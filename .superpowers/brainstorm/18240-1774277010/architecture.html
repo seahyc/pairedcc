@@ -1,0 +1,100 @@
+<h2>Sub-project 1: Architecture Overview</h2>
+<p class="subtitle">Markdown editor + Yjs collaboration + basic agent connection</p>
+
+<div class="mockup">
+  <div class="mockup-header">System Architecture</div>
+  <div class="mockup-body" style="padding: 32px; background: #0a0a0a;">
+    <svg viewBox="0 0 800 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;font-family:monospace;">
+      <!-- Title -->
+      <text x="400" y="30" text-anchor="middle" fill="#888" font-size="13">paired.cc — MVP Architecture (Sub-project 1)</text>
+
+      <!-- Browser Clients -->
+      <rect x="30" y="60" width="200" height="120" rx="8" fill="none" stroke="#4a9eff" stroke-width="1.5"/>
+      <text x="130" y="85" text-anchor="middle" fill="#4a9eff" font-size="12" font-weight="bold">Browser Client</text>
+      <text x="130" y="108" text-anchor="middle" fill="#aaa" font-size="10">React + Tiptap + Yjs</text>
+      <text x="130" y="128" text-anchor="middle" fill="#aaa" font-size="10">y-websocket provider</text>
+      <text x="130" y="148" text-anchor="middle" fill="#666" font-size="10">Live cursors, presence</text>
+      <text x="130" y="168" text-anchor="middle" fill="#666" font-size="10">@-mention input</text>
+
+      <!-- Second browser -->
+      <rect x="30" y="200" width="200" height="60" rx="8" fill="none" stroke="#4a9eff" stroke-width="1" stroke-dasharray="4"/>
+      <text x="130" y="225" text-anchor="middle" fill="#4a9eff" font-size="11">Browser Client 2</text>
+      <text x="130" y="245" text-anchor="middle" fill="#666" font-size="10">(same stack, another user)</text>
+
+      <!-- WebSocket arrows -->
+      <line x1="230" y1="120" x2="320" y2="180" stroke="#4a9eff" stroke-width="1.5"/>
+      <text x="260" y="140" fill="#4a9eff" font-size="9" transform="rotate(-20, 260, 140)">WebSocket</text>
+      <line x1="230" y1="230" x2="320" y2="200" stroke="#4a9eff" stroke-width="1" stroke-dasharray="4"/>
+
+      <!-- Server -->
+      <rect x="320" y="100" width="220" height="200" rx="8" fill="none" stroke="#f0c040" stroke-width="1.5"/>
+      <text x="430" y="125" text-anchor="middle" fill="#f0c040" font-size="12" font-weight="bold">TS Server (Hono/Fastify)</text>
+
+      <rect x="340" y="140" width="180" height="35" rx="4" fill="#1a1a2e" stroke="#555" stroke-width="1"/>
+      <text x="430" y="162" text-anchor="middle" fill="#ccc" font-size="10">Yjs Doc Manager</text>
+
+      <rect x="340" y="185" width="180" height="35" rx="4" fill="#1a1a2e" stroke="#555" stroke-width="1"/>
+      <text x="430" y="207" text-anchor="middle" fill="#ccc" font-size="10">@-mention detector + notifier</text>
+
+      <rect x="340" y="230" width="85" height="30" rx="4" fill="#1a1a2e" stroke="#555" stroke-width="1"/>
+      <text x="382" y="249" text-anchor="middle" fill="#ccc" font-size="9">Auth (OAuth</text>
+      <text x="382" y="259" text-anchor="middle" fill="#ccc" font-size="9">+ Magic Link)</text>
+
+      <rect x="435" y="230" width="85" height="30" rx="4" fill="#1a1a2e" stroke="#555" stroke-width="1"/>
+      <text x="477" y="249" text-anchor="middle" fill="#ccc" font-size="9">REST API</text>
+      <text x="477" y="259" text-anchor="middle" fill="#ccc" font-size="9">(docs CRUD)</text>
+
+      <!-- Agent connections -->
+      <rect x="600" y="70" width="180" height="90" rx="8" fill="none" stroke="#50c878" stroke-width="1.5"/>
+      <text x="690" y="95" text-anchor="middle" fill="#50c878" font-size="12" font-weight="bold">Agent (CLI)</text>
+      <text x="690" y="115" text-anchor="middle" fill="#aaa" font-size="10">pairedcc join &lt;doc-id&gt;</text>
+      <text x="690" y="135" text-anchor="middle" fill="#666" font-size="10">Headless Yjs peer</text>
+      <text x="690" y="150" text-anchor="middle" fill="#666" font-size="10">via WebSocket</text>
+
+      <rect x="600" y="180" width="180" height="90" rx="8" fill="none" stroke="#c850c8" stroke-width="1.5"/>
+      <text x="690" y="205" text-anchor="middle" fill="#c850c8" font-size="12" font-weight="bold">Agent (MCP)</text>
+      <text x="690" y="225" text-anchor="middle" fill="#aaa" font-size="10">Claude Code MCP server</text>
+      <text x="690" y="245" text-anchor="middle" fill="#666" font-size="10">Tools: edit_doc, read_doc,</text>
+      <text x="690" y="260" text-anchor="middle" fill="#666" font-size="10">get_mentions, set_cursor</text>
+
+      <!-- Agent arrows -->
+      <line x1="540" y1="150" x2="600" y2="130" stroke="#50c878" stroke-width="1.5"/>
+      <text x="570" y="130" fill="#50c878" font-size="9">WS</text>
+      <line x1="540" y1="200" x2="600" y2="220" stroke="#c850c8" stroke-width="1.5"/>
+      <text x="558" y="218" fill="#c850c8" font-size="9">REST+WS</text>
+
+      <!-- Data layer -->
+      <rect x="280" y="380" width="300" height="120" rx="8" fill="none" stroke="#888" stroke-width="1" stroke-dasharray="4"/>
+      <text x="430" y="400" text-anchor="middle" fill="#888" font-size="11">Data Layer</text>
+
+      <rect x="300" y="410" width="80" height="40" rx="4" fill="#1a1a2e" stroke="#6a9eff" stroke-width="1"/>
+      <text x="340" y="435" text-anchor="middle" fill="#6a9eff" font-size="10">Postgres</text>
+      <text x="340" y="448" text-anchor="middle" fill="#666" font-size="8">users, docs meta</text>
+
+      <rect x="390" y="410" width="80" height="40" rx="4" fill="#1a1a2e" stroke="#ffa040" stroke-width="1"/>
+      <text x="430" y="435" text-anchor="middle" fill="#ffa040" font-size="10">S3 / R2</text>
+      <text x="430" y="448" text-anchor="middle" fill="#666" font-size="8">Yjs snapshots</text>
+
+      <rect x="480" y="410" width="80" height="40" rx="4" fill="#1a1a2e" stroke="#ff5050" stroke-width="1"/>
+      <text x="520" y="435" text-anchor="middle" fill="#ff5050" font-size="10">Redis</text>
+      <text x="520" y="448" text-anchor="middle" fill="#666" font-size="8">presence, pub/sub</text>
+
+      <!-- Server to data -->
+      <line x1="430" y1="300" x2="430" y2="380" stroke="#888" stroke-width="1" stroke-dasharray="4"/>
+
+      <!-- Flow labels -->
+      <text x="430" y="340" text-anchor="middle" fill="#666" font-size="9">persist snapshots</text>
+      <text x="430" y="355" text-anchor="middle" fill="#666" font-size="9">+ presence sync</text>
+    </svg>
+  </div>
+</div>
+
+<div style="margin-top: 24px; padding: 16px; border: 1px solid #333; border-radius: 8px;">
+  <h3 style="margin-top:0;">Key flows</h3>
+  <p style="color:#aaa; font-size: 14px; line-height: 1.6;">
+    <strong style="color:#4a9eff;">Human edits:</strong> Browser → Tiptap → Yjs update → WebSocket → Server → broadcast to all peers (other browsers + agents)<br/>
+    <strong style="color:#50c878;">Agent edits (CLI):</strong> Agent Yjs peer → WebSocket → Server → broadcast to browsers + other agents<br/>
+    <strong style="color:#c850c8;">Agent edits (MCP):</strong> Claude Code calls <code>edit_doc</code> tool → REST API → Server applies Yjs update → broadcast<br/>
+    <strong style="color:#f0c040;">@-mention:</strong> Server detects <code>@agent-name</code> in Yjs update → pushes notification to agent's WebSocket → agent processes and responds
+  </p>
+</div>
