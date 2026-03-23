@@ -161,7 +161,7 @@ Any MCP-capable client (Claude Code, Claude Desktop, ChatGPT Desktop, Agent SDK)
 |------|-----------|-------------|
 | `list_documents` | — | List docs the user has access to |
 | `read_document` | `doc_id` | Get full markdown content |
-| `edit_document` | `doc_id, range, new_content` | Surgical edit by line range or heading reference |
+| `edit_document` | `doc_id, anchor, new_content` | Surgical edit. `anchor` is a heading path (e.g., `"Q17: Revenue Breakdown"`) or a text search string. Server resolves anchor to Yjs position at apply-time, so concurrent edits don't cause offset drift. |
 | `get_mentions` | `doc_id` | Unread @-mentions for this agent |
 | `respond_to_mention` | `doc_id, mention_id, content` | Reply inline in the doc |
 | `get_presence` | `doc_id` | Who's in the doc right now |
@@ -178,9 +178,10 @@ Any MCP-capable client (Claude Code, Claude Desktop, ChatGPT Desktop, Agent SDK)
 
 1. Human types `@claude` in the doc
 2. Server detects the mention node in the Yjs update
-3. Server pushes notification over the agent's WebSocket connection, including: mention text, surrounding paragraph context, mention ID
-4. Agent receives notification via MCP (as a tool response / event) or CLI (stdout)
-5. Agent responds via `edit_document` or `respond_to_mention`
+3. Server queues the mention (in Redis) with context: mention text, surrounding paragraph, mention ID
+4. **MCP agents:** poll via `get_mentions` tool (MCP is request/response — no server push). The polling loop is handled by the agent's host (e.g., Claude Code `/loop`, a cron skill, or the `pairedcc watch` process feeding events back to the MCP client).
+5. **CLI agents:** `pairedcc watch` holds a WebSocket open and prints mentions to stdout as they arrive (true push).
+6. Agent responds via `edit_document` or `respond_to_mention`
 
 ### Agent Authentication
 
@@ -203,7 +204,7 @@ Any MCP-capable client (Claude Code, Claude Desktop, ChatGPT Desktop, Agent SDK)
 
 - **Invite by email** — sends magic link if recipient isn't a user yet
 - **Role assignment** — editor or viewer
-- **Copy link** — shareable URL with configurable access (view or edit)
+- **Copy link** — shareable URL. Recipients must have a paired.cc account (sign up via magic link on first visit). Link grants viewer access by default; owner can upgrade to editor.
 - **Agent keys** — created in share dialog, shows MCP config snippet to copy-paste
 
 ## Version History
