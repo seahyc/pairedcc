@@ -14,7 +14,9 @@ export function useDocument(docId: string) {
   useEffect(() => {
     api(`/api/documents/${docId}`).then(setMeta).catch(() => {})
 
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/${docId}`
+    // y-websocket appends the room name to the URL, so we pass the base WS URL
+    // Vite proxies /ws/* to the backend server
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
     const prov = new WebsocketProvider(wsUrl, docId, doc)
     prov.on('status', ({ status }: { status: string }) => setConnected(status === 'connected'))
     setProvider(prov)

@@ -64,17 +64,28 @@ documentRoutes.post('/:id/claim', requireAuth, async (c) => {
   return c.json(doc)
 })
 
-// Get document — requires auth
-documentRoutes.get('/:id', requireAuth, async (c) => {
-  const { userId } = c.get('user')
+// Get document — anonymous docs are publicly accessible, owned docs require auth
+documentRoutes.get('/:id', optionalAuth, async (c) => {
+  const user = c.get('user')
   const docId = c.req.param('id')
-  const [doc] = await sql`
-    SELECT d.* FROM documents d
-    LEFT JOIN document_collaborators dc ON dc.document_id = d.id AND dc.user_id = ${userId}
-    WHERE d.id = ${docId} AND (d.owner_id = ${userId} OR dc.user_id IS NOT NULL)
-  `
+
+  // First try to find the doc
+  const [doc] = await sql`SELECT * FROM documents WHERE id = ${docId}`
   if (!doc) return c.json({ error: 'Not found' }, 404)
-  return c.json(doc)
+
+  // Anonymous docs are accessible to anyone
+  if (doc.is_anonymous) return c.json(doc)
+
+  // Owned docs require auth
+  if (!user) return c.json({ error: 'Unauthorized' }, 401)
+
+  const [accessible] = await sql`
+    SELECT d.* FROM documents d
+    LEFT JOIN document_collaborators dc ON dc.document_id = d.id AND dc.user_id = ${user.userId}
+    WHERE d.id = ${docId} AND (d.owner_id = ${user.userId} OR dc.user_id IS NOT NULL)
+  `
+  if (!accessible) return c.json({ error: 'Not found' }, 404)
+  return c.json(accessible)
 })
 
 // Update document title
