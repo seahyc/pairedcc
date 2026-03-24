@@ -26,8 +26,14 @@ export function createAgentRoutes(docManager: DocManager, snapshotStore: Postgre
   // Read document as markdown
   agent.get('/documents/:id', async (c) => {
     const docId = c.req.param('id')
+    const doc = docManager.getOrCreate(docId)
+    // Debug: list all shared types in the doc
+    const sharedTypes: Record<string, string> = {}
+    for (const [key, type] of doc.share.entries()) {
+      sharedTypes[key] = `${type.constructor.name}(length=${(type as any).length || 0})`
+    }
     const content = docManager.getMarkdown(docId)
-    return c.json({ id: docId, content })
+    return c.json({ id: docId, content, _debug: sharedTypes })
   })
 
   // Edit document with anchor-based targeting

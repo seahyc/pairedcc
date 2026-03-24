@@ -16,9 +16,11 @@
     "hono": "^4",
     "ioredis": "^5",
     "jsonwebtoken": "^9",
+    "lib0": "^0.2.117",
     "nanoid": "^5",
     "postgres": "^3",
     "ws": "^8",
+    "y-protocols": "^1.0.7",
     "y-websocket": "^2",
     "yjs": "^13",
     "zod": "^3"

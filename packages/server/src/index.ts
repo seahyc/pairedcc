@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
-import { serve } from '@hono/node-server'
+import { createServer } from 'node:http'
+import { getRequestListener } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { config } from './config.js'
 import { migrate } from './db/migrate.js'
@@ -62,8 +63,9 @@ async function main() {
   setInterval(cleanupAnonymousDocs, 60 * 60 * 1000)
 
   console.log(`paired.cc server running on port ${config.PORT}`)
-  const server = serve({ fetch: app.fetch, port: config.PORT })
-  attachYjsWebSocket(server)
+  const server = createServer(getRequestListener(app.fetch))
+  attachYjsWebSocket(server, docManager)
+  server.listen(config.PORT)
 }
 
 main()
