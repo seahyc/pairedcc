@@ -11,7 +11,7 @@ import { snapshotRoutes } from './routes/snapshots.js'
 import { sharingRoutes } from './routes/sharing.js'
 import { createAgentRoutes } from './routes/agent.js'
 import { DocManager } from './yjs/doc-manager.js'
-import { setupWebSocket } from './yjs/ws-handler.js'
+import { attachYjsWebSocket } from './yjs/ws-handler.js'
 import { PostgresSnapshotStore } from './yjs/snapshot-store.js'
 import { PresenceTracker } from './presence/tracker.js'
 
@@ -21,7 +21,7 @@ const docManager = new DocManager()
 const presenceTracker = new PresenceTracker()
 const snapshotStore = new PostgresSnapshotStore()
 
-const { injectWebSocket } = setupWebSocket(app, docManager, presenceTracker)
+// WebSocket is attached after server starts (see main())
 
 // Auth routes
 app.route('/auth', authRoutes)
@@ -63,7 +63,7 @@ async function main() {
 
   console.log(`paired.cc server running on port ${config.PORT}`)
   const server = serve({ fetch: app.fetch, port: config.PORT })
-  injectWebSocket(server)
+  attachYjsWebSocket(server)
 }
 
 main()

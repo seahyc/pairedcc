@@ -1,106 +1,41 @@
-import { createNodeWebSocket } from '@hono/node-ws'
-import type { Hono } from 'hono'
-import * as Y from 'yjs'
-import { DocManager } from './doc-manager.js'
-import { detectMentions } from './mention-detector.js'
-import { PostgresSnapshotStore } from './snapshot-store.js'
-import { PresenceTracker } from '../presence/tracker.js'
-import { redis } from '../redis.js'
+import { WebSocketServer } from 'ws'
+import type { Server } from 'http'
+// @ts-ignore — y-websocket/bin/utils has no types
+import { setupWSConnection, getYDoc } from 'y-websocket/bin/utils'
 
-interface Client {
-  ws: WebSocket
-  docId: string
-  userId: string
-  name: string
-  isAgent: boolean
-}
+/**
+ * Attach a y-websocket compatible WebSocket server to the Node HTTP server.
+ * The y-websocket client (WebsocketProvider) expects this protocol.
+ *
+ * Routes: /ws/<docId> — the room name is the docId.
+ */
+export function attachYjsWebSocket(server: Server) {
+  const wss = new WebSocketServer({ noServer: true })
 
-const snapshotTimers = new Map<string, NodeJS.Timeout>()
+  server.on('upgrade', (request, socket, head) => {
+    const url = new URL(request.url || '', `http://${request.headers.host}`)
 
-function scheduleAutoSnapshot(docId: string, docManager: DocManager, store: PostgresSnapshotStore) {
-  if (snapshotTimers.has(docId)) return
-  const timer = setInterval(async () => {
-    const state = docManager.getState(docId)
-    if (state) {
-      try {
-        await store.save(docId, state, { authorId: 'system', authorType: 'human', description: 'auto-save' })
-      } catch (e) {
-        console.error(`Auto-snapshot failed for ${docId}:`, e)
-      }
+    // Only handle /ws/* paths
+    if (!url.pathname.startsWith('/ws/')) {
+      // Let other upgrade handlers (like Vite HMR) pass through
+      return
     }
-  }, 5 * 60 * 1000)
-  snapshotTimers.set(docId, timer)
-}
 
-export function setupWebSocket(app: Hono, docManager: DocManager, presenceTracker: PresenceTracker) {
-  const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app: app as any })
-  const clients = new Map<WebSocket, Client>()
-  const snapshotStore = new PostgresSnapshotStore()
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request)
+    })
+  })
 
-  app.get('/ws/:docId', upgradeWebSocket((c) => {
-    const docId = c.req.param('docId')
+  wss.on('connection', (ws: any, request: any) => {
+    const url = new URL(request.url || '', `http://${request.headers.host}`)
+    // Extract docId from /ws/<docId>
+    const docId = url.pathname.replace('/ws/', '')
 
-    return {
-      onOpen(evt, ws) {
-        const rawWs = ws.raw as WebSocket
-        const client: Client = {
-          ws: rawWs,
-          docId,
-          userId: 'anonymous',
-          name: 'Anonymous',
-          isAgent: false,
-        }
-        clients.set(rawWs, client)
+    // setupWSConnection handles the full y-websocket sync protocol
+    // (sync step 1/2, awareness, updates)
+    setupWSConnection(ws, request, { docName: docId })
+  })
 
-        // Track presence
-        presenceTracker.join(docId, client.userId, client.name, client.isAgent)
-
-        // Schedule auto-snapshots for this doc
-        scheduleAutoSnapshot(docId, docManager, snapshotStore)
-
-        // Send current doc state
-        const state = docManager.getState(docId)
-        if (state) {
-          ws.send(state)
-        }
-      },
-
-      onMessage(evt, ws) {
-        const rawWs = ws.raw as WebSocket
-        const client = clients.get(rawWs)
-        if (!client) return
-
-        const data = evt.data
-        if (data instanceof ArrayBuffer || data instanceof Uint8Array) {
-          const update = new Uint8Array(data instanceof ArrayBuffer ? data : data.buffer)
-          docManager.applyUpdate(client.docId, update)
-
-          // Broadcast to all other clients in the same doc
-          for (const [otherWs, otherClient] of clients) {
-            if (otherClient.docId === client.docId && otherWs !== rawWs) {
-              try { otherWs.send(update) } catch {}
-            }
-          }
-
-          // Detect mentions
-          const newMentions = detectMentions(docManager.getOrCreate(client.docId))
-          for (const mention of newMentions) {
-            const mentionData = JSON.stringify(mention)
-            redis.rpush(`mentions:${client.docId}:*`, mentionData).catch(() => {})
-          }
-        }
-      },
-
-      onClose(evt, ws) {
-        const rawWs = ws.raw as WebSocket
-        const client = clients.get(rawWs)
-        if (client) {
-          presenceTracker.leave(client.docId, client.userId)
-        }
-        clients.delete(rawWs)
-      },
-    }
-  }))
-
-  return { injectWebSocket }
+  console.log('Yjs WebSocket server attached')
+  return wss
 }
