@@ -5,6 +5,8 @@ import type { DocManager } from '../yjs/doc-manager.js'
 import type { PostgresSnapshotStore } from '../yjs/snapshot-store.js'
 import type { PresenceTracker } from '../presence/tracker.js'
 import { redis } from '../redis.js'
+import { docAwarenesses } from '../yjs/ws-handler.js'
+import * as Y from 'yjs'
 
 export function createAgentRoutes(docManager: DocManager, snapshotStore: PostgresSnapshotStore, presenceTracker: PresenceTracker) {
   const agent = new Hono()
@@ -58,6 +60,75 @@ export function createAgentRoutes(docManager: DocManager, snapshotStore: Postgre
     }
 
     return c.json({ ok: true })
+  })
+
+  // Stream-type into document (character by character, with agent cursor)
+  agent.post('/documents/:id/stream', async (c) => {
+    const { userId } = c.get('user')
+    const docId = c.req.param('id')
+    const { content, agent_name, speed } = await c.req.json<{ content: string; agent_name?: string; speed?: number }>()
+    const charDelay = speed || 30 // ms per character
+
+    const doc = docManager.getOrCreate(docId)
+
+    // Find the XML fragment
+    let xml: Y.XmlFragment | null = null
+    for (const [key, type] of doc.share.entries()) {
+      if (type instanceof Y.XmlFragment && type.length > 0) {
+        xml = type as Y.XmlFragment
+        break
+      }
+    }
+    if (!xml) xml = doc.getXmlFragment('default')
+
+    // Create a new paragraph for the streamed content
+    const p = new Y.XmlElement('paragraph')
+    const textNode = new Y.XmlText('')
+    doc.transact(() => {
+      p.insert(0, [textNode])
+      xml!.insert(xml!.length, [p])
+    })
+
+    // Set agent cursor via awareness
+    const awareness = docAwarenesses.get(docId)
+    const agentClientId = 99999 + Math.floor(Math.random() * 10000)
+    const colors = ['#50c878', '#ff6b6b', '#ffa040', '#c850c8', '#4a9eff']
+    const color = colors[Math.floor(Math.random() * colors.length)]
+    const name = agent_name || 'claude'
+
+    // Stream characters
+    for (let i = 0; i < content.length; i++) {
+      doc.transact(() => {
+        textNode.insert(i, content[i])
+      })
+
+      // Update awareness to show cursor position (broadcast to browser clients)
+      if (awareness) {
+        awareness.setLocalStateField('user', {
+          name: `🤖 ${name}`,
+          color,
+        })
+      }
+
+      await new Promise(resolve => setTimeout(resolve, charDelay))
+    }
+
+    // Clear agent awareness after done
+    if (awareness) {
+      awareness.setLocalState(null)
+    }
+
+    // Save snapshot
+    const state = docManager.getState(docId)
+    if (state) {
+      await snapshotStore.save(docId, state, {
+        authorId: name,
+        authorType: 'agent',
+        description: `streamed: ${content.substring(0, 50)}...`,
+      })
+    }
+
+    return c.json({ ok: true, chars: content.length })
   })
 
   // Get unread mentions

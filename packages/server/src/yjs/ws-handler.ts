@@ -15,6 +15,9 @@ interface ConnClient {
   awareness: awarenessProtocol.Awareness
 }
 
+// Export awarenesses so agent API can set cursor positions
+export const docAwarenesses = new Map<string, awarenessProtocol.Awareness>()
+
 /**
  * Custom y-websocket compatible server that uses OUR DocManager
  * instead of y-websocket's internal doc store.
@@ -30,6 +33,7 @@ export function attachYjsWebSocket(server: any, docManager: DocManager) {
     if (!awareness) {
       awareness = new awarenessProtocol.Awareness(doc)
       awarenesses.set(docId, awareness)
+      docAwarenesses.set(docId, awareness) // expose for agent API
     }
     return awareness
   }
