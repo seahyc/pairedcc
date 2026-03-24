@@ -1,0 +1,21 @@
+{
+  "name": "@pairedcc/cli",
+  "version": "0.0.1",
+  "type": "module",
+  "bin": { "pairedcc": "dist/index.js" },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "commander": "^13",
+    "yjs": "^13",
+    "ws": "^8"
+  },
+  "devDependencies": {
+    "tsup": "^8",
+    "vitest": "^2",
+    "typescript": "^5",
+    "@types/ws": "^8"
+  }
+}

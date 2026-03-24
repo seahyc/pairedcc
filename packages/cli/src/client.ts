@@ -1,0 +1,43 @@
+export class PairedClient {
+  constructor(private baseUrl: string, private apiKey: string) {}
+
+  private headers() {
+    return { 'X-API-Key': this.apiKey, 'Content-Type': 'application/json' }
+  }
+
+  async listDocuments() {
+    const res = await fetch(`${this.baseUrl}/api/agent/documents`, { headers: this.headers() })
+    return res.json()
+  }
+
+  async readDocument(docId: string) {
+    const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}`, { headers: this.headers() })
+    return res.json()
+  }
+
+  async editDocument(docId: string, anchor: string, newContent: string) {
+    const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}/edit`, {
+      method: 'POST', headers: this.headers(),
+      body: JSON.stringify({ anchor, new_content: newContent }),
+    })
+    return res.json()
+  }
+
+  async getMentions(docId: string) {
+    const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}/mentions`, { headers: this.headers() })
+    return res.json()
+  }
+
+  async respondToMention(docId: string, mentionId: string, content: string) {
+    const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}/mentions/${mentionId}/respond`, {
+      method: 'POST', headers: this.headers(),
+      body: JSON.stringify({ content }),
+    })
+    return res.json()
+  }
+
+  async getPresence(docId: string) {
+    const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}/presence`, { headers: this.headers() })
+    return res.json()
+  }
+}
