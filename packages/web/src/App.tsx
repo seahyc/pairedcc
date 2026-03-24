@@ -3,7 +3,7 @@ import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
 import { Editor } from './pages/Editor'
 import { Settings } from './pages/Settings'
-import { Landing } from './pages/Landing'
+import { HomepageRedirect } from './pages/HomepageRedirect'
 import { useAuth } from './hooks/useAuth'
 
 export function App() {
@@ -14,7 +14,7 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-        <Route path="/" element={user ? <Dashboard /> : <Landing />} />
+        <Route path="/" element={user ? <Dashboard /> : <HomepageRedirect />} />
         <Route path="/d/:docId" element={<Editor />} />
         <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
       </Routes>

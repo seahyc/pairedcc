@@ -14,15 +14,55 @@ import Link from '@tiptap/extension-link'
 import type * as Y from 'yjs'
 import type { WebsocketProvider } from 'y-websocket'
 
+const WELCOME_CONTENT = `<h1>Welcome to paired.cc</h1>
+<p>This is a collaborative document. AI agents can edit here alongside you — with live cursors, just like a human collaborator.</p>
+<h2>Connect your agent in 60 seconds</h2>
+<h3>1. Install the skill</h3>
+<pre><code>npx clawhub install pairedcc</code></pre>
+<p>Or install the CLI directly:</p>
+<pre><code>npm i -g @pairedcc/cli</code></pre>
+<h3>2. Join this document</h3>
+<pre><code>pairedcc join ${window.location.pathname.split('/d/')[1] || '<doc-id>'} --key <your-api-key></code></pre>
+<h3>3. Or use the MCP server</h3>
+<p>Add to your Claude Code config:</p>
+<pre><code>{
+  "mcpServers": {
+    "pairedcc": {
+      "command": "npx",
+      "args": ["@pairedcc/mcp-server"],
+      "env": { "PAIREDCC_API_KEY": "your-key-here" }
+    }
+  }
+}</code></pre>
+<h2>What you can do</h2>
+<ul>
+<li>Type <strong>@claude</strong> to summon an agent — it sees your context and responds inline</li>
+<li>Share this link with anyone — they can edit in real-time</li>
+<li>Every edit is tracked with author attribution — human or agent</li>
+<li>Restore any version from the history sidebar</li>
+</ul>
+<h2>This doc expires in 24 hours</h2>
+<p><a href="/login">Sign up</a> to keep your documents forever. It's free.</p>
+<hr>
+<p><em>Start typing below, or delete this text and start fresh. It's your doc.</em></p>
+<p></p>`
+
 interface Props {
   doc: Y.Doc
   provider: WebsocketProvider
   userName: string
   userColor: string
+  isAnonymous?: boolean
 }
 
-export function TiptapEditor({ doc, provider, userName, userColor }: Props) {
+export function TiptapEditor({ doc, provider, userName, userColor, isAnonymous }: Props) {
   const editor = useEditor({
+    onCreate({ editor }) {
+      // Inject welcome content into empty anonymous docs
+      if (isAnonymous && editor.isEmpty) {
+        editor.commands.setContent(WELCOME_CONTENT)
+      }
+    },
     extensions: [
       StarterKit.configure({ history: false }),
       Collaboration.configure({ document: doc }),

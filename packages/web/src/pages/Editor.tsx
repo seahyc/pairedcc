@@ -49,6 +49,7 @@ export function Editor() {
           provider={provider}
           userName={user?.name || user?.email || 'Anonymous'}
           userColor="#4a9eff"
+          isAnonymous={meta.is_anonymous}
         />
       </div>
       <ShareDialog docId={docId!} open={shareOpen} onClose={() => setShareOpen(false)} />
