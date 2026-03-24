@@ -113,8 +113,19 @@ export function TiptapEditor({ doc, provider, userName, userColor, isAnonymous }
       MathBlock,
     ],
     onCreate({ editor }) {
-      if (isAnonymous && editor.isEmpty) {
-        editor.commands.setContent(WELCOME_CONTENT)
+      if (isAnonymous) {
+        // Wait for Yjs sync before checking emptiness to avoid duplication
+        const checkAndInsert = () => {
+          if (editor.isEmpty) {
+            editor.commands.setContent(WELCOME_CONTENT)
+          }
+        }
+        // If provider is already synced, check now; otherwise wait for sync
+        if (provider.synced) {
+          checkAndInsert()
+        } else {
+          provider.once('synced', checkAndInsert)
+        }
       }
     },
   })

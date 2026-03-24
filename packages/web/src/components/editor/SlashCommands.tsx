@@ -2,7 +2,7 @@ import { Extension } from '@tiptap/core'
 import { ReactRenderer } from '@tiptap/react'
 import Suggestion, { type SuggestionProps, type SuggestionKeyDownProps } from '@tiptap/suggestion'
 import tippy, { type Instance } from 'tippy.js'
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 interface CommandItem {
   title: string
@@ -138,21 +138,26 @@ interface CommandListRef {
 
 const CommandList = forwardRef<CommandListRef, CommandListProps>(({ items, command }, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const selectedIndexRef = useRef(selectedIndex)
+  const itemsRef = useRef(items)
 
-  useEffect(() => setSelectedIndex(0), [items])
+  useEffect(() => { selectedIndexRef.current = selectedIndex }, [selectedIndex])
+  useEffect(() => { itemsRef.current = items; setSelectedIndex(0) }, [items])
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: SuggestionKeyDownProps) => {
+      const currentItems = itemsRef.current
+      const currentIndex = selectedIndexRef.current
       if (event.key === 'ArrowUp') {
-        setSelectedIndex((selectedIndex + items.length - 1) % items.length)
+        setSelectedIndex((currentIndex + currentItems.length - 1) % currentItems.length)
         return true
       }
       if (event.key === 'ArrowDown') {
-        setSelectedIndex((selectedIndex + 1) % items.length)
+        setSelectedIndex((currentIndex + 1) % currentItems.length)
         return true
       }
       if (event.key === 'Enter') {
-        if (items[selectedIndex]) command(items[selectedIndex])
+        if (currentItems[currentIndex]) command(currentItems[currentIndex])
         return true
       }
       return false

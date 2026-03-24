@@ -12,8 +12,9 @@ export function Login() {
 
   return (
     <div className="login-page">
-      <h1>paired.cc</h1>
-      <p>Collaborative documents with AI agents</p>
+      <img src="/logo.svg" alt="paired.cc" style={{ width: 48, height: 48, marginBottom: 8 }} />
+      <h1 style={{ background: 'linear-gradient(135deg, #4a9eff, #c850c8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>paired.cc</h1>
+      <p style={{ color: 'var(--text-muted)' }}>Collaborative documents where AI agents are first-class participants</p>
       <div className="login-buttons">
         <a href="/auth/github/login" className="btn btn-github">Sign in with GitHub</a>
         <a href="/auth/google/login" className="btn btn-google">Sign in with Google</a>
