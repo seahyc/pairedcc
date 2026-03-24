@@ -1,0 +1,10 @@
+{
+  "name": "pairedcc",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm --filter server dev & pnpm --filter web dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test"
+  }
+}

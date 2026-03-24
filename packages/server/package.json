@@ -1,0 +1,31 @@
+{
+  "name": "@pairedcc/server",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/index.ts --format esm --dts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4",
+    "@hono/node-server": "^1",
+    "@hono/node-ws": "^1",
+    "yjs": "^13",
+    "postgres": "^3",
+    "ioredis": "^5",
+    "jsonwebtoken": "^9",
+    "bcrypt": "^5",
+    "nanoid": "^5",
+    "zod": "^3"
+  },
+  "devDependencies": {
+    "tsx": "^4",
+    "tsup": "^8",
+    "vitest": "^2",
+    "typescript": "^5",
+    "@types/node": "^22",
+    "@types/jsonwebtoken": "^9",
+    "@types/bcrypt": "^5"
+  }
+}
