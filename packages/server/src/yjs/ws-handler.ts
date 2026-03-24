@@ -1,5 +1,5 @@
 import { WebSocketServer } from 'ws'
-import type { Server } from 'http'
+import type { Server } from 'node:http'
 // @ts-ignore — y-websocket/bin/utils has no types
 import { setupWSConnection, getYDoc } from 'y-websocket/bin/utils'
 
@@ -9,7 +9,7 @@ import { setupWSConnection, getYDoc } from 'y-websocket/bin/utils'
  *
  * Routes: /ws/<docId> — the room name is the docId.
  */
-export function attachYjsWebSocket(server: Server) {
+export function attachYjsWebSocket(server: any) {
   const wss = new WebSocketServer({ noServer: true })
 
   server.on('upgrade', (request, socket, head) => {
@@ -29,7 +29,8 @@ export function attachYjsWebSocket(server: Server) {
   wss.on('connection', (ws: any, request: any) => {
     const url = new URL(request.url || '', `http://${request.headers.host}`)
     // Extract docId from /ws/<docId>
-    const docId = url.pathname.replace('/ws/', '')
+    const docId = decodeURIComponent(url.pathname.replace('/ws/', ''))
+    console.log(`[yjs-ws] Client connected to doc: "${docId}"`)
 
     // setupWSConnection handles the full y-websocket sync protocol
     // (sync step 1/2, awareness, updates)

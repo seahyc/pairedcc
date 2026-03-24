@@ -36,21 +36,10 @@ export function createAgentRoutes(docManager: DocManager, snapshotStore: Postgre
     const docId = c.req.param('id')
     const { anchor, new_content } = await c.req.json<{ anchor: string; new_content: string }>()
 
-    const doc = docManager.getOrCreate(docId)
-    const text = doc.getText('content')
-    const currentText = text.toString()
-
-    // Find anchor position
-    const anchorIdx = currentText.indexOf(anchor)
-    if (anchorIdx === -1) {
+    const success = docManager.editByAnchor(docId, anchor, new_content)
+    if (!success) {
       return c.json({ error: `Anchor "${anchor}" not found in document` }, 400)
     }
-
-    // Replace anchor text with new content
-    doc.transact(() => {
-      text.delete(anchorIdx, anchor.length)
-      text.insert(anchorIdx, new_content)
-    })
 
     // Save agent snapshot
     const state = docManager.getState(docId)
@@ -81,9 +70,7 @@ export function createAgentRoutes(docManager: DocManager, snapshotStore: Postgre
     const docId = c.req.param('id')
     const { content } = await c.req.json<{ content: string }>()
 
-    const doc = docManager.getOrCreate(docId)
-    const text = doc.getText('content')
-    text.insert(text.length, `\n\n${content}`)
+    docManager.editByAnchor(docId, '', content)
 
     return c.json({ ok: true })
   })
