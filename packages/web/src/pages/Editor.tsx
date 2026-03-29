@@ -20,7 +20,7 @@ function timeUntilExpiry(expiresAt: string): string {
 export function Editor() {
   const { docId } = useParams<{ docId: string }>()
   const { user } = useAuth()
-  const { doc, provider, meta, connected } = useDocument(docId!)
+  const { doc, provider, meta, connected } = useDocument(docId!, user?.userId)
   const peers = usePresence(provider)
   const [shareOpen, setShareOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -32,7 +32,7 @@ export function Editor() {
       {meta.is_anonymous && meta.expires_at && (
         <div className="anon-banner">
           This doc expires in {timeUntilExpiry(meta.expires_at)}.{' '}
-          <a href="/login">Sign up</a> to keep it.
+          <a href={`/login?returnTo=/d/${docId}`}>Sign up</a> to keep it.
         </div>
       )}
       <TopBar

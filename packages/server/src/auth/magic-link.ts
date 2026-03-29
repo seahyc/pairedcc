@@ -6,16 +6,16 @@ import { signJwt } from './jwt.js'
 import { nanoid } from 'nanoid'
 
 // In-memory token store for MVP. Replace with Redis for production.
-const pendingTokens = new Map<string, { email: string; expiresAt: number }>()
+const pendingTokens = new Map<string, { email: string; expiresAt: number; returnTo: string }>()
 
 export const magicLink = new Hono()
 
 magicLink.post('/send', async (c) => {
-  const { email } = await c.req.json<{ email: string }>()
+  const { email, returnTo } = await c.req.json<{ email: string; returnTo?: string }>()
   if (!email) return c.json({ error: 'Email required' }, 400)
 
   const token = nanoid(32)
-  pendingTokens.set(token, { email, expiresAt: Date.now() + 15 * 60 * 1000 })
+  pendingTokens.set(token, { email, expiresAt: Date.now() + 15 * 60 * 1000, returnTo: returnTo || '/' })
 
   const link = `${config.BASE_URL}/auth/magic/verify?token=${token}`
 
@@ -44,5 +44,5 @@ magicLink.get('/verify', async (c) => {
 
   const jwt = signJwt({ userId: user.id, email: user.email })
   setCookie(c, 'session', jwt, { httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 30 * 24 * 60 * 60 })
-  return c.redirect('/')
+  return c.redirect(pending.returnTo || '/')
 })

@@ -67,7 +67,7 @@ export function createAgentRoutes(docManager: DocManager, snapshotStore: Postgre
     const { userId } = c.get('user')
     const docId = c.req.param('id')
     const { content, agent_name, speed } = await c.req.json<{ content: string; agent_name?: string; speed?: number }>()
-    const charDelay = speed || 30 // ms per character
+    const charDelay = speed || 8 // ms per character (fast, like watching an LLM stream)
 
     const doc = docManager.getOrCreate(docId)
 

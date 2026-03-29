@@ -15,6 +15,7 @@ export function App() {
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         <Route path="/" element={user ? <Dashboard /> : <HomepageRedirect />} />
+        <Route path="/new" element={<HomepageRedirect />} />
         <Route path="/d/:docId" element={<Editor />} />
         <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
       </Routes>

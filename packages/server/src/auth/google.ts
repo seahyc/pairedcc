@@ -7,11 +7,13 @@ import { signJwt } from './jwt.js'
 export const google = new Hono()
 
 google.get('/login', (c) => {
+  const returnTo = c.req.query('returnTo') || '/'
   const params = new URLSearchParams({
     client_id: config.GOOGLE_CLIENT_ID!,
     redirect_uri: `${config.BASE_URL}/auth/google/callback`,
     response_type: 'code',
     scope: 'openid email profile',
+    state: returnTo,
   })
   return c.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`)
 })
@@ -49,5 +51,6 @@ google.get('/callback', async (c) => {
 
   const token = signJwt({ userId: user.id, email: user.email })
   setCookie(c, 'session', token, { httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 30 * 24 * 60 * 60 })
-  return c.redirect('/')
+  const returnTo = c.req.query('state') || '/'
+  return c.redirect(returnTo)
 })

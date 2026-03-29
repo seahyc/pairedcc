@@ -7,10 +7,12 @@ import { signJwt } from './jwt.js'
 export const github = new Hono()
 
 github.get('/login', (c) => {
+  const returnTo = c.req.query('returnTo') || '/'
   const params = new URLSearchParams({
     client_id: config.GITHUB_CLIENT_ID!,
     redirect_uri: `${config.BASE_URL}/auth/github/callback`,
     scope: 'user:email',
+    state: returnTo, // pass returnTo through OAuth state
   })
   return c.redirect(`https://github.com/login/oauth/authorize?${params}`)
 })
@@ -56,5 +58,6 @@ github.get('/callback', async (c) => {
 
   const token = signJwt({ userId: user.id, email: user.email })
   setCookie(c, 'session', token, { httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 30 * 24 * 60 * 60 })
-  return c.redirect('/')
+  const returnTo = c.req.query('state') || '/'
+  return c.redirect(returnTo)
 })
