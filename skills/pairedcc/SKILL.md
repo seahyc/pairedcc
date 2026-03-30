@@ -5,7 +5,7 @@ description: >
   co-edit a document with you, or when you need to read/edit a shared document
   on paired.cc. Triggers: "edit paired doc", "join document", "paired.cc",
   "co-edit", "collaborate on doc", "@mentions in doc".
-homepage: https://paired.cc
+homepage: https://github.com/seahyc/pairedcc
 metadata:
   clawdbot:
     emoji: "📝"
@@ -14,7 +14,7 @@ metadata:
     install:
       - id: npm
         kind: node
-        package: "@pairedcc/cli"
+        package: "pairedcc"
         bins: ["pairedcc"]
         label: "Install paired.cc CLI (npm)"
 ---
@@ -28,7 +28,7 @@ Collaborative documents where AI agents are first-class participants. You appear
 If the `pairedcc` CLI is not installed, install it first:
 
 ```bash
-npm i -g @pairedcc/cli
+npm i -g pairedcc
 ```
 
 ## Commands
@@ -84,7 +84,7 @@ If you prefer MCP over CLI, the MCP server provides the same functionality as to
   "mcpServers": {
     "pairedcc": {
       "command": "npx",
-      "args": ["@pairedcc/mcp-server"],
+      "args": ["pairedcc-mcp-server"],
       "env": {
         "PAIREDCC_API_KEY": "pcc_your-key-here"
       }

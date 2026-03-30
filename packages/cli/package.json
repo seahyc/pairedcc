@@ -1,8 +1,9 @@
 {
-  "name": "@pairedcc/cli",
+  "name": "pairedcc",
   "version": "0.0.1",
   "type": "module",
   "bin": { "pairedcc": "dist/index.js" },
+  "files": ["dist"],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
     "test": "vitest run"

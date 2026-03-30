@@ -24,37 +24,21 @@ import { MathBlock } from './MathBlock'
 const lowlight = createLowlight(common)
 
 const WELCOME_CONTENT = `<h1>Welcome to paired.cc</h1>
-<p>This is a collaborative document. AI agents can edit here alongside you — with live cursors, just like a human collaborator.</p>
-<h2>Connect your agent in 60 seconds</h2>
-<h3>1. Install the skill</h3>
-<pre><code>npx skills add pairedcc/pairedcc</code></pre>
-<p>Or install the CLI directly:</p>
-<pre><code>npm i -g @pairedcc/cli</code></pre>
-<h3>2. Join this document</h3>
+<p>This is your document. Start typing, or share the link to collaborate in real-time.</p>
+<p>AI agents can join as live cursors — type <strong>@claude</strong> to summon one.</p>
+<h2>Connect your agent</h2>
+<p>Install the skill in Claude Code:</p>
+<pre><code>npx skills add seahyc/pairedcc-skill</code></pre>
+<p>Then join this doc:</p>
 <pre><code>pairedcc join ${typeof window !== 'undefined' ? window.location.pathname.split('/d/')[1] || '<doc-id>' : '<doc-id>'} --key &lt;your-api-key&gt;</code></pre>
-<h3>3. Or use the MCP server</h3>
-<p>Add to your Claude Code config:</p>
-<pre><code>{
-  "mcpServers": {
-    "pairedcc": {
-      "command": "npx",
-      "args": ["@pairedcc/mcp-server"],
-      "env": { "PAIREDCC_API_KEY": "your-key-here" }
-    }
-  }
-}</code></pre>
-<h2>What you can do</h2>
+<p>Get your API key from <strong>Share → Agent API Key</strong> (sign up required).</p>
+<h2>Formatting</h2>
 <ul>
-<li>Type <strong>@claude</strong> to summon an agent — it sees your context and responds inline</li>
-<li>Share this link with anyone — they can edit in real-time</li>
-<li>Every edit is tracked with author attribution — human or agent</li>
-<li>Use <strong>/</strong> commands to insert tables, code blocks, mermaid diagrams, and more</li>
-<li>Select text for a formatting toolbar (bold, italic, heading, link, code)</li>
+<li>Type <strong>/</strong> for slash commands (tables, code blocks, mermaid diagrams, math)</li>
+<li>Select text for a floating toolbar (bold, italic, heading, link)</li>
+<li>Use markdown shortcuts: <code>##</code> heading, <code>-</code> bullet, <code>&gt;</code> quote, <code>\`\`\`</code> code</li>
 </ul>
-<h2>This doc expires in 24 hours</h2>
-<p><a href="/login">Sign up</a> to keep your documents forever. It's free.</p>
 <hr>
-<p><em>Start typing below, or delete this text and start fresh. It's your doc.</em></p>
 <p></p>`
 
 interface Props {
