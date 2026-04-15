@@ -12,6 +12,7 @@ export function Dashboard() {
 
   const createDoc = async () => {
     const doc = await api('/api/documents', { method: 'POST', body: JSON.stringify({}) })
+    sessionStorage.setItem('pairedcc:just-created', doc.id)
     navigate(`/d/${doc.id}`)
   }
 

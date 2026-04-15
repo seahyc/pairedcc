@@ -50,6 +50,7 @@ export function Landing() {
     setCreating(true)
     try {
       const doc = await api('/api/documents', { method: 'POST', body: JSON.stringify({}) })
+      sessionStorage.setItem('pairedcc:just-created', doc.id)
       navigate(`/d/${doc.id}`)
     } catch {
       setCreating(false)

@@ -6,12 +6,23 @@ interface Props {
   peers: { name: string; color: string; isAgent?: boolean }[]
   onShare: () => void
   onVersionHistory?: () => void
+  onOpenSidebar?: () => void
 }
 
-export function TopBar({ title, onTitleChange, peers, onShare, onVersionHistory }: Props) {
+export function TopBar({ title, onTitleChange, peers, onShare, onVersionHistory, onOpenSidebar }: Props) {
   return (
     <div className="topbar">
       <div className="topbar-left">
+        {onOpenSidebar && (
+          <button
+            className="topbar-menu"
+            onClick={onOpenSidebar}
+            aria-label="Open my docs"
+            title="My docs"
+          >
+            ☰
+          </button>
+        )}
         <a href="/" className="topbar-logo">
           <img src="/logo.svg" alt="paired.cc" className="topbar-logo-img" />
           paired.cc

@@ -12,26 +12,18 @@ interface DocMeta {
   owner_id?: string
 }
 
-export function useDocument(docId: string, userId?: string) {
+export function useDocument(docId: string) {
   const [doc] = useState(() => new Y.Doc())
   const [provider, setProvider] = useState<WebsocketProvider | null>(null)
   const [meta, setMeta] = useState<DocMeta | null>(null)
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
-    api(`/api/documents/${docId}`).then(async (docMeta) => {
-      // Auto-claim: if user is authenticated and doc is anonymous, claim it
-      if (userId && docMeta.is_anonymous) {
-        try {
-          const claimed = await api(`/api/documents/${docId}/claim`, { method: 'POST' })
-          setMeta(claimed)
-        } catch {
-          setMeta(docMeta) // claim failed (maybe already claimed), use as-is
-        }
-      } else {
-        setMeta(docMeta)
-      }
-    }).catch(() => {})
+    // Anonymous docs are publicly editable by anyone with the link.
+    // We DON'T auto-claim — that would let any signed-in visitor accidentally
+    // take ownership of someone else's sandbox doc. Claim is opt-in via the
+    // "Save to your account" action in the banner.
+    api(`/api/documents/${docId}`).then(setMeta).catch(() => {})
 
     const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
     const prov = new WebsocketProvider(wsUrl, docId, doc)
@@ -41,5 +33,11 @@ export function useDocument(docId: string, userId?: string) {
     return () => { prov.destroy(); doc.destroy() }
   }, [docId])
 
-  return { doc, provider, meta, connected }
+  const claimDoc = async () => {
+    const claimed = await api(`/api/documents/${docId}/claim`, { method: 'POST' })
+    setMeta(claimed)
+    return claimed
+  }
+
+  return { doc, provider, meta, connected, claimDoc }
 }

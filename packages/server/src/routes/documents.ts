@@ -7,16 +7,26 @@ import type { DocManager } from '../yjs/doc-manager.js'
 
 export const documentRoutes = new Hono()
 
-// List user's documents (owned + collaborating) — requires auth
+// List user's documents (owned + collaborating) — requires auth.
+// Excludes archived docs unless ?include_archived=true.
 documentRoutes.get('/', requireAuth, async (c) => {
   const { userId } = c.get('user')
-  const docs = await sql`
-    SELECT d.id, d.title, d.created_at, d.updated_at, d.owner_id, d.is_anonymous
-    FROM documents d
-    LEFT JOIN document_collaborators dc ON dc.document_id = d.id AND dc.user_id = ${userId}
-    WHERE d.owner_id = ${userId} OR dc.user_id IS NOT NULL
-    ORDER BY d.updated_at DESC
-  `
+  const includeArchived = c.req.query('include_archived') === 'true'
+  const docs = includeArchived
+    ? await sql`
+        SELECT d.id, d.title, d.created_at, d.updated_at, d.owner_id, d.is_anonymous, d.is_public, d.archived
+        FROM documents d
+        LEFT JOIN document_collaborators dc ON dc.document_id = d.id AND dc.user_id = ${userId}
+        WHERE d.owner_id = ${userId} OR dc.user_id IS NOT NULL
+        ORDER BY d.updated_at DESC
+      `
+    : await sql`
+        SELECT d.id, d.title, d.created_at, d.updated_at, d.owner_id, d.is_anonymous, d.is_public, d.archived
+        FROM documents d
+        LEFT JOIN document_collaborators dc ON dc.document_id = d.id AND dc.user_id = ${userId}
+        WHERE (d.owner_id = ${userId} OR dc.user_id IS NOT NULL) AND d.archived = false
+        ORDER BY d.updated_at DESC
+      `
   return c.json(docs)
 })
 
@@ -101,16 +111,37 @@ documentRoutes.patch('/:id/visibility', requireAuth, async (c) => {
   return c.json(doc)
 })
 
-// Update document title
+// Update document — title and/or archived flag. Owner-only.
 documentRoutes.patch('/:id', requireAuth, async (c) => {
   const { userId } = c.get('user')
   const docId = c.req.param('id')
-  const { title } = await c.req.json<{ title: string }>()
-  const [doc] = await sql`
-    UPDATE documents SET title = ${title}, updated_at = now()
-    WHERE id = ${docId} AND owner_id = ${userId}
-    RETURNING *
-  `
+  const body = await c.req.json<{ title?: string; archived?: boolean }>()
+
+  // Build a single update with whichever fields the caller supplied.
+  // postgres.js doesn't compose dynamic SETs cleanly, so we branch.
+  let doc
+  if (body.title !== undefined && body.archived !== undefined) {
+    [doc] = await sql`
+      UPDATE documents SET title = ${body.title}, archived = ${body.archived}, updated_at = now()
+      WHERE id = ${docId} AND owner_id = ${userId}
+      RETURNING *
+    `
+  } else if (body.title !== undefined) {
+    [doc] = await sql`
+      UPDATE documents SET title = ${body.title}, updated_at = now()
+      WHERE id = ${docId} AND owner_id = ${userId}
+      RETURNING *
+    `
+  } else if (body.archived !== undefined) {
+    [doc] = await sql`
+      UPDATE documents SET archived = ${body.archived}, updated_at = now()
+      WHERE id = ${docId} AND owner_id = ${userId}
+      RETURNING *
+    `
+  } else {
+    return c.json({ error: 'Nothing to update' }, 400)
+  }
+
   if (!doc) return c.json({ error: 'Not found or not owner' }, 404)
   return c.json(doc)
 })
