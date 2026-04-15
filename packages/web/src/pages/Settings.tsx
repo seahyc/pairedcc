@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api'
+import { ConnectorsPanel } from '../components/ConnectorsPanel'
 
 interface ApiKey { id: string; label: string; created_at: string; last_used: string | null }
 
@@ -81,6 +82,10 @@ export function Settings() {
           </div>
         </div>
       ))}
+
+      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
+        <ConnectorsPanel />
+      </div>
     </div>
   )
 }

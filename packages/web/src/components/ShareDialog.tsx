@@ -15,13 +15,26 @@ export function ShareDialog({ docId, open, onClose }: Props) {
   const [meta, setMeta] = useState<{ is_public?: boolean; is_anonymous?: boolean; owner_id?: string | null } | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [agentsOpen, setAgentsOpen] = useState(false)
+  const [allConnectors, setAllConnectors] = useState<any[]>([])
+  const [grantedConnectors, setGrantedConnectors] = useState<any[]>([])
 
   useEffect(() => {
     if (!open) return
     api(`/api/documents/${docId}`).then(setMeta).catch(() => {})
     api(`/api/documents/${docId}/share`).then(setCollabs).catch(() => setCollabs([]))
     api('/api/keys').then(setApiKeys).catch(() => setApiKeys([]))
+    api('/api/connectors').then(setAllConnectors).catch(() => setAllConnectors([]))
+    api(`/api/documents/${docId}/connectors`).then(setGrantedConnectors).catch(() => setGrantedConnectors([]))
   }, [open, docId])
+
+  const grant = async (connectorId: string) => {
+    await api(`/api/documents/${docId}/connectors/${connectorId}`, { method: 'POST' })
+    api(`/api/documents/${docId}/connectors`).then(setGrantedConnectors)
+  }
+  const revokeGrant = async (connectorId: string) => {
+    await api(`/api/documents/${docId}/connectors/${connectorId}`, { method: 'DELETE' })
+    api(`/api/documents/${docId}/connectors`).then(setGrantedConnectors)
+  }
 
   const invite = async () => {
     await api(`/api/documents/${docId}/share`, {
@@ -97,6 +110,40 @@ export function ShareDialog({ docId, open, onClose }: Props) {
             </label>
           )}
         </div>
+
+        {/* Data connectors — owner-only, private docs only */}
+        {!isAnon && !isPublic && meta?.owner_id && (
+          <div className="share-section">
+            <h4>Data connectors</h4>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>
+              Grant this doc access to one of your Settings connectors. Only granted connectors can be used by live query blocks. Public docs can't use connectors.
+            </p>
+            {allConnectors.length === 0 && (
+              <p style={{ fontSize: 13 }}>
+                No connectors yet. <a href="/settings">Add one in Settings →</a>
+              </p>
+            )}
+            {allConnectors.map(c => {
+              const granted = grantedConnectors.some(g => g.id === c.id)
+              return (
+                <div key={c.id} className="collab-row">
+                  <div>
+                    <strong>{c.name}</strong>
+                    <span className="badge" style={{ marginLeft: 6 }}>{c.kind}</span>
+                    <span className="badge" style={{ marginLeft: 4 }}>{c.scope}</span>
+                  </div>
+                  {granted ? (
+                    <button className="btn btn-ghost" onClick={() => revokeGrant(c.id)} style={{ color: '#ff6b6b' }}>
+                      Revoke
+                    </button>
+                  ) : (
+                    <button className="btn" onClick={() => grant(c.id)}>Grant</button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Invite by email — only useful for owned docs */}
         {!isAnon && meta?.owner_id && (

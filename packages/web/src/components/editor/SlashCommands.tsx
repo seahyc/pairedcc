@@ -158,6 +158,31 @@ const commands: CommandItem[] = [
       }).run()
     },
   },
+  {
+    title: 'React mini-app (sandboxed)',
+    description: 'Agent-authored interactive component',
+    icon: '⚛',
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertPccBlock({
+        type: 'react',
+        props: {
+          html: `<div id="app"></div>
+<script>
+  const root = document.getElementById('app')
+  async function render() {
+    const s = await paired.state.get()
+    const count = s.count || 0
+    root.innerHTML = '<button style="padding:8px 16px">' + count + '</button>'
+    root.querySelector('button').onclick = () => paired.state.set({ count: count + 1 })
+  }
+  render()
+  paired.state.subscribe(render)
+</script>`,
+        },
+        state: { count: 0 },
+      }).run()
+    },
+  },
 ]
 
 interface CommandListProps {

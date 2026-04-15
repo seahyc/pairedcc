@@ -11,6 +11,7 @@ import { apiKeyRoutes } from './routes/api-keys.js'
 import { snapshotRoutes } from './routes/snapshots.js'
 import { sharingRoutes } from './routes/sharing.js'
 import { createAgentRoutes } from './routes/agent.js'
+import { connectorRoutes, docConnectorRoutes } from './routes/connectors.js'
 import { DocManager } from './yjs/doc-manager.js'
 import { attachYjsWebSocket } from './yjs/ws-handler.js'
 import { PostgresSnapshotStore } from './yjs/snapshot-store.js'
@@ -32,6 +33,8 @@ app.route('/api/documents', documentRoutes)
 app.route('/api/documents', createPublicDocRoutes(docManager))
 app.route('/api/documents', snapshotRoutes)
 app.route('/api/documents', sharingRoutes)
+app.route('/api/documents', docConnectorRoutes)
+app.route('/api/connectors', connectorRoutes)
 app.route('/api/keys', apiKeyRoutes)
 
 // Agent API

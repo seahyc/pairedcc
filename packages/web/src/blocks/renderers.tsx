@@ -2,6 +2,7 @@ import { useState } from 'react'
 import * as Y from 'yjs'
 import { registerRenderer, setFallbackRenderer, type BlockRendererProps } from './registry'
 import { BLOCKS_MAP_KEY, BLOCK_FIELD_STATE } from './schema'
+import { ReactSandboxRenderer } from './ReactSandboxRenderer'
 
 /**
  * React hook to mutate a block's live CRDT state. Returns a setter that
@@ -98,6 +99,7 @@ export function registerBuiltinRenderers() {
   registerRenderer('counter', CounterRenderer)
   registerRenderer('pullquote', PullquoteRenderer)
   registerRenderer('callout', CalloutRenderer)
+  registerRenderer('react', ReactSandboxRenderer)
   setFallbackRenderer(UnknownRenderer)
 }
 
