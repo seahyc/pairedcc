@@ -3,7 +3,14 @@ import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { api } from '../api'
 
-interface DocMeta { id: string; title: string; is_anonymous?: boolean; expires_at?: string; owner_id?: string }
+interface DocMeta {
+  id: string
+  title: string
+  is_anonymous?: boolean
+  is_public?: boolean
+  expires_at?: string
+  owner_id?: string
+}
 
 export function useDocument(docId: string, userId?: string) {
   const [doc] = useState(() => new Y.Doc())

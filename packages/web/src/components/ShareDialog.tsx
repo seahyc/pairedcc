@@ -12,19 +12,22 @@ export function ShareDialog({ docId, open, onClose }: Props) {
   const [collabs, setCollabs] = useState<any[]>([])
   const [apiKeys, setApiKeys] = useState<any[]>([])
   const [newKey, setNewKey] = useState<string | null>(null)
+  const [meta, setMeta] = useState<{ is_public?: boolean; is_anonymous?: boolean; owner_id?: string | null } | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
-    api(`/api/documents/${docId}/collaborators`).then(setCollabs)
-    api('/api/keys').then(setApiKeys)
+    api(`/api/documents/${docId}`).then(setMeta).catch(() => {})
+    api(`/api/documents/${docId}/share`).then(setCollabs).catch(() => setCollabs([]))
+    api('/api/keys').then(setApiKeys).catch(() => setApiKeys([]))
   }, [open, docId])
 
   const invite = async () => {
-    await api(`/api/documents/${docId}/collaborators`, {
+    await api(`/api/documents/${docId}/share`, {
       method: 'POST', body: JSON.stringify({ email }),
     })
     setEmail('')
-    api(`/api/documents/${docId}/collaborators`).then(setCollabs)
+    api(`/api/documents/${docId}/share`).then(setCollabs)
   }
 
   const createKey = async () => {
@@ -35,12 +38,79 @@ export function ShareDialog({ docId, open, onClose }: Props) {
     api('/api/keys').then(setApiKeys)
   }
 
+  const togglePublic = async (next: boolean) => {
+    const updated = await api(`/api/documents/${docId}/visibility`, {
+      method: 'PATCH', body: JSON.stringify({ is_public: next }),
+    })
+    setMeta(updated)
+  }
+
+  const copy = async (label: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(label)
+      setTimeout(() => setCopied(null), 1500)
+    } catch {}
+  }
+
   if (!open) return null
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const shareUrl = `${origin}/d/${docId}`
+  const rawUrl = `${origin}/api/documents/${docId}/raw`
+  const isAnon = meta?.is_anonymous
+  const isPublic = !!meta?.is_public
+  const linkActive = isAnon || isPublic
+  // Anonymous users have no owner — they can't toggle visibility (they aren't signed in).
+  // Owned-but-private docs need the toggle to flip on.
+  const canToggle = !isAnon && !!meta?.owner_id
 
   return (
     <div className="dialog-overlay" onClick={onClose}>
       <div className="dialog" onClick={e => e.stopPropagation()}>
         <h3>Share Document</h3>
+
+        <div className="share-section">
+          <h4>Public link</h4>
+          {isAnon ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+              Anyone with this link can view and edit while the doc lives. Sign in to keep it permanently.
+            </p>
+          ) : canToggle ? (
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={e => togglePublic(e.target.checked)}
+              />
+              <span>Anyone with the link can view</span>
+            </label>
+          ) : (
+            <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+              Sign in to enable a public share link.
+            </p>
+          )}
+
+          {linkActive && (
+            <>
+              <div className="share-link">
+                <input className="input" readOnly value={shareUrl} onFocus={e => e.target.select()} />
+                <button className="btn" onClick={() => copy('share', shareUrl)}>
+                  {copied === 'share' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              <div className="share-link" style={{ marginTop: 8 }}>
+                <input className="input" readOnly value={rawUrl} onFocus={e => e.target.select()} />
+                <button className="btn" onClick={() => copy('raw', rawUrl)}>
+                  {copied === 'raw' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>
+                Agent-readable markdown — works with <code>curl</code>, WebFetch, or any LLM that can pull a URL.
+              </p>
+            </>
+          )}
+        </div>
 
         <div className="share-section">
           <h4>Invite people</h4>

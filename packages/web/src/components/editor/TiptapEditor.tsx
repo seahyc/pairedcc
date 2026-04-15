@@ -1,5 +1,7 @@
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
+import { DOMParser as PMDOMParser } from '@tiptap/pm/model'
 import StarterKit from '@tiptap/starter-kit'
+import { marked } from 'marked'
 import Collaboration from '@tiptap/extension-collaboration'
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
 import Mention from '@tiptap/extension-mention'
@@ -22,6 +24,24 @@ import { MermaidBlock } from './MermaidBlock'
 import { MathBlock } from './MathBlock'
 
 const lowlight = createLowlight(common)
+
+// Heuristic: does this pasted plain text look like markdown worth converting?
+// We want false positives to be rare — when in doubt, paste as plain text.
+const MD_PATTERNS = [
+  /^#{1,6}\s+\S/m,            // ATX heading
+  /^\s*[-*+]\s+\S/m,           // bullet list
+  /^\s*\d+\.\s+\S/m,           // ordered list
+  /^\s*>\s+\S/m,               // blockquote
+  /^```/m,                     // fenced code
+  /^---+\s*$/m,                // horizontal rule
+  /^\|.+\|.*\n\|[\s\-:|]+\|/m, // table (header + separator)
+  /\*\*[^*\n]+\*\*/,           // bold
+  /\[[^\]\n]+\]\([^)\n]+\)/,   // link
+]
+function looksLikeMarkdown(text: string): boolean {
+  if (text.length < 3) return false
+  return MD_PATTERNS.some(re => re.test(text))
+}
 
 const WELCOME_CONTENT = `<h1>Welcome to paired.cc</h1>
 <p>This is your document. Start typing, or share the link to collaborate in real-time.</p>
@@ -96,6 +116,25 @@ export function TiptapEditor({ doc, provider, userName, userColor, isAnonymous }
       MermaidBlock,
       MathBlock,
     ],
+    editorProps: {
+      handlePaste(view, event) {
+        const cd = event.clipboardData
+        if (!cd) return false
+        // If the source provided HTML (e.g. another rich editor), let Tiptap handle it.
+        if (cd.getData('text/html')) return false
+        const text = cd.getData('text/plain')
+        if (!text || !looksLikeMarkdown(text)) return false
+
+        const html = marked.parse(text, { async: false, gfm: true, breaks: false }) as string
+        const parsed = new DOMParser().parseFromString(html, 'text/html')
+        const slice = PMDOMParser.fromSchema(view.state.schema).parseSlice(parsed.body, {
+          preserveWhitespace: false,
+        })
+        view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView())
+        event.preventDefault()
+        return true
+      },
+    },
     onCreate({ editor }) {
       if (isAnonymous) {
         // Wait for Yjs sync before checking emptiness to avoid duplication

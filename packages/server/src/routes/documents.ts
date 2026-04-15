@@ -1,7 +1,9 @@
 import { Hono } from 'hono'
 import { getCookie, setCookie } from 'hono/cookie'
+import * as Y from 'yjs'
 import { requireAuth, optionalAuth } from '../auth/middleware.js'
 import { sql } from '../db/client.js'
+import type { DocManager } from '../yjs/doc-manager.js'
 
 export const documentRoutes = new Hono()
 
@@ -64,19 +66,16 @@ documentRoutes.post('/:id/claim', requireAuth, async (c) => {
   return c.json(doc)
 })
 
-// Get document — anonymous docs are publicly accessible, owned docs require auth
+// Get document — anonymous + public docs are accessible to anyone, otherwise auth required
 documentRoutes.get('/:id', optionalAuth, async (c) => {
   const user = c.get('user')
   const docId = c.req.param('id')
 
-  // First try to find the doc
   const [doc] = await sql`SELECT * FROM documents WHERE id = ${docId}`
   if (!doc) return c.json({ error: 'Not found' }, 404)
 
-  // Anonymous docs are accessible to anyone
-  if (doc.is_anonymous) return c.json(doc)
+  if (doc.is_anonymous || doc.is_public) return c.json(doc)
 
-  // Owned docs require auth
   if (!user) return c.json({ error: 'Unauthorized' }, 401)
 
   const [accessible] = await sql`
@@ -86,6 +85,20 @@ documentRoutes.get('/:id', optionalAuth, async (c) => {
   `
   if (!accessible) return c.json({ error: 'Not found' }, 404)
   return c.json(accessible)
+})
+
+// Toggle public visibility — only owner can change this
+documentRoutes.patch('/:id/visibility', requireAuth, async (c) => {
+  const { userId } = c.get('user')
+  const docId = c.req.param('id')
+  const { is_public } = await c.req.json<{ is_public: boolean }>()
+  const [doc] = await sql`
+    UPDATE documents SET is_public = ${!!is_public}, updated_at = now()
+    WHERE id = ${docId} AND owner_id = ${userId}
+    RETURNING *
+  `
+  if (!doc) return c.json({ error: 'Not found or not owner' }, 404)
+  return c.json(doc)
 })
 
 // Update document title
@@ -109,3 +122,40 @@ documentRoutes.delete('/:id', requireAuth, async (c) => {
   await sql`DELETE FROM documents WHERE id = ${docId} AND owner_id = ${userId}`
   return c.json({ ok: true })
 })
+
+/**
+ * Routes that need access to the live Yjs DocManager (e.g. for serializing
+ * doc content to markdown). Mounted separately so the simple CRUD routes
+ * above can stay dependency-free.
+ */
+export function createPublicDocRoutes(docManager: DocManager) {
+  const r = new Hono()
+
+  // Agent / WebFetch-friendly: returns the doc as plain markdown.
+  // No auth — only public + anonymous docs are exposed. Private docs 404
+  // (not 401) so we don't leak existence to unauthenticated probes.
+  r.get('/:id/raw', async (c) => {
+    const docId = c.req.param('id')
+    const [doc] = await sql`SELECT id, title, is_public, is_anonymous, yjs_state FROM documents WHERE id = ${docId}`
+    if (!doc || (!doc.is_public && !doc.is_anonymous)) {
+      return c.text('Not found', 404)
+    }
+
+    // Prefer the in-memory Yjs doc (live edits); fall back to the persisted
+    // snapshot. Hydrate the manager with the snapshot if needed so the same
+    // serializer path is used in both cases.
+    if (!docManager.docs.has(docId) && doc.yjs_state) {
+      const ydoc = docManager.getOrCreate(docId)
+      ydoc.getXmlFragment('default')
+      Y.applyUpdate(ydoc, new Uint8Array(doc.yjs_state))
+    }
+
+    const md = docManager.getMarkdown(docId)
+    const body = doc.title ? `# ${doc.title}\n\n${md}` : md
+    c.header('Content-Type', 'text/markdown; charset=utf-8')
+    c.header('Cache-Control', 'no-store')
+    return c.body(body)
+  })
+
+  return r
+}

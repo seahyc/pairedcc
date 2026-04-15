@@ -6,7 +6,7 @@ import { config } from './config.js'
 import { migrate } from './db/migrate.js'
 import { sql } from './db/client.js'
 import { authRoutes } from './routes/auth.js'
-import { documentRoutes } from './routes/documents.js'
+import { documentRoutes, createPublicDocRoutes } from './routes/documents.js'
 import { apiKeyRoutes } from './routes/api-keys.js'
 import { snapshotRoutes } from './routes/snapshots.js'
 import { sharingRoutes } from './routes/sharing.js'
@@ -29,6 +29,7 @@ app.route('/auth', authRoutes)
 
 // API routes
 app.route('/api/documents', documentRoutes)
+app.route('/api/documents', createPublicDocRoutes(docManager))
 app.route('/api/documents', snapshotRoutes)
 app.route('/api/documents', sharingRoutes)
 app.route('/api/keys', apiKeyRoutes)

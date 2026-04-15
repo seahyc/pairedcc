@@ -169,6 +169,15 @@ body {
   margin: 8px 0; word-break: break-all;
 }
 .key-display code { color: var(--primary); font-size: 13px; }
+.toggle-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; cursor: pointer; user-select: none;
+}
+.toggle-row input { width: 16px; height: 16px; cursor: pointer; }
+.share-link {
+  display: flex; gap: 8px; margin-top: 8px;
+}
+.share-link .input { flex: 1; font-family: ui-monospace, monospace; font-size: 12px; }
 
 /* Version sidebar */
 .version-sidebar {

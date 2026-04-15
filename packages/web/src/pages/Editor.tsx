@@ -31,8 +31,8 @@ export function Editor() {
     <div className="editor-page">
       {meta.is_anonymous && meta.expires_at && (
         <div className="anon-banner">
-          This doc expires in {timeUntilExpiry(meta.expires_at)}.{' '}
-          <a href={`/login?returnTo=/d/${docId}`}>Sign up</a> to keep it.
+          <strong>Only you can see this doc</strong> — it's tied to your browser and expires in {timeUntilExpiry(meta.expires_at)}.{' '}
+          <a href={`/login?returnTo=/d/${docId}`}>Sign in</a> to keep it and share with others.
         </div>
       )}
       <TopBar
