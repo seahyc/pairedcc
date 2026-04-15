@@ -12,6 +12,7 @@ import { snapshotRoutes } from './routes/snapshots.js'
 import { sharingRoutes } from './routes/sharing.js'
 import { createAgentRoutes } from './routes/agent.js'
 import { connectorRoutes, docConnectorRoutes } from './routes/connectors.js'
+import { manifestRoutes } from './routes/manifest.js'
 import { DocManager } from './yjs/doc-manager.js'
 import { attachYjsWebSocket } from './yjs/ws-handler.js'
 import { PostgresSnapshotStore } from './yjs/snapshot-store.js'
@@ -35,14 +36,36 @@ app.route('/api/documents', snapshotRoutes)
 app.route('/api/documents', sharingRoutes)
 app.route('/api/documents', docConnectorRoutes)
 app.route('/api/connectors', connectorRoutes)
+app.route('/api/block-kit', manifestRoutes)
 app.route('/api/keys', apiKeyRoutes)
 
 // Agent API
 const agentRoutes = createAgentRoutes(docManager, snapshotStore, presenceTracker)
 app.route('/api/agent', agentRoutes)
 
-// Health check
-app.get('/api/health', (c) => c.json({ ok: true }))
+// Health check — reports DB + Redis status for uptime monitoring.
+app.get('/api/health', async (c) => {
+  const health: { ok: boolean; db: 'ok' | string; redis: 'ok' | string; ts: string } = {
+    ok: true,
+    db: 'ok',
+    redis: 'ok',
+    ts: new Date().toISOString(),
+  }
+  try {
+    await sql`SELECT 1`
+  } catch (e) {
+    health.db = (e as Error).message
+    health.ok = false
+  }
+  try {
+    const { redis } = await import('./redis.js')
+    await redis.ping()
+  } catch (e) {
+    health.redis = (e as Error).message
+    health.ok = false
+  }
+  return c.json(health, health.ok ? 200 : 503)
+})
 
 // Cleanup expired anonymous documents
 async function cleanupAnonymousDocs() {

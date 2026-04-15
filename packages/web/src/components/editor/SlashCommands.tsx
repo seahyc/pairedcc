@@ -159,6 +159,74 @@ const commands: CommandItem[] = [
     },
   },
   {
+    title: 'Chart',
+    description: 'Line/bar/area chart with inline data',
+    icon: '📈',
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertPccBlock({
+        type: 'chart',
+        props: {
+          kind: 'line',
+          title: 'Weekly active users',
+          x: 'week', y: 'users',
+          data: [
+            { week: 'W1', users: 120 }, { week: 'W2', users: 180 },
+            { week: 'W3', users: 260 }, { week: 'W4', users: 340 },
+            { week: 'W5', users: 310 }, { week: 'W6', users: 420 },
+          ],
+        },
+      }).run()
+    },
+  },
+  {
+    title: 'Table',
+    description: 'Sortable, filterable table',
+    icon: '▦',
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertPccBlock({
+        type: 'table',
+        props: {
+          data: [
+            { role: 'CEO', hires: 1, open: 0 },
+            { role: 'CTO', hires: 1, open: 0 },
+            { role: 'Eng', hires: 3, open: 2 },
+          ],
+        },
+      }).run()
+    },
+  },
+  {
+    title: 'Scrollytelling',
+    description: 'Step-by-step explainer with sticky panel',
+    icon: '↓',
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertPccBlock({
+        type: 'scrolly',
+        props: {
+          steps: [
+            { text: 'Every interactive block is a Yjs Map.', panel: '<h2 style="font-size:40px;margin:0">Step 1</h2><p>CRDT substrate.</p>' },
+            { text: 'Agents write the block. Everyone sees it.', panel: '<h2 style="font-size:40px;margin:0">Step 2</h2><p>Agent-authored runtime.</p>' },
+            { text: 'State merges across viewers via Yjs.', panel: '<h2 style="font-size:40px;margin:0">Step 3</h2><p>Live multiplayer state.</p>' },
+          ],
+        },
+      }).run()
+    },
+  },
+  {
+    title: 'Live SQL query',
+    description: 'Runs a SQL query via a granted Postgres connector',
+    icon: '⬢',
+    command: ({ editor, range }) => {
+      const connectorId = window.prompt('Connector ID (from Settings → Data Connectors)')
+      if (!connectorId) return
+      const query = window.prompt('SQL query', 'SELECT 1 as n') || 'SELECT 1 as n'
+      editor.chain().focus().deleteRange(range).insertPccBlock({
+        type: 'sql',
+        props: { connectorId, query, title: 'Live query' },
+      }).run()
+    },
+  },
+  {
     title: 'React mini-app (sandboxed)',
     description: 'Agent-authored interactive component',
     icon: '⚛',

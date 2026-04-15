@@ -249,6 +249,10 @@ body {
   padding: 6px 10px; margin-right: 4px; border-radius: 4px;
 }
 .topbar-menu:hover { background: rgba(255,255,255,0.05); }
+.topbar-theme {
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer;
+}
 
 /* Docs sidebar — slides in from the left */
 .sidebar-overlay {
@@ -382,6 +386,36 @@ body {
 }
 .connector-field { display: flex; flex-direction: column; gap: 4px; }
 .connector-field > span { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Chart */
+.pcc-chart-svg { width: 100%; height: auto; color: var(--text); }
+.pcc-renderer--chart h4 { font-weight: 600; }
+
+/* Table */
+.pcc-table-search { margin-bottom: 8px; width: 100%; max-width: 280px; }
+.pcc-table-wrap { overflow-x: auto; }
+.pcc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pcc-table th, .pcc-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.pcc-table th { color: var(--text-muted); font-weight: 600; cursor: pointer; user-select: none; text-transform: uppercase; font-size: 11px; letter-spacing: 0.03em; }
+.pcc-table th:hover { color: var(--text); }
+.pcc-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+.pcc-table-sort { color: var(--primary); }
+.pcc-table-pagination { display: flex; align-items: center; gap: 12px; margin-top: 8px; justify-content: flex-end; }
+
+/* Scrolly */
+.pcc-scrolly-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 8px; }
+.pcc-scrolly-steps { display: flex; flex-direction: column; gap: 80px; padding: 40vh 0; }
+.pcc-scrolly-step { padding: 16px; border-left: 3px solid transparent; transition: border-color 200ms, color 200ms; color: var(--text-muted); }
+.pcc-scrolly-step.is-active { border-left-color: var(--primary); color: var(--text); }
+.pcc-scrolly-panel { position: sticky; top: 20vh; align-self: start; height: 60vh; }
+.pcc-scrolly-panel-inner { height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 24px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; }
+@media (max-width: 640px) {
+  .pcc-scrolly-layout { grid-template-columns: 1fr; }
+  .pcc-scrolly-panel { position: relative; top: 0; height: auto; }
+}
+
+/* Sql */
+.pcc-renderer--sql { /* TableRenderer inside does the layout */ }
 
 /* Version sidebar */
 .version-sidebar {

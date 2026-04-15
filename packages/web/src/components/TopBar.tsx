@@ -1,4 +1,5 @@
 import { PresenceAvatars } from './PresenceAvatars'
+import { THEMES } from '../themes'
 
 interface Props {
   title: string
@@ -7,9 +8,11 @@ interface Props {
   onShare: () => void
   onVersionHistory?: () => void
   onOpenSidebar?: () => void
+  theme?: string
+  onThemeChange?: (id: string) => void
 }
 
-export function TopBar({ title, onTitleChange, peers, onShare, onVersionHistory, onOpenSidebar }: Props) {
+export function TopBar({ title, onTitleChange, peers, onShare, onVersionHistory, onOpenSidebar, theme, onThemeChange }: Props) {
   return (
     <div className="topbar">
       <div className="topbar-left">
@@ -36,6 +39,18 @@ export function TopBar({ title, onTitleChange, peers, onShare, onVersionHistory,
       </div>
       <div className="topbar-right">
         <PresenceAvatars peers={peers} />
+        {onThemeChange && (
+          <select
+            className="topbar-theme"
+            value={theme}
+            onChange={e => onThemeChange(e.target.value)}
+            title="Theme"
+          >
+            {THEMES.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        )}
         {onVersionHistory && (
           <button className="btn btn-ghost" onClick={onVersionHistory}>History</button>
         )}

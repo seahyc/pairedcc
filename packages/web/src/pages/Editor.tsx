@@ -9,6 +9,7 @@ import { ShareDialog } from '../components/ShareDialog'
 import { VersionHistory } from '../components/VersionHistory'
 import { Toast } from '../components/Toast'
 import { DocsSidebar } from '../components/DocsSidebar'
+import { THEMES, getActiveTheme, setActiveTheme, applyTheme } from '../themes'
 
 // Tracks doc IDs we've already shown the first-creation toast for in this tab.
 // Module-level so React Strict Mode's dev-only double-mount can't re-trigger it.
@@ -33,6 +34,9 @@ export function Editor() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [claiming, setClaiming] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [theme, setTheme] = useState<string>(getActiveTheme())
+
+  useEffect(() => { applyTheme(theme) }, [theme])
 
   // Show a one-time "your doc is at..." toast when arriving from creation.
   // The flag is set by HomepageRedirect / Landing / Dashboard before navigating.
@@ -79,6 +83,8 @@ export function Editor() {
         onShare={() => setShareOpen(true)}
         onVersionHistory={user ? () => setHistoryOpen(true) : undefined}
         onOpenSidebar={user ? () => setSidebarOpen(true) : undefined}
+        theme={theme}
+        onThemeChange={(t) => { setActiveTheme(t); setTheme(t) }}
       />
       {!connected && <div className="connection-bar">Reconnecting...</div>}
       <div className="editor-container">

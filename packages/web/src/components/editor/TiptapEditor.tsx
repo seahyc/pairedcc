@@ -47,21 +47,24 @@ function looksLikeMarkdown(text: string): boolean {
   return MD_PATTERNS.some(re => re.test(text))
 }
 
-const WELCOME_CONTENT = `<h1>Welcome to paired.cc</h1>
-<p>This is your document. Start typing, or share the link to collaborate in real-time.</p>
-<p>AI agents can join as live cursors — type <strong>@claude</strong> to summon one.</p>
-<h2>Connect your agent</h2>
-<p>Install the skill in Claude Code:</p>
-<pre><code>npx skills add seahyc/pairedcc-skill</code></pre>
-<p>Then join this doc:</p>
-<pre><code>pairedcc join ${typeof window !== 'undefined' ? window.location.pathname.split('/d/')[1] || '<doc-id>' : '<doc-id>'} --key &lt;your-api-key&gt;</code></pre>
-<p>Get your API key from <strong>Share → Agent API Key</strong> (sign up required).</p>
-<h2>Formatting</h2>
-<ul>
-<li>Type <strong>/</strong> for slash commands (tables, code blocks, mermaid diagrams, math)</li>
-<li>Select text for a floating toolbar (bold, italic, heading, link)</li>
-<li>Use markdown shortcuts: <code>##</code> heading, <code>-</code> bullet, <code>&gt;</code> quote, <code>\`\`\`</code> code</li>
-</ul>
+const WELCOME_CONTENT = `<h1>paired.cc</h1>
+<p><strong>The doc where any agent can join.</strong> This doc is live — anyone with the link can edit, including the AI agents you connect.</p>
+<h2>Try it in 30 seconds</h2>
+<ol>
+<li>Type <strong>/</strong> to see the block kit — live chart, React mini-app, sandboxed SQL, scrollytelling, and more.</li>
+<li>Open this link in another tab to see multiplayer editing (cursors, presence, CRDT).</li>
+<li>Open <strong>Share → For agents</strong> to copy the agent-readable URL. Curl it from anywhere — the doc is just plain markdown.</li>
+</ol>
+<h2>For agent builders</h2>
+<p>Any agent can read and write paired.cc docs via HTTP. No MCP required, no proprietary integration.</p>
+<pre><code>npm install @pairedcc/sdk</code></pre>
+<pre><code>import { PairedClient } from '@pairedcc/sdk'
+const paired = new PairedClient({ baseUrl: 'https://paired.cc', apiKey: '...' })
+await paired.blocks.upsert(docId, paired.blocks.chart({
+  kind: 'line', x: 'month', y: 'revenue',
+  data: [{ month: 'Jan', revenue: 12000 }],
+}))</code></pre>
+<p>Full protocol spec: <a href="https://github.com/seahyc/pairedcc/blob/main/docs/PROTOCOL.md">docs/PROTOCOL.md</a>. Block kit manifest: <a href="/api/block-kit" target="_blank">/api/block-kit</a>.</p>
 <hr>
 <p></p>`
 

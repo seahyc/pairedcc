@@ -3,6 +3,10 @@ import * as Y from 'yjs'
 import { registerRenderer, setFallbackRenderer, type BlockRendererProps } from './registry'
 import { BLOCKS_MAP_KEY, BLOCK_FIELD_STATE } from './schema'
 import { ReactSandboxRenderer } from './ReactSandboxRenderer'
+import { ChartRenderer } from './ChartRenderer'
+import { TableRenderer } from './TableRenderer'
+import { ScrollyRenderer } from './ScrollyRenderer'
+import { SqlRenderer } from './SqlRenderer'
 
 /**
  * React hook to mutate a block's live CRDT state. Returns a setter that
@@ -100,6 +104,10 @@ export function registerBuiltinRenderers() {
   registerRenderer('pullquote', PullquoteRenderer)
   registerRenderer('callout', CalloutRenderer)
   registerRenderer('react', ReactSandboxRenderer)
+  registerRenderer('chart', ChartRenderer)
+  registerRenderer('table', TableRenderer)
+  registerRenderer('scrolly', ScrollyRenderer)
+  registerRenderer('sql', SqlRenderer)
   setFallbackRenderer(UnknownRenderer)
 }
 
