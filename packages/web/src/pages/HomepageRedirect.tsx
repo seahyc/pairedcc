@@ -43,6 +43,7 @@ export function HomepageRedirect() {
         body: JSON.stringify({ title: 'Welcome to paired.cc' }),
       }).then((doc) => {
         storeDocId(doc.id)
+        sessionStorage.setItem('pairedcc:just-created', doc.id)
         navigate(`/d/${doc.id}`, { replace: true })
       })
     }

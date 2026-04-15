@@ -10,6 +10,10 @@ import { VersionHistory } from '../components/VersionHistory'
 import { Toast } from '../components/Toast'
 import { DocsSidebar } from '../components/DocsSidebar'
 
+// Tracks doc IDs we've already shown the first-creation toast for in this tab.
+// Module-level so React Strict Mode's dev-only double-mount can't re-trigger it.
+const toastShownFor = new Set<string>()
+
 function timeUntilExpiry(expiresAt: string): string {
   const diff = new Date(expiresAt).getTime() - Date.now()
   if (diff <= 0) return 'expired'
@@ -31,11 +35,15 @@ export function Editor() {
   const [toast, setToast] = useState<string | null>(null)
 
   // Show a one-time "your doc is at..." toast when arriving from creation.
-  // The flag is set by Landing.tsx / Dashboard.tsx before navigating.
+  // The flag is set by HomepageRedirect / Landing / Dashboard before navigating.
+  // We use a module-level Set (toastShownFor) to survive React Strict Mode's
+  // double-mount in dev — without it, the first mount clears sessionStorage and
+  // the second mount finds nothing, so the toast never sticks.
   useEffect(() => {
     if (!docId) return
     const justCreated = sessionStorage.getItem('pairedcc:just-created')
-    if (justCreated === docId) {
+    if (justCreated === docId && !toastShownFor.has(docId)) {
+      toastShownFor.add(docId)
       sessionStorage.removeItem('pairedcc:just-created')
       const url = `${window.location.origin}/d/${docId}`
       setToast(`Your doc is at ${url} — anyone with this link can edit.`)
