@@ -27,7 +27,12 @@ export function useDocument(docId: string) {
 
     const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
     const prov = new WebsocketProvider(wsUrl, docId, doc)
-    prov.on('status', ({ status }: { status: string }) => setConnected(status === 'connected'))
+    // y-websocket can fire 'status' synchronously in the same call stack as
+    // child renders that touch the provider (e.g. Tiptap's collab extension
+    // wiring). Defer the setState to avoid mid-render parent updates.
+    prov.on('status', ({ status }: { status: string }) => {
+      queueMicrotask(() => setConnected(status === 'connected'))
+    })
     setProvider(prov)
 
     return () => { prov.destroy(); doc.destroy() }
