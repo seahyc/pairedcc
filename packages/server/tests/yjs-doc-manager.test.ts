@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import * as Y from 'yjs'
 import { DocManager } from '../src/yjs/doc-manager.js'
+import { upsertBlock } from '../src/yjs/blocks.js'
 
 describe('DocManager', () => {
   let manager: DocManager
@@ -78,6 +79,51 @@ describe('DocManager', () => {
     const md = manager.getMarkdown('list-1')
     expect(md).toMatch(/- one/)
     expect(md).toMatch(/  - nested/)
+  })
+
+  it('serializes pccBlock as paired.cc-flavored fenced markdown', () => {
+    const doc = manager.getOrCreate('pcc-1')
+    const frag = doc.getXmlFragment('default')
+
+    // Heading + a pccBlock + a paragraph after
+    const h = new Y.XmlElement('heading')
+    h.setAttribute('level', '1')
+    h.insert(0, [new Y.XmlText('Live dashboard')])
+
+    const block = new Y.XmlElement('pccBlock')
+    block.setAttribute('anchor', 'b-revenue1')
+
+    const trailing = new Y.XmlElement('paragraph')
+    trailing.insert(0, [new Y.XmlText('See above.')])
+
+    frag.insert(0, [h, block, trailing])
+
+    upsertBlock(doc, 'b-revenue1', {
+      type: 'duckdb',
+      props: { dataset: 'sales' },
+      state: { query: 'SELECT count(*) FROM orders' },
+    })
+
+    const md = manager.getMarkdown('pcc-1')
+    expect(md).toContain('# Live dashboard')
+    expect(md).toContain('```pairedcc:duckdb b-revenue1')
+    expect(md).toContain('"props"')
+    expect(md).toContain('"dataset": "sales"')
+    expect(md).toContain('"query": "SELECT count(*) FROM orders"')
+    expect(md).toContain('See above.')
+    // Plain markdown viewers see this as a fenced code block — graceful fallback.
+    expect(md.indexOf('```pairedcc:duckdb')).toBeLessThan(md.indexOf('See above.'))
+  })
+
+  it('emits stub fence for orphan pccBlock with no map entry', () => {
+    const doc = manager.getOrCreate('pcc-orphan')
+    const frag = doc.getXmlFragment('default')
+    const block = new Y.XmlElement('pccBlock')
+    block.setAttribute('anchor', 'b-orphan99')
+    frag.insert(0, [block])
+
+    const md = manager.getMarkdown('pcc-orphan')
+    expect(md).toContain('```pairedcc:unknown b-orphan99')
   })
 
   it('serializes code blocks with language', () => {

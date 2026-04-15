@@ -125,6 +125,39 @@ const commands: CommandItem[] = [
       }
     },
   },
+  {
+    title: 'Counter (live)',
+    description: 'Multiplayer counter — clicks merge across viewers',
+    icon: '⚡',
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertPccBlock({
+        type: 'counter',
+        state: { count: 0 },
+      }).run()
+    },
+  },
+  {
+    title: 'Pull-quote',
+    description: 'Editorial pull-quote with attribution',
+    icon: '❝',
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertPccBlock({
+        type: 'pullquote',
+        props: { text: 'A great quote.', attribution: 'Someone' },
+      }).run()
+    },
+  },
+  {
+    title: 'Callout',
+    description: 'Note, warning, or tip aside',
+    icon: '!',
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertPccBlock({
+        type: 'callout',
+        props: { kind: 'note', body: 'Add a note here.' },
+      }).run()
+    },
+  },
 ]
 
 interface CommandListProps {

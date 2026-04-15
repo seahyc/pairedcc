@@ -7,6 +7,14 @@ import type { PresenceTracker } from '../presence/tracker.js'
 import { redis } from '../redis.js'
 import { docAwarenesses } from '../yjs/ws-handler.js'
 import * as Y from 'yjs'
+import {
+  upsertBlock,
+  deleteBlock,
+  readBlockSnapshot,
+  listBlocks,
+  generateAnchor,
+  isAnchor,
+} from '../yjs/blocks.js'
 
 export function createAgentRoutes(docManager: DocManager, snapshotStore: PostgresSnapshotStore, presenceTracker: PresenceTracker) {
   const agent = new Hono()
@@ -157,6 +165,94 @@ export function createAgentRoutes(docManager: DocManager, snapshotStore: Postgre
     const docId = c.req.param('id')
     const presence = await presenceTracker.list(docId)
     return c.json(presence)
+  })
+
+  // ---- ComponentBlock substrate ----
+
+  // List all blocks in a doc
+  agent.get('/documents/:id/blocks', async (c) => {
+    const docId = c.req.param('id')
+    const doc = docManager.getOrCreate(docId)
+    return c.json(listBlocks(doc))
+  })
+
+  // Read a single block by anchor
+  agent.get('/documents/:id/blocks/:anchor', async (c) => {
+    const docId = c.req.param('id')
+    const anchor = c.req.param('anchor')
+    if (!isAnchor(anchor)) return c.json({ error: 'Invalid anchor format' }, 400)
+    const doc = docManager.getOrCreate(docId)
+    const snap = readBlockSnapshot(doc, anchor)
+    if (!snap) return c.json({ error: 'Not found' }, 404)
+    return c.json(snap)
+  })
+
+  /**
+   * Upsert a block. Body: { anchor?, type?, props?, state? }.
+   * If `anchor` is omitted, the server generates one and returns it — that's
+   * the "create" path. If `anchor` is supplied, fields are merged onto the
+   * existing entry (or a new one is created at that anchor).
+   *
+   * State is shallow-merged into the existing Y.Map so concurrent agent edits
+   * to different state fields converge via CRDT.
+   */
+  agent.post('/documents/:id/blocks/upsert', async (c) => {
+    const { userId } = c.get('user')
+    const docId = c.req.param('id')
+    const body = await c.req.json<{
+      anchor?: string
+      type?: string
+      props?: unknown
+      state?: Record<string, unknown>
+    }>()
+
+    if (body.anchor && !isAnchor(body.anchor)) {
+      return c.json({ error: 'Invalid anchor format. Use generateAnchor() or omit to auto-create.' }, 400)
+    }
+    // For brand-new blocks, type is required.
+    const doc = docManager.getOrCreate(docId)
+    const anchor = body.anchor ?? generateAnchor()
+    const existing = readBlockSnapshot(doc, anchor)
+    if (!existing && !body.type) {
+      return c.json({ error: 'New blocks require a `type` field.' }, 400)
+    }
+
+    upsertBlock(doc, anchor, {
+      type: body.type,
+      props: body.props,
+      state: body.state,
+    })
+
+    // Save snapshot so agent edits persist even if no browser is connected.
+    const state = docManager.getState(docId)
+    if (state) {
+      await snapshotStore.save(docId, state, {
+        authorId: userId,
+        authorType: 'agent',
+        description: `block.upsert ${anchor}`,
+      })
+    }
+
+    return c.json({ anchor, ...readBlockSnapshot(doc, anchor) })
+  })
+
+  // Delete a block
+  agent.delete('/documents/:id/blocks/:anchor', async (c) => {
+    const { userId } = c.get('user')
+    const docId = c.req.param('id')
+    const anchor = c.req.param('anchor')
+    if (!isAnchor(anchor)) return c.json({ error: 'Invalid anchor format' }, 400)
+    const doc = docManager.getOrCreate(docId)
+    deleteBlock(doc, anchor)
+    const state = docManager.getState(docId)
+    if (state) {
+      await snapshotStore.save(docId, state, {
+        authorId: userId,
+        authorType: 'agent',
+        description: `block.delete ${anchor}`,
+      })
+    }
+    return c.json({ ok: true, anchor })
   })
 
   return agent

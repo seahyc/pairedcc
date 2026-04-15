@@ -1,4 +1,5 @@
 import * as Y from 'yjs'
+import { readBlockSnapshot } from './blocks.js'
 
 /**
  * Single source of truth for all Yjs documents.
@@ -22,7 +23,7 @@ export class DocManager {
 
     for (const [, type] of doc.share.entries()) {
       if (type instanceof Y.XmlFragment && type.length > 0) {
-        return fragmentToMarkdown(type).replace(/\n{3,}/g, '\n\n').trim() + '\n'
+        return fragmentToMarkdown(type, doc).replace(/\n{3,}/g, '\n\n').trim() + '\n'
       }
     }
     return ''
@@ -81,12 +82,12 @@ export class DocManager {
 
 interface ListCtx { type: 'bullet' | 'ordered'; index: number; depth: number }
 
-function fragmentToMarkdown(fragment: Y.XmlFragment, list?: ListCtx): string {
+function fragmentToMarkdown(fragment: Y.XmlFragment, doc: Y.Doc, list?: ListCtx): string {
   const out: string[] = []
   for (let i = 0; i < fragment.length; i++) {
     const child = fragment.get(i)
     if (child instanceof Y.XmlElement) {
-      out.push(blockToMarkdown(child, list))
+      out.push(blockToMarkdown(child, doc, list))
     } else if (child instanceof Y.XmlText) {
       out.push(inlineToMarkdown(child))
     }
@@ -94,38 +95,38 @@ function fragmentToMarkdown(fragment: Y.XmlFragment, list?: ListCtx): string {
   return out.filter(s => s.length > 0).join('\n\n')
 }
 
-function blockToMarkdown(el: Y.XmlElement, list?: ListCtx): string {
+function blockToMarkdown(el: Y.XmlElement, doc: Y.Doc, list?: ListCtx): string {
   switch (el.nodeName) {
     case 'heading': {
       const level = Math.min(6, Math.max(1, Number(el.getAttribute('level') || 1)))
-      return '#'.repeat(level) + ' ' + inlineChildren(el)
+      return '#'.repeat(level) + ' ' + inlineChildren(el, doc)
     }
     case 'paragraph':
-      return inlineChildren(el)
+      return inlineChildren(el, doc)
     case 'bulletList':
-      return childrenAsList(el, { type: 'bullet', index: 0, depth: (list?.depth ?? -1) + 1 })
+      return childrenAsList(el, doc, { type: 'bullet', index: 0, depth: (list?.depth ?? -1) + 1 })
     case 'orderedList':
-      return childrenAsList(el, { type: 'ordered', index: 0, depth: (list?.depth ?? -1) + 1 })
+      return childrenAsList(el, doc, { type: 'ordered', index: 0, depth: (list?.depth ?? -1) + 1 })
     case 'listItem': {
-      if (!list) return inlineChildren(el)
+      if (!list) return inlineChildren(el, doc)
       const marker = list.type === 'bullet' ? '- ' : `${++list.index}. `
       const indent = '  '.repeat(list.depth)
-      const inner = serializeListItem(el, list)
+      const inner = serializeListItem(el, doc, list)
       return inner.split('\n').map((line, idx) => idx === 0 ? indent + marker + line : indent + '  ' + line).join('\n')
     }
     case 'taskList':
-      return childrenAsList(el, { type: 'bullet', index: 0, depth: (list?.depth ?? -1) + 1 })
+      return childrenAsList(el, doc, { type: 'bullet', index: 0, depth: (list?.depth ?? -1) + 1 })
     case 'taskItem': {
       const checked = el.getAttribute('checked') === 'true'
       const indent = '  '.repeat(list?.depth ?? 0)
-      return `${indent}- [${checked ? 'x' : ' '}] ${inlineChildren(el)}`
+      return `${indent}- [${checked ? 'x' : ' '}] ${inlineChildren(el, doc)}`
     }
     case 'codeBlock': {
       const lang = el.getAttribute('language') || ''
       return '```' + lang + '\n' + plainText(el) + '\n```'
     }
     case 'blockquote':
-      return inlineChildren(el).split('\n').map(l => '> ' + l).join('\n')
+      return inlineChildren(el, doc).split('\n').map(l => '> ' + l).join('\n')
     case 'horizontalRule':
       return '---'
     case 'hardBreak':
@@ -146,23 +147,44 @@ function blockToMarkdown(el: Y.XmlElement, list?: ListCtx): string {
     case 'math':
       return '$$\n' + plainText(el) + '\n$$'
     case 'table':
-      return tableToMarkdown(el)
+      return tableToMarkdown(el, doc)
+    case 'pccBlock':
+      return pccBlockToMarkdown(el, doc)
     default:
-      return inlineChildren(el)
+      return inlineChildren(el, doc)
   }
 }
 
-function serializeListItem(el: Y.XmlElement, list: ListCtx): string {
+/**
+ * paired.cc-flavored markdown emitter. Format:
+ *
+ *   ```pairedcc:<type> <anchor>
+ *   { "props": ..., "state": ... }
+ *   ```
+ *
+ * Plain markdown viewers render this as a normal code block — the natural
+ * fallback for gdocs/Word/notion exporters that don't speak PCC. PCC-aware
+ * tools parse the JSON body to round-trip the block.
+ *
+ * If the lookup fails (anchor in attrs but no entry in pccBlocks Map), we
+ * still emit a stub fence so the doc round-trips without losing the slot.
+ */
+function pccBlockToMarkdown(el: Y.XmlElement, doc: Y.Doc): string {
+  const anchor = el.getAttribute('anchor') || ''
+  const snap = anchor ? readBlockSnapshot(doc, anchor) : null
+  if (!snap) {
+    return '```pairedcc:unknown ' + (anchor || 'b-orphan') + '\n{}\n```'
+  }
+  const body = JSON.stringify({ props: snap.props ?? null, state: snap.state }, null, 2)
+  return '```pairedcc:' + snap.type + ' ' + snap.anchor + '\n' + body + '\n```'
+}
+
+function serializeListItem(el: Y.XmlElement, doc: Y.Doc, list: ListCtx): string {
   const parts: string[] = []
   for (let i = 0; i < el.length; i++) {
     const child = el.get(i)
     if (child instanceof Y.XmlElement) {
-      // A nested list inside a listItem is its own context with depth+1.
-      if (child.nodeName === 'bulletList' || child.nodeName === 'orderedList') {
-        parts.push(blockToMarkdown(child, list))
-      } else {
-        parts.push(blockToMarkdown(child, list))
-      }
+      parts.push(blockToMarkdown(child, doc, list))
     } else if (child instanceof Y.XmlText) {
       parts.push(inlineToMarkdown(child))
     }
@@ -170,18 +192,18 @@ function serializeListItem(el: Y.XmlElement, list: ListCtx): string {
   return parts.filter(p => p.length).join('\n')
 }
 
-function childrenAsList(el: Y.XmlElement, ctx: ListCtx): string {
+function childrenAsList(el: Y.XmlElement, doc: Y.Doc, ctx: ListCtx): string {
   const lines: string[] = []
   for (let i = 0; i < el.length; i++) {
     const child = el.get(i)
     if (child instanceof Y.XmlElement) {
-      lines.push(blockToMarkdown(child, ctx))
+      lines.push(blockToMarkdown(child, doc, ctx))
     }
   }
   return lines.join('\n')
 }
 
-function tableToMarkdown(el: Y.XmlElement): string {
+function tableToMarkdown(el: Y.XmlElement, doc: Y.Doc): string {
   const rows: string[][] = []
   let headerSeen = false
   let hasHeader = false
@@ -194,7 +216,7 @@ function tableToMarkdown(el: Y.XmlElement): string {
       const cell = row.get(j)
       if (cell instanceof Y.XmlElement) {
         if (cell.nodeName === 'tableHeader') isHeaderRow = true
-        cells.push(inlineChildren(cell).replace(/\n+/g, ' ').replace(/\|/g, '\\|'))
+        cells.push(inlineChildren(cell, doc).replace(/\n+/g, ' ').replace(/\|/g, '\\|'))
       }
     }
     if (cells.length === 0) continue
@@ -207,17 +229,15 @@ function tableToMarkdown(el: Y.XmlElement): string {
   const sep = `| ${Array(cols).fill('---').join(' | ')} |`
   const lines = [`| ${rows[0].join(' | ')} |`, sep]
   for (let i = 1; i < rows.length; i++) lines.push(`| ${rows[i].join(' | ')} |`)
-  // If first row wasn't an explicit header but we still need a separator for valid GFM,
-  // the above already inserts one after row 0 — that matches markdown's "first row = header" convention.
   return lines.join('\n') + (hasHeader ? '' : '')
 }
 
-function inlineChildren(el: Y.XmlElement): string {
+function inlineChildren(el: Y.XmlElement, doc: Y.Doc): string {
   const parts: string[] = []
   for (let i = 0; i < el.length; i++) {
     const child = el.get(i)
     if (child instanceof Y.XmlText) parts.push(inlineToMarkdown(child))
-    else if (child instanceof Y.XmlElement) parts.push(blockToMarkdown(child))
+    else if (child instanceof Y.XmlElement) parts.push(blockToMarkdown(child, doc))
   }
   return parts.join('')
 }

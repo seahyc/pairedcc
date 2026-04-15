@@ -22,6 +22,10 @@ import type { WebsocketProvider } from 'y-websocket'
 import { SlashCommands, slashCommandSuggestion } from './SlashCommands'
 import { MermaidBlock } from './MermaidBlock'
 import { MathBlock } from './MathBlock'
+import { PccBlock } from '../../blocks/PccBlockNode'
+import { registerBuiltinRenderers } from '../../blocks/renderers'
+
+registerBuiltinRenderers()
 
 const lowlight = createLowlight(common)
 
@@ -115,6 +119,7 @@ export function TiptapEditor({ doc, provider, userName, userColor, isAnonymous }
       }),
       MermaidBlock,
       MathBlock,
+      PccBlock.configure({ doc }),
     ],
     editorProps: {
       handlePaste(view, event) {

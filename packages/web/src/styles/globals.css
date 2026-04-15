@@ -325,6 +325,42 @@ body {
 }
 .docs-sidebar-action:hover { color: var(--text); border-color: var(--text-muted); }
 
+/* ComponentBlock substrate */
+.pcc-block {
+  margin: 16px 0; padding: 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+}
+.pcc-block.ProseMirror-selectednode { outline: 2px solid var(--primary); outline-offset: 2px; }
+.pcc-renderer-label {
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+}
+.pcc-renderer-label code { font-size: 11px; opacity: 0.7; }
+.pcc-counter-btn {
+  font: 600 24px/1 ui-monospace, monospace;
+  padding: 8px 20px; min-width: 80px;
+  background: var(--primary); color: white;
+  border: none; border-radius: 6px; cursor: pointer;
+}
+.pcc-counter-btn:hover { filter: brightness(1.1); }
+.pcc-renderer--pullquote {
+  border-left: 4px solid var(--primary); padding-left: 16px;
+  font-size: 18px; font-style: italic;
+}
+.pcc-renderer--pullquote cite { display: block; margin-top: 8px; font-size: 13px; opacity: 0.7; }
+.pcc-renderer--callout { display: block; padding: 12px 16px; border-radius: 6px; }
+.pcc-callout--note { background: rgba(74, 158, 255, 0.1); border-left: 4px solid #4a9eff; }
+.pcc-callout--warn { background: rgba(240, 192, 64, 0.1); border-left: 4px solid #f0c040; }
+.pcc-callout--tip { background: rgba(80, 200, 120, 0.1); border-left: 4px solid #50c878; }
+.pcc-renderer--unknown {
+  font-family: ui-monospace, monospace; font-size: 12px;
+}
+.pcc-block-stub {
+  color: var(--text-muted); font-size: 13px;
+  padding: 8px; background: rgba(240, 192, 64, 0.06); border-radius: 4px;
+}
+
 /* Version sidebar */
 .version-sidebar {
   position: fixed; right: 0; top: 0; bottom: 0; width: 320px;
