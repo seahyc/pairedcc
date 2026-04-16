@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { createServer } from 'node:http'
+import { readFile } from 'node:fs/promises'
 import { getRequestListener } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { config } from './config.js'
@@ -79,6 +80,22 @@ async function cleanupAnonymousDocs() {
 
 // Serve frontend in production
 app.use('/*', serveStatic({ root: './public' }))
+
+// SPA history fallback — for client-side routes (e.g. /d/:id, /settings)
+// the file doesn't exist on disk, so serve index.html and let React Router handle it.
+// Skips API/auth paths and anything that looks like a static asset (has a file extension).
+app.get('*', async (c) => {
+  const path = c.req.path
+  if (path.startsWith('/api/') || path.startsWith('/auth/') || /\.[a-zA-Z0-9]+$/.test(path)) {
+    return c.notFound()
+  }
+  try {
+    const html = await readFile('./public/index.html', 'utf-8')
+    return c.html(html)
+  } catch {
+    return c.notFound()
+  }
+})
 
 async function main() {
   await migrate()

@@ -317,6 +317,9 @@ export const slashCommandSuggestion = {
       item.description.toLowerCase().includes(query.toLowerCase())
     )
   },
+  command: ({ editor, range, props }: { editor: any; range: any; props: CommandItem }) => {
+    props.command({ editor, range })
+  },
   render: () => {
     let component: ReactRenderer<CommandListRef>
     let popup: Instance[]
