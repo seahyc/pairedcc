@@ -8,6 +8,7 @@ COPY packages/server/package.json packages/server/
 COPY packages/web/package.json packages/web/
 COPY packages/mcp-server/package.json packages/mcp-server/
 COPY packages/cli/package.json packages/cli/
+COPY packages/sdk/package.json packages/sdk/
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build
