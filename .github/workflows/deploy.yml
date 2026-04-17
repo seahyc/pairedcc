@@ -19,7 +19,6 @@ jobs:
           host: oracle.seahyingcong.com
           username: opc
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: SHA256:jVqDss+yPPemDbCUUzsAEPJtbNnzMPhgRXhsFnOrPCA
           command_timeout: 10m
           script: |
             cd ~/pairedcc
