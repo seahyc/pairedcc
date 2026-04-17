@@ -1,0 +1,42 @@
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: oracle.seahyingcong.com
+          username: opc
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          command_timeout: 10m
+          script: |
+            cd ~/pairedcc
+            git pull
+            sudo docker compose -f docker-compose.prod.yml build app
+            sudo docker compose -f docker-compose.prod.yml up -d app
+
+      - name: Health check
+        run: |
+          sleep 5
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS https://paired.cc/api/health | grep -q '"ok":true'; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i — retrying in 5s..."
+            sleep 5
+          done
+          echo "Health check failed after 6 attempts"
+          exit 1
