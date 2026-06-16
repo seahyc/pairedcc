@@ -15,6 +15,13 @@ import {
   generateAnchor,
   isAnchor,
 } from '../yjs/blocks.js'
+import { isUuid, validateBody, parseTags, safeJson } from '../comments/logic.js'
+import {
+  getComment,
+  insertComment,
+  listAgentInbox,
+  setStatus,
+} from '../comments/store.js'
 
 export function createAgentRoutes(docManager: DocManager, snapshotStore: PostgresSnapshotStore, presenceTracker: PresenceTracker) {
   const agent = new Hono()
@@ -253,6 +260,124 @@ export function createAgentRoutes(docManager: DocManager, snapshotStore: Postgre
       })
     }
     return c.json({ ok: true, anchor })
+  })
+
+  // ---- Comment inbox (assigned via @agent tag or the human "Assign to agent" toggle) ----
+
+  /**
+   * Resolve the current block text for a comment so the agent gets live
+   * context, not just the stored quote. Hydrate the in-memory doc from the
+   * snapshot if no browser is connected, then read the enclosing block by
+   * anchor. Falls back to the stored quote when the anchor no longer resolves.
+   */
+  function blockContext(docId: string, blockAnchor: string, quote: string): { block_text: string; block_resolved: boolean } {
+    docManager.getOrCreate(docId).getXmlFragment('default')
+    const live = docManager.getBlockTextByAnchor(docId, blockAnchor)
+    if (live != null) return { block_text: live, block_resolved: true }
+    return { block_text: quote, block_resolved: false }
+  }
+
+  async function hydrate(docId: string) {
+    if (!docManager.docs.has(docId)) {
+      const [doc] = await sql<{ yjs_state: Buffer | null }[]>`SELECT yjs_state FROM documents WHERE id = ${docId}`
+      if (doc?.yjs_state) {
+        const ydoc = docManager.getOrCreate(docId)
+        ydoc.getXmlFragment('default')
+        Y.applyUpdate(ydoc, new Uint8Array(doc.yjs_state))
+      }
+    }
+  }
+
+  /**
+   * Agent inbox across ALL docs this key can access. Defaults to assigned +
+   * open. Each item carries its block_anchor and the current block text.
+   *
+   * Query: ?assigned=true (default true) &status=open|resolved|all (default open)
+   */
+  agent.get('/comments', async (c) => {
+    const { userId } = c.get('user')
+    const statusQ = c.req.query('status') ?? 'open'
+    if (!['open', 'resolved', 'all'].includes(statusQ)) {
+      return c.json({ error: 'status must be open, resolved, or all.' }, 400)
+    }
+    // Only docs owned by / shared with this key's user.
+    const docs = await sql<{ id: string }[]>`
+      SELECT d.id FROM documents d
+      LEFT JOIN document_collaborators dc ON dc.document_id = d.id AND dc.user_id = ${userId}
+      WHERE d.owner_id = ${userId} OR dc.user_id IS NOT NULL
+    `
+    const out: unknown[] = []
+    for (const d of docs) {
+      const inbox = await listAgentInbox(d.id, statusQ as 'open' | 'resolved' | 'all')
+      if (inbox.length === 0) continue
+      await hydrate(d.id)
+      for (const cm of inbox) {
+        out.push({ ...cm, ...blockContext(d.id, cm.block_anchor, cm.quote) })
+      }
+    }
+    return c.json(out)
+  })
+
+  /** Doc-scoped inbox — same shape, single doc. */
+  agent.get('/documents/:id/comments', async (c) => {
+    const docId = c.req.param('id')
+    if (!isUuid(docId)) return c.json({ error: 'Invalid document id.' }, 400)
+    const statusQ = c.req.query('status') ?? 'open'
+    if (!['open', 'resolved', 'all'].includes(statusQ)) {
+      return c.json({ error: 'status must be open, resolved, or all.' }, 400)
+    }
+    const inbox = await listAgentInbox(docId, statusQ as 'open' | 'resolved' | 'all')
+    await hydrate(docId)
+    return c.json(inbox.map((cm) => ({ ...cm, ...blockContext(docId, cm.block_anchor, cm.quote) })))
+  })
+
+  /** Full context for one comment: thread + current block text. */
+  agent.get('/documents/:id/comments/:cid/context', async (c) => {
+    const docId = c.req.param('id')
+    const cid = c.req.param('cid')
+    if (!isUuid(docId) || !isUuid(cid)) return c.json({ error: 'Invalid id.' }, 400)
+    const cm = await getComment(docId, cid)
+    if (!cm) return c.json({ error: 'Not found' }, 404)
+    await hydrate(docId)
+    return c.json({ ...cm, ...blockContext(docId, cm.block_anchor, cm.quote) })
+  })
+
+  /** Agent replies to a comment thread. */
+  agent.post('/documents/:id/comments/:cid/reply', async (c) => {
+    const { name } = c.get('user') as { name?: string }
+    const docId = c.req.param('id')
+    const cid = c.req.param('cid')
+    if (!isUuid(docId) || !isUuid(cid)) return c.json({ error: 'Invalid id.' }, 400)
+    const parent = await getComment(docId, cid)
+    if (!parent || parent.parent_id !== null) return c.json({ error: 'Thread not found' }, 404)
+
+    const raw = await safeJson(c.req)
+    const bodyCheck = validateBody(raw.body)
+    if (!bodyCheck.ok) return c.json({ error: bodyCheck.error }, bodyCheck.status)
+    const tags = parseTags(bodyCheck.value)
+
+    const row = await insertComment({
+      docId,
+      blockAnchor: parent.block_anchor,
+      quote: parent.quote,
+      body: bodyCheck.value,
+      authorId: name || 'agent',
+      authorType: 'agent',
+      parentId: cid,
+      assignedToAgent: false,
+      tags,
+    })
+    return c.json({ ...row, tags }, 201)
+  })
+
+  /** Agent resolves a thread (after acting on it). */
+  agent.post('/documents/:id/comments/:cid/resolve', async (c) => {
+    const docId = c.req.param('id')
+    const cid = c.req.param('cid')
+    if (!isUuid(docId) || !isUuid(cid)) return c.json({ error: 'Invalid id.' }, 400)
+    const row = await setStatus(docId, cid, 'resolved')
+    if (!row) return c.json({ error: 'Thread not found' }, 404)
+    return c.json(row)
   })
 
   return agent

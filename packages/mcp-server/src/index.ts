@@ -39,6 +39,21 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     case 'get_presence':
       result = await client.getPresence(args!.doc_id as string)
       break
+    case 'list_comments':
+      result = await client.listComments(
+        args?.doc_id as string | undefined,
+        (args?.status as 'open' | 'resolved' | 'all') || 'open',
+      )
+      break
+    case 'get_comment_context':
+      result = await client.getCommentContext(args!.doc_id as string, args!.comment_id as string)
+      break
+    case 'reply_comment':
+      result = await client.replyComment(args!.doc_id as string, args!.comment_id as string, args!.body as string)
+      break
+    case 'resolve_comment':
+      result = await client.resolveComment(args!.doc_id as string, args!.comment_id as string)
+      break
     default:
       throw new Error(`Unknown tool: ${name}`)
   }

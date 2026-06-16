@@ -4,6 +4,8 @@ import * as Y from 'yjs'
 import { requireAuth, optionalAuth } from '../auth/middleware.js'
 import { sql } from '../db/client.js'
 import { config } from '../config.js'
+import { rateLimit } from '../middleware/rate-limit.js'
+import { LIMITS } from '../comments/logic.js'
 import type { DocManager } from '../yjs/doc-manager.js'
 import type { PostgresSnapshotStore } from '../yjs/snapshot-store.js'
 
@@ -79,10 +81,16 @@ documentRoutes.get('/', requireAuth, async (c) => {
   return c.json(docs)
 })
 
-// Create document — supports anonymous creation (no auth required)
-documentRoutes.post('/', optionalAuth, async (c) => {
+// Create document — supports anonymous creation (no auth required).
+// Anonymous (unauthenticated) creates are rate limited per IP / anon-session;
+// the limiter middleware exempts authenticated callers.
+documentRoutes.post('/', rateLimit({ name: 'doc-create', limit: 20, windowSec: 60 }), optionalAuth, async (c) => {
   const user = c.get('user')
-  const { title } = await c.req.json<{ title?: string }>().catch(() => ({ title: undefined }))
+  const raw = await c.req.json<{ title?: string }>().catch(() => ({ title: undefined }))
+  if (raw.title !== undefined && typeof raw.title === 'string' && raw.title.length > LIMITS.TITLE) {
+    return c.json({ error: `Title exceeds ${LIMITS.TITLE} characters.` }, 400)
+  }
+  const title = typeof raw.title === 'string' ? raw.title : undefined
 
   if (user) {
     // Authenticated user creates a normal document
@@ -229,7 +237,7 @@ export function createPublicDocRoutes(docManager: DocManager, snapshotStore?: Po
    * Body: { markdown: string, title?: string }
    * Returns 201 { ...document, url, anon_session? }
    */
-  r.post('/import', optionalAuth, async (c) => {
+  r.post('/import', rateLimit({ name: 'doc-import', limit: 20, windowSec: 60 }), optionalAuth, async (c) => {
     const user = c.get('user')
     const body = await c.req
       .json<{ markdown?: string; title?: string }>()
@@ -237,6 +245,12 @@ export function createPublicDocRoutes(docManager: DocManager, snapshotStore?: Po
 
     if (typeof body.markdown !== 'string' || body.markdown.trim() === '') {
       return c.json({ error: 'Body must include a non-empty `markdown` string.' }, 400)
+    }
+    if (body.markdown.length > LIMITS.MARKDOWN_IMPORT) {
+      return c.json({ error: `Markdown exceeds ${LIMITS.MARKDOWN_IMPORT} characters.` }, 413)
+    }
+    if (body.title !== undefined && typeof body.title === 'string' && body.title.length > LIMITS.TITLE) {
+      return c.json({ error: `Title exceeds ${LIMITS.TITLE} characters.` }, 400)
     }
 
     // Derive a title if none given: first ATX heading, else first line.

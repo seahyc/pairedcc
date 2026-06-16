@@ -46,6 +46,40 @@ export class DocManager {
     return Y.encodeStateAsUpdate(doc)
   }
 
+  /**
+   * Resolve a block anchor to the CURRENT text of the enclosing block.
+   *
+   * The anchor is the same text-snippet contract `editByAnchor` uses. We find
+   * the top-level block whose serialized text contains the anchor and return
+   * that block's full current text (so a comment thread can show "what the
+   * block says now", even after collaborative edits moved things around).
+   *
+   * Returns null if the anchor no longer resolves (block deleted / text
+   * changed past recognition) — the caller can fall back to the stored quote.
+   */
+  getBlockTextByAnchor(docId: string, anchor: string): string | null {
+    const doc = this.docs.get(docId)
+    if (!doc || !anchor) return null
+
+    let xml: Y.XmlFragment | null = null
+    for (const [, type] of doc.share.entries()) {
+      if (type instanceof Y.XmlFragment && type.length > 0) {
+        xml = type
+        break
+      }
+    }
+    if (!xml) return null
+
+    for (let i = 0; i < xml.length; i++) {
+      const child = xml.get(i)
+      let text: string | null = null
+      if (child instanceof Y.XmlText) text = child.toString()
+      else if (child instanceof Y.XmlElement) text = xmlElementToText(child)
+      if (text != null && text.includes(anchor)) return text
+    }
+    return null
+  }
+
   editByAnchor(docId: string, anchor: string, newContent: string): boolean {
     const doc = this.getOrCreate(docId)
 

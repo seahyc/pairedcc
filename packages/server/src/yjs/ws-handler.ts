@@ -9,10 +9,21 @@ import { DocManager } from './doc-manager.js'
 const messageSync = 0
 const messageAwareness = 1
 
+// Keep-alive cadence. y-websocket's client force-closes a connection if it
+// receives NOTHING for `messageReconnectTimeout` (30s) and then reconnects —
+// which flashes the "Reconnecting…" banner on every idle doc. The reference
+// y-websocket server avoids this by pinging on an interval; our custom server
+// didn't, so idle docs reconnected every ~30s. Ping well inside that window so
+// the client always sees traffic and stays connected. A client that misses two
+// pings (no pong) is assumed dead and terminated.
+const PING_INTERVAL_MS = 15_000
+
 interface ConnClient {
   ws: WebSocket
   docId: string
   awareness: awarenessProtocol.Awareness
+  /** Liveness flag toggled by the ping/pong loop. */
+  alive: boolean
 }
 
 // Export awarenesses so agent API can set cursor positions
@@ -23,7 +34,7 @@ export const docAwarenesses = new Map<string, awarenessProtocol.Awareness>()
  * instead of y-websocket's internal doc store.
  * This ensures the agent API and WebSocket clients share the same docs.
  */
-export function attachYjsWebSocket(server: any, docManager: DocManager) {
+export function attachYjsWebSocket(server: any, docManager: DocManager, pingIntervalMs: number = PING_INTERVAL_MS) {
   const wss = new WebSocketServer({ noServer: true })
   const clients = new Map<WebSocket, ConnClient>()
   const awarenesses = new Map<string, awarenessProtocol.Awareness>()
@@ -66,7 +77,15 @@ export function attachYjsWebSocket(server: any, docManager: DocManager) {
     doc.getXmlFragment('default')
     const awareness = getAwareness(docId, doc)
 
-    clients.set(ws, { ws, docId, awareness })
+    clients.set(ws, { ws, docId, awareness, alive: true })
+
+    // Mark the client alive whenever it answers a ping. y-websocket's client
+    // auto-replies to WS-level pings, so this also confirms the socket is
+    // healthy without any app-level message.
+    ws.on('pong', () => {
+      const client = clients.get(ws)
+      if (client) client.alive = true
+    })
 
     // Send sync step 1 to new client
     const encoder = encoding.createEncoder()
@@ -132,6 +151,25 @@ export function attachYjsWebSocket(server: any, docManager: DocManager) {
       console.log(`[yjs-ws] Client disconnected from doc: "${docId}"`)
     })
   })
+
+  // Keep-alive loop: ping every client on an interval. A client that hasn't
+  // ponged since the last tick is presumed dead and terminated (its 'close'
+  // handler cleans up). This is what stops the periodic false "Reconnecting…"
+  // banner: the client receives steady traffic and never trips its 30s
+  // reconnect timer on an otherwise-idle doc.
+  const pingTimer = setInterval(() => {
+    for (const [ws, client] of clients) {
+      if (!client.alive) {
+        ws.terminate()
+        continue
+      }
+      client.alive = false
+      try { ws.ping() } catch {}
+    }
+  }, pingIntervalMs)
+  // Don't keep the process alive solely for the ping loop.
+  if (typeof pingTimer.unref === 'function') pingTimer.unref()
+  wss.on('close', () => clearInterval(pingTimer))
 
   console.log('Yjs WebSocket server attached (custom sync protocol)')
   return wss

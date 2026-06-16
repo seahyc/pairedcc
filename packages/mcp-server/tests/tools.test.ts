@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { tools } from '../src/tools.js'
 
 describe('MCP tools', () => {
-  it('defines all 7 tools', () => {
-    expect(tools).toHaveLength(7)
+  it('defines the document + comment tools', () => {
+    expect(tools).toHaveLength(11)
     const names = tools.map(t => t.name)
     expect(names).toContain('list_documents')
     expect(names).toContain('create_document')
@@ -12,6 +12,20 @@ describe('MCP tools', () => {
     expect(names).toContain('get_mentions')
     expect(names).toContain('respond_to_mention')
     expect(names).toContain('get_presence')
+    expect(names).toContain('list_comments')
+    expect(names).toContain('get_comment_context')
+    expect(names).toContain('reply_comment')
+    expect(names).toContain('resolve_comment')
+  })
+
+  it('comment tools require the right fields', () => {
+    const ctx = tools.find(t => t.name === 'get_comment_context')!
+    expect(ctx.inputSchema.required).toEqual(['doc_id', 'comment_id'])
+    const reply = tools.find(t => t.name === 'reply_comment')!
+    expect(reply.inputSchema.required).toContain('body')
+    // list_comments has no required fields (doc/status optional).
+    const list = tools.find(t => t.name === 'list_comments')!
+    expect(list.inputSchema.required).toBeUndefined()
   })
 
   it('create_document requires markdown', () => {

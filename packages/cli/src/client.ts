@@ -55,4 +55,43 @@ export class PairedClient {
     const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}/presence`, { headers: this.headers() })
     return res.json()
   }
+
+  // ---- Comments (agent inbox) ----
+
+  /**
+   * List comments assigned to the agent (via an @agent tag or the human
+   * "Assign to agent" toggle). Across all docs the key can access, or scoped to
+   * one doc. Each item carries its block_anchor and the CURRENT block text.
+   */
+  async listComments(docId: string | undefined, status: 'open' | 'resolved' | 'all' = 'open') {
+    const path = docId
+      ? `/api/agent/documents/${docId}/comments?status=${status}`
+      : `/api/agent/comments?status=${status}`
+    const res = await fetch(`${this.baseUrl}${path}`, { headers: this.headers() })
+    return res.json()
+  }
+
+  /** Full context for one comment: thread fields + current block text. */
+  async getCommentContext(docId: string, commentId: string) {
+    const res = await fetch(
+      `${this.baseUrl}/api/agent/documents/${docId}/comments/${commentId}/context`,
+      { headers: this.headers() },
+    )
+    return res.json()
+  }
+
+  async replyComment(docId: string, commentId: string, body: string) {
+    const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}/comments/${commentId}/reply`, {
+      method: 'POST', headers: this.headers(),
+      body: JSON.stringify({ body }),
+    })
+    return res.json()
+  }
+
+  async resolveComment(docId: string, commentId: string) {
+    const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}/comments/${commentId}/resolve`, {
+      method: 'POST', headers: this.headers(),
+    })
+    return res.json()
+  }
 }

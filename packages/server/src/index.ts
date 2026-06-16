@@ -12,6 +12,7 @@ import { apiKeyRoutes } from './routes/api-keys.js'
 import { snapshotRoutes } from './routes/snapshots.js'
 import { sharingRoutes } from './routes/sharing.js'
 import { createAgentRoutes } from './routes/agent.js'
+import { createCommentRoutes } from './comments/routes.js'
 import { connectorRoutes, docConnectorRoutes } from './routes/connectors.js'
 import { manifestRoutes } from './routes/manifest.js'
 import { DocManager } from './yjs/doc-manager.js'
@@ -44,6 +45,11 @@ app.route('/auth', authRoutes)
 // API routes
 app.route('/api/documents', documentRoutes)
 app.route('/api/documents', createPublicDocRoutes(docManager, snapshotStore))
+// Comments use optionalAuth + anon_session (public surface). Mount BEFORE the
+// auth-guarded sibling routers (snapshots/sharing/connectors) — those use a
+// `use('*', requireAuth)` on the SAME /api/documents prefix, which would
+// otherwise intercept anonymous comment requests and 401 them.
+app.route('/api/documents', createCommentRoutes())
 app.route('/api/documents', snapshotRoutes)
 app.route('/api/documents', sharingRoutes)
 app.route('/api/documents', docConnectorRoutes)

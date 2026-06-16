@@ -74,9 +74,30 @@ interface Props {
   userName: string
   userColor: string
   isAnonymous?: boolean
+  /**
+   * Called when the user clicks the BubbleMenu "💬 Comment" button. Receives a
+   * text snippet of the enclosing top-level block — used as BOTH the comment's
+   * block_anchor (the `editByAnchor` contract: resolve-by-text, robust under
+   * collab edits) and the displayed quote.
+   */
+  onComment?: (blockText: string) => void
 }
 
-export function TiptapEditor({ doc, provider, userName, userColor, isAnonymous }: Props) {
+/**
+ * Text of the top-level block containing the current selection. We walk up to
+ * the doc's direct child (the "block") and return its text content. This is the
+ * same anchoring unit the agent edit API resolves against.
+ */
+function enclosingBlockText(editor: import('@tiptap/react').Editor): string {
+  const { state } = editor
+  const $from = state.selection.$from
+  // depth 1 is the top-level block under the doc node.
+  const blockNode = $from.depth >= 1 ? $from.node(1) : $from.parent
+  const text = (blockNode?.textContent ?? '').trim()
+  return text
+}
+
+export function TiptapEditor({ doc, provider, userName, userColor, isAnonymous, onComment }: Props) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -217,6 +238,18 @@ export function TiptapEditor({ doc, provider, userName, userColor, isAnonymous }
         >
           Link
         </button>
+        {onComment && (
+          <button
+            className="bubble-comment"
+            title="Comment on this block"
+            onClick={() => {
+              const text = enclosingBlockText(editor)
+              if (text) onComment(text)
+            }}
+          >
+            💬 Comment
+          </button>
+        )}
       </BubbleMenu>
       <EditorContent editor={editor} className="tiptap-editor" />
     </>

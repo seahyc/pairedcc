@@ -112,6 +112,59 @@ describe('PairedClient', () => {
     expect(res.url).toBe('https://paired.cc/d/d11')
   })
 
+  it('comments.list hits the cross-doc inbox by default with the api key', async () => {
+    let capturedUrl = ''
+    let capturedHeaders: Record<string, string> = {}
+    const p = new PairedClient({
+      baseUrl: 'https://paired.cc',
+      apiKey: 'sk_test',
+      fetch: (async (url: string, init?: RequestInit) => {
+        capturedUrl = String(url)
+        capturedHeaders = (init?.headers as Record<string, string>) || {}
+        return { ok: true, status: 200, statusText: 'OK', json: async () => [], text: async () => '' } as Response
+      }) as unknown as typeof fetch,
+    })
+    await p.comments.list()
+    expect(capturedUrl).toBe('https://paired.cc/api/agent/comments?status=open')
+    expect(capturedHeaders['X-API-Key']).toBe('sk_test')
+  })
+
+  it('comments.list scopes to a doc and status when given', async () => {
+    let capturedUrl = ''
+    const p = new PairedClient({
+      baseUrl: 'https://paired.cc',
+      apiKey: 'sk_test',
+      fetch: (async (url: string) => {
+        capturedUrl = String(url)
+        return { ok: true, status: 200, statusText: 'OK', json: async () => [], text: async () => '' } as Response
+      }) as unknown as typeof fetch,
+    })
+    await p.comments.list({ docId: 'd1', status: 'all' })
+    expect(capturedUrl).toBe('https://paired.cc/api/agent/documents/d1/comments?status=all')
+  })
+
+  it('comments.reply posts the body to the reply endpoint', async () => {
+    let capturedUrl = ''
+    let capturedBody: unknown
+    const p = new PairedClient({
+      baseUrl: 'https://paired.cc',
+      apiKey: 'sk_test',
+      fetch: (async (url: string, init?: RequestInit) => {
+        capturedUrl = String(url)
+        capturedBody = JSON.parse(String(init?.body))
+        return { ok: true, status: 201, statusText: 'Created', json: async () => ({ id: 'c1' }), text: async () => '' } as Response
+      }) as unknown as typeof fetch,
+    })
+    await p.comments.reply('d1', 'c1', 'on it')
+    expect(capturedUrl).toBe('https://paired.cc/api/agent/documents/d1/comments/c1/reply')
+    expect(capturedBody).toEqual({ body: 'on it' })
+  })
+
+  it('comments.list requires an api key', async () => {
+    const p = new PairedClient({ baseUrl: 'https://paired.cc', fetch: mockFetch([]) })
+    await expect(p.comments.list()).rejects.toThrow(/requires an API key/)
+  })
+
   it('surfaces server errors with status + detail', async () => {
     const p = new PairedClient({
       baseUrl: 'https://paired.cc',

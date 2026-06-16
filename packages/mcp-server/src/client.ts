@@ -54,4 +54,37 @@ export class PairedClient {
     const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}/presence`, { headers: this.headers() })
     return res.json()
   }
+
+  async listComments(docId: string | undefined, status: 'open' | 'resolved' | 'all') {
+    const path = docId
+      ? `/api/agent/documents/${docId}/comments?status=${status}`
+      : `/api/agent/comments?status=${status}`
+    const res = await fetch(`${this.baseUrl}${path}`, { headers: this.headers() })
+    return res.json()
+  }
+
+  async getCommentContext(docId: string, commentId: string) {
+    const res = await fetch(
+      `${this.baseUrl}/api/agent/documents/${docId}/comments/${commentId}/context`,
+      { headers: this.headers() },
+    )
+    return res.json()
+  }
+
+  async replyComment(docId: string, commentId: string, body: string) {
+    const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}/comments/${commentId}/reply`, {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify({ body }),
+    })
+    return res.json()
+  }
+
+  async resolveComment(docId: string, commentId: string) {
+    const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}/comments/${commentId}/resolve`, {
+      method: 'POST',
+      headers: this.headers(),
+    })
+    return res.json()
+  }
 }
