@@ -17,14 +17,14 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: oracle.seahyingcong.com
-          username: opc
+          username: ubuntu
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           command_timeout: 10m
           script: |
-            cd ~/pairedcc
-            git pull
-            sudo docker compose -f docker-compose.prod.yml build app
-            sudo docker compose -f docker-compose.prod.yml up -d app
+            cd /home/ubuntu/personal/pairedcc
+            git pull --ff-only
+            docker compose -f docker-compose.prod.yml build app
+            docker compose -f docker-compose.prod.yml up -d app
 
       - name: Health check
         run: |
