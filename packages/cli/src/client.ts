@@ -1,8 +1,23 @@
 export class PairedClient {
-  constructor(private baseUrl: string, private apiKey: string) {}
+  constructor(private baseUrl: string, private apiKey?: string) {}
 
   private headers() {
-    return { 'X-API-Key': this.apiKey, 'Content-Type': 'application/json' }
+    const h: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (this.apiKey) h['X-API-Key'] = this.apiKey
+    return h
+  }
+
+  /**
+   * Create a doc from markdown in one call. No API key needed → anonymous doc
+   * (24h, link-shareable). With a key → owned doc. Returns the doc plus a
+   * shareable `url`.
+   */
+  async createDocument(markdown: string, title?: string) {
+    const res = await fetch(`${this.baseUrl}/api/documents/import`, {
+      method: 'POST', headers: this.headers(),
+      body: JSON.stringify({ markdown, ...(title ? { title } : {}) }),
+    })
+    return res.json()
   }
 
   async listDocuments() {

@@ -19,7 +19,18 @@ import { attachYjsWebSocket } from './yjs/ws-handler.js'
 import { PostgresSnapshotStore } from './yjs/snapshot-store.js'
 import { PresenceTracker } from './presence/tracker.js'
 
+import { createNormalizeApiTrailingSlash } from './middleware/trailing-slash.js'
+
 const app = new Hono()
+
+// Normalize trailing slashes on /api/* paths for ALL methods. Hono's built-in
+// trimTrailingSlash only redirects GET/HEAD, which leaves a footgun: a natural-
+// looking `POST /api/documents/` matched a `use('*')` requireAuth guard from a
+// sibling router mounted on the same prefix and returned a misleading 401
+// instead of behaving like `POST /api/documents` (anonymous create). This
+// middleware rewrites the matched path so the request routes identically with
+// or without a trailing slash.
+app.use('/api/*', createNormalizeApiTrailingSlash((req) => app.fetch(req)))
 
 const docManager = new DocManager()
 const presenceTracker = new PresenceTracker()
@@ -32,7 +43,7 @@ app.route('/auth', authRoutes)
 
 // API routes
 app.route('/api/documents', documentRoutes)
-app.route('/api/documents', createPublicDocRoutes(docManager))
+app.route('/api/documents', createPublicDocRoutes(docManager, snapshotStore))
 app.route('/api/documents', snapshotRoutes)
 app.route('/api/documents', sharingRoutes)
 app.route('/api/documents', docConnectorRoutes)

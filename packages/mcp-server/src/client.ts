@@ -13,6 +13,15 @@ export class PairedClient {
     return res.json()
   }
 
+  async createDocument(markdown: string, title?: string) {
+    const res = await fetch(`${this.baseUrl}/api/documents/import`, {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify({ markdown, ...(title ? { title } : {}) }),
+    })
+    return res.json()
+  }
+
   async readDocument(docId: string) {
     const res = await fetch(`${this.baseUrl}/api/agent/documents/${docId}`, { headers: this.headers() })
     return res.json()

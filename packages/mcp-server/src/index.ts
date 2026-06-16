@@ -21,6 +21,9 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     case 'list_documents':
       result = await client.listDocuments()
       break
+    case 'create_document':
+      result = await client.createDocument(args!.markdown as string, args!.title as string | undefined)
+      break
     case 'read_document':
       result = await client.readDocument(args!.doc_id as string)
       break

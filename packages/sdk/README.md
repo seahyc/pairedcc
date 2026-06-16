@@ -8,6 +8,30 @@ TypeScript client for [paired.cc](https://paired.cc), the open protocol for agen
 npm install @pairedcc/sdk
 ```
 
+## Quick start: markdown → shareable link in one call
+
+```ts
+import { PairedClient } from '@pairedcc/sdk'
+
+// No API key needed for the anonymous, link-shareable flow.
+const paired = new PairedClient({ baseUrl: 'https://paired.cc' })
+
+const doc = await paired.docs.import(`# Roadmap
+
+We are **shipping** the importer.
+
+- [x] write importer
+- [ ] open PR
+`)
+
+console.log(doc.url) // → https://paired.cc/d/<id> — hand this to a human to co-edit
+```
+
+The markdown renders as real, editable blocks (headings, lists, fenced code,
+tables, task lists), not one big code block, and live collaboration works the
+moment someone opens the link. Pass an `apiKey` to own the doc instead of
+creating an anonymous one.
+
 ## Usage
 
 ```ts

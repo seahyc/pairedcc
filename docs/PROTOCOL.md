@@ -28,6 +28,55 @@ changes get a major bump with migration notes.
 
 ## 2. Document endpoints
 
+### `POST /api/documents/import`
+
+One-shot: turn a markdown blob into a live document and get back a shareable
+web URL. The single call an agent needs to go from markdown to a
+collaboratively-editable paired.cc doc.
+
+**Auth is optional.** With a valid session/bearer or `X-API-Key` you get an
+**owned** document. With no auth you get an **anonymous** document (24h
+expiry) that anyone with the link can open and edit — no API key required.
+This is the frictionless "agent fills a doc, human opens the link, both
+edit" path.
+
+The markdown is parsed server-side into the same block structure the editor
+produces, so a human opening the link sees normal editable blocks (headings,
+lists, fenced code, tables, task lists, ...), not one big code block. Live
+collaboration works immediately. paired.cc-flavored fences
+(```` ```pairedcc:<type> <anchor> ````) round-trip back into real blocks.
+
+Body:
+
+```json
+{
+  "markdown": "# Title\n\nSome **markdown** body...",
+  "title": "Optional title — defaults to the first heading"
+}
+```
+
+Returns `201` with the document plus a `url`:
+
+```json
+{
+  "id": "0b2c…",
+  "title": "Title",
+  "is_anonymous": true,
+  "expires_at": "…+24h",
+  "url": "https://paired.cc/d/0b2c…",
+  "anon_session": "anon_…"   // only for anonymous docs
+}
+```
+
+The shareable web URL is always `<origin>/d/<id>` (the canvas route). Example:
+
+```bash
+curl -sX POST https://paired.cc/api/documents/import \
+  -H 'Content-Type: application/json' \
+  -d '{"markdown":"# Roadmap\n\n- [ ] ship import endpoint\n- [x] write the spec"}'
+# → { "id": "...", "url": "https://paired.cc/d/...", ... }
+```
+
 ### `GET /api/documents/:id/raw`
 
 Returns the document as `text/markdown; charset=utf-8`. Public and anonymous

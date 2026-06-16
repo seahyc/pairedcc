@@ -17,6 +17,7 @@
     "ioredis": "^5",
     "jsonwebtoken": "^9",
     "lib0": "^0.2.117",
+    "marked": "^14",
     "nanoid": "^5",
     "postgres": "^3",
     "ws": "^8",
