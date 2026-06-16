@@ -3,8 +3,16 @@ import { program } from 'commander'
 import { joinCommand } from './commands/join.js'
 import { watchCommand } from './commands/watch.js'
 import { editCommand } from './commands/edit.js'
+import { createCommand } from './commands/create.js'
 
 program.name('pairedcc').version('0.0.1').description('paired.cc CLI')
+
+program.command('create [file]')
+  .description('Create a doc from a markdown file (or stdin) and print its shareable URL')
+  .option('--key <api-key>', 'API key (optional — omit for an anonymous, link-shareable doc)')
+  .option('--url <url>', 'Server URL', 'https://paired.cc')
+  .option('--title <title>', 'Document title (defaults to the first heading)')
+  .action(createCommand)
 
 program.command('join <doc-id>').description('Join a document as a Yjs peer')
   .option('--key <api-key>', 'API key').option('--url <url>', 'Server URL', 'https://paired.cc')

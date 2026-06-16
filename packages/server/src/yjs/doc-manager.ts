@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 import { readBlockSnapshot } from './blocks.js'
+import { importMarkdown } from './markdown-import.js'
 
 /**
  * Single source of truth for all Yjs documents.
@@ -27,6 +28,16 @@ export class DocManager {
       }
     }
     return ''
+  }
+
+  /**
+   * Replace a doc's content with the blocks parsed from a markdown string.
+   * Produces the same Tiptap-schema Yjs state the browser editor builds, so
+   * a human opening the doc sees normal editable blocks and live collab works.
+   */
+  importMarkdown(docId: string, markdown: string): void {
+    const doc = this.getOrCreate(docId)
+    importMarkdown(doc, markdown)
   }
 
   getState(docId: string): Uint8Array | null {

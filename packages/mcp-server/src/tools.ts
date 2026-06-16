@@ -7,6 +7,19 @@ export const tools: Tool[] = [
     inputSchema: { type: 'object', properties: {} },
   },
   {
+    name: 'create_document',
+    description:
+      'Create a new paired.cc document from a markdown blob in one call. The markdown is rendered as real editable blocks (headings, lists, code, tables), not a code block. Returns the document id and a shareable web URL you can hand to a human to co-edit live.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        markdown: { type: 'string', description: 'Full markdown content for the new document' },
+        title: { type: 'string', description: 'Optional title (defaults to the first heading)' },
+      },
+      required: ['markdown'],
+    },
+  },
+  {
     name: 'read_document',
     description: 'Read the full markdown content of a document',
     inputSchema: {

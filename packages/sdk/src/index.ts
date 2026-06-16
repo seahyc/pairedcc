@@ -14,6 +14,10 @@
  *     apiKey: process.env.PAIREDCC_API_KEY,
  *   })
  *
+ *   // One-shot: markdown blob → live doc + shareable link (no key needed for
+ *   // the anonymous flow). Renders as real editable blocks, not a code block.
+ *   const { url } = await paired.docs.import('# Hello\n\nA **live** doc.')
+ *
  *   // Read any doc as markdown (including public docs — no key needed)
  *   const md = await paired.docs.getMarkdown('doc-id')
  *
@@ -143,6 +147,40 @@ export class PairedClient {
     list: async (): Promise<DocMeta[]> => {
       return this.req<DocMeta[]>('/api/agent/documents', { method: 'GET', auth: true })
     },
+
+    /**
+     * One-shot: turn a markdown blob into a live paired.cc doc and get back a
+     * shareable web URL. The markdown is rendered as real, editable blocks
+     * (headings, lists, code, tables, ...), not a single code block.
+     *
+     * No API key required — without one you get an anonymous doc (24h expiry)
+     * that anyone with the link can open and edit. With an API key the doc is
+     * owned by your account. This is the frictionless "agent fills a doc,
+     * human opens the link, both edit" path in a single call.
+     */
+    import: async (
+      markdown: string,
+      opts?: { title?: string },
+    ): Promise<DocCreated> => {
+      return this.req<DocCreated>('/api/documents/import', {
+        method: 'POST',
+        body: { markdown, ...(opts?.title ? { title: opts.title } : {}) },
+        authOptional: true,
+      })
+    },
+
+    /**
+     * Create an empty document and get a shareable URL. Anonymous without an
+     * API key, owned with one. For pre-filled docs prefer `docs.import()`.
+     */
+    create: async (opts?: { title?: string }): Promise<DocCreated> => {
+      const doc = await this.req<DocMeta>('/api/documents', {
+        method: 'POST',
+        body: opts?.title ? { title: opts.title } : {},
+        authOptional: true,
+      })
+      return { ...doc, url: `${this.baseUrl}/d/${doc.id}` }
+    },
   }
 
   /** Blocks: the paired.cc substrate primitive. */
@@ -193,12 +231,16 @@ export class PairedClient {
 
   private async req<T = unknown>(
     path: string,
-    opts: { method: string; body?: unknown; expect?: 'json' | 'text'; auth?: boolean },
+    opts: { method: string; body?: unknown; expect?: 'json' | 'text'; auth?: boolean; authOptional?: boolean },
   ): Promise<T> {
     const headers: Record<string, string> = {}
     if (opts.body !== undefined) headers['Content-Type'] = 'application/json'
     if (opts.auth) {
       if (!this.apiKey) throw new Error('This call requires an API key. Pass `apiKey` to the PairedClient constructor.')
+      headers['X-API-Key'] = this.apiKey
+    } else if (opts.authOptional && this.apiKey) {
+      // Send the key if we have one (→ owned doc), but don't require it
+      // (→ anonymous doc). Lets the same call serve both flows.
       headers['X-API-Key'] = this.apiKey
     }
     const res = await this.fetchImpl(this.baseUrl + path, {
@@ -224,4 +266,12 @@ export interface DocMeta {
   owner_id?: string | null
   expires_at?: string | null
   updated_at?: string
+}
+
+/** A freshly created/imported doc, including its shareable web URL (/d/:id). */
+export interface DocCreated extends DocMeta {
+  /** Shareable web URL — open it to view/edit the doc collaboratively. */
+  url: string
+  /** Present only for anonymous docs created without an API key. */
+  anon_session?: string
 }

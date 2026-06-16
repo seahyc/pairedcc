@@ -59,6 +59,59 @@ describe('PairedClient', () => {
     expect((spec.props as { kind: string }).kind).toBe('line')
   })
 
+  it('imports markdown without an api key (anonymous flow)', async () => {
+    let capturedBody: unknown
+    let capturedHeaders: Record<string, string> = {}
+    const p = new PairedClient({
+      baseUrl: 'https://paired.cc',
+      fetch: (async (url: string, init?: RequestInit) => {
+        capturedHeaders = (init?.headers as Record<string, string>) || {}
+        capturedBody = JSON.parse(String(init?.body))
+        expect(url).toBe('https://paired.cc/api/documents/import')
+        return {
+          ok: true, status: 201, statusText: 'Created',
+          json: async () => ({ id: 'd9', title: 'My Doc', is_anonymous: true, url: 'https://paired.cc/d/d9', anon_session: 'anon_x' }),
+          text: async () => '',
+        } as Response
+      }) as unknown as typeof fetch,
+    })
+    const res = await p.docs.import('# My Doc\n\nhi')
+    expect(res.url).toBe('https://paired.cc/d/d9')
+    expect(res.anon_session).toBe('anon_x')
+    expect(capturedBody).toEqual({ markdown: '# My Doc\n\nhi' })
+    expect(capturedHeaders['X-API-Key']).toBeUndefined()
+  })
+
+  it('imports markdown WITH an api key (owned flow), passing the key', async () => {
+    let capturedHeaders: Record<string, string> = {}
+    const p = new PairedClient({
+      baseUrl: 'https://paired.cc',
+      apiKey: 'sk_test',
+      fetch: (async (_url: string, init?: RequestInit) => {
+        capturedHeaders = (init?.headers as Record<string, string>) || {}
+        return {
+          ok: true, status: 201, statusText: 'Created',
+          json: async () => ({ id: 'd10', title: 'T', url: 'https://paired.cc/d/d10' }),
+          text: async () => '',
+        } as Response
+      }) as unknown as typeof fetch,
+    })
+    const res = await p.docs.import('# T', { title: 'T' })
+    expect(res.url).toBe('https://paired.cc/d/d10')
+    expect(capturedHeaders['X-API-Key']).toBe('sk_test')
+  })
+
+  it('create returns a shareable url', async () => {
+    const p = new PairedClient({
+      baseUrl: 'https://paired.cc',
+      fetch: mockFetch([
+        { match: (u) => u === 'https://paired.cc/api/documents', response: { status: 201, body: { id: 'd11', title: 'Untitled' } } },
+      ]),
+    })
+    const res = await p.docs.create()
+    expect(res.url).toBe('https://paired.cc/d/d11')
+  })
+
   it('surfaces server errors with status + detail', async () => {
     const p = new PairedClient({
       baseUrl: 'https://paired.cc',
