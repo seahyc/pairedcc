@@ -10,5 +10,12 @@
     "build:canvas": "pnpm --filter @pairedcc/canvas build",
     "test:canvas": "pnpm --filter @pairedcc/canvas test",
     "mcp:canvas": "pnpm --filter @pairedcc/canvas mcp"
+  },
+  "pnpm": {
+    "overrides": {
+      "prosemirror-view": "1.42.9",
+      "prosemirror-model": "1.25.13",
+      "prosemirror-state": "1.4.4"
+    }
   }
 }
