@@ -985,6 +985,13 @@ function App() {
   useEffect(() => {
     if (agentEditor) return connectAgentAccess(agentEditor);
   }, [agentEditor]);
+  if (import.meta.env.PROD && !import.meta.env.VITE_TLDRAW_LICENSE_KEY) {
+    return <main style={{ padding: 64, maxWidth: 640, margin: "auto", fontFamily: "sans-serif" }}>
+      <h1>Paired canvas</h1>
+      <p>The canvas is being set up. The document editor is available now.</p>
+      <a href="/documents">Open the document editor</a>
+    </main>;
+  }
   const components: TLComponents = { InFrontOfTheCanvas: Shell };
   function mount(editor: Editor) {
     editor.user.updateUserPreferences({
