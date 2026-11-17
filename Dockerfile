@@ -16,7 +16,8 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm --filter web build
 RUN pnpm --filter server build
-RUN pnpm --filter @pairedcc/canvas build
+ARG VITE_TLDRAW_LICENSE_KEY
+RUN VITE_TLDRAW_LICENSE_KEY="$VITE_TLDRAW_LICENSE_KEY" pnpm --filter @pairedcc/canvas build
 
 # Move web build to where serveStatic expects it
 RUN cp -r packages/web/dist public

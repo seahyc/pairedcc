@@ -1031,6 +1031,7 @@ function App() {
     <main className="app">
       <div className="canvas-stage">
         <Tldraw
+          licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
           persistenceKey="picabird-canvas-v1"
           hideUi
           components={components}

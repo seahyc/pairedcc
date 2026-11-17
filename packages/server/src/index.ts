@@ -96,7 +96,7 @@ async function cleanupAnonymousDocs() {
 }
 
 // Serve frontend in production
-app.get('/', (c) => c.redirect('/canvas/'))
+app.get('/', (c) => c.redirect('/documents'))
 app.get('/canvas', (c) => c.redirect('/canvas/'))
 app.use('/*', serveStatic({ root: './public' }))
 
