@@ -96,6 +96,8 @@ async function cleanupAnonymousDocs() {
 }
 
 // Serve frontend in production
+app.get('/', (c) => c.redirect('/canvas/'))
+app.get('/canvas', (c) => c.redirect('/canvas/'))
 app.use('/*', serveStatic({ root: './public' }))
 
 // SPA history fallback — for client-side routes (e.g. /d/:id, /settings)

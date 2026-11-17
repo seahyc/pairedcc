@@ -5,6 +5,10 @@
   "scripts": {
     "dev": "pnpm --filter server dev & pnpm --filter web dev",
     "build": "pnpm -r build",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "dev:canvas": "pnpm --filter @pairedcc/canvas dev",
+    "build:canvas": "pnpm --filter @pairedcc/canvas build",
+    "test:canvas": "pnpm --filter @pairedcc/canvas test",
+    "mcp:canvas": "pnpm --filter @pairedcc/canvas mcp"
   }
 }
