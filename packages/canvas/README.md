@@ -18,6 +18,7 @@ On YC's Mac, the local server is managed by user LaunchAgent `com.paired.canvas.
 - Pages, nested layers, collapse/expand, multiselection, alignment/grouping and object properties.
 - Undo/redo, keyboard tool shortcuts and duplicate/delete.
 - Local IndexedDB persistence, JSON file export and validated import.
+- Scratchbook visual language: pink handwriting and ink for the human, lavender ✦ cards and violet arrows for agents, pick (P) and reject (X) marks, captions, and an open-marks counter. See AGENT_API.md.
 - Browser object interface: `window.paired.read()`, `create(input)`, `update(input)`, `select(ids)`, `undo()` and `redo()`.
 
 Local HTTP and MCP access are now implemented; see [AGENT_API.md](AGENT_API.md). A built-in AI assistant remains future work. Updates require `expectedRevision`; stale updates and updates to locked objects are rejected. Agents and humans use the same tldraw store and history.

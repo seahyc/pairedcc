@@ -4,6 +4,7 @@ import {
   useEditor,
   useValue,
   DefaultDashStyle,
+  DefaultColorStyle,
   DefaultFillStyle,
   DefaultFontStyle,
   serializeTldrawJson,
@@ -56,6 +57,15 @@ import {
 import { connectAgentAccess } from "./agent-client";
 import { annotateObject } from "./agent-operations";
 import { seed } from "./seed";
+import { CardShapeUtil, CardShapeTool } from "./card-shape";
+import {
+  PaperBackground,
+  ScratchbookLayer,
+  MarksCounter,
+  toggleMark,
+  authorOf,
+  humanStyle,
+} from "./scratchbook";
 import "tldraw/tldraw.css";
 import "./style.css";
 
@@ -72,7 +82,7 @@ const tools = [
   { id: "ellipse", name: "Ellipse", key: "O", icon: Circle },
   { id: "draw", name: "Pen", key: "D", icon: Pencil },
   { id: "text", name: "Text", key: "T", icon: Type },
-  { id: "note", name: "Note", key: "N", icon: StickyNote },
+  { id: "card", name: "Note", key: "N", icon: StickyNote },
   { id: "arrow", name: "Arrow", key: "A", icon: ArrowUpRight },
 ];
 const palette = [
@@ -116,7 +126,7 @@ function IconButton({
 function ShapeIcon({ shape }: { shape: TLShape }) {
   if (shape.type === "frame") return <Frame size={14} />;
   if (shape.type === "text") return <Type size={14} />;
-  if (shape.type === "note") return <StickyNote size={14} />;
+  if (shape.type === "note" || shape.type === "card") return <StickyNote size={14} />;
   if (shape.type === "image") return <ImagePlus size={14} />;
   if (shape.type === "arrow") return <ArrowUpRight size={14} />;
   if (shape.type === "draw") return <Pencil size={14} />;
@@ -228,8 +238,30 @@ function Shell() {
         chooseTool(tool.id);
       }
     }
+    // P and X judge the selection. Capture first so tldraw's own X (pen) shortcut doesn't fire.
+    function judge(event: KeyboardEvent) {
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest("input,textarea,select,[contenteditable=true]")
+      )
+        return;
+      const key = event.key.toLowerCase();
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      if (key !== "p" && key !== "x") return;
+      if (editor.getEditingShapeId()) return;
+      const picked = editor.getSelectedShapes();
+      if (!picked.length) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      toggleMark(editor, picked, key === "p" ? "picked" : "rejected");
+    }
+    window.addEventListener("keydown", judge, { capture: true });
     window.addEventListener("keydown", keydown);
-    return () => window.removeEventListener("keydown", keydown);
+    return () => {
+      window.removeEventListener("keydown", judge, { capture: true });
+      window.removeEventListener("keydown", keydown);
+    };
   }, [editor]);
   const shapeColor =
     shape && "color" in shape.props ? shape.props.color : undefined;
@@ -240,6 +272,17 @@ function Shell() {
     return () => clearTimeout(t);
   }, [notice]);
   function chooseTool(id: string) {
+    // Scratchbook defaults: the human writes in pink ink and handwriting.
+    const scratch = id === "draw" || id === "note" || id === "arrow";
+    editor.setStyleForNextShapes(
+      DefaultColorStyle,
+      id === "note" ? humanStyle.note : scratch ? humanStyle.ink : "black",
+    );
+    editor.setStyleForNextShapes(
+      DefaultFontStyle,
+      id === "note" ? humanStyle.font : "sans",
+    );
+    editor.setStyleForNextShapes(DefaultDashStyle, id === "draw" ? "draw" : "solid");
     if (id === "ellipse") {
       editor.setStyleForNextShapes(GeoShapeGeoStyle, "ellipse");
       editor.setCurrentTool("geo");
@@ -385,6 +428,7 @@ function Shell() {
           <span>Untitled exploration</span>
           <ChevronDown size={12} />
           <span className="local-badge">Local</span>
+          <MarksCounter />
         </div>
         <div className="top-actions">
           <span className="save-state">
@@ -415,15 +459,28 @@ function Shell() {
         </div>
         <div className="pages">
           {pages.map((p) => (
-            <button
-              key={p.id}
-              className={`page-row ${p.id === page.id ? "current" : ""}`}
-              onClick={() => editor.setCurrentPage(p.id)}
-            >
-              <Frame size={13} />
-              <span>{p.name}</span>
-              {p.id === page.id && <Check size={12} />}
-            </button>
+            <div key={p.id} className="page-row-wrap">
+              <button
+                className={`page-row ${p.id === page.id ? "current" : ""}`}
+                onClick={() => editor.setCurrentPage(p.id)}
+              >
+                <Frame size={13} />
+                <span>{p.name}</span>
+                {p.id === page.id && <Check size={12} />}
+              </button>
+              {p.id === page.id && pages.length > 1 && (
+                <IconButton
+                  label={`Delete page ${p.name}`}
+                  onClick={() => {
+                    if (!window.confirm(`Delete page "${p.name}" and everything on it? You can undo.`)) return;
+                    editor.markHistoryStoppingPoint("delete page");
+                    editor.deletePage(p.id);
+                  }}
+                >
+                  <Trash2 size={12} />
+                </IconButton>
+              )}
+            </div>
           ))}
         </div>
         <div className="section-heading border-top">
@@ -607,6 +664,23 @@ function Shell() {
               </div>
             )}
             <div className="inspector-section">
+              <div className="section-title">Judge</div>
+              <div className="arrange-actions">
+                <button
+                  className={shape.meta.mark === "picked" ? "judge-on" : ""}
+                  onClick={() => toggleMark(editor, selected, "picked")}
+                >
+                  Pick (P)
+                </button>
+                <button
+                  className={shape.meta.mark === "rejected" ? "judge-on" : ""}
+                  onClick={() => toggleMark(editor, selected, "rejected")}
+                >
+                  Reject (X)
+                </button>
+              </div>
+            </div>
+            <div className="inspector-section">
               <div className="section-title">Arrange</div>
               <div className="arrange-actions">
                 <button
@@ -663,6 +737,7 @@ function Shell() {
               <span>Object identity</span>
               <code>{shape.id}</code>
               <span>Revision {revision(shape)}</span>
+              <span>By {authorOf(shape)}</span>
             </div>
           </>
         ) : (
@@ -979,6 +1054,8 @@ function Shell() {
   );
 }
 import { GeoShapeGeoStyle, PageRecordType } from "tldraw";
+const scratchShapes = [CardShapeUtil];
+const scratchTools = [CardShapeTool];
 function App() {
   const [ready, setReady] = useState(false);
   const [agentEditor, setAgentEditor] = useState<Editor | null>(null);
@@ -992,7 +1069,11 @@ function App() {
       <a href="/documents">Open the document editor</a>
     </main>;
   }
-  const components: TLComponents = { InFrontOfTheCanvas: Shell };
+  const components: TLComponents = {
+    InFrontOfTheCanvas: Shell,
+    OnTheCanvas: ScratchbookLayer,
+    Background: PaperBackground,
+  };
   function mount(editor: Editor) {
     editor.user.updateUserPreferences({
       colorScheme: "light",
@@ -1001,6 +1082,24 @@ function App() {
     });
     editor.setStyleForNextShapes(DefaultDashStyle, "solid");
     editor.setStyleForNextShapes(DefaultFontStyle, "sans");
+    // Thariq's palette: deep indigo for agent connectors, crimson for the human's ink.
+    editor.updateThemes((themes) => {
+      const theme = themes.default, light = theme.colors.light;
+      return {
+        ...themes,
+        default: {
+          ...theme,
+          colors: {
+            ...theme.colors,
+            light: {
+              ...light,
+              violet: { ...light.violet, solid: "#3a2fd0" },
+              red: { ...light.red, solid: "#c8125a" },
+            },
+          },
+        },
+      };
+    });
     editor.setStyleForNextShapes(DefaultFillStyle, "solid");
     const revisions = new Map<string, number>();
     editor.sideEffects.registerBeforeChangeHandler(
@@ -1040,6 +1139,8 @@ function App() {
         <Tldraw
           licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
           persistenceKey="picabird-canvas-v1"
+          shapeUtils={scratchShapes}
+          tools={scratchTools}
           hideUi
           components={components}
           onMount={mount}

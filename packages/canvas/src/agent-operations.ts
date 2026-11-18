@@ -23,6 +23,54 @@ import {
   richTextPlain,
   revision,
 } from "./operations";
+import { agentStyle, collectMarks, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
+
+const cardInput = z.object({
+  x: z.number().finite(),
+  y: z.number().finite(),
+  width: z.number().min(80).max(4000).optional(),
+  text: z.string().max(50000).default(""),
+  name: z.string().max(200).optional(),
+});
+
+/** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
+export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}) {
+  const input = cardInput.parse(value), id = createShapeId(), human = author === HUMAN;
+  editor.createShape({
+    id,
+    type: "card",
+    x: input.x,
+    y: input.y,
+    meta: {
+      name: input.name ?? (input.text.split("\n")[0].slice(0, 48) || (human ? "Note" : "Agent note")),
+      revision: 0,
+      ...(human ? {} : { createdBy: author }),
+      ...meta,
+    },
+    props: { w: input.width ?? (human ? 240 : 420), richText: toRichText(input.text), tone: human ? "human" : "agent" },
+  });
+  return id;
+}
+
+/** Agents' notes become cards; other primitives pass through unchanged. */
+function createFor(editor: Editor, value: unknown, actor: string) {
+  const kind = value && typeof value === "object" ? (value as { kind?: unknown }).kind : undefined;
+  if (kind === "note" && actor !== HUMAN) {
+    editor.markHistoryStoppingPoint("create card");
+    const id = createCard(editor, value, actor);
+    editor.select(id);
+    return id;
+  }
+  return createObject(editor, value);
+}
+
+function placeCaption(editor: Editor, imageId: string) {
+  const image = find(editor, imageId);
+  const caption = editor.getCurrentPageShapes().find(s => s.meta.role === "caption" && s.meta.captionFor === image.id);
+  if (!caption || !("h" in image.props)) return;
+  if (caption.parentId !== image.parentId) editor.reparentShapes([caption.id], image.parentId);
+  editor.updateShape({ id: caption.id, type: caption.type, x: image.x, y: image.y + image.props.h + 6 });
+}
 
 const idInput = z.object({
   id: z.string().startsWith("shape:"),
@@ -77,7 +125,7 @@ function composeScene(editor: Editor, value: unknown, actor: string) {
     for (const node of nodes) {
       const created = node.shape.kind === "image"
         ? image(editor, node.shape, actor)
-        : describeObject(editor, createObject(editor, node.shape));
+        : describeObject(editor, createFor(editor, node.shape, actor));
       if (!created) throw new Error(`Could not create ${node.key}`);
       let shape = find(editor, created.id);
       if (node.parentKey) {
@@ -87,6 +135,7 @@ function composeScene(editor: Editor, value: unknown, actor: string) {
       }
       editor.updateShape({ id: shape.id, type: shape.type, x: node.shape.x, y: node.shape.y,
         meta: { ...shape.meta, createdBy: actor, scene: input.name, sceneKey: node.key } });
+      if (shape.type === "image") placeCaption(editor, shape.id);
       shape = find(editor, shape.id);
       objects.set(node.key, shape);
     }
@@ -134,8 +183,19 @@ function image(editor: Editor, value: unknown, actor: string) {
       },
       props: { assetId, w: input.width, h: input.height },
     });
+    if (input.caption)
+      editor.createShape({
+        type: "card",
+        x: input.x,
+        y: input.y + input.height + 6,
+        meta: { name: "Caption", role: "caption", captionFor: id, createdBy: actor, revision: 0 },
+        props: { w: Math.max(80, input.width), richText: toRichText(input.caption), tone: "caption" },
+      });
   });
-  return describeObject(editor, id);
+  const captionId = editor.getCurrentPageShapes().find(s => s.meta.role === "caption" && s.meta.captionFor === id)?.id;
+  const described = describeObject(editor, id);
+  if (!described) throw new Error("Could not place the image");
+  return { ...described, ...(captionId ? { captionId } : {}) };
 }
 function connect(editor: Editor, value: unknown, actor: string) {
   const input = connectionInput.parse(value),
@@ -147,35 +207,44 @@ function connect(editor: Editor, value: unknown, actor: string) {
     b = editor.getShapePageBounds(to);
   if (!a || !b) throw new Error("Objects must have visible bounds");
   const id = createShapeId();
+  // Thariq-style connector: thin indigo line with a filled head. Arrows leaving the same
+  // side of a card share one anchor point, so several of them fan out from it.
+  const dx = b.center.x - a.center.x, dy = b.center.y - a.center.y;
+  const vertical = Math.abs(dy) >= Math.abs(dx) * 0.6;
+  const startAnchor = vertical ? { x: 0.5, y: dy > 0 ? 1 : 0 } : { x: dx > 0 ? 1 : 0, y: 0.5 };
+  const endAnchor = vertical ? { x: 0.5, y: dy > 0 ? 0 : 1 } : { x: dx > 0 ? 0 : 1, y: 0.5 };
+  const bend = Math.max(-60, Math.min(60, (vertical ? dx : -dy) * 0.12)) * (vertical ? (dy > 0 ? 1 : -1) : dx > 0 ? 1 : -1);
   editor.markHistoryStoppingPoint("connect objects");
   editor.run(() => {
     editor.createShape({
       id,
       type: "arrow",
-      x: a.center.x,
-      y: a.center.y,
+      x: a.x + startAnchor.x * a.w,
+      y: a.y + startAnchor.y * a.h,
       meta: { fromId, toId, relation: input.relation, createdBy: actor },
       props: {
         start: { x: 0, y: 0 },
-        end: { x: b.center.x - a.center.x, y: b.center.y - a.center.y },
-        color: "grey",
+        end: { x: b.x + endAnchor.x * b.w - (a.x + startAnchor.x * a.w), y: b.y + endAnchor.y * b.h - (a.y + startAnchor.y * a.h) },
+        color: actor === HUMAN ? humanStyle.ink : agentStyle.ink,
         dash: "solid",
         size: "s",
+        arrowheadEnd: "triangle",
+        bend,
         richText: toRichText(input.label),
       },
     });
-    for (const [terminal, target] of [
-      ["start", from],
-      ["end", to],
-    ] satisfies ["start" | "end", typeof from][]) {
+    for (const [terminal, target, anchor] of [
+      ["start", from, startAnchor],
+      ["end", to, endAnchor],
+    ] satisfies ["start" | "end", typeof from, { x: number; y: number }][]) {
       editor.createBinding({
         type: "arrow",
         fromId: id,
         toId: target.id,
         props: {
           terminal,
-          normalizedAnchor: { x: 0.5, y: 0.5 },
-          isPrecise: false,
+          normalizedAnchor: anchor,
+          isPrecise: true,
           isExact: false,
           snap: "none",
         },
@@ -189,28 +258,12 @@ export function annotateObject(editor: Editor, value: unknown) {
     target = find(editor, input.targetId),
     bounds = editor.getShapePageBounds(target);
   if (!bounds) throw new Error("Target must have bounds");
-  const id = createShapeId();
+  const x = input.x ?? bounds.x, y = input.y ?? bounds.maxY + 60;
+  const meta = { name: input.author === HUMAN ? "Feedback" : "Agent note", role: "annotation", targetId: target.id, status: "open", author: input.author };
   editor.markHistoryStoppingPoint("add feedback");
+  let id = createShapeId();
   editor.run(() => {
-    editor.createShape({
-      id,
-      type: "note",
-      x: input.x ?? bounds.x,
-      y: input.y ?? bounds.maxY + 60,
-      meta: {
-        name: "Feedback",
-        role: "annotation",
-        targetId: target.id,
-        status: "open",
-        author: input.author,
-      },
-      props: {
-        richText: toRichText(input.text),
-        font: "sans",
-        color: "light-red",
-        size: "s",
-      },
-    });
+    id = createCard(editor, { x, y, text: input.text }, input.author, meta);
     connect(
       editor,
       { fromId: id, toId: target.id, relation: "feedback" },
@@ -243,6 +296,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         ...object,
         text:
           "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
+        author: authorOf(s),
         meta: s.meta,
         asset,
       };
@@ -264,6 +318,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
     selection: editor.getSelectedShapeIds(),
     objects,
     annotations,
+    marks: collectMarks(editor),
     bindings: editor
       .getCurrentPageShapes()
       .filter((s) => s.type === "arrow")
@@ -348,7 +403,7 @@ export async function executeCommand(
       };
     }
     case "create": {
-      const id = createObject(editor, command.input);
+      const id = createFor(editor, command.input, actor);
       const s = find(editor, id);
       editor.updateShape({
         id: s.id,
@@ -371,29 +426,10 @@ export async function executeCommand(
     case "resolve": {
       const input = resolveInput.parse(command.input),
         s = find(editor, input.id);
-      if (s.meta.role !== "annotation")
-        throw new Error("Object is not an annotation");
-      if (s.isLocked)
-        throw new Error("Unlock the annotation before editing it");
+      if (s.isLocked) throw new Error("Unlock the mark before editing it");
       if (revision(s) !== input.expectedRevision)
-        throw new Error("Annotation changed. Read it before updating.");
-      editor.markHistoryStoppingPoint("resolve feedback");
-      const meta = {
-        ...s.meta,
-        name: input.status === "resolved" ? "Feedback · resolved" : "Feedback",
-        status: input.status,
-        resolvedBy: actor,
-      };
-      if (s.type === "note")
-        editor.updateShape({
-          id: s.id,
-          type: "note",
-          meta,
-          props: {
-            color: input.status === "resolved" ? "light-green" : "light-red",
-          },
-        });
-      else editor.updateShape({ id: s.id, type: s.type, meta });
+        throw new Error("Mark changed. Read it before updating.");
+      resolveMark(editor, s, input.status, actor);
       return describeObject(editor, s.id);
     }
     case "remove": {

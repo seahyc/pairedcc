@@ -764,3 +764,253 @@ p {
 .layer.selected { background: #eeecf9; }
 .right-panel { overflow-y:auto; }
 .feedback-input{font:inherit;display:block;width:100%;min-height:110px;resize:vertical;border:1px solid #dcdde5;border-radius:7px;padding:12px;background:white;color:#34363e;line-height:1.6;outline-color:#7669c8;margin:16px 0}.agent-dialog pre{overflow-wrap:anywhere}
+
+/* Scratchbook visual language: human ink is pink, agent work is lavender with ✦. */
+.tl-container {
+  --tl-color-background: #efede8;
+}
+.tl-background {
+  background: #efede8;
+}
+.scratch-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100000;
+}
+.scratch-item {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.scratch-ink {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.scratch-ink path {
+  fill: none;
+  stroke: #d1366b;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.scratch-fade {
+  fill: rgba(239, 237, 232, 0.55);
+}
+.scratch-spark {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  color: #6b4fd8;
+  font-size: 14px;
+  line-height: 1;
+}
+.scratch-spark.inline {
+  top: 2px;
+  right: auto;
+  left: -16px;
+  font-size: 12px;
+}
+.scratch-done {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: #3f8f5b;
+  color: #fff;
+  font: 600 12px/20px Inter, -apple-system, sans-serif;
+  text-align: center;
+}
+.marks-counter {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #ececf0;
+  color: #55565c;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.marks-counter.has-open {
+  background: #fbe3ec;
+  color: #b0285a;
+}
+.arrange-actions button.judge-on {
+  background: #fbe3ec;
+  color: #b0285a;
+}
+.page-row-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.page-row-wrap .page-row {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Scratchbook paper, fonts and cards */
+.tl-container {
+  --scratch-hand: "Caveat", "Kalam", cursive;
+  --scratch-type: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+  --tl-font-draw: "Caveat", "tldraw_draw", cursive;
+}
+.paper {
+  position: absolute;
+  inset: 0;
+  background-color: #efede8;
+  background-image: radial-gradient(circle, #cfcabe 1px, transparent 1.2px);
+}
+.scrap {
+  border-radius: 12px;
+  pointer-events: all;
+}
+.scrap--agent {
+  background: #ecebfb;
+  border: 1px solid #c9c3f0;
+  box-shadow: 0 1px 0 rgba(60, 50, 120, 0.06);
+}
+.scrap--human {
+  background: #fde6ee;
+  border: 1.5px solid #d1366b;
+  box-shadow: 0 2px 6px rgba(160, 30, 80, 0.12);
+}
+.scrap--human .tl-rich-text {
+  font-weight: 600;
+}
+.scrap--caption {
+  background: transparent;
+}
+.scratch-spark.inline {
+  top: 3px;
+  left: -14px;
+  font-size: 11px;
+}
+
+/* Messier scratchbook: hand-drawn card edges, handwriting everywhere. */
+.tl-container {
+  --scratch-hand: "Caveat", cursive;
+  --scratch-pen: "Kalam", cursive;
+  --scratch-type: "Kalam", cursive;
+  --tl-font-draw: "Caveat", cursive;
+  --tl-font-sans: "Kalam", "tldraw_sans", cursive;
+}
+.scrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  pointer-events: all;
+}
+.scrap--agent,
+.scrap--human {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.scrap-edge {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.scrap-edge path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.scrap--agent .scrap-fill {
+  fill: #ebe8fb;
+  stroke: none;
+}
+.scrap--agent .scrap-edge path:not(.scrap-fill) {
+  stroke: #8f7fe0;
+  stroke-width: 1.4;
+}
+.scrap--human .scrap-fill {
+  fill: #fde3ec;
+  stroke: none;
+}
+.scrap--human .scrap-edge path:not(.scrap-fill) {
+  stroke: #d1366b;
+  stroke-width: 2.2;
+}
+.scrap--human .scrap-edge .scrap-second {
+  stroke-width: 1.1;
+  opacity: 0.55;
+}
+.scrap--human .tl-rich-text {
+  font-weight: 700;
+}
+.scrap--caption .tl-rich-text {
+  font-weight: 300;
+}
+
+/* One-for-one with Thariq's board (overrides the earlier scratchbook experiments). */
+.tl-container {
+  --scratch-hand: "Caveat Brush", cursive;
+  --scratch-type: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+  --tl-font-draw: "Caveat Brush", cursive;
+  --tl-font-sans: Inter, "tldraw_sans", sans-serif;
+}
+.paper {
+  background-color: #ebeae5;
+  background-image: radial-gradient(circle, #c4c1b8 0.9px, transparent 1.1px);
+}
+.scrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+.scrap--agent {
+  background: #e9e8fb;
+  border: 1.5px solid #c9c6f2;
+  box-shadow: none;
+}
+.scrap--human {
+  background: #f9e1ea;
+  border: 2.5px solid #c8125a;
+  box-shadow: 0 2px 8px rgba(160, 20, 80, 0.12);
+}
+.scrap--human .tl-rich-text {
+  font-weight: 400;
+}
+.scrap--caption {
+  background: transparent;
+  border: none;
+}
+.scrap--caption .tl-rich-text {
+  font-weight: 400;
+}
+.scratch-ink path {
+  stroke: #c8125a;
+  stroke-width: 3;
+}
+.scratch-spark {
+  top: 10px;
+  right: 12px;
+  color: #3a2fd0;
+  font-size: 16px;
+}
+.scratch-spark.inline {
+  top: 1px;
+  left: -16px;
+  font-size: 12px;
+}
+
+/* Marker connectors replace tldraw's uniform arrow line (labels and selection stay). */
+.tl-shape[data-shape-type="arrow"] > svg.tl-svg-container {
+  opacity: 0;
+}
+.marker-arrows {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+}

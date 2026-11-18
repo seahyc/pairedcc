@@ -43,6 +43,130 @@ The canvas is the primary surface. Conversations, code, tables and widgets are w
 - Object relationships are distinct from visual proximity. Moving a chart does not silently change execution order or context.
 - Human and agent edits appear in the same workspace with inspectable authorship/history.
 
+## How humans think intuitively
+
+Endorsed by YC as design grounding, 2026-11-18. These are well-supported findings from cognitive science; the agent primitives below exist to serve them.
+
+1. **Working memory holds only about four things.** People think well by putting their thinking out into the world and working on it there (Clark and Chalmers, the "extended mind").
+2. **Moving things is thinking.** People rearrange Scrabble tiles and Tetris pieces to work things out, not to make progress (Kirsh, "epistemic actions"). Arranging a canvas is reasoning, not tidying.
+3. **Spatial thinking comes first.** Abstract thought builds on spatial thought (Tversky, *Mind in Motion*). "Close", "above" and "central" are how we reason about ideas.
+4. **We think with our eyes.** Grouping, outliers and contrast are seen before they are reasoned about, so a good representation turns a reasoning problem into a seeing problem.
+5. **Concrete before abstract.** Understanding starts from specific examples and moves outward. Abstractions without examples don't stick.
+6. **Comparing beats describing.** Two alternatives side by side show what one alone can't. This is why Thariq's board works.
+7. **Recognising beats recalling.** Picking from options is much easier than producing an answer from nothing.
+8. **Rough means unfinished.** A sketchy, rough look tells people an idea is still open to change. A polished look makes them stop questioning it.
+9. **Understanding needs effort and repetition.** Reading an explanation feels like understanding, but often isn't.
+
+## What produces understanding
+
+Reading a clear explanation creates familiarity, not understanding (Matuschak, "Why books don't work"). The learning-science findings below describe what does. In each case the learner does the work.
+
+| Mechanism | Finding | Canvas implication (proposal) |
+|---|---|---|
+| Predict, then check | Committing to a guess before seeing the answer makes the surprise stick, and the error is what teaches. | Before revealing a chart or result, optionally ask "what do you expect?" and keep the guess next to the outcome. |
+| Generate and self-explain | Producing an answer or explaining "why" in your own words beats reading it (generation effect; Chi on self-explanation). | Agent asks the human to state a claim or explanation first, then critiques it, rather than writing the conclusion. |
+| Retrieve | Recalling something strengthens it far more than rereading it (Roediger and Karpicke, the testing effect). | Resumed work opens with "what did we conclude here, and why?" before showing the answer. |
+| Space and revisit | Returning after a delay beats massed study (Bjork, desirable difficulties; Matuschak's mnemonic medium). | Resurface open questions and stale conclusions on return, on a widening interval. |
+| Contrast cases | Comparing well-chosen examples reveals which features matter, especially before any explanation (Schwartz and Bransford). | Comparison is a first-class action; agents propose contrasting cases, not only examples. |
+| Manipulate the model | Changing an input and watching the effect builds an intuition that static text can't (Victor, explorable explanations; Papert, constructionism). | Any assumption can become a control; dependents update or show as stale. |
+| Struggle productively, then get help | Attempting a problem before instruction improves later understanding, if help arrives at the right moment (Kapur, productive failure). | Agent help is offered at a sticking point, not before the attempt. |
+| Use it for real | Knowledge applied to a real project in varied contexts transfers; knowledge only rehearsed does not. | Learning sits inside actual work on the canvas, not in a separate tutor panel. |
+
+These mechanisms cost effort, so they apply only when understanding is the goal. See "Working and learning" below.
+
+## Prior art: Bret Victor
+
+Victor's work asks how to make thinking visible and directly manipulable. Its value is in **seeing**, not in effort, so it helps whether you are learning or just getting work done.
+
+| Work | Key point | Canvas implication (proposal) |
+|---|---|---|
+| "Magic Ink" (2006) | Most software is information software: its job is to answer a question through graphic design, with as little interaction as possible. Interaction is a cost. | The default view of any object answers its likely question at a glance. Controls appear on demand. |
+| "Up and Down the Ladder of Abstraction" (2011) | Understand a system by moving between one concrete instance, many instances and the aggregate, with the views linked. | Any aggregate drills down to its rows; any row can be lifted to the pattern. This is the core answer for the 230-tab workbook. |
+| "Explorable Explanations" and "Kill Math" (2011) | Numbers in an argument should be adjustable, so readers can explore what depends on them. Replace symbol manipulation with direct manipulation of concrete representations. | Any assumption in a note, table or model can become a control, with dependents updating or marked stale. |
+| "Inventing on Principle" (2012) | Creators need an immediate connection to what they create. Any delay between a change and seeing its effect blocks ideas. | Edits, filters and parameter changes show their effect immediately; agent runs show partial progress. |
+| "Learnable Programming" (2012) | Show the data, not just the code. Make state and flow visible. Create by reacting to something on screen rather than starting from nothing. | Transformations show sample inputs and outputs inline. New objects start from an example or a suggestion, not a blank card. |
+| "Media for Thinking the Unthinkable" (2013) | New representations make new thoughts possible. Multiple linked views of one model let you see it from several angles at once. | Tables, charts, notes and widgets are views of the same underlying object, not copies of it. |
+| "Seeing Spaces" (2014) and Dynamicland / Realtalk (2017–present) | Computation should be visible, physical and shared, so people can gather around it, point at it and change it together. "Realtalk is not a codebase. It's a poster gallery." | Everything that matters stays on the canvas, inspectable and pointable. Agent work is visible objects, not hidden state. |
+
+## Prior art: Andy Matuschak
+
+Matuschak's work asks how people actually come to understand and remember things, and what that means for tools. Much of it is about **learning specifically**, so most of it applies in learning mode (see "Working and learning").
+
+| Work | Key point | Canvas implication (proposal) |
+|---|---|---|
+| "Why books don't work" (2019) | Books and lectures assume understanding transfers by exposure. It doesn't; the reader must do the cognitive work, and the medium can be designed to prompt it. | In learning mode, the canvas prompts the learner to engage instead of only presenting conclusions. |
+| "How can we develop transformative tools for thought?" (with Michael Nielsen, 2019) | Transformative tools change how people think, not just how fast they work. They come from deep insight into a real problem, built with serious users, not from generic features. | Prove the canvas on one demanding real workflow, such as the workbook, before generalising. |
+| Quantum Country and the mnemonic medium (2019) | Embedding spaced-repetition review in the reading makes memory a choice. Memory is the foundation that understanding is built on. | Learning frames can turn key claims into review prompts that resurface over time. Off by default elsewhere. |
+| Evergreen notes (working notes) | Notes should be atomic, concept-oriented and densely linked, and keep developing over time. They compound across projects instead of being written once for one task. | Notes are addressable objects that can be reused and linked across canvases, not trapped on one board. |
+| "Tools for thought as cultural practices, not construction projects" | A tool succeeds only alongside the practices people develop around it. | Ship worked example canvases that show how to use it, alongside the features. |
+| AI-augmented learning and the "Wizard-of-Oz" learning assistant (2024–2026) | He tested what a good tutor actually does, using a human before building any AI version. Guidance should be embedded in the learner's real work, not a separate chat. An AI that thinks for you skips the processing that creates understanding. | The agent works on the same objects, at the point of need. In learning mode it scaffolds instead of answering. |
+| "Apps and programming: two accidental tyrannies" (early 2026) | Apps trap capabilities in silos, and programming is too hard for most people to escape them. His malleable reading prototype lets extensions by different authors compose on the same text without knowing about each other. | Widgets and extensions declare what they contribute and compose on shared objects, as in the widget contract. |
+
+## Working and learning
+
+The canvas serves two kinds of sessions, and many sessions mix them.
+
+- **Working:** the goal is a result, such as an answer, a decision, a chart or a draft. Understanding beyond what the task needs is optional.
+- **Learning:** the goal is that the human comes to understand or remember something.
+
+Rules:
+
+1. **Working is the default, and it must be seamless.** The agent does what is asked, directly and quickly. No quizzes, predictions or "explain it yourself" prompts by default.
+2. **Victor's principles are always on.** Visible state, linked views, adjustable assumptions, drill-down and immediate feedback make work faster and safer as well as more understandable. They cost the user nothing.
+3. **Matuschak's effort-based mechanisms are opt-in.** Prediction, retrieval, self-explanation, spaced resurfacing and "struggle first" turn on only when the human signals a learning goal, for example on a frame brief ("I want to understand this") or on a single request.
+4. **Learning prompts never block.** Any prediction, review or explanation prompt can be skipped in one action, and the result is then shown directly.
+5. **Mode belongs to a frame or request, not the user.** One canvas can hold a frame for learning a topic beside frames that just get work done.
+6. **Cheap understanding is always available.** Even in working mode, every result keeps its sources, assumptions and transformations, so the human can check *why* whenever they choose.
+
+Open question: whether the agent should ever suggest switching to learning mode, for example when the same concept is repeatedly re-asked. Proposed default: no unprompted suggestions until tested with YC.
+
+## Working-mode reference: Thariq's board
+
+Source: frames sampled every three seconds from the 36-second clip in [Thariq's post](https://x.com/trq212/status/2122438328079524159), inspected 2026-11-18. The clip shows the board, not the agent's implementation.
+
+The board is a scratchbook: the agent generates, the human judges, and ideas branch out by association. It fits most of the principles above:
+
+- Thinking lives on the board.
+- Arrangement carries meaning.
+- Alternatives sit side by side.
+- The human recognises and picks rather than specifying.
+- Roughness is visible.
+- Pointing replaces prose.
+- Rejected options stay visible.
+- Selected directions become playable.
+
+### Visual language: whose is what, at a glance
+
+| | Human | Agent |
+|---|---|---|
+| Notes | Pink cards, handwriting font, short ("I like A here.") | Lavender cards, plain type, ✦ mark, long and structured |
+| Ink | Pink circles around picks, X through rejects | Indigo arrows linking its notes to what they discuss |
+| Captions | — | ✦ caption under every generated artifact, with status: rough, try A/B, locked, PLAYING |
+| Role | Judges: picks, rejects, asks | Generates, interprets, critiques, asks, reports back |
+
+Authorship must be **visible at a glance** through this visual language, not only inspectable in history.
+
+### Agent conversation loop
+
+1. **Read back:** restate how it understood the human's mark before acting ("How I read your note: … Correct me on the board if I've got it wrong").
+2. **Propose:** generate options side by side, labelled rough until a direction is picked.
+3. **Give a view:** "My read: … I lean to the spikes", with reasons.
+4. **Ask:** hand decisions back as short numbered questions.
+5. **Tell the human how to answer:** "Mark the ones worth a proper render, or mix them."
+6. **Close:** "Done: smash A and the spikes are in; the cracks and smash B are out." Resolve the marks it addressed.
+
+### Marks as a queue
+
+Human feedback (notes, picks, rejects, ink over an artifact) counts as an **open mark** until the agent addresses it. The canvas shows the count ("96 items · 0 open marks"), and resolved marks show a ✓. Judgement belongs to the human: agents read picks and rejects but do not set them.
+
+### Gaps for Paired beyond the board
+
+- **Converge:** branching by association sprawls. Paired needs a way to pull branches into a synthesis or conclusion.
+- **Data and models:** the board is creative work. Research and analysis also need the ladder of abstraction, adjustable assumptions and stale-marking.
+- **Learning:** picking from options suits working mode. Learning mode asks the human to generate first.
+
+The research equivalent of "four character concepts" is several hypotheses, framings or *definitions* side by side, for example three definitions of "paying hirer", each with its own number and trend.
+
 ## Proposed foundational primitives
 
 | Primitive | Contract |
@@ -120,3 +244,16 @@ YC requested a running, smooth canvas first, with Paper as the visual/interactio
 ## Local agent access implemented: 2026-11-17
 
 YC requested API/agent access to reproduce Thariq's reference/alternatives/feedback workflow. `canvas/AGENT_API.md` documents the local HTTP/browser relay and stdio MCP adapter. Agents can add image artifacts, bind connections, read targeted feedback, revise specific objects, resolve annotations and render PNG screenshots. Transport is local/development-only and requires an open browser. The Agent studio SVG fixture verifies the workflow but is not an autonomous image-generation agent. A built-in assistant and actual model/provider integration remain open.
+
+## Scratchbook visual language implemented: 2026-11-18
+
+YC asked to replicate Thariq's board. The local canvas now has:
+
+- Human/agent styling (pink handwriting and ink versus lavender ✦ cards and violet arrows).
+- Human-only pick (P) and reject (X) marks drawn as rough ink.
+- Image captions.
+- An "items · open marks" counter.
+- Marks in `read`, and `resolve` for any mark.
+- MCP instructions describing the agent loop.
+
+Verified live in Dia on a demo page with synthetic data: keyboard pick/reject, agent read-back, questions, a Done note and resolution to zero open marks. Detection of freehand pen ink over an object is implemented but was not exercised live, because synthetic pointer events did not produce a tldraw stroke. Not built: converging branches, learning mode, data widgets.

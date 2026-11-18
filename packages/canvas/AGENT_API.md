@@ -18,6 +18,21 @@ Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_
 
 Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
 
+### Scratchbook conventions
+
+The canvas uses Thariq's scratchbook visual language, so authorship shows at a glance. The canvas applies it automatically:
+
+- **Matches Thariq's board** on dot-grid paper. Notes are `card` shapes that grow to fit their text.
+- **Human work:** crimson brush handwriting (Caveat Brush) on pink cards with a crimson border; the Note tool (N) drops one. Pen ink is crimson. Picks get a crimson box; rejects get a crimson X and fade.
+- **Agent work:** agent `note`s and annotations become lavender cards in plain type with an indigo ✦. Connections are thin indigo curves with filled arrowheads; arrows leaving the same side of a card share one anchor, so they fan out from it. `image` accepts a `caption`, shown underneath with a ✦.
+- **Open marks:** human feedback notes, picks, rejects and pen ink drawn over an object are *marks*. `read` returns them in `marks` (`kind`, `status`, `targetIds`, `revision`), and every object reports its `author`. The header shows "N items · M open marks".
+- **Judgement is human-only:** the human selects and presses P (pick) or X (reject), or uses Judge in Properties. Agents read picks and rejects but cannot set them.
+- **Closing the loop:** `resolve` accepts any mark: a feedback note, a picked/rejected object (pass the object ID) or an ink stroke. Resolved marks show a ✓.
+
+Suggested loop: read back how you understood the mark, propose captioned options, give your view, ask numbered questions, say how to answer, then post a "Done: …" note and resolve the marks you addressed.
+
+`tools/demo-scratchbook.ts build` creates a demo page: three definitions of "paying hirer" with synthetic data. Pick and reject in the browser, then run `close` to post the Done note and resolve every open mark.
+
 ### Compose an exploration
 
 `canvas_scene` creates native editable objects, nested frames, images and bound connections in one undoable operation. Keys let an agent describe a whole scene without discovering IDs between calls. Children use coordinates relative to their parent frame. Connections use scene keys; results map those keys to real IDs and revisions. All keys and parent references are validated before writing; failed construction rolls back.
@@ -88,14 +103,14 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 
 | `op` | `input` |
 |---|---|
-| `read` | Optional `ids`; returns page, selection, objects, annotations and arrow bindings |
+| `read` | Optional `ids`; returns page, selection, objects (with `author`), annotations, open/resolved human `marks` and arrow bindings |
 | `get` | `id`, optional `includeAsset` |
 | `create` | `kind` (frame, rectangle, ellipse, text, note), `x`, `y`, optional dimensions, text, color, name |
 | `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name |
-| `image` | `src` (base64 image data URL), `x`, `y`, `width`, `height`, optional name, sourceUrl, isAnimated |
+| `image` | `src` (base64 image data URL), `x`, `y`, `width`, `height`, optional name, sourceUrl, isAnimated, caption |
 | `connect` | `fromId`, `toId`, optional relation (reference, alternative, derived-from, feedback), label |
 | `annotate` | `targetId`, `text`, optional position; creates a targeted note and bound connector |
-| `resolve` | Annotation `id`, `expectedRevision`, `status` (open or resolved) |
+| `resolve` | Mark `id` (feedback note, picked/rejected object or ink stroke), `expectedRevision`, `status` (open or resolved) |
 | `remove` | `id`, `expectedRevision`; locked objects cannot be removed |
 | `select` | `ids` |
 | `focus` | Optional `ids`; fits the selected objects or current page |

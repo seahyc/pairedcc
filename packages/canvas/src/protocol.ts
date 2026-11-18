@@ -19,6 +19,7 @@ export const imageInput = z.object({
   name: z.string().max(200).default("Image"),
   sourceUrl: z.url().optional(),
   isAnimated: z.boolean().default(false),
+  caption: z.string().max(300).optional(),
 });
 export const annotationInput = z.object({
   targetId: shapeId,
