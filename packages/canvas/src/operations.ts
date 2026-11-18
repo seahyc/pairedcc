@@ -21,6 +21,10 @@ export const createInput = z.object({
   text: z.string().max(50000).default(""),
   name: z.string().max(200).optional(),
   color: color.default("black"),
+  style: z
+    .enum(["note", "heading", "quote", "code"])
+    .optional()
+    .describe("Agent notes only: note (default, casual typed card), heading (large, no card), quote (serif italic, for sourced excerpts) or code (monospace, for data, numbers and code)."),
 });
 export const patchInput = z.object({
   ...styles,

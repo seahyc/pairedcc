@@ -31,11 +31,15 @@ const cardInput = z.object({
   width: z.number().min(80).max(4000).optional(),
   text: z.string().max(50000).default(""),
   name: z.string().max(200).optional(),
+  style: z.enum(["note", "heading", "quote", "code"]).optional(),
 });
+const agentWidths = { agent: 420, heading: 440, quote: 380, code: 360 } as const;
 
 /** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
 export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}) {
   const input = cardInput.parse(value), id = createShapeId(), human = author === HUMAN;
+  // The human always writes by hand; agents pick a text style for what they are writing.
+  const tone = human ? "human" : input.style && input.style !== "note" ? input.style : "agent";
   editor.createShape({
     id,
     type: "card",
@@ -47,7 +51,7 @@ export function createCard(editor: Editor, value: unknown, author: string, meta:
       ...(human ? {} : { createdBy: author }),
       ...meta,
     },
-    props: { w: input.width ?? (human ? 240 : 420), richText: toRichText(input.text), tone: human ? "human" : "agent" },
+    props: { w: input.width ?? (human ? 240 : agentWidths[tone as keyof typeof agentWidths]), richText: toRichText(input.text), tone },
   });
   return id;
 }

@@ -91,7 +91,8 @@ If `canvas_sessions` is empty, the tab is closed or signed in to a different acc
 - Put options side by side, each with a small picture and a one-line caption.
 - Give your view, then hand decisions back as short numbered questions.
 - The human answers with marks: P picks, X rejects, a pen circle or a pink note. `canvas_read` returns open marks; resolve each one with `canvas_resolve` once you've acted on it.
-- Never mark picks or rejects yourself. Your work is shown in typed lavender with ✦; theirs is handwritten pink.
+- Never mark picks or rejects yourself. Your work is shown in casual typed lavender with ✦; theirs is handwritten pink.
+- Pick a note style for what you write: `heading` for section titles, `quote` for excerpts from a source (say where it came from), `code` for numbers and data, and the default `note` for everything else.
 
 When everything works, print:
 

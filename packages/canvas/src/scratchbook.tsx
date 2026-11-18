@@ -279,7 +279,7 @@ export function ScratchbookLayer() {
         const agent = isAgentShape(s) && Boolean(textual);
         const mark = s.meta.mark === "picked" || s.meta.mark === "rejected" ? s.meta.mark : undefined;
         if (!agent && !mark && !resolved.has(s.id)) return [];
-        return [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, type: s.type, caption: s.meta.role === "caption", agent, mark, resolved: resolved.has(s.id) }];
+        return [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, type: s.type, caption: s.meta.role === "caption", heading: s.type === "card" && s.props.tone === "heading", agent, mark, resolved: resolved.has(s.id) }];
       });
     },
     [editor],
@@ -295,7 +295,7 @@ export function ScratchbookLayer() {
               <path d={i.mark === "picked" ? pickBox(i.w, i.h) : rejectX(i.w, i.h)} />
             </svg>
           )}
-          {i.agent && <span className={i.type === "text" || i.caption ? "scratch-spark inline" : "scratch-spark"}>✦</span>}
+          {i.agent && <span className={i.heading ? "scratch-spark heading" : i.type === "text" || i.caption ? "scratch-spark inline" : "scratch-spark"}>✦</span>}
           {i.resolved && <span className="scratch-done">✓</span>}
         </div>
       ))}

@@ -69,8 +69,8 @@ export function seed(editor: Editor) {
     return id;
   };
 
-  const card = (x: number, y: number, value: string, author: string, width?: number) =>
-    createCard(editor, { x, y, text: value, width }, author);
+  const card = (x: number, y: number, value: string, author: string, width?: number, style?: "heading" | "quote" | "code") =>
+    createCard(editor, { x, y, text: value, width, style }, author);
   const link = (fromId: TLShapeId, toId: TLShapeId, actor: string, label = "") =>
     connect(editor, { fromId, toId, label }, actor)!.id as TLShapeId;
   const resolve = (id: TLShapeId) => {
@@ -111,14 +111,14 @@ export function seed(editor: Editor) {
   };
 
   // A: the agent loop.
-  const a = column(0, "A", "think out loud with your own AI agent", "Claude Code, Codex or any MCP agent can read this board, write on it, and wait for your call.");
+  const a = column(0, "A", "think out loud with your own AI agent", "Claude Code, Codex, Cursor or any MCP agent can read this board, write on it, and wait for your call.");
   step(a, "1", "you write in pink, by hand");
   put(a, card(a.x, a.y, "how many of our customers\nreally come back?", HUMAN, 300), 30);
   step(a, "2", "the agent answers in typed lavender, marked ✦");
   put(a, card(a.x, a.y, "Before I count: does a single repeat visit count, or do you mean a habit, like twice a month? I'll lay out both so you can compare.", AGENT, INNER), 30);
   step(a, "3", "try this prompt");
   put(a, card(a.x, a.y, "Read my board. Give me three ways to look at my question, each with a small picture and a one-line caption. Then ask me two questions I can answer by marking the board.", AGENT, INNER), 30);
-  put(a, text(a.x, a.y, "Agent access works with Paired running on your computer: the { } button explains how. Hosted agent connections are coming.", { size: "s", color: "grey", w: INNER }), 10);
+  put(a, text(a.x, a.y, "To connect, click { } Agent access (top right) and paste the one line it gives you into your agent. Keep this tab open while it works.", { size: "s", color: "grey", w: INNER }), 10);
 
   // B: examples side by side.
   const b = column(1, "B", "see options side by side", "Ask for a few. The agent reads your question back, then lays out real examples you can compare at a glance.");
@@ -218,6 +218,12 @@ export function seed(editor: Editor) {
     "export saves the board as an image",
   ])
     put(e, text(e.x, e.y, `–  ${line}`, { size: "s", w: INNER }), 8);
+  e.y += 30;
+  put(e, text(e.x, e.y, "agents write in a few voices, so you can tell an idea from a source or a number at a glance:", { size: "s", color: "grey", w: INNER }), 22);
+  put(e, card(e.x + 22, e.y, "Why people come back", AGENT, INNER - 22, "heading"), 14);
+  put(e, card(e.x, e.y, "Regulars come for the coffee, but they stay for being recognised.", AGENT, INNER), 16);
+  put(e, card(e.x, e.y, "“A good café is a living room you share with strangers.”\n— a café owner, from your interview notes (example)", AGENT, INNER, "quote"), 16);
+  put(e, card(e.x, e.y, "regulars: 312\nrepeat rate: 41%\nmedian visits: 3.2 a month", AGENT, 280, "code"), 10);
 
   // +: what comes next.
   const f = column(5, "+", "where this is going", "Paired is an early prototype of a tool for thought. Next on the list:");
@@ -225,7 +231,7 @@ export function seed(editor: Editor) {
     "converge: the agent gathers your picks into one summary",
     "bring your data: charts drawn from your own numbers",
     "learning mode, opt-in: predict before you look, then check",
-    "hosted agent connections",
+    "boards saved to your account, so agents can work while this tab is closed",
   ])
     put(f, text(f.x, f.y, `–  ${line}`, { size: "s", w: INNER }), 8);
   f.y += 26;

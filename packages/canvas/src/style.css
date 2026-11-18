@@ -852,111 +852,21 @@ p {
   min-width: 0;
 }
 
-/* Scratchbook paper, fonts and cards */
-.tl-container {
-  --scratch-hand: "Caveat", "Kalam", cursive;
-  --scratch-type: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
-  --tl-font-draw: "Caveat", "tldraw_draw", cursive;
-}
-.paper {
-  position: absolute;
-  inset: 0;
-  background-color: #efede8;
-  background-image: radial-gradient(circle, #cfcabe 1px, transparent 1.2px);
-}
-.scrap {
-  border-radius: 12px;
-  pointer-events: all;
-}
-.scrap--agent {
-  background: #ecebfb;
-  border: 1px solid #c9c3f0;
-  box-shadow: 0 1px 0 rgba(60, 50, 120, 0.06);
-}
-.scrap--human {
-  background: #fde6ee;
-  border: 1.5px solid #d1366b;
-  box-shadow: 0 2px 6px rgba(160, 30, 80, 0.12);
-}
-.scrap--human .tl-rich-text {
-  font-weight: 600;
-}
-.scrap--caption {
-  background: transparent;
-}
-.scratch-spark.inline {
-  top: 3px;
-  left: -14px;
-  font-size: 11px;
-}
-
-/* Messier scratchbook: hand-drawn card edges, handwriting everywhere. */
-.tl-container {
-  --scratch-hand: "Caveat", cursive;
-  --scratch-pen: "Kalam", cursive;
-  --scratch-type: "Kalam", cursive;
-  --tl-font-draw: "Caveat", cursive;
-  --tl-font-sans: "Kalam", "tldraw_sans", cursive;
-}
-.scrap {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-  pointer-events: all;
-}
-.scrap--agent,
-.scrap--human {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-.scrap-edge {
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-  pointer-events: none;
-}
-.scrap-edge path {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.scrap--agent .scrap-fill {
-  fill: #ebe8fb;
-  stroke: none;
-}
-.scrap--agent .scrap-edge path:not(.scrap-fill) {
-  stroke: #8f7fe0;
-  stroke-width: 1.4;
-}
-.scrap--human .scrap-fill {
-  fill: #fde3ec;
-  stroke: none;
-}
-.scrap--human .scrap-edge path:not(.scrap-fill) {
-  stroke: #d1366b;
-  stroke-width: 2.2;
-}
-.scrap--human .scrap-edge .scrap-second {
-  stroke-width: 1.1;
-  opacity: 0.55;
-}
-.scrap--human .tl-rich-text {
-  font-weight: 700;
-}
-.scrap--caption .tl-rich-text {
-  font-weight: 300;
-}
-
-/* One-for-one with Thariq's board (overrides the earlier scratchbook experiments). */
+/* Scratchbook: paper, type and cards.
+   Human: Caveat Brush marker on pink. Agents: Shantell Sans casual print on lavender,
+   plus heading, quote (Newsreader italic) and code (JetBrains Mono) styles.
+   tldraw's own font choices map the same way: draw = hand, sans = casual. */
 .tl-container {
   --scratch-hand: "Caveat Brush", cursive;
-  --scratch-type: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
-  --tl-font-draw: "Caveat Brush", cursive;
-  --tl-font-sans: Inter, "tldraw_sans", sans-serif;
+  --scratch-type: "Shantell Sans", "Comic Neue", sans-serif;
+  --tl-font-draw: "Caveat Brush", "tldraw_draw", cursive;
+  --tl-font-sans: "Shantell Sans", "tldraw_sans", sans-serif;
+  --tl-font-serif: Newsreader, "tldraw_serif", Georgia, serif;
+  --tl-font-mono: "JetBrains Mono", "tldraw_mono", ui-monospace, monospace;
 }
 .paper {
+  position: absolute;
+  inset: 0;
   background-color: #ebeae5;
   background-image: radial-gradient(circle, #c4c1b8 0.9px, transparent 1.1px);
 }
@@ -966,32 +876,46 @@ p {
   height: 100%;
   border-radius: 10px;
   box-sizing: border-box;
+  pointer-events: all;
 }
 .scrap--agent {
   background: #e9e8fb;
   border: 1.5px solid #c9c6f2;
-  box-shadow: none;
 }
 .scrap--human {
   background: #f9e1ea;
   border: 2.5px solid #c8125a;
   box-shadow: 0 2px 8px rgba(160, 20, 80, 0.12);
 }
-.scrap--human .tl-rich-text {
-  font-weight: 400;
-}
-.scrap--caption {
+.scrap--caption,
+.scrap--heading {
   background: transparent;
   border: none;
 }
-.scrap--caption .tl-rich-text {
-  font-weight: 400;
+.scrap--heading .tl-rich-text {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.scrap--quote {
+  background: #f6f5fd;
+  border: none;
+  border-left: 4px solid #8f86e3;
+  border-radius: 4px 10px 10px 4px;
+}
+.scrap--quote .tl-rich-text {
+  font-style: italic;
+}
+.scrap--code {
+  background: #f4f3f8;
+  border: 1.5px dashed #b9b4e6;
+  border-radius: 8px;
 }
 .scratch-ink path {
   stroke: #c8125a;
   stroke-width: 3;
 }
 .scratch-spark {
+  position: absolute;
   top: 10px;
   right: 12px;
   color: #3a2fd0;
@@ -999,8 +923,15 @@ p {
 }
 .scratch-spark.inline {
   top: 1px;
+  right: auto;
   left: -16px;
   font-size: 12px;
+}
+.scratch-spark.heading {
+  top: 6px;
+  right: auto;
+  left: -22px;
+  font-size: 16px;
 }
 
 /* Marker connectors replace tldraw's uniform arrow line (labels and selection stay). */

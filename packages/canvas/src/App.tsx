@@ -57,7 +57,7 @@ import {
 import { agentLink, connectAgentAccess } from "./agent-client";
 import { annotateObject } from "./agent-operations";
 import { isLegacySeed, seed } from "./seed";
-import { CardShapeUtil, CardShapeTool } from "./card-shape";
+import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
 import {
   PaperBackground,
   ScratchbookLayer,
@@ -1102,6 +1102,15 @@ function App() {
               red: { ...light.red, solid: "#c8125a" },
             },
           },
+          // Scratchbook type: the pen is a brush marker, plain text is a casual print,
+          // serif is for quoted sources and mono for data. Faces load from Google Fonts.
+          fonts: {
+            ...theme.fonts,
+            draw: { ...theme.fonts.draw, fontFamily: "'Caveat Brush', cursive", faces: [] },
+            sans: { ...theme.fonts.sans, fontFamily: "'Shantell Sans', sans-serif", faces: [] },
+            serif: { ...theme.fonts.serif, fontFamily: "Newsreader, Georgia, serif", faces: [] },
+            mono: { ...theme.fonts.mono, fontFamily: "'JetBrains Mono', ui-monospace, monospace", faces: [] },
+          },
         },
       };
     });
@@ -1126,18 +1135,20 @@ function App() {
     const fresh = editor.getCurrentPageShapes().length === 0 && editor.getPages().length === 1 && !page.meta.seeded;
     // Swap the old starter board for the welcome board, but only if nobody has touched it.
     const legacy = page.meta.seeded === true && isLegacySeed(editor);
-    if (fresh || legacy) {
-      // Cards size themselves from measured text, so wait for the board's fonts first.
-      const fonts = Promise.all([document.fonts.load("15px Inter"), document.fonts.load("27px 'Caveat Brush'")]);
-      const timeout = new Promise((done) => setTimeout(done, 2500));
-      void Promise.race([fonts, timeout]).catch(() => undefined).then(() => {
-        if (editor.getCurrentPage().meta.seeded === 2) return;
-        if (legacy) editor.deleteShapes([...editor.getCurrentPageShapeIds()]);
-        else if (editor.getCurrentPageShapes().length) return;
-        seed(editor);
-        editor.updatePage({ id: page.id, meta: { ...editor.getCurrentPage().meta, seeded: 2 } });
-      });
-    }
+    // Cards size themselves from measured text, so wait for the board's fonts, then
+    // re-measure existing cards and lay out the welcome board if this is a new canvas.
+    const fonts = Promise.all(
+      ["16px 'Shantell Sans'", "bold 30px 'Shantell Sans'", "27px 'Caveat Brush'", "italic 19px Newsreader", "13px 'JetBrains Mono'"].map((f) => document.fonts.load(f)),
+    );
+    const timeout = new Promise((done) => setTimeout(done, 2500));
+    void Promise.race([fonts, timeout]).catch(() => undefined).then(() => {
+      refitCards(editor);
+      if (!(fresh || legacy) || editor.getCurrentPage().meta.seeded === 2) return;
+      if (legacy) editor.deleteShapes([...editor.getCurrentPageShapeIds()]);
+      else if (editor.getCurrentPageShapes().length) return;
+      seed(editor);
+      editor.updatePage({ id: page.id, meta: { ...editor.getCurrentPage().meta, seeded: 2 } });
+    });
     setReady(true);
     return () => {
       delete window.paired;
