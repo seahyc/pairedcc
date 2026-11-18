@@ -1,53 +1,133 @@
 import { z } from "zod";
-import type { Editor } from "tldraw";
+import { atom, type Editor } from "tldraw";
 import { executeCommand } from "./agent-operations";
 import { envelopeSchema } from "./protocol";
 
 const requestSchema = envelopeSchema.extend({ id: z.string() });
-export function connectAgentAccess(editor: Editor) {
-  const hot = import.meta.hot;
-  if (!hot) return () => {};
-  const sessionId =
-    sessionStorage.getItem("picabird-agent-session") ?? crypto.randomUUID();
-  sessionStorage.setItem("picabird-agent-session", sessionId);
-  document.documentElement.dataset.pairedSession = sessionId;
-  let closed = false;
+type Reply = (message: { id: string; ok: boolean; result?: unknown; error?: string }) => void;
+
+export type AgentLink =
+  | { mode: "local" }
+  | { mode: "hosted"; state: "signed-out" | "connecting" | "connected"; email?: string };
+
+/** Current agent connection, for the Agent access panel. */
+export const agentLink = atom<AgentLink>("agent link", { mode: "hosted", state: "signed-out" });
+
+function sessionId() {
+  const id = sessionStorage.getItem("picabird-agent-session") ?? crypto.randomUUID();
+  sessionStorage.setItem("picabird-agent-session", id);
+  document.documentElement.dataset.pairedSession = id;
+  return id;
+}
+
+/** Runs agent commands against the editor, once per requestId. */
+function commandRunner(editor: Editor, session: string, isClosed: () => boolean) {
   const seen = new Map<string, Promise<unknown>>();
-  const hello = () =>
-    hot.send("paired:hello", { sessionId, title: document.title });
-  const request = (raw: unknown) => {
+  return (raw: unknown, reply: Reply) => {
     const parsed = requestSchema.safeParse(raw);
-    if (!parsed.success || parsed.data.sessionId !== sessionId || closed)
-      return;
+    if (!parsed.success || parsed.data.sessionId !== session || isClosed()) return;
     const { id, command, actor, requestId } = parsed.data;
     let work = seen.get(requestId);
     if (!work) {
       work = executeCommand(editor, command, actor);
       seen.set(requestId, work);
+      if (seen.size > 500) seen.delete(seen.keys().next().value!);
     }
     void work
-      .then((result) => {
-        if (!closed) hot.send("paired:response", { id, ok: true, result });
-      })
-      .catch((error) => {
-        if (!closed)
-          hot.send("paired:response", {
-            id,
-            ok: false,
-            error:
-              error instanceof Error
-                ? error.message
-                : "Canvas operation failed",
-          });
-      });
+      .then((result) => !isClosed() && reply({ id, ok: true, result }))
+      .catch((error) =>
+        !isClosed() &&
+        reply({ id, ok: false, error: error instanceof Error ? error.message : "Canvas operation failed" }),
+      );
   };
-  hot.on("paired:request", request);
-  hot.on("vite:ws:connect", hello);
-  hello();
+}
+
+/**
+ * Lets agents work on this canvas. In development the Vite relay carries commands
+ * from the local MCP server; on paired.cc a signed-in tab connects to the hosted
+ * relay behind https://paired.cc/mcp.
+ */
+export function connectAgentAccess(editor: Editor, onChange: (link: AgentLink) => void = (link) => agentLink.set(link)) {
+  const hot = import.meta.hot;
+  const session = sessionId();
+  let closed = false;
+  const run = commandRunner(editor, session, () => closed);
+
+  if (hot) {
+    onChange({ mode: "local" });
+    const hello = () => hot.send("paired:hello", { sessionId: session, title: document.title });
+    const request = (raw: unknown) => run(raw, (message) => hot.send("paired:response", message));
+    hot.on("paired:request", request);
+    hot.on("vite:ws:connect", hello);
+    hello();
+    return () => {
+      hot.send("paired:bye", { sessionId: session });
+      closed = true;
+      hot.off("paired:request", request);
+      hot.off("vite:ws:connect", hello);
+    };
+  }
+
+  let socket: WebSocket | undefined;
+  let retry: ReturnType<typeof setTimeout> | undefined;
+  let attempts = 0;
+  let email: string | undefined;
+
+  const connect = async () => {
+    if (closed || socket) return;
+    clearTimeout(retry);
+    try {
+      const me = await fetch("/auth/me", { credentials: "same-origin" });
+      if (!me.ok) {
+        onChange({ mode: "hosted", state: "signed-out" });
+        return;
+      }
+      email = ((await me.json()) as { email?: string }).email;
+    } catch {
+      retry = setTimeout(connect, 10_000);
+      return;
+    }
+    if (closed || socket) return;
+    onChange({ mode: "hosted", state: "connecting", email });
+    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/canvas-relay`);
+    socket = ws;
+    ws.onopen = () => ws.send(JSON.stringify({ type: "hello", sessionId: session, title: document.title }));
+    ws.onmessage = (event) => {
+      let message: { type?: string } & Record<string, unknown>;
+      try {
+        message = JSON.parse(String(event.data));
+      } catch {
+        return;
+      }
+      if (message.type === "connected") {
+        attempts = 0;
+        onChange({ mode: "hosted", state: "connected", email });
+      } else if (message.type === "request") {
+        run(message, (reply) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: "response", ...reply })));
+      }
+    };
+    ws.onclose = () => {
+      if (socket === ws) socket = undefined;
+      if (closed) return;
+      onChange({ mode: "hosted", state: "connecting", email });
+      attempts += 1;
+      retry = setTimeout(connect, Math.min(30_000, 1000 * 2 ** Math.min(attempts, 5)));
+    };
+  };
+
+  // Signing in usually happens in another tab (the agent's sign-in page), so check again on return.
+  const recheck = () => {
+    if (document.visibilityState === "visible" && !socket) void connect();
+  };
+  document.addEventListener("visibilitychange", recheck);
+  window.addEventListener("focus", recheck);
+  void connect();
+
   return () => {
-    hot.send("paired:bye", { sessionId });
     closed = true;
-    hot.off("paired:request", request);
-    hot.off("vite:ws:connect", hello);
+    clearTimeout(retry);
+    document.removeEventListener("visibilitychange", recheck);
+    window.removeEventListener("focus", recheck);
+    socket?.close(1000, "Canvas closed");
   };
 }

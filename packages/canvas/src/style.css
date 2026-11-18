@@ -1015,3 +1015,21 @@ p {
   height: 1px;
   overflow: visible;
 }
+
+/* Agent access panel */
+.agent-dialog { max-height: calc(100vh - 80px); overflow-y: auto; }
+.agent-dialog > p.inspector-help { margin: 14px 0 -8px; }
+.copy-block { position: relative; }
+.copy-block pre { margin: 10px 0; padding-right: 64px; }
+.copy-block .copy-button {
+  position: absolute; top: 8px; right: 8px;
+  border: 1px solid #d9d9e2; border-radius: 5px; background: white;
+  font-size: 11px; padding: 4px 9px; color: #4c4e58; cursor: pointer;
+}
+.copy-block .copy-button:hover { background: #f1eff9; }
+.agent-status { display: flex; align-items: center; gap: 8px; color: #34363e !important; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #c9c9d2; flex: none; }
+.status-dot.connected { background: #2f9e5b; box-shadow: 0 0 0 3px #2f9e5b22; }
+.status-dot.connecting { background: #e2a33c; }
+.wide-button.dark { background: #1f1d2c; color: white; border-color: #1f1d2c; }
+.wide-button.dark:hover { background: #3a2fd0; }

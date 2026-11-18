@@ -36,11 +36,11 @@ Browser checks performed 17 Nov 2026: native object dragging, pen drawing, text 
 
 This first pass adopts familiar canvas primitives and interactions. It does not reproduce Paper's CSS-flex layout system, shaders, component system or HTML/React export. Interactive data widgets and a built-in assistant come later. The local agent transport is implemented.
 
-The prototype stores work in the current browser profile. Export a file to move work between profiles or devices. There is no hosted workspace, authentication or multiplayer backend. tldraw development use works locally; production use requires an appropriate tldraw license. No production deployment was made.
+The prototype stores work in the current browser profile. Export a file to move work between profiles or devices. Boards are not stored on a server and there is no multiplayer backend; hosted agent access (`https://paired.cc/mcp`) relays commands to a signed-in open tab. tldraw development use works locally; production use requires an appropriate tldraw license. No production deployment was made.
 
 ## Agent workflow (17 Nov 2026)
 
-Open **Agent access** for the MCP configuration for this tab. The 16 tools include scene composition, nested frames, layout and duplication alongside targeted feedback and image operations. The **Agent studio** page is a scripted SVG demonstration. Integration checks cover the real HTTP/browser bridge and MCP stdio protocol; 12 automated tests and the production build pass. The API is a local development-server feature and is not included as a hosted backend in the static build.
+Open **Agent access** for the MCP configuration for this tab. The 16 tools include scene composition, nested frames, layout and duplication alongside targeted feedback and image operations. The **Agent studio** page is a scripted SVG demonstration. Integration checks cover the real HTTP/browser bridge and MCP stdio protocol; 12 automated tests and the production build pass. Locally the API runs in the development server. On paired.cc, Agent access shows a one-line command per client and the hosted endpoint forwards to the signed-in tab.
 
 ## Migration compatibility
 

@@ -14,6 +14,9 @@ import { createCommentRoutes } from './comments/routes.js'
 import { connectorRoutes, docConnectorRoutes } from './routes/connectors.js'
 import { manifestRoutes } from './routes/manifest.js'
 import { createFrontendRoutes } from './routes/frontend.js'
+import { oauthRoutes } from './oauth/routes.js'
+import { createMcpRoutes } from './canvas/mcp.js'
+import { CanvasRelay } from './canvas/relay.js'
 import { DocManager } from './yjs/doc-manager.js'
 import { attachYjsWebSocket } from './yjs/ws-handler.js'
 import { PostgresSnapshotStore } from './yjs/snapshot-store.js'
@@ -35,6 +38,8 @@ app.use('/api/*', createNormalizeApiTrailingSlash((req) => app.fetch(req)))
 const docManager = new DocManager()
 const presenceTracker = new PresenceTracker()
 const snapshotStore = new PostgresSnapshotStore()
+// Agents reach the user's open canvas tab: /mcp (OAuth) → relay → tab (WebSocket).
+const canvasRelay = new CanvasRelay([new URL(config.BASE_URL).origin])
 
 // WebSocket is attached after server starts (see main())
 
@@ -94,6 +99,10 @@ async function cleanupAnonymousDocs() {
   }
 }
 
+// Hosted canvas agent access: OAuth for MCP clients, then the MCP endpoint.
+app.route('/', oauthRoutes)
+app.route('/', createMcpRoutes(canvasRelay))
+
 // Serve frontend in production: / → canvas, document editor under /docs,
 // legacy URLs (/d/:id, /login, ...) 301-redirect to their /docs equivalents.
 app.route('/', createFrontendRoutes())
@@ -110,6 +119,7 @@ async function main() {
   console.log(`paired.cc server running on port ${config.PORT}`)
   const server = createServer(getRequestListener(app.fetch))
   attachYjsWebSocket(server, docManager)
+  canvasRelay.attach(server)
   server.listen(config.PORT)
 }
 

@@ -1,6 +1,6 @@
 # Work with the open canvas
 
-Start the development server (`npm run dev`) and open http://localhost:5183. The browser owns the live document; keep its tab open. This is a local development integration, not a hosted agent service.
+Start the development server (`npm run dev`) and open http://localhost:5183. The browser owns the live document; keep its tab open. This is the local development integration. On paired.cc the same tools are served at `https://paired.cc/mcp` with OAuth sign-in; see `public/agent-setup.md`.
 
 ## MCP
 

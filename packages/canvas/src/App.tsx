@@ -54,7 +54,7 @@ import {
   revision,
   type CanvasBridge,
 } from "./operations";
-import { connectAgentAccess } from "./agent-client";
+import { agentLink, connectAgentAccess } from "./agent-client";
 import { annotateObject } from "./agent-operations";
 import { isLegacySeed, seed } from "./seed";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
@@ -156,6 +156,68 @@ function Numeric({
     </label>
   );
 }
+/** A copyable code block. */
+function CopyBlock({ text, onCopied }: { text: string; onCopied: (notice: string) => void }) {
+  return (
+    <div className="copy-block">
+      <pre>{text}</pre>
+      <button
+        className="copy-button"
+        onClick={() =>
+          void navigator.clipboard
+            .writeText(text)
+            .then(() => onCopied("Copied"))
+            .catch(() => onCopied("Select the text and copy it"))
+        }
+      >
+        Copy
+      </button>
+    </div>
+  );
+}
+
+/** Agent setup on paired.cc: one sentence for the agent, or one command per client. */
+function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void }) {
+  const link = useValue("agent link", () => agentLink.get(), []);
+  const origin = location.origin;
+  if (link.mode !== "hosted") return null;
+  if (link.state === "signed-out")
+    return (
+      <>
+        <p>
+          Claude Code, Codex, Cursor or any MCP agent can read this board and work on it with you.
+          Sign in first, so your agent connects to your canvas and nobody else's.
+        </p>
+        <button
+          className="wide-button dark"
+          onClick={() => (location.href = `/docs/login?returnTo=${encodeURIComponent("/canvas/")}`)}
+        >
+          Sign in to connect an agent
+        </button>
+      </>
+    );
+  return (
+    <>
+      <p className="agent-status">
+        <span className={`status-dot ${link.state}`} />
+        {link.state === "connected" ? `This tab is ready for your agent${link.email ? ` (${link.email})` : ""}.` : "Connecting this tab…"}
+      </p>
+      <p>Paste this into your agent:</p>
+      <CopyBlock text={`Read ${origin}/agent-setup.md and connect me to Paired.`} onCopied={onCopied} />
+      <p>Or add it yourself:</p>
+      <p className="inspector-help">Claude Code</p>
+      <CopyBlock text={`claude mcp add --transport http paired ${origin}/mcp`} onCopied={onCopied} />
+      <p className="inspector-help">Codex</p>
+      <CopyBlock text={`codex mcp add paired --url ${origin}/mcp && codex mcp login paired`} onCopied={onCopied} />
+      <p className="inspector-help">Cursor, Claude.ai, ChatGPT and other clients: add a remote MCP server at</p>
+      <CopyBlock text={`${origin}/mcp`} onCopied={onCopied} />
+      <p className="inspector-help">
+        Your agent opens a sign-in page the first time. Keep this tab open while it works: the board itself is still saved in this browser.
+      </p>
+    </>
+  );
+}
+
 function Shell() {
   const editor = useEditor();
   const [feedbackTarget, setFeedbackTarget] = useState<string | null>(null);
@@ -947,7 +1009,7 @@ function Shell() {
           >
             <div className="dialog-heading">
               <Braces size={18} />
-              <h2>One canvas. Shared objects.</h2>
+              <h2>Bring your own agent</h2>
               <IconButton
                 label="Close agent access"
                 onClick={() => setAgentOpen(false)}
@@ -961,75 +1023,18 @@ function Shell() {
               canvas. The local HTTP API uses the same objects and history as
               your edits.
             </p>
-            <pre>
-              {JSON.stringify(
-                {
-                  mcpServers: {
-                    paired: {
-                      command: "node",
-                      args: [
-                        "/Users/yingcong/Code/pairedcc/packages/canvas/node_modules/tsx/dist/cli.mjs",
-                        "/Users/yingcong/Code/pairedcc/packages/canvas/tools/mcp.ts",
-                      ],
-                      env: {
-                        PAIRED_SESSION:
-                          sessionStorage.getItem("picabird-agent-session") ??
-                          "",
-                      },
-                    },
-                  },
-                },
-                null,
-                2,
-              )}
-            </pre>
-            <button
-              className="wide-button"
-              onClick={() => {
-                void navigator.clipboard
-                  .writeText(
-                    JSON.stringify(
-                      {
-                        mcpServers: {
-                          paired: {
-                            command: "node",
-                            args: [
-                              "/Users/yingcong/Code/pairedcc/packages/canvas/node_modules/tsx/dist/cli.mjs",
-                              "/Users/yingcong/Code/pairedcc/packages/canvas/tools/mcp.ts",
-                            ],
-                            env: {
-                              PAIRED_SESSION:
-                                sessionStorage.getItem(
-                                  "picabird-agent-session",
-                                ) ?? "",
-                            },
-                          },
-                        },
-                      },
-                      null,
-                      2,
-                    ),
-                  )
-                  .then(() => setNotice("MCP configuration copied"))
-                  .catch(() =>
-                    setNotice("Select and copy the configuration above"),
-                  );
-              }}
-            >
-              Copy MCP configuration
-            </button>
+            <CopyBlock
+              text={JSON.stringify({ mcpServers: { paired: { command: "node", args: [
+                "/Users/yingcong/Code/pairedcc/packages/canvas/node_modules/tsx/dist/cli.mjs",
+                "/Users/yingcong/Code/pairedcc/packages/canvas/tools/mcp.ts",
+              ], env: { PAIRED_SESSION: sessionStorage.getItem("picabird-agent-session") ?? "" } } } }, null, 2)}
+              onCopied={setNotice}
+            />
             <p className="inspector-help">
               HTTP: POST http://localhost:5183/api/canvas/command. Keep this tab
               open. Access is local to this computer.
             </p>
-            <p className="inspector-help">
-              Updates check the current revision. Human and agent edits share
-              the same selection, history and saved document.
-            </p>
-            </> : <p>
-              This canvas saves work in this browser. Export a file to back it up or move it to another device.
-              External agent access is currently available in the local development version; hosted agent connections are not enabled yet.
-            </p>}
+            </> : <HostedAgentAccess onCopied={setNotice} />}
             <button
               className="wide-button"
               onClick={() => {

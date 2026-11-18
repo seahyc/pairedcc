@@ -12,4 +12,4 @@ The canvas runs locally on port 5183 and is built into the production image at `
 
 ## Production canvas license
 
-The canvas bundle is deployed at `/canvas/`, but tldraw disables production rendering without a valid license. Set `VITE_TLDRAW_LICENSE_KEY` in the deployment environment and rebuild the app to enable it. The document editor remains available at `/docs` regardless. The canvas MCP relay remains local-only.
+The canvas bundle is deployed at `/canvas/`, but tldraw disables production rendering without a valid license. Set `VITE_TLDRAW_LICENSE_KEY` in the deployment environment and rebuild the app to enable it. The document editor remains available at `/docs` regardless. Agents connect to the hosted canvas with one command, for example `claude mcp add --transport http paired https://paired.cc/mcp`, or by being told to read https://paired.cc/agent-setup.md. They sign in through OAuth with a paired.cc account, and their commands go to the user's open, signed-in canvas tab. The Vite relay used in development stays local-only.

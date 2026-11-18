@@ -46,6 +46,16 @@ export function createFrontendRoutes(publicDir = './public') {
   app.get('/', (c) => c.redirect('/canvas/'))
   app.get('/canvas', (c) => c.redirect('/canvas/'))
 
+  // Instructions an agent reads to connect itself ("Read paired.cc/agent-setup.md").
+  app.get('/agent-setup.md', async (c) => {
+    try {
+      const body = await readFile(`${publicDir}/canvas/agent-setup.md`, 'utf-8')
+      return c.body(body, 200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'public, max-age=300' })
+    } catch {
+      return c.notFound()
+    }
+  })
+
   // Legacy document-editor URLs → /docs/* (301 so shared links keep working).
   // Preserves the query string and rewrites a legacy returnTo param.
   app.all('*', async (c, next) => {
