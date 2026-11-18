@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import {
   BaseBoxShapeTool,
   BaseBoxShapeUtil,
@@ -74,15 +75,20 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
   override onBeforeCreate(next: CardShape) {
     return this.fit(next);
   }
-  override onBeforeUpdate(_prev: CardShape, next: CardShape) {
+  override onBeforeUpdate(prev: CardShape, next: CardShape) {
+    // Re-estimate only when the content or width changes; a height-only update is
+    // the rendered-size correction from useAutoHeight and must stick.
+    const p = prev.props, n = next.props;
+    if (p.richText === n.richText && p.w === n.w && p.tone === n.tone) return next;
     return this.fit(next);
   }
   override component(shape: CardShape) {
     const t = cardType[shape.props.tone];
     const isSelected = useValue("card selected", () => this.editor.getOnlySelectedShapeId() === shape.id, [this.editor, shape.id]);
+    const ref = useAutoHeight(this.editor, shape, t.pad * 2 + (unboxed.has(shape.props.tone) ? 2 : 4));
     return (
       <HTMLContainer style={{ width: shape.props.w, height: shape.props.h }}>
-        <div className={`scrap scrap--${shape.props.tone}`} style={{ fontStyle: t.style, fontWeight: t.weight }}>
+        <div ref={ref} className={`scrap scrap--${shape.props.tone}`} style={{ fontStyle: t.style, fontWeight: t.weight }}>
         <RichTextLabel
           shapeId={shape.id}
           type="card"
@@ -106,6 +112,35 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
     path.roundRect(0, 0, shape.props.w, shape.props.h, 10);
     return path;
   }
+}
+
+/**
+ * Auto-size by default: watch the text as the browser actually lays it out and set
+ * the card's height to match, so text never spills out whatever the font metrics,
+ * wrapping or zoom. The up-front estimate in fit() only avoids a visible jump.
+ */
+function useAutoHeight(editor: Editor, shape: CardShape, chrome: number) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { id, props: { h: height, w, richText } } = shape;
+  // Re-run when anything else sets the height (e.g. the load-time estimate) and when
+  // editing swaps the text element, not only when the text box itself resizes.
+  useLayoutEffect(() => {
+    const text = ref.current?.querySelector<HTMLElement>(".tl-rich-text");
+    if (!text) return;
+    const sync = () => {
+      const content = text.scrollHeight;
+      if (!content || !text.offsetParent) return; // culled or hidden: no layout to trust
+      const shape = editor.getShape<CardShape>(id);
+      const h = Math.ceil(content + chrome);
+      if (!shape || Math.abs(shape.props.h - h) < 1) return;
+      editor.run(() => editor.updateShape<CardShape>({ id, type: "card", props: { h } }), { history: "ignore" });
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(text);
+    return () => observer.disconnect();
+  }, [editor, id, chrome, height, w, richText]);
+  return ref;
 }
 
 /** Re-measure every card, e.g. once web fonts have loaded or the type has changed. */
