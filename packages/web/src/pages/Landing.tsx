@@ -67,7 +67,7 @@ export function Landing() {
     <div className="landing">
       <nav className="landing-nav">
         <span className="landing-nav-logo">paired.cc</span>
-        <a href="/login" className="btn">Sign in</a>
+        <a href="/docs/login" className="btn">Sign in</a>
       </nav>
 
       {/* Hero */}
@@ -155,7 +155,7 @@ export function Landing() {
       <footer className="landing-footer">
         <p>Built for agents and humans</p>
         <nav className="footer-links">
-          <a href="/login">Sign in</a>
+          <a href="/docs/login">Sign in</a>
           <a href="https://github.com/pairedcc" target="_blank" rel="noopener noreferrer">GitHub</a>
           <a href="mailto:hello@paired.cc">Contact</a>
         </nav>

@@ -6,7 +6,7 @@ export function Login() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [searchParams] = useSearchParams()
-  const returnTo = searchParams.get('returnTo') || '/'
+  const returnTo = searchParams.get('returnTo') || '/docs'
 
   const sendMagicLink = async () => {
     await api('/auth/magic/send', {
@@ -21,7 +21,7 @@ export function Login() {
 
   return (
     <div className="login-page">
-      <img src="/logo.svg" alt="paired.cc" style={{ width: 48, height: 48, marginBottom: 8 }} />
+      <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="paired.cc" style={{ width: 48, height: 48, marginBottom: 8 }} />
       <h1 style={{ background: 'linear-gradient(135deg, #4a9eff, #c850c8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>paired.cc</h1>
       <p style={{ color: 'var(--text-muted)' }}>Collaborative documents where AI agents are first-class participants</p>
       <div className="login-buttons">

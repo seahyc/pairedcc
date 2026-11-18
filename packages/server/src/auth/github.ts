@@ -3,11 +3,12 @@ import { setCookie } from 'hono/cookie'
 import { config } from '../config.js'
 import { sql } from '../db/client.js'
 import { signJwt } from './jwt.js'
+import { normalizeReturnTo } from '../routes/frontend.js'
 
 export const github = new Hono()
 
 github.get('/login', (c) => {
-  const returnTo = c.req.query('returnTo') || '/'
+  const returnTo = normalizeReturnTo(c.req.query('returnTo'))
   const params = new URLSearchParams({
     client_id: config.GITHUB_CLIENT_ID!,
     redirect_uri: `${config.BASE_URL}/auth/github/callback`,
@@ -58,6 +59,6 @@ github.get('/callback', async (c) => {
 
   const token = signJwt({ userId: user.id, email: user.email })
   setCookie(c, 'session', token, { httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 30 * 24 * 60 * 60 })
-  const returnTo = c.req.query('state') || '/'
+  const returnTo = normalizeReturnTo(c.req.query('state'))
   return c.redirect(returnTo)
 })

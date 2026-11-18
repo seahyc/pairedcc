@@ -70,13 +70,13 @@ describe('PairedClient', () => {
         expect(url).toBe('https://paired.cc/api/documents/import')
         return {
           ok: true, status: 201, statusText: 'Created',
-          json: async () => ({ id: 'd9', title: 'My Doc', is_anonymous: true, url: 'https://paired.cc/d/d9', anon_session: 'anon_x' }),
+          json: async () => ({ id: 'd9', title: 'My Doc', is_anonymous: true, url: 'https://paired.cc/docs/d/d9', anon_session: 'anon_x' }),
           text: async () => '',
         } as Response
       }) as unknown as typeof fetch,
     })
     const res = await p.docs.import('# My Doc\n\nhi')
-    expect(res.url).toBe('https://paired.cc/d/d9')
+    expect(res.url).toBe('https://paired.cc/docs/d/d9')
     expect(res.anon_session).toBe('anon_x')
     expect(capturedBody).toEqual({ markdown: '# My Doc\n\nhi' })
     expect(capturedHeaders['X-API-Key']).toBeUndefined()
@@ -91,13 +91,13 @@ describe('PairedClient', () => {
         capturedHeaders = (init?.headers as Record<string, string>) || {}
         return {
           ok: true, status: 201, statusText: 'Created',
-          json: async () => ({ id: 'd10', title: 'T', url: 'https://paired.cc/d/d10' }),
+          json: async () => ({ id: 'd10', title: 'T', url: 'https://paired.cc/docs/d/d10' }),
           text: async () => '',
         } as Response
       }) as unknown as typeof fetch,
     })
     const res = await p.docs.import('# T', { title: 'T' })
-    expect(res.url).toBe('https://paired.cc/d/d10')
+    expect(res.url).toBe('https://paired.cc/docs/d/d10')
     expect(capturedHeaders['X-API-Key']).toBe('sk_test')
   })
 
@@ -109,7 +109,7 @@ describe('PairedClient', () => {
       ]),
     })
     const res = await p.docs.create()
-    expect(res.url).toBe('https://paired.cc/d/d11')
+    expect(res.url).toBe('https://paired.cc/docs/d/d11')
   })
 
   it('comments.list hits the cross-doc inbox by default with the api key', async () => {

@@ -22,12 +22,12 @@ export function Dashboard() {
         <h1>paired.cc</h1>
         <div>
           <button onClick={createDoc} className="btn btn-primary">New Document</button>
-          <a href="/settings" className="btn btn-ghost">Settings</a>
+          <a href="/docs/settings" className="btn btn-ghost">Settings</a>
         </div>
       </header>
       <div className="doc-list">
         {docs.map(doc => (
-          <a key={doc.id} href={`/d/${doc.id}`} className="doc-card">
+          <a key={doc.id} href={`/docs/d/${doc.id}`} className="doc-card">
             <h3>{doc.title}</h3>
             <time>{new Date(doc.updated_at).toLocaleDateString()}</time>
           </a>

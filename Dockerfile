@@ -20,7 +20,7 @@ ARG VITE_TLDRAW_LICENSE_KEY
 RUN VITE_TLDRAW_LICENSE_KEY="$VITE_TLDRAW_LICENSE_KEY" pnpm --filter @pairedcc/canvas build
 
 # Move web build to where serveStatic expects it
-RUN cp -r packages/web/dist public
+RUN mkdir -p public/docs && cp -r packages/web/dist/. public/docs/
 RUN mkdir -p public/canvas && cp -r packages/canvas/dist/. public/canvas/
 # Copy migrations to where the built migrate.ts expects them
 RUN mkdir -p packages/server/dist/db/migrations && cp packages/server/src/db/migrations/*.sql packages/server/dist/db/migrations/ 2>/dev/null; \

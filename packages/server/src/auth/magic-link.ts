@@ -4,6 +4,7 @@ import { config } from '../config.js'
 import { sql } from '../db/client.js'
 import { signJwt } from './jwt.js'
 import { nanoid } from 'nanoid'
+import { normalizeReturnTo } from '../routes/frontend.js'
 
 // In-memory token store for MVP. Replace with Redis for production.
 const pendingTokens = new Map<string, { email: string; expiresAt: number; returnTo: string }>()
@@ -15,7 +16,7 @@ magicLink.post('/send', async (c) => {
   if (!email) return c.json({ error: 'Email required' }, 400)
 
   const token = nanoid(32)
-  pendingTokens.set(token, { email, expiresAt: Date.now() + 15 * 60 * 1000, returnTo: returnTo || '/' })
+  pendingTokens.set(token, { email, expiresAt: Date.now() + 15 * 60 * 1000, returnTo: normalizeReturnTo(returnTo) })
 
   const link = `${config.BASE_URL}/auth/magic/verify?token=${token}`
 
@@ -44,5 +45,5 @@ magicLink.get('/verify', async (c) => {
 
   const jwt = signJwt({ userId: user.id, email: user.email })
   setCookie(c, 'session', jwt, { httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 30 * 24 * 60 * 60 })
-  return c.redirect(pending.returnTo || '/')
+  return c.redirect(pending.returnTo)
 })

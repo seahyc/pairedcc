@@ -70,7 +70,7 @@ export function ShareDialog({ docId, open, onClose }: Props) {
   if (!open) return null
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const shareUrl = `${origin}/d/${docId}`
+  const shareUrl = `${origin}/docs/d/${docId}`
   const rawUrl = `${origin}/api/documents/${docId}/raw`
   const isAnon = meta?.is_anonymous
   const isPublic = !!meta?.is_public
@@ -120,7 +120,7 @@ export function ShareDialog({ docId, open, onClose }: Props) {
             </p>
             {allConnectors.length === 0 && (
               <p style={{ fontSize: 13 }}>
-                No connectors yet. <a href="/settings">Add one in Settings →</a>
+                No connectors yet. <a href="/docs/settings">Add one in Settings →</a>
               </p>
             )}
             {allConnectors.map(c => {

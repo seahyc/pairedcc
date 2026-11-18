@@ -28,7 +28,7 @@ export function Settings() {
     <div className="dashboard">
       <header className="dashboard-header">
         <h1>Settings</h1>
-        <a href="/" className="btn btn-ghost">&larr; Back</a>
+        <a href="/docs" className="btn btn-ghost">&larr; Back</a>
       </header>
 
       <h2>API Keys</h2>

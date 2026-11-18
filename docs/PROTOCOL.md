@@ -63,18 +63,18 @@ Returns `201` with the document plus a `url`:
   "title": "Title",
   "is_anonymous": true,
   "expires_at": "…+24h",
-  "url": "https://paired.cc/d/0b2c…",
+  "url": "https://paired.cc/docs/d/0b2c…",
   "anon_session": "anon_…"   // only for anonymous docs
 }
 ```
 
-The shareable web URL is always `<origin>/d/<id>` (the canvas route). Example:
+The shareable web URL is always `<origin>/docs/d/<id>` (legacy `/d/<id>` links 301-redirect there). Example:
 
 ```bash
 curl -sX POST https://paired.cc/api/documents/import \
   -H 'Content-Type: application/json' \
   -d '{"markdown":"# Roadmap\n\n- [ ] ship import endpoint\n- [x] write the spec"}'
-# → { "id": "...", "url": "https://paired.cc/d/...", ... }
+# → { "id": "...", "url": "https://paired.cc/docs/d/...", ... }
 ```
 
 ### `GET /api/documents/:id/raw`

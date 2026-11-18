@@ -207,7 +207,7 @@ export class PairedClient {
         body: opts?.title ? { title: opts.title } : {},
         authOptional: true,
       })
-      return { ...doc, url: `${this.baseUrl}/d/${doc.id}` }
+      return { ...doc, url: `${this.baseUrl}/docs/d/${doc.id}` }
     },
   }
 
@@ -342,7 +342,7 @@ export interface DocMeta {
   updated_at?: string
 }
 
-/** A freshly created/imported doc, including its shareable web URL (/d/:id). */
+/** A freshly created/imported doc, including its shareable web URL (/docs/d/:id). */
 export interface DocCreated extends DocMeta {
   /** Shareable web URL — open it to view/edit the doc collaboratively. */
   url: string

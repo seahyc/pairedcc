@@ -1,8 +1,6 @@
 import { Hono } from 'hono'
 import { createServer } from 'node:http'
-import { readFile } from 'node:fs/promises'
 import { getRequestListener } from '@hono/node-server'
-import { serveStatic } from '@hono/node-server/serve-static'
 import { config } from './config.js'
 import { migrate } from './db/migrate.js'
 import { sql } from './db/client.js'
@@ -15,6 +13,7 @@ import { createAgentRoutes } from './routes/agent.js'
 import { createCommentRoutes } from './comments/routes.js'
 import { connectorRoutes, docConnectorRoutes } from './routes/connectors.js'
 import { manifestRoutes } from './routes/manifest.js'
+import { createFrontendRoutes } from './routes/frontend.js'
 import { DocManager } from './yjs/doc-manager.js'
 import { attachYjsWebSocket } from './yjs/ws-handler.js'
 import { PostgresSnapshotStore } from './yjs/snapshot-store.js'
@@ -95,26 +94,9 @@ async function cleanupAnonymousDocs() {
   }
 }
 
-// Serve frontend in production
-app.get('/', (c) => c.redirect('/documents'))
-app.get('/canvas', (c) => c.redirect('/canvas/'))
-app.use('/*', serveStatic({ root: './public' }))
-
-// SPA history fallback — for client-side routes (e.g. /d/:id, /settings)
-// the file doesn't exist on disk, so serve index.html and let React Router handle it.
-// Skips API/auth paths and anything that looks like a static asset (has a file extension).
-app.get('*', async (c) => {
-  const path = c.req.path
-  if (path.startsWith('/api/') || path.startsWith('/auth/') || /\.[a-zA-Z0-9]+$/.test(path)) {
-    return c.notFound()
-  }
-  try {
-    const html = await readFile('./public/index.html', 'utf-8')
-    return c.html(html)
-  } catch {
-    return c.notFound()
-  }
-})
+// Serve frontend in production: / → canvas, document editor under /docs,
+// legacy URLs (/d/:id, /login, ...) 301-redirect to their /docs equivalents.
+app.route('/', createFrontendRoutes())
 
 async function main() {
   await migrate()

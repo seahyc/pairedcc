@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  // Document editor is served under /docs (the canvas owns /).
+  base: '/docs/',
   plugins: [react()],
   server: {
     proxy: {

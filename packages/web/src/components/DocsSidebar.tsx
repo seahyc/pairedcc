@@ -154,7 +154,7 @@ export function DocsSidebar({ open, onClose, currentDocId }: Props) {
                     }}
                   />
                 ) : (
-                  <a className="docs-sidebar-link" href={`/d/${doc.id}`}>
+                  <a className="docs-sidebar-link" href={`/docs/d/${doc.id}`}>
                     <span className="docs-sidebar-title">{doc.title || 'Untitled'}</span>
                     <time className="docs-sidebar-time">{relTime(doc.updated_at)}</time>
                   </a>

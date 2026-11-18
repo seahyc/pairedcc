@@ -26,8 +26,8 @@ export function TopBar({ title, onTitleChange, peers, onShare, onVersionHistory,
             ☰
           </button>
         )}
-        <a href="/" className="topbar-logo">
-          <img src="/logo.svg" alt="paired.cc" className="topbar-logo-img" />
+        <a href="/docs" className="topbar-logo">
+          <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="paired.cc" className="topbar-logo-img" />
           paired.cc
         </a>
         <span className="topbar-sep">&rsaquo;</span>

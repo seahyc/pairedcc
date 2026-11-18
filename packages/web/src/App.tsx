@@ -11,12 +11,11 @@ export function App() {
   if (loading) return <div className="loading">Loading...</div>
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/docs">
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         <Route path="/" element={user ? <Dashboard /> : <HomepageRedirect />} />
-        <Route path="/documents" element={user ? <Dashboard /> : <HomepageRedirect />} />
-        <Route path="/new" element={<HomepageRedirect />} />
+                <Route path="/new" element={<HomepageRedirect />} />
         <Route path="/d/:docId" element={<Editor />} />
         <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
       </Routes>

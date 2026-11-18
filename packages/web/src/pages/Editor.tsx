@@ -90,7 +90,7 @@ export function Editor() {
     if (justCreated === docId && !toastShownFor.has(docId)) {
       toastShownFor.add(docId)
       sessionStorage.removeItem('pairedcc:just-created')
-      const url = `${window.location.origin}/d/${docId}`
+      const url = `${window.location.origin}/docs/d/${docId}`
       setToast(`Your doc is at ${url} — anyone with this link can edit.`)
     }
   }, [docId])
@@ -112,7 +112,7 @@ export function Editor() {
               {claiming ? 'Saving…' : 'Save to your account'}
             </button>
           ) : (
-            <a href={`/login?returnTo=/d/${docId}`}>Sign in</a>
+            <a href={`/docs/login?returnTo=/docs/d/${docId}`}>Sign in</a>
           )}
           {' '}to keep it.
         </div>

@@ -24,7 +24,7 @@ We are **shipping** the importer.
 - [ ] open PR
 `)
 
-console.log(doc.url) // → https://paired.cc/d/<id> — hand this to a human to co-edit
+console.log(doc.url) // → https://paired.cc/docs/d/<id> — hand this to a human to co-edit
 ```
 
 The markdown renders as real, editable blocks (headings, lists, fenced code,

@@ -25,9 +25,9 @@ function publicOrigin(c: import('hono').Context): string {
   return config.BASE_URL.replace(/\/$/, '')
 }
 
-/** Shareable web URL for a doc id — the React route is /d/:docId. */
+/** Shareable web URL for a doc id — the React route is /docs/d/:docId. */
 export function shareUrl(origin: string, docId: string): string {
-  return `${origin.replace(/\/$/, '')}/d/${docId}`
+  return `${origin.replace(/\/$/, '')}/docs/d/${docId}`
 }
 
 /**

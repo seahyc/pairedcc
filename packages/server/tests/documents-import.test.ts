@@ -45,11 +45,11 @@ describe('withTitleHeading', () => {
 })
 
 describe('shareUrl', () => {
-  it('builds /d/:id from the origin', () => {
-    expect(shareUrl('https://paired.cc', 'abc-123')).toBe('https://paired.cc/d/abc-123')
+  it('builds /docs/d/:id from the origin', () => {
+    expect(shareUrl('https://paired.cc', 'abc-123')).toBe('https://paired.cc/docs/d/abc-123')
   })
 
   it('tolerates a trailing slash on the origin', () => {
-    expect(shareUrl('https://paired.cc/', 'abc')).toBe('https://paired.cc/d/abc')
+    expect(shareUrl('https://paired.cc/', 'abc')).toBe('https://paired.cc/docs/d/abc')
   })
 })
