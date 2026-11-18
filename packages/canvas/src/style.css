@@ -543,7 +543,8 @@ p {
   left: 256px;
 }
 .zoom-controls {
-  right: 252px;
+  /* Leave the tldraw licence watermark (bottom-right of the canvas) uncovered. */
+  right: 368px;
 }
 .zoom-value {
   border: 0;
@@ -668,7 +669,7 @@ p {
     right: 200px;
   }
   .zoom-controls {
-    right: 216px;
+    right: 332px;
   }
   .brand {
     width: 180px;
