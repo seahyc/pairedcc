@@ -56,7 +56,7 @@ import {
 } from "./operations";
 import { connectAgentAccess } from "./agent-client";
 import { annotateObject } from "./agent-operations";
-import { seed } from "./seed";
+import { isLegacySeed, seed } from "./seed";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
 import {
   PaperBackground,
@@ -1117,15 +1117,20 @@ function App() {
     );
     window.paired = createBridge(editor);
     setAgentEditor(editor);
-    if (
-      editor.getCurrentPageShapes().length === 0 &&
-      editor.getPages().length === 1 &&
-      !editor.getCurrentPage().meta.seeded
-    ) {
-      seed(editor);
-      editor.updatePage({
-        id: editor.getCurrentPageId(),
-        meta: { ...editor.getCurrentPage().meta, seeded: true },
+    const page = editor.getCurrentPage();
+    const fresh = editor.getCurrentPageShapes().length === 0 && editor.getPages().length === 1 && !page.meta.seeded;
+    // Swap the old starter board for the welcome board, but only if nobody has touched it.
+    const legacy = page.meta.seeded === true && isLegacySeed(editor);
+    if (fresh || legacy) {
+      // Cards size themselves from measured text, so wait for the board's fonts first.
+      const fonts = Promise.all([document.fonts.load("15px Inter"), document.fonts.load("27px 'Caveat Brush'")]);
+      const timeout = new Promise((done) => setTimeout(done, 2500));
+      void Promise.race([fonts, timeout]).catch(() => undefined).then(() => {
+        if (editor.getCurrentPage().meta.seeded === 2) return;
+        if (legacy) editor.deleteShapes([...editor.getCurrentPageShapeIds()]);
+        else if (editor.getCurrentPageShapes().length) return;
+        seed(editor);
+        editor.updatePage({ id: page.id, meta: { ...editor.getCurrentPage().meta, seeded: 2 } });
       });
     }
     setReady(true);

@@ -149,7 +149,7 @@ function composeScene(editor: Editor, value: unknown, actor: string) {
     return { name: input.name, objects: Object.fromEntries([...objects].map(([key, shape]) => [key, describeObject(editor, shape.id)])), connections };
   });
 }
-function image(editor: Editor, value: unknown, actor: string) {
+export function image(editor: Editor, value: unknown, actor: string) {
   const input = imageInput.parse(value),
     assetId = AssetRecordType.createId(),
     id = createShapeId();
@@ -197,7 +197,7 @@ function image(editor: Editor, value: unknown, actor: string) {
   if (!described) throw new Error("Could not place the image");
   return { ...described, ...(captionId ? { captionId } : {}) };
 }
-function connect(editor: Editor, value: unknown, actor: string) {
+export function connect(editor: Editor, value: unknown, actor: string) {
   const input = connectionInput.parse(value),
     { fromId, toId } = input,
     from = find(editor, fromId),
