@@ -1025,8 +1025,8 @@ function Shell() {
             </p>
             <CopyBlock
               text={JSON.stringify({ mcpServers: { paired: { command: "node", args: [
-                "/Users/yingcong/Code/pairedcc/packages/canvas/node_modules/tsx/dist/cli.mjs",
-                "/Users/yingcong/Code/pairedcc/packages/canvas/tools/mcp.ts",
+                "/Users/yingcong/Code/tools/pairedcc/packages/canvas/node_modules/tsx/dist/cli.mjs",
+                "/Users/yingcong/Code/tools/pairedcc/packages/canvas/tools/mcp.ts",
               ], env: { PAIRED_SESSION: sessionStorage.getItem("picabird-agent-session") ?? "" } } } }, null, 2)}
               onCopied={setNotice}
             />

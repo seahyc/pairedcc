@@ -9,7 +9,7 @@ Open **Agent access** in Paired and copy the MCP configuration. It supplies the 
 The equivalent stdio process is:
 
 ```sh
-node /Users/yingcong/Code/pairedcc/packages/canvas/node_modules/tsx/dist/cli.mjs /Users/yingcong/Code/pairedcc/packages/canvas/tools/mcp.ts
+node /Users/yingcong/Code/tools/pairedcc/packages/canvas/node_modules/tsx/dist/cli.mjs /Users/yingcong/Code/tools/pairedcc/packages/canvas/tools/mcp.ts
 ```
 
 Set `PAIRED_SESSION` to target a particular tab. Its ID persists across reloads in that tab's session storage. `canvas_sessions` lists connections. If several are open, requests without a session ID fail rather than selecting a canvas arbitrarily.
