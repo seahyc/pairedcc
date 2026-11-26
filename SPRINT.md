@@ -537,6 +537,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     merged since. Done when `verify-board-images.mjs fresh` passes 5/5, with the cause named.
 
 ## Claims
+88. Clean profile shows large imported images | claude/sprint-board-images-2 | 2026-11-26T13:50Z
 87. The menu and dialogs work from the keyboard | claude/sprint-robust-menu | 2026-11-26T13:48Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 
