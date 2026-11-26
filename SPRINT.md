@@ -176,7 +176,7 @@ task by which measure is furthest from target, not by backlog order.
     (or `?prototype=learning`) refuses those operations with an error that says how to turn them
     on, flagged tabs and saved boards behave as before, and a test fails if the gate is removed.
 
-24. (PRs #30 #45 open, awaiting review; #45 stacked on #30.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
+24. (#30 merged; PR #45 open, awaiting review, now merged up to the integration branch.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
     the development board store. Done when a scripted check signs in to a local server (Postgres,
     Redis), opens the canvas, saves, and a second clean browser on the same account opens the same
     board, without needing a tldraw licence key (for example the dev canvas proxying `/auth` and
@@ -254,7 +254,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     arrow keeps the anchor sides chosen when it was made and takes an odd route (reported by the
     agent-usability attempt, PR #24). Done when moving either end re-routes the arrow to the facing
     sides, shown by before/after screenshots and a check of the binding anchors.
-36. **Working spec's implemented sections, after the 26 Nov merges.** `docs/canvas/working-spec.md`
+36. (PR #49 open, awaiting review.) **Working spec's implemented sections, after the 26 Nov merges.** `docs/canvas/working-spec.md`
     still lists server-side storage, file import and a general Transformation object as not built,
     and says nothing of #11 to #30. Done when each merged PR's user- or agent-visible effect is in an
     implemented section with its PR number, no "not built" claim contradicts the code, and
@@ -266,7 +266,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 37. read reports card style | claude/sprint-card-style | 2026-11-26T11:27Z
-36. Working spec implemented sections | claude/sprint-spec-sync | 2026-11-26T11:27Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 36. Comments move with their target | claude/sprint-follow | 2026-11-26T11:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
@@ -410,3 +409,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:23Z | build-A | 24 Sync against the real server (race) | #45 | Real server refuses a stale save with 409 and the canvas merges; both browsers' changes on the server |
 | 2026-11-26T11:24Z | build-B | 35 Agents see clusters | #47 | `canvas_overview` reports piles of nearby objects; tested pure function; live HTTP check; root build and test green |
 | 2026-11-26T11:25Z | build-A | 35 Annotation arrows follow | #48 | Side effect re-picks connector sides; before/after anchors and screenshots; scorecard unchanged |
+| 2026-11-26T11:26Z | build-A | 36 Working spec implemented sections | #49 | #11 to #30 recorded with PR numbers; stale "not built" claims (server storage, file import, transformations, hosted presence) corrected |
