@@ -1614,6 +1614,8 @@ function App() {
     const page = editor.getCurrentPage();
     // A brand-new canvas: nothing on it and never laid out. It holds no work of the person's own.
     const fresh = editor.getCurrentPageShapes().length === 0 && editor.getPages().length === 1 && !page.meta.seeded;
+    // The page this tab opened on: on a fresh board, the only page there was.
+    const firstPage = editor.getCurrentPageId();
     // Plain text wraps at a reading width and grows downward instead of running off the board.
     const wrapText = (shape: TLShape) => {
       if (shape.type !== "text" || !("autoSize" in shape.props) || !shape.props.autoSize || shape.meta.fixedWidth) return;
@@ -1695,8 +1697,8 @@ function App() {
         // A board that was empty when this tab opened and has been worked on since (an agent
         // acted before the fonts arrived, or the person started writing) keeps that work in
         // view: the calm board is laid out on its own page without moving there. If the tab's
-        // first page was left empty (an agent made a page of its own), that page takes it.
-        const empty = fresh ? editor.getPages().find((p) => p.id !== working && editor.getSortedChildIdsForParent(p.id).length === 0) : undefined;
+        // own first page was left empty (an agent made a page of its own), that page takes it.
+        const empty = fresh && firstPage !== working && editor.getPage(firstPage) && editor.getSortedChildIdsForParent(firstPage).length === 0 ? editor.getPage(firstPage) : undefined;
         const id = empty?.id ?? PageRecordType.createId();
         if (empty) editor.updatePage({ id: empty.id, name: "Board 1", meta: { ...empty.meta, seeded: 3 } });
         else editor.createPage({ id, name: "Thinking", meta: { seeded: 3 } });
