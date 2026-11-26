@@ -240,6 +240,7 @@ export function listAsks(editor: Editor, value: unknown = {}) {
   const input = asksInput.parse(value);
   const asks = allAsks(editor)
     .filter((s) => input.state === "all" || askOf(s)!.state === input.state)
+    .filter((s) => input.page === "all" || editor.getAncestorPageId(s) === editor.getCurrentPageId())
     .sort((a, b) => askOf(a)!.askedAt - askOf(b)!.askedAt)
     .map((s) => describeAsk(editor, s));
   return { asks };
@@ -316,7 +317,7 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         targetId: shape.id,
         replyTo: shape.id,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
-      }, offPage ? pageId : undefined);
+      }, pageId);
       rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
       return id;
     });

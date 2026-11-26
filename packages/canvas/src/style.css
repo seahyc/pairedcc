@@ -2021,3 +2021,16 @@ kbd {
   padding-left: 6px;
   border-left: 1px solid #dedfe4;
 }
+
+/* Read by screen readers, never seen: an ask's changes of state are announced here. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

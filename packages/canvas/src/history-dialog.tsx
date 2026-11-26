@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FolderOpen, History, X } from "lucide-react";
 import type { BoardSummary, RevisionSummary } from "./board-sync";
 import { boardHistory } from "./board-sync-browser";
+import { useDialogFocus } from "./focus-keys";
 import { boardLabel, historyRows, sizeLabel, whenLabel } from "./history";
 
 // "Earlier versions": the board's kept revisions, each restorable. A restore saves the
@@ -33,9 +34,10 @@ export function HistoryDialog({ onClose, where }: { onClose: () => void; where: 
       setState({ ...state, busy: undefined, error: e instanceof Error ? e.message : String(e) });
     }
   };
+  const focus = useDialogFocus<HTMLElement>(onClose);
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <section className="agent-dialog history-dialog" role="dialog" aria-modal="true" aria-label="Earlier versions" onClick={(e) => e.stopPropagation()}>
+      <section {...focus} className="agent-dialog history-dialog" role="dialog" aria-modal="true" aria-label="Earlier versions" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-heading">
           <History size={18} />
           <h2>Earlier versions</h2>
@@ -98,9 +100,10 @@ export function SavedBoardsDialog({ onClose, where }: { onClose: () => void; whe
       setState({ ...state, busy: undefined, error: e instanceof Error ? e.message : String(e) });
     }
   };
+  const focus = useDialogFocus<HTMLElement>(onClose);
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <section className="agent-dialog history-dialog" role="dialog" aria-modal="true" aria-label="Saved boards" onClick={(e) => e.stopPropagation()}>
+      <section {...focus} className="agent-dialog history-dialog" role="dialog" aria-modal="true" aria-label="Saved boards" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-heading">
           <FolderOpen size={18} />
           <h2>Saved boards</h2>
