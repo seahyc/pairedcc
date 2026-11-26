@@ -331,6 +331,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     in a real tab.
 
 ## Claims
+51. CSV import keeps what the file says | claude/sprint-csv-faithful | 2026-11-26T11:55Z
 45. Ask about a frame gives its contents | claude/sprint-ask-frame | 2026-11-26T11:52Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
