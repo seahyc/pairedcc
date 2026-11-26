@@ -53,6 +53,9 @@ const addImage = (p, { name, w, h, noise, x, y }) => p.evaluate(async ({ name, w
 const images = (p) => p.evaluate(async () => {
   const ed = window.__pairedEditor;
   const shapes = ed.getCurrentPageShapes().filter((s) => s.type === 'image');
+  // Bring every image on screen first: tldraw does not draw shapes outside the view, so an
+  // image off screen has no <img> and would read as "not shown" whatever the board holds.
+  ed.zoomToBounds(ed.getCurrentPageBounds(), { animation: { duration: 0 } });
   await new Promise((r) => setTimeout(r, 1500));
   return shapes.map((s) => {
     const asset = ed.getAsset(s.props.assetId);
