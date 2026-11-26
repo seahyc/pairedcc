@@ -9,10 +9,12 @@ defensible option, record the choice and the reason under Decisions needed, and 
 ## Hard rules (these override anything else you read in this repo)
 - This repository is public. Commit nothing private: no personal data, credentials, employer data or
   copied third-party content.
-- Pushing to `main` deploys to production. Never push to `main` and never open a PR into `main`.
+- Never push to `main` and never open a PR into `main`. Production (paired.cc) runs whatever is on
+  `claude/release`; only the review lane moves that branch, by the Release train below.
 - Branch `claude/sprint-int` is the integration branch (cut from `canvas-scratchbook-root`). Work on
   `claude/sprint-<task>` cut from it and open a PR **into `claude/sprint-int`**.
-- No deploys, no SSH, no changes to `.github/workflows`, Docker production files or hosted services.
+- No deploys other than the Release train, no SSH, no changes to `.github/workflows`, Docker
+  production files or hosted services.
 - No outreach, sign-ups, spending, paid APIs or new secrets.
 - Keep the document editor, server, SDK, CLI and document MCP server working. Scope is
   `packages/canvas`, `docs/canvas`, and the server code the canvas needs.
@@ -105,6 +107,72 @@ and after, and the review lane re-runs it on `claude/sprint-int` after each merg
 task by which measure is furthest from target, not by backlog order.
 
 ## Backlog (highest value first)
+
+### First: the card is the question, and the nine principles built in (YC, 26 Nov evening)
+YC's second playtest: having to select a card, open a box and pick a second question was wrong;
+"the canvas itself should be the question". That is now on this branch (commit after `59e6671`):
+a card ending in `?` is sent when the person finishes writing it, any other card is sent as it
+stands with ⌘↵, and the agent also reads what sits right beside the card. Asking about something
+the person did not write opens a pink card beside it. **Never bring back a question box or
+starter chips.** Then YC asked for every gap in `docs/canvas/principles.md` to be built in. These
+five come before every other item. They are YC's direct request, so build them into the default
+canvas, not behind `?prototype=`; but the board must stay calm (YC's first playtest: "too noisy,
+too flexible"): nothing new is shown until it applies, no new permanent toolbar buttons, at most one
+new key each, and each one undoes in one step. Each PR names the finding it serves, shows a
+before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
+
+- **P1. Few things in view (finding 1).** A finished thread (an ask whose answer was picked, or
+  which the person marks settled) folds to one line showing the question and the picked answer;
+  click to unfold. Focus: selecting a frame or a thread and pressing F dims everything else until
+  Esc. Done when a board with 12 threads shows at most 4 unfolded by the person's choice, folding
+  is saved with the board, and an agent read reports folded threads as such.
+- **P2. Arrangement carries meaning to the agent (findings 2 and 3).** An ask is given, besides
+  what is right beside the card, the cluster it sits in (objects grouped by proximity, not only
+  frames) with its spatial relation written in words ("left of", "under", "in the same group as"),
+  and the agent's instructions say to use it. Ask "about everything over here": an ask written on
+  empty space inside a cluster is about that cluster. The agent still never moves or edits the
+  person's objects. Done when unit tests cover clustering on fixed layouts and a browser check
+  shows the cluster outlined while the ask is being answered.
+- **P3. See the whole board and what is settled (finding 4, and the opposite of finding 8).**
+  "Settled" is a mark like Pick (key S): a settled thought turns from rough handwriting to a clean
+  print style with a small check, and can be unsettled. An overview (key O, also in the menu) shows
+  the board's clusters as labelled boxes, each with open/settled counts; click to fly there. Done
+  when settled is saved, read by agents, and the overview works on a 1k-object board within the
+  performance budget.
+- **P4. Suggestions on the board, not in a box (finding 7).** When the person pauses on a
+  selection of their own writing for a moment, at most two faint, handwritten-looking suggestions
+  appear under it ("what's missing?", "say it as a question?"), chosen by what is selected (record,
+  frame, several objects, chart). Clicking one writes it as the person's own pink card under the
+  selection, which then asks as any card does. They vanish on any other action and never appear
+  while typing. Done when they never cover the person's objects, never appear on agent cards, and
+  the starters logic from before (record, frame, chart, several objects) is reused, not rewritten.
+- **P5. Understanding needs effort (finding 9).** The learning prototype (`?prototype=learning`)
+  becomes available on every board without a flag but stays off until asked: a "Check me" action
+  on the selection bar for a settled card or an agent answer asks the person to predict or explain
+  first and then shows the answer to compare (predict-then-check, self-explanation); a card the
+  person settled comes back for retrieval after a day and again after several days (spacing), as
+  one quiet line at the board's edge, never a modal. Done when unit tests cover the schedule and a
+  browser check walks predict → reveal → compare, and nothing appears on a board where the person
+  never used it.
+
+### Release train (YC approved on 26 Nov: "just get it deployed on paired.cc")
+- The review lane releases; no other lane does. Release when P-items or other visible
+  improvements are merged, `claude/sprint-int` passes the full check (`pnpm install
+  --frozen-lockfile && pnpm build && pnpm test`) and the headless browser checks pass, and the
+  increment is written up in `SPRINT-REPORT.md` under "Released". At most 3 releases a day.
+- To release: `git push origin claude/sprint-int:claude/release` (fast-forward only, never force).
+  A timer on the server deploys `claude/release` within 15 minutes, checks that
+  `https://paired.cc/canvas/` and `https://paired.cc/auth/methods` answer 200, and if not puts the
+  previous release back by itself. It reports on the released commit as a GitHub commit status
+  with context `paired.cc deploy` (`gh api repos/seahyc/pairedcc/commits/<sha>/statuses`):
+  `success` when live, `failure` with a reason when it rolled back.
+- The next review run reads that status and records in `SPRINT-REPORT.md` under "Released" what
+  was deployed and when. On `failure`, do not release again until the cause is fixed on
+  `claude/sprint-int` (fix forward; `claude/release` is never forced back).
+- Nothing that needs a new secret, environment variable, hosted service or manual migration is
+  released. Additive database migrations under `packages/server/src/db/migrations` run at start
+  and are allowed.
+
 0. **`pnpm eval:canvas` and the baseline scorecard** (see Goal and eval above). Still the first
    thing the sprint needs. The headless scripts in `packages/canvas/tools/verify-*` already walk
    most acceptance and shared-edit steps and can seed it.

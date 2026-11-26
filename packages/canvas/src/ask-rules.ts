@@ -45,6 +45,9 @@ export function answerLayout(anchor: { x: number; y: number }, texts: string[], 
   return { box: { x: anchor.x, y: anchor.y + STATUS_ROOM, w: across * w + (across - 1) * OPTION_GAP, h }, cards };
 }
 
+/** A card that ends in a question mark is a question, and is sent as soon as it is written. */
+export const isQuestion = (text: string) => /[?？]\s*$/.test(text.trim());
+
 /** A sensible first question for what is selected: a question is answered, a thought is probed. */
 export function suggestQuestion(selectedText: string) {
   return /\?\s*$/.test(selectedText.trim()) ? "Answer this" : "";
@@ -88,7 +91,7 @@ export function askStatusLine(
 ) {
   const secs = (from: number, to: number) => `${Math.max(1, Math.round((to - from) / 1000))}s`;
   if (ask.state === "answered")
-    return { tone: "done", text: `${ask.agent ?? "Agent"} answered in ${secs(ask.askedAt, ask.answeredAt ?? opts.now)} · given ${opts.given}` };
+    return { tone: "done", text: `${ask.agent ?? "Agent"} answered in ${secs(ask.askedAt, ask.answeredAt ?? opts.now)}${opts.given ? ` · also read ${opts.given}` : ""}` };
   if (ask.state === "failed") return { tone: "failed", text: `No answer: ${ask.error ?? "something went wrong"}`, retry: true };
   if (ask.state === "working") {
     // An agent that says nothing for two minutes has stopped; offer the way out.
