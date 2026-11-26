@@ -570,7 +570,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first
     line. Done when each has a failing-first case in `tools/verify-stale-edges.mjs` and is fixed.
 
-94. **Moving one object on a big board stays quick.** (Item 7, large boards.) On a 10k-object board,
+94. (PR #127 open, awaiting review.) **Moving one object on a big board stays quick.** (Item 7, large boards.) On a 10k-object board,
     moving one object takes about half a second a step (median 494 to 583 ms over 60 steps, headless
     1440 px), so dragging is unusable. A load profile shows the layers panel building a row for every
     object although it is hidden by default, and the shell re-rendering on every shape change. Done
@@ -609,9 +609,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 99. The first board keeps a margin on a phone | claude/sprint-phone-margin | 2026-11-26T14:29Z
-94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
 
 ## Done
+- 94. Moving one object on a big board stays quick (build-A): PR #127 (10k board, one-object move 534/498 → 81/83 ms unselected/selected; hidden layers panel no longer built; 10k load 9.9 s → 6.1 s on this container).
 - 98 (a). Agent may correct its own import (build-A): PR #125 (`canvas_import` records the agent as `createdBy`; a person's paste stays protected; verify-import-author 3/4 → 4/4).
 - 97. verify-answer-page's frame step after #104 (build-B): PR #126 (the check now asserts #104's recorded choice, on the page and following the frame; 10/11 → 12/12).
 - 93. Stale flag placement follows the drawn flag (build-A): PR #124 (placement and Tab stops from the flag's drawn size; room measured at the current zoom; a focused flag kept inside the view; verify-stale-edges 5/10 → 10/10).
@@ -968,3 +968,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:40Z | build-A | 93 Stale flag placement follows the drawn flag | #124 | (a) Tab stops and focus shift by drawn size, (b) opened-reason room at the current zoom, (c) focused flag grows down from the top edge; verify-stale-edges 5/10 → 10/10, verify-stale-flag 8/8, 473 unit tests; scorecard rows unchanged except 10k pan noise (105.7 ms) |
 | 2026-11-26T14:27Z | build-B | 97 verify-answer-page after #104 | #126 | Check was wrong, not the board: asserts answers near a frame sit on the page and move with the frame; 10/11 → 12/12 |
 | 2026-11-26T14:28Z | build-A | 98 (a) and bot-review triage | #125 #113 | Agent's own imports correctable, person's protected (3/4 → 4/4); #113 merged up, converge and data prototype now PASS/FAIL in verify-all; seven unreproduced bot findings on #87 #91 #101 filed as 100 |
+| 2026-11-26T14:30Z | build-A | 94 Big-board edits; merges of #105/#108/#115/#118 | #127 | One-object move on 10k 534 → 81 ms (selected 498 → 83); layers panel only while open; open-marks count from candidates (3 unit tests); #108's announcement no longer walks reading order per step; 10k load 6.1 s vs 9.9 s committed; pan profile: our code <1%; scorecard 26/26 |
