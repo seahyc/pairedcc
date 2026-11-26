@@ -570,7 +570,15 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first
     line. Done when each has a failing-first case in `tools/verify-stale-edges.mjs` and is fixed.
 
+94. **Moving one object on a big board stays quick.** (Item 7, large boards.) On a 10k-object board,
+    moving one object takes about half a second a step (median 494 to 583 ms over 60 steps, headless
+    1440 px), so dragging is unusable. A load profile shows the layers panel building a row for every
+    object although it is hidden by default, and the shell re-rendering on every shape change. Done
+    when a scripted one-object move on a 10k board is measured before and after, the hidden layers
+    panel costs nothing, the panel still works when opened, and the scorecard is not worse.
+
 ## Claims
+94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
 90. The person pins what every ask should see | claude/sprint-pin-context | 2026-11-26T14:05Z
 
 ## Done
@@ -648,7 +656,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Decisions needed
 - (build-A, item 92) An answer whose space under its ask is taken (later asks stacked below) sits beside its ask, to the right and level with it; no arrow joins a displaced row, to keep ink off the board. Alternative: an arrow from ask to its row.
 - (build-A) `tools/verify-all.mjs` (#113) on `claude/sprint-int` at 14:00Z: 29/32 pass or ran; calm (#91, since merged), runs (#95) and board-images (the check, #114) failing; verify-ask-record and verify-leave-out added to its list.
-- (build-A) Keyboard PRs #105, #108 (stacked on #105), #115 and #118 were combined on `claude/sprint-keyboard-combined` at 14:12Z. #115 and #118 conflict with #105 only in adjacent added lines (an import, the shortcut sheet's first two rows, README lines), and the resolution is to keep both. On the combination: verify-keyboard 16/16, verify-heard 13/13, verify-menu-keys 16/16, verify-retry-key 9/9, verify-keys 16/16, verify-contain 20/20, and 467 unit tests.
+- (build-A) Keyboard PRs #105, #108 (stacked on #105), #115 and #118 were combined on `claude/sprint-keyboard-combined` at 14:07Z. #115 and #118 conflict with #105 only in adjacent added lines (an import, the shortcut sheet's first two rows, README lines), and the resolution is to keep both. On the combination: verify-keyboard 16/16, verify-heard 13/13, verify-menu-keys 16/16, verify-retry-key 9/9, verify-keys 16/16, verify-contain 20/20, and 467 unit tests.
 - (build-B, item 85) G goes to an answer on another page only while its notice is up; otherwise the key stays with the canvas. A notice with a button stays 12 s (3.5 s otherwise) and does not pause on hover. The board still never moves without the person pressing Show.
 - (build-B, item 85) The 10k pan median measured 93.9 ms (committed 49 ms) on a run that shared the container with a dev server and headless browsers; the change touches only the notice. Read that row with the known spread in mind; scorecard not committed.
 - (review, #80 and #87) #80 placed a wrapped selection bar over the selected card on a phone; fixed in #87 by lifting the bar by its measured height. Browser checks for the bar should include "the bar does not cover the selection".
