@@ -167,9 +167,28 @@ export function elsewhereNotice(
   const asked = `“${where.question.length > 40 ? `${where.question.slice(0, 39)}…` : where.question}”`;
   const page = `on the page “${where.pageName}”`;
   if (after.state === "answered") return `✦ ${after.agent ?? "Your agent"} answered ${asked} ${page}.`;
-  if (after.state === "failed") return `Your ask ${asked} ${page} could not be answered. Open that page to retry.`;
+  if (after.state === "failed") return `Your ask ${asked} ${page} could not be answered. Show it to retry.`;
   return undefined;
 }
+
+/**
+ * What Show selects on the ask's page: the answers to the ask (board order, hidden ones left
+ * out), or the ask itself when it failed or its answers are gone, so Retry or the ask's status
+ * is on the selection. Nothing for a state that is not an outcome.
+ */
+export function elsewhereShow(
+  state: string,
+  askId: string,
+  shapes: { id: string; replyTo?: unknown; hidden?: boolean }[],
+): string[] {
+  if (state === "failed") return [askId];
+  if (state !== "answered") return [];
+  const answers = shapes.filter((s) => s.replyTo === askId && !s.hidden).map((s) => s.id);
+  return answers.length ? answers : [askId];
+}
+
+/** How long a notice stays: long enough to read, and to press its button when it has one. */
+export const noticeMs = (hasAction: boolean) => (hasAction ? 12000 : 3500);
 
 /** Gap kept between the selection bar and the window's edges. */
 export const BAR_MARGIN = 8;

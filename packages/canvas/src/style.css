@@ -601,6 +601,36 @@ p {
   padding: 10px 15px;
   box-shadow: 0 3px 15px #0002;
 }
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Its own width up to the window's, not half of it (left: 50% would otherwise cap it). */
+  width: max-content;
+  max-width: min(640px, calc(100vw - 32px));
+  box-sizing: border-box;
+}
+.toast-action {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff1f;
+  color: white;
+  border: 1px solid #ffffff4d;
+  border-radius: 5px;
+  padding: 4px 9px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toast-action:hover,
+.toast-action:focus-visible {
+  background: #ffffff38;
+}
+.toast-action kbd {
+  color: #292a2e;
+}
 .modal-backdrop {
   position: absolute;
   inset: 0;

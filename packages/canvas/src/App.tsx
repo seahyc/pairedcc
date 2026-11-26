@@ -12,6 +12,8 @@ import {
   startEditingShapeWithRichText,
   type Editor,
   type TLShape,
+  type TLShapeId,
+  Box,
   type TLComponents,
 } from "tldraw";
 import {
@@ -79,7 +81,7 @@ import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
-import { elsewhereNotice } from "./ask-rules";
+import { elsewhereNotice, elsewhereShow, noticeMs } from "./ask-rules";
 import { askOf } from "./asks";
 import { landedAnswers } from "./ask-rules";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
@@ -281,6 +283,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Open or close the feedback queue", "Shift C"],
       ["Bring in a table or document as cards", keys("⌘ V, or drop a file")],
       ["Next / previous imported record", "J / K"],
+      ["Go to an answer that landed on another page, while its notice is up", "G"],
       ["Finish typing", "Esc"],
     ],
   },
@@ -387,8 +390,15 @@ function Shell() {
     redo = useValue("can redo", () => editor.getCanRedo(), [editor]);
   const [leftOpen, setLeftOpen] = useState(false),
     [agentOpen, setAgentOpen] = useState(false),
-    [notice, setNotice] = useState(""),
+    [notice, setNoticeText] = useState(""),
+    // The ask a notice is about when it was answered (or failed) on another page: Show goes there.
+    [noticeShow, setNoticeShow] = useState<string | null>(null),
     [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Any other notice is about something else, so it drops the Show from the one before.
+  const setNotice = (text: string) => {
+    setNoticeText(text);
+    setNoticeShow(null);
+  };
   const importRef = useRef<HTMLInputElement>(null),
     imageRef = useRef<HTMLInputElement>(null);
   const shape = selected.length === 1 ? selected[0] : undefined;
@@ -488,6 +498,13 @@ function Shell() {
         return;
       }
       if (event.shiftKey) return;
+      // G goes to an ask answered on another page, while the notice about it is up.
+      if (key === "g" && showing.current) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) showRef.current();
+        return;
+      }
       // L leaves the selection out of asks (the context prototype). Capture first so tldraw's own L (line) doesn't fire.
       if (key === "l" && prototypeEnabled("context")) {
         const chosen = editor.getSelectedShapes();
@@ -611,7 +628,10 @@ function Shell() {
               question: "richText" in shape.props ? richTextPlain(shape.props.richText).trim() : "",
               pageName: (pageId && editor.getPage(pageId)?.name) || "another page",
             });
-            if (said) setNotice(said);
+            if (said) {
+              setNoticeText(said);
+              setNoticeShow(shape.id);
+            }
           }
         },
         { scope: "document" },
@@ -620,9 +640,34 @@ function Shell() {
   );
   useEffect(() => {
     if (!notice) return;
-    const t = setTimeout(() => setNotice(""), 3500);
+    const t = setTimeout(() => setNotice(""), noticeMs(Boolean(noticeShow)));
     return () => clearTimeout(t);
-  }, [notice]);
+  }, [notice, noticeShow]);
+  /** Show: open the ask's page, select its answer (or the failed ask) and bring it into view. */
+  function showElsewhere(askId: string) {
+    setNotice("");
+    const ask = editor.getShape(askId as TLShapeId), pageId = ask && editor.getAncestorPageId(ask);
+    if (!ask || !pageId) {
+      setNotice("That ask is no longer on the board");
+      return;
+    }
+    editor.setCurrentPage(pageId);
+    const onPage = [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []);
+    const ids = elsewhereShow(askOf(ask)?.state ?? "", ask.id, onPage.map((s) => ({ id: s.id, replyTo: s.meta.replyTo, hidden: editor.isShapeHidden(s) })));
+    editor.setCurrentTool("select");
+    editor.select(...(ids as TLShapeId[]));
+    // Centre the ask and what answered it together, so the answer is seen with its question;
+    // zoom out only when they do not fit the window at this zoom.
+    const box = Box.Common([ask.id, ...ids].flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []));
+    const view = editor.getViewportPageBounds();
+    if (box.w > view.w * 0.8 || box.h > view.h * 0.7) editor.zoomToBounds(box, { inset: 80, animation: { duration: 180 } });
+    else editor.centerOnPoint(box.center, { animation: { duration: 180 } });
+    editor.focus();
+  }
+  const showRef = useRef<() => void>(() => {});
+  showRef.current = () => noticeShow && showElsewhere(noticeShow);
+  const showing = useRef(false);
+  showing.current = Boolean(notice && noticeShow);
   function chooseTool(id: string) {
     // Scratchbook defaults: the human writes in pink ink and handwriting.
     const scratch = id === "draw" || id === "note" || id === "arrow";
@@ -1389,6 +1434,11 @@ function Shell() {
       {notice && (
         <div className="toast" role="status">
           {notice}
+          {noticeShow && (
+            <button type="button" className="toast-action" onClick={() => showRef.current()}>
+              Show{!TOUCH && <kbd>G</kbd>}
+            </button>
+          )}
         </div>
       )}
       {link.mode === "local" && link.state === "disconnected" && (
@@ -1445,7 +1495,7 @@ function Shell() {
   );
 }
 import { GeoShapeGeoStyle, PageRecordType, createShapeId, react } from "tldraw";
-import { keys } from "./keys";
+import { TOUCH, keys } from "./keys";
 const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil, BoardImageShapeUtil];
 const TEXT_WRAP = 460;
 // One set of editor options: the page limit, and double-click writes a card rather than plain text.
