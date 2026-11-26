@@ -604,4 +604,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:23Z | build-B | 58 Read filter matching gaps | #78 | Partly formatted words, Greek final sigma and Devanagari vowel signs match correctly; failing-first tests; live MCP check |
 | 2026-11-26T12:26Z | build-B | 8 Docs: board history on the menu | #79 | README and working spec no longer say no screen lists boards; #75's README line describes the new retention |
 | 2026-11-26T12:27Z | build-A | 54 Text and next step inside the window | #80 | verify-contain 11/20 → 20/20 at 1440 and 390 px (Ask box send button was off a phone screen, Send again too); 8 failing-first unit tests; first screen unchanged; scorecard unchanged |
-| 2026-11-26T12:33Z | build-B | 59 Safety race for restore | #82 | Safety 9 to 10 races, 0 lost; a restore that overwrites instead of writing conditionally fails it (1 lost) |
+| 2026-11-26T12:29Z | build-B | 59 Safety race for restore | #82 | Safety 9 to 10 races, 0 lost; a restore that overwrites instead of writing conditionally fails it (1 lost) |
