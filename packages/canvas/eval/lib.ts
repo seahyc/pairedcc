@@ -1,5 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -43,8 +45,11 @@ export type DevServer = { base: string; stop(): void };
 /** Start the canvas dev server (with the local relay) on its own port, or reuse `EVAL_URL`. */
 export async function startServer(port = Number(process.env.EVAL_PORT ?? 5191)): Promise<DevServer> {
   if (process.env.EVAL_URL) return { base: process.env.EVAL_URL.replace(/\/$/, ""), stop() {} };
+  // Each run gets an empty development board store, so saved boards never leak between runs.
+  const boards = mkdtempSync(join(tmpdir(), "paired-eval-boards-"));
   const child: ChildProcess = spawn(process.execPath, [`${packageDir}/node_modules/vite/bin/vite.js`, "--port", String(port), "--strictPort"], {
     cwd: packageDir,
+    env: { ...process.env, PAIRED_BOARDS_DIR: boards },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let log = "";
@@ -97,8 +102,33 @@ export async function ready(page: Page) {
   // A new board lays out the welcome page after fonts load (up to 2.5 s); wait for it so it
   // does not land in the middle of a check. Existing boards are already seeded.
   await page
-    .waitForFunction(() => (window as any).__pairedEditor.getPages().some((p: any) => p.meta.seeded === 2), null, { timeout: 10000 })
+    .waitForFunction(() => (window as any).__pairedEditor.getPages().some((p: any) => p.meta.seeded >= 2), null, { timeout: 10000 })
     .catch(() => undefined);
+}
+
+/**
+ * Wait until the board is saved to the account (or the development board store), as a
+ * person would before closing the tab: nothing unsaved and no save in flight. Returns
+ * false if the board never reports being saved there (for example, no board storage).
+ */
+export async function savedToAccount(page: Page, timeout = 20000): Promise<boolean> {
+  await sleep(300);
+  return page
+    .waitForFunction(
+      () => {
+        const el = document.querySelector(".save-state");
+        let memo: { dirty?: boolean } | null = null;
+        try {
+          memo = JSON.parse(localStorage.getItem("paired-board-sync") ?? "null");
+        } catch {
+          /* unreadable memo counts as unsaved */
+        }
+        return !!el && el.textContent?.startsWith("Saved to") && !el.classList.contains("saving") && memo?.dirty === false;
+      },
+      null,
+      { timeout },
+    )
+    .then(() => true, () => false);
 }
 
 /** The relay session ID of a tab, once the tab has connected to the relay. */
@@ -120,7 +150,7 @@ export type Agent = {
 };
 
 /** A real stdio MCP client running tools/mcp.ts against one tab. Tool errors reject. */
-export async function mcpAgent(base: string, session: string): Promise<Agent> {
+export async function mcpAgent(base: string, session: string, actor?: string): Promise<Agent> {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
   const client = new Client({ name: "paired-eval", version: "1.0.0" });
@@ -128,7 +158,7 @@ export async function mcpAgent(base: string, session: string): Promise<Agent> {
     new StdioClientTransport({
       command: process.execPath,
       args: [`${packageDir}/node_modules/tsx/dist/cli.mjs`, `${packageDir}/tools/mcp.ts`],
-      env: { ...env, PAIRED_URL: base, PAIRED_SESSION: session },
+      env: { ...env, PAIRED_URL: base, PAIRED_SESSION: session, ...(actor ? { PAIRED_ACTOR: actor } : {}) },
     }),
   );
   const agent: Agent = {

@@ -11,6 +11,8 @@ const { chromium } = require('playwright');
   console.log('button without flag:', await p.getByText('Data prototype page').count());
   await p.goto('http://localhost:5183/canvas/?prototype=data');
   await p.waitForTimeout(3000);
+  // The pages list sits behind the menu in the calm layout.
+  await p.getByRole('button', { name: 'Menu' }).click(); await p.getByRole('menuitem', { name: /layers and pages/ }).click();
   await p.getByText('Data prototype page').click();
   await p.waitForTimeout(800);
   const bars = async () => p.$$eval('.bar', bs => bs.map(b => b.getAttribute('aria-label')));

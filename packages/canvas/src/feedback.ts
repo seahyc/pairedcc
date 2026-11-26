@@ -46,6 +46,8 @@ export type FeedbackItem = {
   resolvedAt?: string;
   resolvedBy?: string;
   replies: FeedbackReply[];
+  /** Set when the comment is an ask put to an agent: waiting, working, answered or failed. */
+  ask?: string;
 };
 
 const iso = (value: unknown) =>
@@ -108,13 +110,16 @@ export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
       );
     if (s.author !== HUMAN_AUTHOR) continue;
     if (m.role === "annotation")
-      items.push(
-        item(s, "comment", m.status, commentTargets(m), {
+      items.push({
+        ...item(s, "comment", m.status, commentTargets(m), {
           createdAt: m.createdAt,
           updatedAt: m.updatedAt ?? m.createdAt,
           resolvedAt: m.resolvedAt,
         }),
-      );
+        ...(m.ask && typeof m.ask === "object" && typeof (m.ask as { state?: unknown }).state === "string"
+          ? { ask: (m.ask as { state: string }).state }
+          : {}),
+      });
     else if (s.type === "draw" && s.inkTargets?.length)
       items.push(
         item(s, "ink", m.status, s.inkTargets, {

@@ -1,3 +1,4 @@
+import { prototypeEnabled } from "../prototype-flags";
 import {
   BaseBoxShapeUtil,
   HTMLContainer,
@@ -47,7 +48,7 @@ export type DatasetShape = TLShape<"dataset">;
 export type ChartShape = TLShape<"chart">;
 
 export function dataPrototypeEnabled(search = typeof location === "undefined" ? "" : location.search) {
-  return new URLSearchParams(search).getAll("prototype").includes("data");
+  return prototypeEnabled("data", search);
 }
 
 const keepToCanvas = (editor: Editor) => (e: ReactPointerEvent) => editor.markEventAsHandled(e);
@@ -66,9 +67,12 @@ export function recordedInputs(shape: TLShape): InputRef[] {
     const p = (shape as ChartShape).props;
     return p.datasetId ? [{ id: p.datasetId, version: p.inputVersion }] : [];
   }
-  const parsed = inputRefSchema.array().safeParse(shape.meta.inputs);
+  // Most objects record no inputs; skip validation for them (this runs for every shape).
+  if (shape.meta.inputs === undefined) return [];
+  const parsed = inputRefsSchema.safeParse(shape.meta.inputs);
   return parsed.success ? parsed.data : [];
 }
+const inputRefsSchema = inputRefSchema.array();
 
 export function staleness(editor: Editor, shape: TLShape): StaleInput[] {
   const inputs = recordedInputs(shape);

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Tldraw,
   useEditor,
@@ -48,6 +48,12 @@ import {
   MessageSquarePlus,
   MessagesSquare,
   Keyboard,
+  Ellipsis,
+  Menu,
+  Sparkles,
+  Layers,
+  FilePlus2,
+  Map as MapIcon,
 } from "lucide-react";
 import {
   createObject,
@@ -57,13 +63,16 @@ import {
   revision,
   type CanvasBridge,
 } from "./operations";
-import { agentLink, connectAgentAccess } from "./agent-client";
+import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { createComment } from "./agent-operations";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
-import { isLegacySeed, seed } from "./seed";
-import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
+import { startBoardSync } from "./board-sync-browser";
+import { calmSeed, seed } from "./seed";
+import { AskLayer, SelectionBar } from "./ask-ui";
+import { CardShapeUtil, CardShapeTool } from "./card-shape";
 import { PromptShapeUtil, createLearningPrototypePage, learningPrototypeEnabled, learningVisibility } from "./learning/prompt-shape";
 import { ChartShapeUtil, DataLayer, DatasetShapeUtil, createDataPrototypePage, dataPrototypeEnabled } from "./data/shapes";
+import { importCsvFiles, isCsvFile } from "./data/csv";
 import {
   PaperBackground,
   ScratchbookLayer,
@@ -75,7 +84,9 @@ import {
   HUMAN,
 } from "./scratchbook";
 import { richTextPlain } from "./operations";
+import { onlyDerivedChange } from "./revision";
 import { canvasOptions } from "./canvas-options";
+import { layerTree } from "./layer-tree";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
@@ -87,17 +98,21 @@ declare global {
     __pairedEditor?: Editor;
   }
 }
-const tools = [
-  { id: "select", name: "Move", key: "V", icon: MousePointer2 },
+// What a thinker needs is on the strip; everything else is one click away under More.
+const mainTools = [
+  { id: "select", name: "Select", key: "V", icon: MousePointer2 },
+  { id: "card", name: "Write", key: "N", icon: StickyNote },
+  { id: "draw", name: "Pen", key: "D", icon: Pencil },
+  { id: "arrow", name: "Arrow", key: "A", icon: ArrowUpRight },
+];
+const moreTools = [
   { id: "hand", name: "Pan", key: "H", icon: Hand },
   { id: "frame", name: "Frame", key: "F", icon: Frame },
   { id: "geo", name: "Rectangle", key: "R", icon: Square },
   { id: "ellipse", name: "Ellipse", key: "O", icon: Circle },
-  { id: "draw", name: "Pen", key: "D", icon: Pencil },
-  { id: "text", name: "Text", key: "T", icon: Type },
-  { id: "card", name: "Note", key: "N", icon: StickyNote },
-  { id: "arrow", name: "Arrow", key: "A", icon: ArrowUpRight },
+  { id: "text", name: "Plain text", key: "T", icon: Type },
 ];
+const tools = [...mainTools, ...moreTools];
 const palette = [
   { id: "black", hex: "#242528" },
   { id: "grey", hex: "#9ba1a8" },
@@ -192,6 +207,7 @@ function CopyBlock({ text, onCopied }: { text: string; onCopied: (notice: string
 /** Agent setup on paired.cc: one sentence for the agent, or one command per client. */
 function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void }) {
   const link = useValue("agent link", () => agentLink.get(), []);
+  const listeners = useValue("agent listeners", () => agentListeners.get(), []);
   const origin = location.origin;
   if (link.mode !== "hosted") return null;
   if (link.state === "signed-out")
@@ -215,6 +231,12 @@ function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void })
         <span className={`status-dot ${link.state}`} />
         {link.state === "connected" ? `This tab is ready for your agent${link.email ? ` (${link.email})` : ""}.` : "Connecting this tab…"}
       </p>
+      {listeners !== null && (
+        <p className="agent-status">
+          <span className={`status-dot ${listeners.length ? "connected" : "connecting"}`} />
+          {listeners.length ? `${listeners.join(", ")} is listening and answers your asks.` : "The resident agent is offline, so asks wait until it is back or you connect your own."}
+        </p>
+      )}
       <p>Paste this into your agent:</p>
       <CopyBlock text={`Read ${origin}/agent-setup.md and connect me to Paired.`} onCopied={onCopied} />
       <p>Or add it yourself:</p>
@@ -233,11 +255,13 @@ function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void })
 
 const shortcutGroups: { title: string; rows: [string, string][] }[] = [
   {
-    title: "Feedback",
+    title: "Think",
     rows: [
+      ["Write a thought", "N, or double-click the board"],
+      ["Ask your agent about the selection", "⌘ ↵"],
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
-      ["Reject the selection (again to undo)", "X"],
+      ["Cross out the selection (again to undo)", "X"],
       ["Open or close the feedback queue", "Shift C"],
       ["Finish typing", "Esc"],
     ],
@@ -278,7 +302,7 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
           </IconButton>
         </div>
         <p>
-          Pink is you, lavender with ✦ is your agent. Everything you comment on, pick or reject goes into one feedback queue that your agent reads and answers.
+          Pink handwriting is you, lavender with ✦ is your agent. Write a thought, select it and ask. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
         </p>
         <div className="shortcut-grid">
           {shortcutGroups.map((group) => (
@@ -302,10 +326,16 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
 
 function Shell() {
   const editor = useEditor();
-  const [rightTab, setRightTab] = useState<"properties" | "feedback">("properties");
+  const [panel, setPanel] = useState<"properties" | "feedback" | null>(null);
+  const rightTab = panel ?? "properties";
+  const setRightTab = setPanel;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [asking, setAsking] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const openCount = useValue("open feedback", () => collectFeedback(editor).filter((i) => i.status === "open").length, [editor]);
   const link = useValue("agent link", () => agentLink.get(), []);
+  const listeners = useValue("agent listeners", () => agentListeners.get(), []);
   const editingId = useValue("editing", () => editor.getEditingShapeId(), [editor]);
   const pointer = useRef<{ x: number; y: number } | null>(null);
   const shapes = useValue("layers", () => editor.getCurrentPageShapesSorted(), [
@@ -322,13 +352,15 @@ function Shell() {
   const page = useValue("page", () => editor.getCurrentPage(), [editor]);
   const undo = useValue("can undo", () => editor.getCanUndo(), [editor]),
     redo = useValue("can redo", () => editor.getCanRedo(), [editor]);
-  const [leftOpen, setLeftOpen] = useState(true),
+  const [leftOpen, setLeftOpen] = useState(false),
     [agentOpen, setAgentOpen] = useState(false),
     [notice, setNotice] = useState(""),
     [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const importRef = useRef<HTMLInputElement>(null),
     imageRef = useRef<HTMLInputElement>(null);
   const shape = selected.length === 1 ? selected[0] : undefined;
+  const tree = useMemo(() => layerTree(shapes), [shapes]);
+  const selectedIds = useMemo(() => new Set(selected.map((s) => s.id)), [selected]);
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       const target = event.target;
@@ -375,6 +407,9 @@ function Shell() {
       }
       if (key === "escape") {
         setHelpOpen(false);
+        setMenuOpen(false);
+        setMoreOpen(false);
+        setAsking(false);
         editor.cancel();
         editor.setCurrentTool("select");
         editor.selectNone();
@@ -389,12 +424,24 @@ function Shell() {
     // P and X judge the selection. Capture first so tldraw's own X (pen) shortcut doesn't fire.
     function judge(event: KeyboardEvent) {
       const target = event.target;
+      const typingOnBoard = target instanceof HTMLElement && Boolean(target.closest(".tl-container [contenteditable=true]"));
+      const asksNow = (event.metaKey || event.ctrlKey) && event.key === "Enter" && typingOnBoard;
       if (
+        !asksNow &&
         target instanceof HTMLElement &&
         target.closest("input,textarea,select,[contenteditable=true]")
       )
         return;
       const key = event.key.toLowerCase();
+      // ⌘↵ asks about what is selected, or about the card being written.
+      if ((event.metaKey || event.ctrlKey) && key === "enter") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        // The canvas starts editing a selected card when Enter is released; this Enter is ours.
+        swallowEnterUp = true;
+        if (!event.repeat) askAboutSelection();
+        return;
+      }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (editor.getEditingShapeId()) return;
       // ? shows the shortcuts, C comments, Shift+C opens the feedback queue.
@@ -402,7 +449,7 @@ function Shell() {
         event.preventDefault();
         event.stopImmediatePropagation();
         if (event.key === "?") setHelpOpen((open) => !open);
-        else if (event.shiftKey) setRightTab((tab) => (tab === "feedback" ? "properties" : "feedback"));
+        else if (event.shiftKey) setPanel((tab) => (tab === "feedback" ? null : "feedback"));
         else addComment();
         return;
       }
@@ -414,6 +461,13 @@ function Shell() {
       event.stopImmediatePropagation();
       toggleMark(editor, picked, key === "p" ? "picked" : "rejected");
     }
+    let swallowEnterUp = false;
+    const enterUp = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" || !swallowEnterUp) return;
+      swallowEnterUp = false;
+      event.stopImmediatePropagation();
+    };
+    window.addEventListener("keyup", enterUp, { capture: true });
     const track = (event: PointerEvent) => {
       pointer.current = { x: event.clientX, y: event.clientY };
     };
@@ -425,6 +479,7 @@ function Shell() {
       window.removeEventListener("pointermove", track, { capture: true });
       window.removeEventListener("pointerdown", track, { capture: true });
       window.removeEventListener("keydown", judge, { capture: true });
+      window.removeEventListener("keyup", enterUp, { capture: true });
       window.removeEventListener("keydown", keydown);
     };
   }, [editor]);
@@ -451,6 +506,30 @@ function Shell() {
     if ("richText" in fresh.props && richTextPlain(fresh.props.richText).trim()) return;
     startEditingShapeWithRichText(editor, fresh.id, { selectAll: true });
   }, [editor, currentTool]);
+  /** Pan just enough that a page-space box clears the chrome and the window edges. */
+  function keepInView(box: { x: number; y: number; maxX: number; maxY: number }) {
+    const from = editor.pageToScreen({ x: box.x, y: box.y }), to = editor.pageToScreen({ x: box.maxX, y: box.maxY });
+    const left = document.querySelector(".editor-chrome.left-closed") ? 80 : 310;
+    const right = window.innerWidth - (document.querySelector(".editor-chrome.right-closed") ? 24 : 260), top = 104, bottom = window.innerHeight - 90;
+    const dx = to.x > right ? Math.max(right - to.x, left - from.x) : from.x < left ? left - from.x : 0;
+    const dy = to.y > bottom ? Math.max(bottom - to.y, top - from.y) : from.y < top ? top - from.y : 0;
+    const camera = editor.getCamera();
+    if (dx || dy) editor.setCamera({ x: camera.x + dx / camera.z, y: camera.y + dy / camera.z, z: camera.z }, { animation: { duration: 160 } });
+  }
+  /** Ask: finish typing if a card is being written, then open the question box on the selection. */
+  function askAboutSelection() {
+    const editing = editor.getEditingShapeId();
+    if (editing) {
+      editor.complete();
+      editor.setCurrentTool("select");
+      editor.select(editing);
+    }
+    if (!editor.getSelectedShapes().some((s) => s.type !== "arrow")) {
+      setNotice("Select what you mean first, then ask");
+      return;
+    }
+    setAsking(true);
+  }
   /** C: comment on the selection, or pin a comment where the pointer is, and start typing. */
   function addComment() {
     try {
@@ -467,14 +546,7 @@ function Shell() {
       editor.select(id as never);
       // Keep the new comment clear of the side panels and the edges of the window.
       const box = editor.getShapePageBounds(id as never);
-      if (box) {
-        const from = editor.pageToScreen({ x: box.x, y: box.y }), to = editor.pageToScreen({ x: box.maxX, y: box.maxY });
-        const left = document.querySelector(".editor-chrome.left-closed") ? 70 : 300, right = window.innerWidth - 260, top = 64, bottom = window.innerHeight - 90;
-        const dx = to.x > right ? right - to.x : from.x < left ? left - from.x : 0;
-        const dy = to.y > bottom ? bottom - to.y : from.y < top ? top - from.y : 0;
-        const camera = editor.getCamera();
-        if (dx || dy) editor.setCamera({ x: camera.x + dx / camera.z, y: camera.y + dy / camera.z, z: camera.z }, { animation: { duration: 160 } });
-      }
+      if (box) keepInView(box);
       startEditingShapeWithRichText(editor, id as never, { selectAll: true });
     } catch (err) {
       setNotice(err instanceof Error ? err.message : "Could not add a comment");
@@ -483,6 +555,24 @@ function Shell() {
   const shapeColor =
     shape && "color" in shape.props ? shape.props.color : undefined;
   const bounds = shape ? editor.getShapePageBounds(shape) : undefined;
+  // PROTOTYPE (?prototype=data): dropping CSV files on the canvas creates datasets.
+  // Other dropped files go on to tldraw's own handling.
+  useEffect(() => {
+    if (!dataPrototypeEnabled()) return;
+    const onDrop = (e: DragEvent) => {
+      const files = [...(e.dataTransfer?.files ?? [])];
+      const csvs = files.filter(isCsvFile);
+      if (!csvs.length || !(e.target instanceof Element) || !e.target.closest(".tl-container")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const point = editor.screenToPage({ x: e.clientX, y: e.clientY });
+      void importCsvFiles(editor, csvs, point).then(setNotice);
+      const rest = files.filter((f) => !isCsvFile(f));
+      if (rest.length) void editor.putExternalContent({ type: "files", files: rest, point });
+    };
+    window.addEventListener("drop", onDrop, true);
+    return () => window.removeEventListener("drop", onDrop, true);
+  }, [editor]);
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(""), 3500);
@@ -568,26 +658,54 @@ function Shell() {
     }
   }
 
+  /** A new board is one click: an empty page with the invitation, the old ones kept. */
   function addPage() {
     const id = PageRecordType.createId();
-    editor.createPage({ id, name: `Page ${pages.length + 1}` });
+    editor.createPage({ id, name: `Board ${pages.length + 1}`, meta: { seeded: 3 } });
     editor.setCurrentPage(id);
+    calmSeed(editor);
+    editor.clearHistory();
+    setMenuOpen(false);
   }
+  /** The longer tour of what the canvas can do, on its own board. */
+  function openTour() {
+    const existing = pages.find((p) => p.meta.tour === true);
+    if (existing) editor.setCurrentPage(existing.id);
+    else {
+      const id = PageRecordType.createId();
+      editor.createPage({ id, name: "Tour", meta: { seeded: 2, tour: true } });
+      editor.setCurrentPage(id);
+      seed(editor);
+      editor.updateShapes(editor.getCurrentPageShapes().map((s) => ({ id: s.id, type: s.type, meta: { ...s.meta, seed: true } })));
+      editor.clearHistory();
+    }
+    editor.zoomToFit();
+    setMenuOpen(false);
+  }
+  // While a card is being written, follow its growing bottom edge so the text stays on screen.
+  const editingBottom = useValue("editing bottom", () => {
+    const id = editor.getEditingShapeId();
+    return id ? (editor.getShapePageBounds(id)?.maxY ?? null) : null;
+  }, [editor]);
+  useEffect(() => {
+    const id = editor.getEditingShapeId(), box = id && editor.getShapePageBounds(id);
+    if (box && editor.pageToScreen({ x: box.x, y: box.maxY }).y > window.innerHeight - 60) keepInView(box);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingBottom]);
   // A result hidden behind a learning prompt must not leak through its layer name.
   function layerName(s: TLShape) {
     return editor.isShapeHidden(s) ? "Hidden until you answer" : shapeName(s);
   }
   function layerRows(parentId: string, depth = 0): React.ReactNode {
-    return shapes
-      .filter((s) => s.parentId === parentId)
-      .reverse()
+    return tree
+      .childrenOf(parentId)
       .map((s) => {
-        const children = shapes.some((c) => c.parentId === s.id),
+        const children = tree.hasChildren(s.id),
           isCollapsed = collapsed.has(s.id);
         return (
           <React.Fragment key={s.id}>
             <div
-              className={`layer ${selected.some((t) => t.id === s.id) ? "selected" : ""}`}
+              className={`layer ${selectedIds.has(s.id) ? "selected" : ""}`}
               style={{ paddingLeft: 12 + depth * 16 }}
             >
               {children ? (
@@ -640,28 +758,79 @@ function Shell() {
       });
   }
   return (
-    <div className={`editor-chrome ${!leftOpen ? "left-closed" : ""}`}>
+    <div className={`editor-chrome ${!leftOpen ? "left-closed" : ""} ${panel ? "" : "right-closed"}`}>
       <header className="topbar">
         <div className="brand">
           <Bird size={20} strokeWidth={2.1} />
           <span>paired</span>
         </div>
-        <div className="file-title">
-          <span>Untitled exploration</span>
-          <ChevronDown size={12} />
-          <span className="local-badge">Local</span>
-          <MarksCounter onOpen={() => setRightTab("feedback")} />
-        </div>
         <div className="top-actions">
           <SaveState />
+          {openCount > 0 && <MarksCounter onOpen={() => setPanel("feedback")} />}
           <AgentChip onOpen={() => setAgentOpen(true)} />
-          <button className="subtle-button" onClick={() => setAgentOpen(true)}>
-            <Braces size={14} /> Agent access
-          </button>
-          <button className="dark-button" onClick={exportFile}>
-            <Download size={13} /> Export
+          <button className={`subtle-button menu-button ${menuOpen ? "open" : ""}`} aria-label="Menu" aria-expanded={menuOpen} title="Boards, panels, export" onClick={() => setMenuOpen((open) => !open)}>
+            <Menu size={15} />
           </button>
         </div>
+        {menuOpen && (
+          <div className="menu" role="menu" aria-label="Menu">
+            <button role="menuitem" onClick={addPage}>
+              <FilePlus2 size={14} /> New board
+            </button>
+            {pages.length > 1 && <div className="menu-label">Boards</div>}
+            {pages.length > 1 &&
+              pages.map((p) => (
+                <button
+                  key={p.id}
+                  role="menuitem"
+                  className={p.id === page.id ? "current" : ""}
+                  onClick={() => {
+                    editor.setCurrentPage(p.id);
+                    setMenuOpen(false);
+                  }}
+                >
+                  {p.id === page.id ? <Check size={14} /> : <span className="menu-gap" />} {p.name}
+                </button>
+              ))}
+            <div className="menu-rule" />
+            <button role="menuitem" onClick={() => { setPanel(panel === "feedback" ? null : "feedback"); setMenuOpen(false); }}>
+              <MessagesSquare size={14} /> Feedback queue <kbd>⇧C</kbd>
+            </button>
+            <button role="menuitem" onClick={() => { setLeftOpen(!leftOpen); setMenuOpen(false); }}>
+              <Layers size={14} /> {leftOpen ? "Hide" : "Show"} layers and pages
+            </button>
+            <button role="menuitem" onClick={() => { setPanel(panel === "properties" ? null : "properties"); setMenuOpen(false); }}>
+              <SlidersHorizontal size={14} /> {panel === "properties" ? "Hide" : "Show"} properties
+            </button>
+            <div className="menu-rule" />
+            <button role="menuitem" onClick={() => { setAgentOpen(true); setMenuOpen(false); }}>
+              <Braces size={14} /> Connect an agent
+            </button>
+            <button role="menuitem" onClick={openTour}>
+              <MapIcon size={14} /> Tour board
+            </button>
+            <button role="menuitem" onClick={() => { setHelpOpen(true); setMenuOpen(false); }}>
+              <Keyboard size={14} /> Shortcuts <kbd>?</kbd>
+            </button>
+            <div className="menu-rule" />
+            <button role="menuitem" onClick={() => { void exportFile(); setMenuOpen(false); }}>
+              <Download size={14} /> Export board file
+            </button>
+            <button role="menuitem" onClick={() => { importRef.current?.click(); setMenuOpen(false); }}>
+              <Upload size={14} /> Open board file
+            </button>
+          </div>
+        )}
+        <input
+          ref={importRef}
+          type="file"
+          accept=".json"
+          hidden
+          onChange={(e) => {
+            void importFile(e.currentTarget.files?.[0]);
+            e.currentTarget.value = "";
+          }}
+        />
       </header>
       <aside className="left-panel">
         <div className="panel-tabs">
@@ -736,36 +905,44 @@ function Shell() {
           A place to think.
         </footer>
       </aside>
-      {!leftOpen && (
-        <div className="restore-panel">
-          <IconButton label="Show layers" onClick={() => setLeftOpen(true)}>
-            <PanelLeftOpen size={17} />
-          </IconButton>
-        </div>
-      )}
       <nav className="tool-strip" aria-label="Canvas tools">
-        {tools.map((t, i) => (
-          <React.Fragment key={t.id}>
-            {i === 2 && <div className="tool-divider" />}
-            <IconButton
-              label={`${t.name} (${t.key})`}
-              active={t.id === "ellipse" ? false : currentTool === t.id}
-              onClick={() => chooseTool(t.id)}
-            >
-              <t.icon size={18} strokeWidth={1.6} />
-            </IconButton>
-          </React.Fragment>
+        {mainTools.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`tool-button ${currentTool === t.id ? "active" : ""}`}
+            aria-pressed={currentTool === t.id}
+            title={`${t.name} (${t.key})`}
+            onClick={() => chooseTool(t.id)}
+          >
+            <t.icon size={18} strokeWidth={1.6} />
+            <span>{t.name}</span>
+          </button>
         ))}
+        <button type="button" className="tool-button ask" title="Ask your agent about the selection (⌘↵)" onClick={askAboutSelection}>
+          <Sparkles size={18} strokeWidth={1.6} />
+          <span>Ask</span>
+        </button>
         <div className="tool-divider" />
-        <IconButton label="Comment on the selection, or on the board (C)" onClick={addComment}>
-          <MessageSquarePlus size={18} />
-        </IconButton>
-        <IconButton
-          label="Import image"
-          onClick={() => imageRef.current?.click()}
-        >
-          <ImagePlus size={18} />
-        </IconButton>
+        <button type="button" className={`tool-button ${moreOpen || moreTools.some((t) => t.id === currentTool) ? "active" : ""}`} aria-expanded={moreOpen} title="More tools" onClick={() => setMoreOpen((open) => !open)}>
+          <Ellipsis size={18} strokeWidth={1.6} />
+          <span>More</span>
+        </button>
+        {moreOpen && (
+          <div className="menu more-menu" role="menu" aria-label="More tools">
+            {moreTools.map((t) => (
+              <button key={t.id} role="menuitem" className={currentTool === t.id ? "current" : ""} onClick={() => { chooseTool(t.id); setMoreOpen(false); }}>
+                <t.icon size={14} /> {t.name} <kbd>{t.key}</kbd>
+              </button>
+            ))}
+            <button role="menuitem" onClick={() => { addComment(); setMoreOpen(false); }}>
+              <MessageSquarePlus size={14} /> Comment <kbd>C</kbd>
+            </button>
+            <button role="menuitem" onClick={() => { imageRef.current?.click(); setMoreOpen(false); }}>
+              <ImagePlus size={14} /> Add an image
+            </button>
+          </div>
+        )}
         <input
           ref={imageRef}
           type="file"
@@ -778,6 +955,7 @@ function Shell() {
           }}
         />
       </nav>
+      <SelectionBar asking={asking} setAsking={setAsking} onComment={addComment} onNotice={setNotice} keepInView={keepInView} />
       <aside className="right-panel">
         <div className="panel-tabs right-tabs" role="tablist">
           <button role="tab" aria-selected={rightTab === "properties"} className={rightTab === "properties" ? "tab-current" : "tab-other"} onClick={() => setRightTab("properties")}>
@@ -787,6 +965,9 @@ function Shell() {
             <MessagesSquare size={14} /> Feedback
             <span className={openCount ? "tab-count has-open" : "tab-count"}>{openCount}</span>
           </button>
+          <IconButton label="Close panel" onClick={() => setPanel(null)}>
+            <X size={15} />
+          </IconButton>
         </div>
         {rightTab === "feedback" ? (
           <FeedbackPanel onNotice={setNotice} />
@@ -901,7 +1082,7 @@ function Shell() {
                   className={shape.meta.mark === "rejected" ? "judge-on" : ""}
                   onClick={() => toggleMark(editor, selected, "rejected")}
                 >
-                  Reject (X)
+                  Cross out (X)
                 </button>
               </div>
             </div>
@@ -1019,7 +1200,7 @@ function Shell() {
                   <dd>C</dd>
                 </div>
                 <div>
-                  <dt>Pick / reject</dt>
+                  <dt>Pick / cross out</dt>
                   <dd>P / X</dd>
                 </div>
                 <div>
@@ -1052,24 +1233,6 @@ function Shell() {
                 </div>
               </dl>
             </div>
-            <div className="inspector-section">
-              <button
-                className="wide-button"
-                onClick={() => importRef.current?.click()}
-              >
-                <Upload size={14} /> Open canvas file
-              </button>
-              <input
-                ref={importRef}
-                type="file"
-                accept=".json"
-                hidden
-                onChange={(e) => {
-                  void importFile(e.currentTarget.files?.[0]);
-                  e.currentTarget.value = "";
-                }}
-              />
-            </div>
           </>
         )}
       </aside>
@@ -1080,8 +1243,6 @@ function Shell() {
         <IconButton label="Redo" disabled={!redo} onClick={() => editor.redo()}>
           <Redo2 size={16} />
         </IconButton>
-        <span className="bottom-divider" />
-        <span className="canvas-caption">{page.name}</span>
       </div>
       <div className="zoom-controls">
         <IconButton
@@ -1157,10 +1318,15 @@ function Shell() {
               </IconButton>
             </div>
             {import.meta.env.DEV ? <>
+            <p className="agent-status">
+              <span className={`status-dot ${listeners?.length ? "connected" : "connecting"}`} />
+              {listeners?.length ? `${listeners.join(", ")} is listening and answers your asks.` : "No agent is listening, so asks will wait."}
+            </p>
+            <p>The resident agent answers asks with Claude Code on this computer. Start it in a terminal and leave it running:</p>
+            <CopyBlock text="pnpm --filter @pairedcc/canvas agent" onCopied={setNotice} />
             <p>
-              Connect Claude Code, Codex or another MCP client to this open
-              canvas. The local HTTP API uses the same objects and history as
-              your edits.
+              Or connect Claude Code, Codex or another MCP client to this open
+              canvas. It uses the same objects and history as your edits.
             </p>
             <CopyBlock
               text={JSON.stringify(localMcpConfig(__CANVAS_DIR__, sessionStorage.getItem("picabird-agent-session") ?? ""), null, 2)}
@@ -1171,36 +1337,23 @@ function Shell() {
               open. Access is local to this computer.
             </p>
             </> : <HostedAgentAccess onCopied={setNotice} />}
-            <button
-              className="wide-button"
-              onClick={() => {
-                const center = editor.getViewportPageBounds().center;
-                createObject(editor, {
-                  kind: "note",
-                  x: center.x - 100,
-                  y: center.y - 100,
-                  text: "What else could be true?",
-                  name: "A question worth exploring",
-                });
-                setAgentOpen(false);
-                editor.focus();
-              }}
-            >
-              Try creating an object
-            </button>
           </section>
         </div>
       )}
     </div>
   );
 }
-import { GeoShapeGeoStyle, PageRecordType } from "tldraw";
+import { GeoShapeGeoStyle, PageRecordType, createShapeId } from "tldraw";
 const scratchShapes = [CardShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil];
+const TEXT_WRAP = 460;
+// One set of editor options: the page limit, and double-click writes a card rather than plain text.
+const editorOptions = { ...canvasOptions, createTextOnCanvasDoubleClick: false };
 const scratchTools = [CardShapeTool];
 function CanvasLayers() {
   return (
     <>
       <ScratchbookLayer />
+      <AskLayer />
       <DataLayer />
     </>
   );
@@ -1263,6 +1416,8 @@ function App() {
     editor.sideEffects.registerBeforeChangeHandler(
       "shape",
       (previous, next) => {
+        // Re-derived values (a card re-measuring its text) are not edits: leave the revision.
+        if (onlyDerivedChange(previous, next)) return next;
         const version =
           Math.max(
             revisions.get(next.id) ?? 0,
@@ -1286,27 +1441,71 @@ function App() {
     if (import.meta.env.DEV) window.__pairedEditor = editor;
     setAgentEditor(editor);
     const page = editor.getCurrentPage();
+    // A brand-new canvas: nothing on it and never laid out. It holds no work of the person's own.
     const fresh = editor.getCurrentPageShapes().length === 0 && editor.getPages().length === 1 && !page.meta.seeded;
-    // Swap the old starter board for the welcome board, but only if nobody has touched it.
-    const legacy = page.meta.seeded === true && isLegacySeed(editor);
-    // Cards size themselves from measured text, so wait for the board's fonts, then
-    // re-measure existing cards and lay out the welcome board if this is a new canvas.
+    // Plain text wraps at a reading width and grows downward instead of running off the board.
+    const wrapText = (shape: TLShape) => {
+      if (shape.type !== "text" || !("autoSize" in shape.props) || !shape.props.autoSize) return;
+      const scale = "scale" in shape.props && typeof shape.props.scale === "number" ? shape.props.scale : 1;
+      if (editor.getShapeGeometry(shape).bounds.w <= TEXT_WRAP * scale) return;
+      editor.updateShape({ id: shape.id, type: "text", props: { autoSize: false, w: TEXT_WRAP } });
+    };
+    editor.sideEffects.registerAfterCreateHandler("shape", (shape) => {
+      wrapText(shape);
+      // Pasted text arrives at a fixed width close to the whole screen; bring it to a reading width.
+      if (shape.type === "text" && "w" in shape.props && !shape.props.autoSize && shape.props.w > TEXT_WRAP)
+        editor.updateShape({ id: shape.id, type: "text", props: { w: TEXT_WRAP } });
+    });
+    editor.sideEffects.registerAfterChangeHandler("shape", (_previous, next) => wrapText(next));
+    // Double-click the empty board to write a thought: a pink card, already in typing mode.
+    const writeOnDoubleClick = (info: { type: string; name?: string; phase?: string; target?: string }) => {
+      if (info.type !== "click" || info.name !== "double_click" || info.phase !== "up" || info.target !== "canvas") return;
+      if (editor.getCurrentToolId() !== "select" || editor.getEditingShapeId()) return;
+      const point = editor.inputs.getCurrentPagePoint();
+      if (editor.getShapeAtPoint(point, { hitInside: true, margin: 4 })) return;
+      const id = createShapeId();
+      editor.markHistoryStoppingPoint("write a thought");
+      editor.createShape({ id, type: "card", x: point.x - 24, y: point.y - 28, props: { tone: "human" } });
+      editor.select(id);
+      startEditingShapeWithRichText(editor, id, { selectAll: true });
+    };
+    editor.on("event", writeOnDoubleClick);
+    // Lay out the first board once the board's fonts are in, so its cards measure right.
+    // Existing cards keep their saved heights: a card on screen re-measures itself when
+    // its fonts arrive (useAutoHeight), and re-estimating all of them here changed saved
+    // objects on every reload.
     const fonts = Promise.all(
       ["16px 'Shantell Sans'", "bold 30px 'Shantell Sans'", "27px 'Caveat Brush'", "italic 19px Newsreader", "13px 'JetBrains Mono'"].map((f) => document.fonts.load(f)),
     );
     const timeout = new Promise((done) => setTimeout(done, 2500));
+    const prepare = () => {
+      // The calm first board is laid out once per document. A board saved by an earlier
+      // version is kept as its own page; the calm board opens beside it.
+      const settings = editor.getDocumentSettings();
+      if (settings.meta.calm === 3) return;
+      const untouched = editor.getPages().length === 1 && editor.getCurrentPageShapes().length === 0;
+      if (untouched) editor.updatePage({ id: editor.getCurrentPageId(), name: "Board 1", meta: { seeded: 3 } });
+      else {
+        const id = PageRecordType.createId();
+        editor.createPage({ id, name: "Thinking", meta: { seeded: 3 } });
+        editor.setCurrentPage(id);
+      }
+      calmSeed(editor);
+      editor.updateDocumentSettings({ meta: { ...settings.meta, calm: 3 } });
+      editor.clearHistory();
+    };
+    let disposed = false;
+    let stopSync: (() => void) | undefined;
     void Promise.race([fonts, timeout]).catch(() => undefined).then(() => {
-      refitCards(editor);
-      if (!(fresh || legacy) || editor.getCurrentPage().meta.seeded === 2) return;
-      if (legacy) editor.deleteShapes([...editor.getCurrentPageShapeIds()]);
-      else if (editor.getCurrentPageShapes().length) return;
-      seed(editor);
-      // Mark the welcome board's own objects, so its text is never mistaken for the human's notes.
-      editor.updateShapes(editor.getCurrentPageShapes().map((s) => ({ id: s.id, type: s.type, meta: { ...s.meta, seed: true } })));
-      editor.updatePage({ id: page.id, meta: { ...editor.getCurrentPage().meta, seeded: 2 } });
+      prepare();
+      // Then keep the board saved to the account; a brand-new board holds no work of its own.
+      if (!disposed) stopSync = startBoardSync(editor, !fresh);
     });
     setReady(true);
     return () => {
+      disposed = true;
+      stopSync?.();
+      editor.off("event", writeOnDoubleClick);
       delete window.paired;
       delete window.__pairedEditor;
     };
@@ -1317,11 +1516,11 @@ function App() {
         <Tldraw
           licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
           persistenceKey="picabird-canvas-v1"
-          options={canvasOptions}
           shapeUtils={scratchShapes}
           getShapeVisibility={learningVisibility}
           tools={scratchTools}
           hideUi
+          options={editorOptions}
           components={components}
           onMount={mount}
         />

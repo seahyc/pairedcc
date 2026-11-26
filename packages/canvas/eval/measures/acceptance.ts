@@ -103,9 +103,14 @@ export async function acceptance(browser: Browser, base: string) {
     });
 
     await check(steps, "Agent reads that exact chart state", async () => {
-      const chart = find(await agent.call("canvas_read"), chartId);
+      const read = await agent.call("canvas_read");
+      const chart = find(read, chartId);
       const w = chart?.widget;
       if (!w) return "chart has no widget state in canvas_read";
+      // Overview, then detail: the summary read leaves rows out; canvas_get has them.
+      const ds = find(read, datasetId);
+      if (ds?.dataset?.rows || ds?.props?.data || chart.props?.data || chart.props?.bars) return "canvas_read includes dataset rows or chart bars in a summary";
+      if ((await agent.call("canvas_get", { id: datasetId })).dataset?.rows?.length !== rows.length) return "canvas_get does not return the dataset's rows";
       if (!same(w.state.filter, { month: ["Feb"] })) return `filter ${JSON.stringify(w.state.filter)}`;
       if (!same(w.state.selected, ["North"])) return `selected ${JSON.stringify(w.state.selected)}`;
       const sel = w.selected?.[0];
@@ -155,6 +160,9 @@ export async function acceptance(browser: Browser, base: string) {
       const mine = find(await agent.call("canvas_read"), noteId);
       await agent.call("canvas_update", { id: noteId, expectedRevision: mine.revision, text: "Revised: mean kWh per month, North in February." });
       if (revised.widget?.state?.aggregate !== "mean") return "agent revision did not apply";
+      // A partial state change keeps the person's filter and selection.
+      if (!same(revised.widget.state.filter, { month: ["Feb"] }) || !same(revised.widget.state.selected, ["North"]))
+        return `agent revision dropped the person's filter or selection: ${JSON.stringify(revised.widget.state)}`;
       const after = find(await agent.call("canvas_read"), humanId);
       if (!after) return "annotation is gone";
       return after.revision === human.revision && after.text === human.text ? true : `annotation changed: ${JSON.stringify(after.text)} r${after.revision}`;

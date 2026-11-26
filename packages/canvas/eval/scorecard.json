@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-11-26T10:47Z",
-  "commit": "0248e9f with uncommitted changes",
+  "generatedAt": "2026-11-26T11:00Z",
+  "commit": "16ce025",
   "carriedOver": [],
   "table": [
     {
       "measure": "Acceptance scenario",
       "target": "every step passes",
-      "result": "8/10 steps",
-      "status": "fail"
+      "result": "10/10 steps",
+      "status": "pass"
     },
     {
       "measure": "Agent usability",
       "target": "≥90% of ≥20 tasks",
-      "result": "20/21 (95%), median 3 tool calls",
-      "status": "pass"
+      "result": "0 tasks, no recorded attempt",
+      "status": "not run"
     },
     {
       "measure": "Safety of shared edits",
@@ -24,13 +24,13 @@
     {
       "measure": "Persistence",
       "target": "identical in a clean profile",
-      "result": "differs: the saved page does not exist in a clean profile (boards are stored only in this browser)",
-      "status": "fail"
+      "result": "identical",
+      "status": "pass"
     },
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 2485 ms, pan 16.7 ms/frame; 10k: load 25185 ms, pan 40.3 ms/frame",
+      "result": "1k: load 1358 ms, pan 16.7 ms/frame; 10k: load 7135 ms, pan 40 ms/frame",
       "status": "reported"
     },
     {
@@ -45,67 +45,67 @@
       "steps": [
         {
           "name": "Person imports a dataset by dropping a CSV file",
-          "pass": false,
-          "detail": "no dataset object after the drop (0 other objects added)",
+          "pass": true,
+          "detail": "ok",
           "ms": 1514
         },
         {
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 35
+          "ms": 15
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 482
+          "ms": 496
         },
         {
           "name": "Agent charts the selection",
           "pass": true,
           "detail": "ok",
-          "ms": 36
+          "ms": 20
         },
         {
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 853
+          "ms": 826
         },
         {
           "name": "Agent reads that exact chart state",
           "pass": true,
           "detail": "ok",
-          "ms": 5
+          "ms": 4
         },
         {
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 42
+          "ms": 27
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1716
+          "ms": 1154
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": true,
           "detail": "ok",
-          "ms": 1001
+          "ms": 920
         },
         {
           "name": "Reload restores everything",
-          "pass": false,
-          "detail": "1 of 5 objects differ after reload: card revision/props/meta (props h); 5 objects now",
-          "ms": 505
+          "pass": true,
+          "detail": "ok",
+          "ms": 391
         }
       ],
       "pageErrors": [],
-      "toolCalls": 28
+      "toolCalls": 29
     },
     "safety": {
       "races": [
@@ -113,21 +113,21 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 82,
+          "ms": 69,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 196,
+          "ms": 134,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 269,
+          "ms": 246,
           "humanEditsLost": 0
         }
       ],
@@ -135,32 +135,32 @@
     },
     "persistence": {
       "objects": 4,
-      "sameProfileReload": false,
-      "cleanProfile": false,
-      "detail": "the saved page does not exist in a clean profile (boards are stored only in this browser)"
+      "sameProfileReload": true,
+      "cleanProfile": true,
+      "detail": "identical"
     },
     "performance": [
       {
         "objects": 1000,
-        "buildMs": 481,
-        "loadMs": 2485,
+        "buildMs": 166,
+        "loadMs": 1358,
         "panMedianFrameMs": 16.7,
-        "panP95FrameMs": 16.8
+        "panP95FrameMs": 16.9
       },
       {
         "objects": 10000,
-        "buildMs": 3458,
-        "loadMs": 25185,
-        "panMedianFrameMs": 40.3,
-        "panP95FrameMs": 93.5
+        "buildMs": 1221,
+        "loadMs": 7135,
+        "panMedianFrameMs": 40,
+        "panP95FrameMs": 83.9
       }
     ],
     "agentUsability": {
-      "tasks": 21,
-      "attempted": 21,
-      "completed": 20,
-      "medianToolCalls": 3,
-      "recordedAt": "2026-11-26T10:44:31.300Z"
+      "tasks": 0,
+      "attempted": 0,
+      "completed": 0,
+      "medianToolCalls": null,
+      "recordedAt": null
     },
     "workspace": {
       "build": true,
@@ -169,13 +169,13 @@
           "pass": false,
           "summary": ""
         },
-        "canvas": {
-          "pass": true,
-          "summary": "90 passed (90)"
-        },
         "cli": {
           "pass": true,
           "summary": "no test files"
+        },
+        "canvas": {
+          "pass": true,
+          "summary": "150 passed (150)"
         },
         "mcp-server": {
           "pass": true,

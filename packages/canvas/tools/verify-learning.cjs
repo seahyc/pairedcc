@@ -18,6 +18,8 @@ async function http(sessionId, op, input) {
   await p.goto(base + '/canvas/?prototype=learning'); await p.waitForFunction(() => Boolean(window.paired), null, { timeout: 30000 });
   const sid = await p.evaluate(() => document.documentElement.dataset.pairedSession);
   await p.waitForTimeout(1500);
+  // The pages list sits behind the menu in the calm layout.
+  await p.getByRole('button', { name: 'Menu' }).click(); await p.getByRole('menuitem', { name: /layers and pages/ }).click();
   await p.getByText('Learning prototype page').click();
   await p.waitForTimeout(800);
   const visible = (t) => p.getByText(t, { exact: false }).filter({ visible: true }).count();

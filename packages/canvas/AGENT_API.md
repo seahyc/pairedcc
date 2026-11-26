@@ -1,10 +1,10 @@
 # Work with the open canvas
 
-Start the development server (`npm run dev`) and open http://localhost:5183. The browser owns the live document; keep its tab open. This is the local development integration. On paired.cc the same tools are served at `https://paired.cc/mcp` with OAuth sign-in; see `public/agent-setup.md`.
+Start the development server (`pnpm dev:canvas`) and open http://localhost:5183/canvas/. The browser owns the live document; keep its tab open. This is the local development integration. On paired.cc the same tools are served at `https://paired.cc/mcp` with OAuth sign-in; see `public/agent-setup.md`.
 
 ## MCP
 
-Open **Agent access** in Paired and copy the MCP configuration. It supplies the absolute local entry point and the session ID for that specific tab. Add it through your agent client's normal MCP configuration. No client or global MCP registration is automatically modified by Paired.
+Open the menu, choose **Connect an agent** and copy the MCP configuration. It supplies the absolute local entry point and the session ID for that specific tab. Add it through your agent client's normal MCP configuration. No client or global MCP registration is automatically modified by Paired.
 
 The equivalent stdio process is:
 
@@ -16,18 +16,18 @@ where `<repo>` is the absolute path of your checkout; the configuration in Agent
 
 Set `PAIRED_SESSION` to target a particular tab. Its ID persists across reloads in that tab's session storage. `canvas_sessions` lists connections. If several are open, requests without a session ID fail rather than selecting a canvas arbitrarily.
 
-Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_feedback`, `canvas_reply`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
+Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_asks`, `canvas_ask_status`, `canvas_answer`, `canvas_feedback`, `canvas_reply`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
 
 Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
 
 ### Learning prompts (prototype)
 
-`canvas_learn` is a prototype tool for learning mode. Use it only when the person has asked to understand or learn something. It places a prompt card and hides `hideIds` until the person answers:
+`canvas_learn` is a prototype tool for learning mode. Use it only when the person has asked to understand or learn something. It runs only in a tab opened with `?prototype=learning`; other tabs refuse it and change nothing. It places a prompt card and hides `hideIds` until the person answers:
 
 - In `predict` mode, the person guesses before the result is shown.
 - In `generate` mode, the person explains in their own words before your explanation is shown.
 
-The person can always skip in one click, and the hidden objects then appear directly. Their layer names are hidden too. Agents cannot answer a prompt. Read its `props.status` (open, committed or skipped) and `props.response`, then compare the answer with the outcome. To try it by hand, open the canvas with `?prototype=learning` and use **Learning prototype page**.
+Only objects an agent made can be hidden; the person's own work is refused. The person can always skip in one click, and the hidden objects then appear directly. Their layer names are hidden too. Agents cannot answer a prompt. Read its `props.status` (open, committed or skipped) and `props.response`, then compare the answer with the outcome. To try it by hand, open the canvas with `?prototype=learning` and use **Learning prototype page**.
 
 Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
 
@@ -41,7 +41,7 @@ Prototype tools (`canvas_learn` and the data tools) are flagged `prototype` in `
 
 ### Data prototype
 
-A prototype of the working spec's first acceptance scenario: a dataset, a bar chart over it that the person filters by clicking, an exact read of what the chart shows, and stale marking when an input changes. These tools are labelled PROTOTYPE in their descriptions and, today, every connected agent sees them. To try it by hand, open the canvas with `?prototype=data` and use **Data prototype page**. Use synthetic or openly licensed data only.
+A prototype of the working spec's first acceptance scenario: a dataset, a bar chart over it that the person filters by clicking, an exact read of what the chart shows, and stale marking when an input changes. These tools are labelled PROTOTYPE in their descriptions and, today, every connected agent sees them, but a tab runs them only when it was opened with `?prototype=data`. Any other tab refuses `canvas_dataset`, `canvas_chart`, `canvas_chart_state` and `canvas_cell` with an error that says so, and changes nothing; ask the person to open the canvas with the flag. Datasets and charts already on a saved board still show in every tab. To try it by hand, open the canvas with `?prototype=data` and use **Data prototype page**. With the same flag, the person can drop a `.csv` file on the canvas to create a dataset: a column is a number column when every value in it is numeric, otherwise text. A file with any problem creates nothing, and a message names the row and column. Use synthetic or openly licensed data only.
 
 - `canvas_dataset` places a table. Pass `synthetic: "orders"` for the built-in synthetic café orders (48 rows: `month`, `region`, `product`, `orders`), or supply `columns` (`name`, `type` text or number) and `rows` (at most 5,000), with a `title` and a `source` that says where the data came from. Every row must have every column with the right type; unknown columns are rejected.
 - `canvas_chart` places a bar chart over a dataset on the current page: `datasetId` and a `state` of `x` (category column), `y` (numeric column, ignored by count), `aggregate` (`sum`, `mean` or `count`, default sum), `filter` (`{column: [values]}`, keeping rows whose value is listed) and `selected` (bar keys). The person toggles filter chips and selects bars by clicking; both change this same state.
@@ -63,11 +63,11 @@ Suggested loop: read the chart's `widget`, cite `summary` and the selected value
 
 ### Undo one agent operation
 
-Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists recent runs, newest first, with the object IDs each run created, updated and removed. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
+Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists your own recent runs, newest first, with the object IDs each run created, updated and removed. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
 
-The undo is all-or-nothing. If the human or a later run has changed a field the run set, edited an object the run created, deleted an object the run changed, or locked one, nothing is changed and the error names each conflicting object and field. Undo the later run first, or leave it. The canvas's own derived values (the revision counter, the text-edit timestamp and auto-sized card height) do not count as conflicts.
+The undo is all-or-nothing. If the human or a later run has changed a field the run set, edited an object the run created, deleted an object the run changed, or locked one, or if something the run deleted can no longer go back (its frame or page, or the other end of its arrow, was deleted since), nothing is changed and the error names each conflicting object and field. Undo the later run first, or leave it. The canvas's own derived values (the revision counter, the text-edit timestamp and auto-sized card height) do not count as conflicts.
 
-The run ledger lives in the open tab's memory. It holds the last 100 runs and is cleared on reload. An agent undo is also a step in the shared tldraw history, so the human's Cmd+Z straight after it re-applies the run.
+Runs belong to the agent that made them: `canvas_runs` lists and `canvas_undo_run` accepts only your own. Ownership follows the actor label, which is not authenticated; local MCP agents are all "MCP agent" unless you set `PAIRED_ACTOR` for each, and agents sharing a label share runs. The run ledger lives in the open tab's memory. It holds the last 100 runs and is cleared on reload. An agent undo is also a step in the shared tldraw history, so the human's Cmd+Z straight after it re-applies the run.
 
 ### Scratchbook conventions
 
@@ -83,6 +83,41 @@ The canvas uses Thariq's scratchbook visual language, so authorship shows at a g
 Suggested loop: read back how you understood the mark, propose captioned options, give your view, ask numbered questions, say how to answer, then post a "Done: …" note and resolve the marks you addressed.
 
 `tools/demo-scratchbook.ts build` creates a demo page: three definitions of "paying hirer" with synthetic data. Pick and reject in the browser, then run `close` to post the Done note and resolve every open mark.
+
+### Asks
+
+An ask is the human putting a question to an agent about objects they selected (the Ask button on the selection, or ⌘↵). It is a pink card on the board that carries its own state, shown in a line under it: `waiting`, `working`, `answered` or `failed`. The human never waits in silence: with no agent listening the ask says so.
+
+Answering is three steps, the same for the resident agent (`pnpm --filter @pairedcc/canvas agent`, see `tools/resident-agent.ts`) and for any other agent:
+
+1. **Wait for an ask.** Long-poll the local server. It answers as soon as a human asks, or with `{"ask":null}` after `waitMs` (at most 30000); call it again straight away. While you are waiting, open tabs show "<agent> is listening". One ask goes to one agent.
+
+   ```sh
+   curl -s http://localhost:5183/api/canvas/asks/wait \
+     -H 'Content-Type: application/json' -d '{"agent":"My agent","waitMs":25000}'
+   ```
+
+   The reply is `{ "sessionId": "...", "ask": { ... } }`. Over MCP, or to see asks you did not receive this way, `asks` (`canvas_asks`) lists them: `state` is `waiting` (default), `working`, `answered`, `failed` or `all`.
+
+2. **Say you have it.** `ask_status` with `{ id, state: "working", note: "reading 2 cards" }`. The note appears on the ask. If you cannot answer, send `state: "failed"` with a plain `error`; the human gets a Retry button, and a retry reaches the wait endpoint as a new attempt.
+
+3. **Answer.** `answer` with `{ id, text }` for one short card (about 60 words; over 90 is cut, over 700 characters is rejected), or `{ id, alternatives: [..] }` with two to four short options, which are lettered and placed side by side for the human to pick (P) or cross out (X). Add `read` to say what you read, and `question: true` when your text is a clarifying question back (the ask then stays open in the queue). The cards go under the ask; the human's objects are never moved.
+
+An ask carries everything the human sees as its context, and nothing else needs to be read to answer it:
+
+| Field | Meaning |
+|---|---|
+| `id`, `revision`, `attempt` | The ask card. `attempt` rises on each retry. |
+| `question` | What the human asked |
+| `state`, `agent`, `note`, `error` | Where it stands and who has it |
+| `targets` | The selected objects: `id`, `type`, `author`, `text` |
+| `frame` | The frame the selection sits in, with `name` and the text of up to 12 other objects in it |
+| `history` | When the ask is about an agent's answer: the exchange that led to it, oldest first |
+| `pageId`, `pageName`, `askedAt` | Where and when |
+
+Asks are also items in the feedback queue (`ask` holds the state), so nothing is lost if no agent was waiting. Keep answers to one step: the human does the thinking and judges each answer before asking again. See `docs/canvas/principles.md`.
+
+On paired.cc the three operations work over MCP, but MCP clients have no wait endpoint and are not shown as listening; read `canvas_asks` when the human tells you they asked. The one exception is the site's resident agent, described in the README: it holds a server secret, long-polls `POST /api/canvas/asks/wait` and may only call `ask_status` and `answer`, and only for accounts on the server's allowlist. Those accounts see whether it is listening; every other account sees that no agent is listening for it.
 
 ### The feedback queue
 
@@ -153,7 +188,7 @@ The adapter does not include an LLM or image-generation provider. Use the agent'
 
 ## HTTP
 
-Discover connected sessions:
+Discover connected sessions (the reply also lists `listeners`, the agents waiting for asks):
 
 ```sh
 curl http://localhost:5183/api/canvas/sessions
@@ -203,6 +238,9 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `resolve` | Mark `id` (feedback note, picked/rejected object or ink stroke), `expectedRevision`, `status` (open or resolved); works on any page |
 | `feedback` | Optional `status`, `allPages`, `format`; returns the board-wide feedback queue with replies |
 | `reply` | Feedback item `id`, `text`; places an agent answer under the item |
+| `asks` | Optional `state`; lists the human's asks with their context |
+| `ask_status` | Ask `id`, `state` (working, failed, waiting), optional `note`, `error` |
+| `answer` | Ask `id` and either `text` or 2 to 4 `alternatives`; optional `read`, `question` |
 | `remove` | `id`, `expectedRevision`; locked objects cannot be removed |
 | `select` | `ids` |
 | `focus` | Optional `ids`; fits the selected objects or current page |
@@ -224,7 +262,7 @@ Mutations operate on the browser's current page. Read before changing objects; i
 
 ### Retry and revision behaviour
 
-Keep the same `requestId` and request content when retrying an HTTP operation. Within one development-server run, identical retries reuse the original result; changed content with the same ID is rejected. The ledger holds at most 1,000 requests and is in memory. Restarting the server resets it. This is not durable exactly-once execution across server restarts.
+Keep the same `requestId` and request content when retrying an HTTP operation. Within one development-server run, identical retries reuse the original result; changed content with the same ID is rejected. The ledger holds the newest 1,000 requests and is in memory. Restarting the server resets it. This is not durable exactly-once execution across server restarts.
 
 Updates/removals require the object's current revision. A stale revision fails without applying that operation. If a request times out or the browser disconnects before acknowledgement, its outcome may be unknown: read the canvas before issuing a new mutation. All connected agents are trusted local processes; the actor label is attribution, not authenticated identity. The API rejects remote and cross-origin requests. No secrets or paid providers are configured.
 
