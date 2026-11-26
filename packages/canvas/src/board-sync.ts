@@ -192,8 +192,16 @@ export function createBoardSync(o: SyncOptions) {
     if (!stopped) timer = setTimer(() => (account ? save() : start()), (retry = Math.min(retry * 2, 30_000)));
   };
 
+  // tldraw reports a load's changes a frame later, after `applying` is cleared. The first
+  // report after a load is that echo if the board still equals what was synced; it must not
+  // mark the memo dirty, or a reload in the save delay would treat the old copy as edits.
+  let echo = false;
   const unlisten = o.local.listen(() => {
     if (applying || stopped || !started) return;
+    if (echo) {
+      echo = false;
+      if (synced && JSON.stringify(o.local.snapshot()) === synced) return;
+    }
     markDirty();
     if (!account) return;
     clearTimer(timer);
@@ -219,7 +227,9 @@ export function createBoardSync(o: SyncOptions) {
       markSynced(snapshot, json);
       refusedJson = "";
       base = snapshot;
-      remember(again);
+      // Still dirty if the board changed while this save was in flight, even when that
+      // edit's own save has not started yet.
+      remember(again || JSON.stringify(o.local.snapshot()) !== json);
       retry = 1000;
       emit({ state: "saved", account: account!, revision, at: now().getTime(), ...(note ? { note } : {}) });
       return;
@@ -268,6 +278,7 @@ export function createBoardSync(o: SyncOptions) {
       o.local.load(snapshot);
     } finally {
       applying = false;
+      echo = true;
     }
   }
 
@@ -310,9 +321,21 @@ export function createBoardSync(o: SyncOptions) {
         revision = server.revision;
         base = server.snapshot;
         if (known.dirty) return await push();
-        // In step by the memo, but this browser's copy is not what was synced: the tab closed
-        // before tldraw stored the board it had just loaded or restored. The account has it.
-        if (known.hash && contentHash(o.local.snapshot()) !== known.hash) apply(server.snapshot);
+        if (known.hash && contentHash(initial) !== known.hash) {
+          // In step by the memo, but the copy this tab opened with is not what was synced:
+          // the tab closed before tldraw stored the board it had just loaded or restored.
+          // The account has it; objects made since this tab opened are carried onto it.
+          const recovered = withNewRecords(initial, o.local.snapshot(), server.snapshot);
+          apply(recovered.snapshot);
+          if (recovered.kept) {
+            started = true;
+            return await push("Kept the changes made while your board was loading.");
+          }
+        } else if (known.hash && contentHash(o.local.snapshot()) !== known.hash) {
+          // The copy was current, and the person edited it while the board was connecting.
+          started = true;
+          return await push();
+        }
         markSynced(o.local.snapshot());
         remember(false);
         return emit({ state: "saved", account, revision, at: now().getTime() });

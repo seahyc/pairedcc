@@ -9,7 +9,7 @@ function server(signedIn: string | null = "alice", keep = 50) {
   // history[i] is revision first + i; the oldest are pruned beyond `keep`, as on the server.
   const boards = new Map<string, { revision: number; snapshot: Snapshot; history: Snapshot[]; first: number }>();
   let down = false;
-  const hooks: { beforeRevision?: () => Promise<void> } = {};
+  const hooks: { beforeRevision?: () => Promise<void>; beforeGet?: () => Promise<void>; beforePut?: () => Promise<void> } = {};
   const uploads: string[] = [];
   const api: BoardApi = {
     async account() {
@@ -18,11 +18,13 @@ function server(signedIn: string | null = "alice", keep = 50) {
     },
     async get(id) {
       if (down) throw new Error("offline");
+      await hooks.beforeGet?.();
       const b = boards.get(id);
       return b ? { revision: b.revision, snapshot: structuredClone(b.snapshot) } : null;
     },
     async put(id, expectedRevision, snapshot) {
       if (down) throw new Error("offline");
+      await hooks.beforePut?.();
       uploads.push(id);
       if (JSON.stringify(snapshot).includes("HUGE")) return { ok: false, stale: false, refused: 413, error: "Boards are limited to 10 MB" };
       const b = boards.get(id);
@@ -55,9 +57,11 @@ function server(signedIn: string | null = "alice", keep = 50) {
   return { api, boards, hooks, uploads, setDown: (v: boolean) => (down = v) };
 }
 
-function browser(initial: Snapshot, memo: SyncMemo | null = null) {
+function browser(initial: Snapshot, memo: SyncMemo | null = null, opts: { lateNotify?: boolean } = {}) {
   let doc = structuredClone(initial);
   const listeners = new Set<() => void>();
+  // tldraw reports store changes a frame later; with lateNotify, a load's report waits for deliver().
+  const pending: (() => void)[] = [];
   const stored = { memo };
   const timers: (() => void)[] = [];
   return {
@@ -72,12 +76,16 @@ function browser(initial: Snapshot, memo: SyncMemo | null = null) {
       snapshot: () => structuredClone(doc),
       load(s: Snapshot) {
         doc = structuredClone(s);
-        for (const l of listeners) l();
+        if (opts.lateNotify) pending.push(() => listeners.forEach((l) => l()));
+        else for (const l of listeners) l();
       },
       listen(fn: () => void) {
         listeners.add(fn);
         return () => listeners.delete(fn);
       },
+    },
+    deliver() {
+      while (pending.length) pending.shift()!();
     },
     memo: { get: () => stored.memo, set: (m: SyncMemo | null) => (stored.memo = m) },
     stored,
@@ -547,6 +555,62 @@ describe("withNewRecords", () => {
     const b: Snapshot = { store: { "shape:a": { props: { h: 3, w: 2 }, x: 1, id: "shape:a" } }, schema: { other: true } };
     expect(contentHash(a)).toBe(contentHash(b));
     expect(contentHash(a)).not.toBe(contentHash(snap("x")));
+  });
+
+  it("keeps the recovered board through a second reload before the browser stores it", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("v2");
+    await b.flush();
+    await s.restore(1);
+    // First reload: the browser still holds v2, so the account's v1 is loaded; tldraw reports it later.
+    const first = browser(snap("v2"), b.stored.memo, { lateNotify: true });
+    await sync(srv, first, true).s.start();
+    first.deliver(); // the load's own report must not count as an edit
+    expect(first.stored.memo).toMatchObject({ dirty: false });
+    // Second reload, still before the browser stored v1.
+    const second = browser(snap("v2"), first.stored.memo);
+    await sync(srv, second, true).s.start();
+    expect(text(second.doc)).toBe("v1");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("v1");
+  });
+
+  it("keeps an edit made while a save was in flight when the tab reloads before saving it", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("first edit");
+    let release!: () => void;
+    srv.hooks.beforePut = () => new Promise<void>((done) => (release = done));
+    const saving = b.timers.shift()!(); // saves "first edit"; the server holds the request
+    await Promise.resolve();
+    b.edit("second edit"); // its save is still waiting on its debounce
+    srv.hooks.beforePut = undefined;
+    release();
+    await saving;
+    expect(b.stored.memo).toMatchObject({ dirty: true });
+    // Reload now: the browser stored "second edit", the account has "first edit".
+    const again = browser(snap("second edit"), b.stored.memo);
+    await sync(srv, again, true).s.start();
+    expect(text(again.doc)).toBe("second edit");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("second edit");
+  });
+
+  it("saves an edit made while the board was connecting instead of replacing it", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("on the server"));
+    const b = browser(snap("on the server"), { account: "alice", boardId: "main", revision: 1, dirty: false, hash: contentHash(snap("on the server")) });
+    let release!: () => void;
+    srv.hooks.beforeGet = () => new Promise<void>((done) => (release = done));
+    const starting = sync(srv, b, true).s.start();
+    await Promise.resolve();
+    b.edit("moved while connecting");
+    srv.hooks.beforeGet = undefined;
+    release();
+    await starting;
+    expect(text(b.doc)).toBe("moved while connecting");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("moved while connecting");
   });
 });
 
