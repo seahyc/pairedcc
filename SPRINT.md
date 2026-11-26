@@ -689,7 +689,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 104. (PR #132 open, awaiting review.) **The Ask loop measure follows the card-is-the-question loop.** Since 7cc29ef there is no question box, and `eval/measures/ask-loop.ts` (#56) still presses ⌘↵ and waits for it, so the scorecard's Ask loop row is 0/5 on `claude/sprint-int`. Every P-item PR must keep `pnpm eval:canvas` no worse, so this blocks them. Done when the measure walks the new loop (a card ending in "?" is sent when the person finishes writing it; another card is sent with ⌘↵; the agent finds the ask over MCP, works, answers beside it; a failed ask offers Retry) and passes 5/5, with each step still failing when its behaviour is broken.
 
-105. ((a): PR #136, (b) and (d): PR #137, open, awaiting review.) **Friction from the 26-task agent attempt (PR #131; reported by the agent, not yet reproduced).** (a) `canvas_update` with `text` leaves the layer `name` at the old text, and `read` and `overview` show the stale name; (b) clearing a chart filter (`filter: {}`) has no example in AGENT_API; (c) `canvas_runs` lists every page's runs, with no page filter; (d) `canvas_annotate`'s placement without x/y and its fixed 420 px width are undocumented; (e) results are large (full richText props, long `created` lists in `canvas_runs`). Done when each is reproduced and fixed or recorded as a decision.
+105. ((a): PR #136, (b) and (d): PR #137, (c): PR #139, open, awaiting review; (e) open.) **Friction from the 26-task agent attempt (PR #131; reported by the agent, not yet reproduced).** (a) `canvas_update` with `text` leaves the layer `name` at the old text, and `read` and `overview` show the stale name; (b) clearing a chart filter (`filter: {}`) has no example in AGENT_API; (c) `canvas_runs` lists every page's runs, with no page filter; (d) `canvas_annotate`'s placement without x/y and its fixed 420 px width are undocumented; (e) results are large (full richText props, long `created` lists in `canvas_runs`). Done when each is reproduced and fixed or recorded as a decision.
 
 106. (PR #134 open, awaiting review.) **The keyboard, heard and contain checks follow Ask without a question box.** Since 7cc29ef ("The
     card is the question") `tools/verify-keyboard.mjs` (6 fail), `verify-heard.mjs` (7 fail) and
@@ -705,6 +705,7 @@ P5. Understanding needs effort (part 1: Check me on the default board) | claude/
 P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 
 ## Done
+- 105 (c). canvas_runs by page (build-B): PR #139 (pages on each run, page: "current"; live MCP check 1/3 → 3/3; manifest regenerated; workspace green with services).
 - P3 (part 1). Settled mark (build-A): PR #138 (S settles or reopens, print with ✓ in the person's colour, one undo, saved, `settled: true` in read and ask targets; verify-settled 11/11; first screen unchanged).
 - 105 (b), (d). Chart filter clearing and annotate placement documented (build-B): PR #137.
 - 105 (a). A layer name made from the text follows the text (build-B): PR #136 (nameAfterText; live MCP check 1/3 → 3/3).
@@ -1092,3 +1093,4 @@ P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 | 2026-11-26T15:12Z | build-B | 105 (a) Name follows text | #136 | nameAfterText (4 failing-first tests); patchObject renames a derived name on text change; verify-name-follows 1/3 → 3/3 |
 | 2026-11-26T15:13Z | build-B | 105 (b), (d) Docs from agent friction | #137 | filter {} / selected [] clear; annotate placement and 420 px width; checked against the code |
 | 2026-11-26T15:15Z | build-A | P3 part 1 Settled mark; run end | #138 | S settles/reopens, print with ✓, one undo, saved, agents read settled: true; verify-settled 11/11, 4 unit tests; scorecard unchanged (ask loop 0/5 as on int until #132). Run worked through the 14:30–15:11Z PAUSE without noticing (recorded under Decisions); stopping now that the switch is RUN only for one review cycle. Open from this run: #127 (stacked on #134), #133, #134, #138 |
+| 2026-11-26T15:19Z | build-B | 105 (c) canvas_runs by page | #139 | pagesOfRun and page filter (3 failing-first tests); manifest regenerated; verify-runs-page 1/3 → 3/3; eval workspace row green; task 21 self-test OK |
