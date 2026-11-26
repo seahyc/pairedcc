@@ -53,6 +53,7 @@ import {
   Sparkles,
   Layers,
   FilePlus2,
+  FileInput,
   Map as MapIcon,
   History,
   FolderOpen,
@@ -68,6 +69,7 @@ import {
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { convergeForPerson, createComment } from "./agent-operations";
 import { prototypeEnabled } from "./prototype-flags";
+import { followConnectors } from "./connector-follow";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
@@ -75,9 +77,10 @@ import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
+import { DataTableShapeUtil } from "./table-shape";
+import { ImportLayer, chooseImportFile } from "./import-ui";
 import { PromptShapeUtil, createLearningPrototypePage, learningPrototypeEnabled, learningVisibility } from "./learning/prompt-shape";
 import { ChartShapeUtil, DataLayer, DatasetShapeUtil, createDataPrototypePage, dataPrototypeEnabled } from "./data/shapes";
-import { importCsvFiles, isCsvFile } from "./data/csv";
 import {
   PaperBackground,
   ScratchbookLayer,
@@ -268,6 +271,8 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
       ["Open or close the feedback queue", "Shift C"],
+      ["Bring in a table or document as cards", "⌘ V, or drop a file"],
+      ["Next / previous imported record", "J / K"],
       ["Finish typing", "Esc"],
     ],
   },
@@ -394,8 +399,9 @@ function Shell() {
         mod = event.metaKey || event.ctrlKey;
       if (mod) {
         if (key === "z") {
+          // The canvas's own shortcut has usually undone already; a second undo here would take two steps.
+          if (!event.defaultPrevented) event.shiftKey ? editor.redo() : editor.undo();
           event.preventDefault();
-          event.shiftKey ? editor.redo() : editor.undo();
         } else if (key === "d") {
           event.preventDefault();
           editor.markHistoryStoppingPoint("duplicate");
@@ -575,24 +581,6 @@ function Shell() {
   const shapeColor =
     shape && "color" in shape.props ? shape.props.color : undefined;
   const bounds = shape ? editor.getShapePageBounds(shape) : undefined;
-  // PROTOTYPE (?prototype=data): dropping CSV files on the canvas creates datasets.
-  // Other dropped files go on to tldraw's own handling.
-  useEffect(() => {
-    if (!dataPrototypeEnabled()) return;
-    const onDrop = (e: DragEvent) => {
-      const files = [...(e.dataTransfer?.files ?? [])];
-      const csvs = files.filter(isCsvFile);
-      if (!csvs.length || !(e.target instanceof Element) || !e.target.closest(".tl-container")) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const point = editor.screenToPage({ x: e.clientX, y: e.clientY });
-      void importCsvFiles(editor, csvs, point).then(setNotice);
-      const rest = files.filter((f) => !isCsvFile(f));
-      if (rest.length) void editor.putExternalContent({ type: "files", files: rest, point });
-    };
-    window.addEventListener("drop", onDrop, true);
-    return () => window.removeEventListener("drop", onDrop, true);
-  }, [editor]);
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(""), 3500);
@@ -833,6 +821,9 @@ function Shell() {
               <Keyboard size={14} /> Shortcuts <kbd>?</kbd>
             </button>
             <div className="menu-rule" />
+            <button role="menuitem" onClick={() => { chooseImportFile(); setMenuOpen(false); }}>
+              <FileInput size={14} /> Import a file
+            </button>
             {historyWhere && savedBoards > 1 && (
               <button role="menuitem" onClick={() => { setBoardsOpen(true); setMenuOpen(false); }}>
                 <FolderOpen size={14} /> Saved boards
@@ -985,6 +976,7 @@ function Shell() {
           }}
         />
       </nav>
+      <ImportLayer onNotice={setNotice} />
       <SelectionBar asking={asking} setAsking={setAsking} onComment={addComment} onNotice={setNotice} keepInView={keepInView} />
       <aside className="right-panel">
         <div className="panel-tabs right-tabs" role="tablist">
@@ -1390,7 +1382,7 @@ function Shell() {
   );
 }
 import { GeoShapeGeoStyle, PageRecordType, createShapeId } from "tldraw";
-const scratchShapes = [CardShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil];
+const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil];
 const TEXT_WRAP = 460;
 // One set of editor options: the page limit, and double-click writes a card rather than plain text.
 const editorOptions = { ...canvasOptions, createTextOnCanvasDoubleClick: false };
@@ -1503,6 +1495,7 @@ function App() {
         editor.updateShape({ id: shape.id, type: "text", props: { w: TEXT_WRAP } });
     });
     editor.sideEffects.registerAfterChangeHandler("shape", (_previous, next) => wrapText(next));
+    followConnectors(editor);
     // Double-click the empty board to write a thought: a pink card, already in typing mode.
     const writeOnDoubleClick = (info: { type: string; name?: string; phase?: string; target?: string }) => {
       if (info.type !== "click" || info.name !== "double_click" || info.phase !== "up" || info.target !== "canvas") return;

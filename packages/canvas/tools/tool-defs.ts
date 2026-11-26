@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createInput, patchInput } from "../src/operations";
 import { sceneInput, arrangeInput, duplicateInput, groupInput } from "../src/composition";
+import { importInput } from "../src/import-board";
 import { imageInput, annotationInput, connectionInput, resolveInput, feedbackInput, replyInput, asksInput, askStatusInput, answerInput } from "../src/protocol";
 import { learnInput } from "../src/learning/model";
 import { convergeInput } from "../src/converge/model";
@@ -87,7 +88,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_overview",
     op: "overview",
     description:
-      "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
+      "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
     input: overviewInput.shape,
     output: "json",
   },
@@ -196,6 +197,14 @@ export const toolDefs: ToolDef[] = [
     description:
       "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X). Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved.",
     input: answerInput.shape,
+    output: "json",
+  },
+  {
+    name: "canvas_import",
+    op: "import",
+    description:
+      "Bring a table or document onto the board as source material the human can think with, in one undoable step. Rows of prose (a review, findings, interview notes) become one cluster per row: a title line from the short identifying columns, a tag for categories such as severity (most severe first), and one card per long text column, labelled with its column name. Grids of numbers stay one read-only table. Markdown or prose becomes one card per section in reading order. Imported objects have a neutral source look and carry `meta.source` (from, at, row, column). Columns left empty for a verdict are not drawn: the human picks (P), crosses out (X) or comments (C). Returns the record ids in reading order.",
+    input: importInput.shape,
     output: "json",
   },
   {

@@ -477,7 +477,7 @@
     },
     {
       "name": "canvas_overview",
-      "description": "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
+      "description": "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
       "op": "overview",
       "output": "json",
       "inputSchema": {
@@ -1203,6 +1203,66 @@
         },
         "required": [
           "id"
+        ]
+      }
+    },
+    {
+      "name": "canvas_import",
+      "description": "Bring a table or document onto the board as source material the human can think with, in one undoable step. Rows of prose (a review, findings, interview notes) become one cluster per row: a title line from the short identifying columns, a tag for categories such as severity (most severe first), and one card per long text column, labelled with its column name. Grids of numbers stay one read-only table. Markdown or prose becomes one card per section in reading order. Imported objects have a neutral source look and carry `meta.source` (from, at, row, column). Columns left empty for a verdict are not drawn: the human picks (P), crosses out (X) or comments (C). Returns the record ids in reading order.",
+      "op": "import",
+      "output": "json",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "description": "Which open canvas to use; see canvas_sessions. Optional when only one is open.",
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000000,
+            "description": "The table or document as text: CSV, TSV, an HTML table, Markdown, a JSON array of objects, or plain prose."
+          },
+          "format": {
+            "default": "auto",
+            "description": "auto works it out from the content; name the format for CSV with few columns.",
+            "type": "string",
+            "enum": [
+              "auto",
+              "csv",
+              "tsv",
+              "html",
+              "markdown",
+              "json",
+              "text"
+            ]
+          },
+          "name": {
+            "description": "Where it came from, recorded on every object and shown to the human: a file name or a short description.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "as": {
+            "default": "auto",
+            "description": "auto: rows of prose become record cards, grids of numbers stay one table. Force either with cards or table.",
+            "type": "string",
+            "enum": [
+              "auto",
+              "cards",
+              "table"
+            ]
+          },
+          "focus": {
+            "default": true,
+            "description": "Move the view to the first records.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "content"
         ]
       }
     },
