@@ -693,7 +693,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 104. The Ask loop measure follows the card-is-the-question loop | claude/sprint-askloop-card | 2026-11-26T14:48Z
-100 (f)-(g). Answer rows and panning findings on #87 | claude/sprint-answer-rows | 2026-11-26T14:48Z
+P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 102. Review follow-ups to #115 and #118 | claude/sprint-keys-followup | 2026-11-26T14:32Z
 
 ## Done
