@@ -309,7 +309,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 45. Board sync gaps (a) to (c) | claude/sprint-sync-gaps | 2026-11-26T11:49Z
 44. Asks carry picks and cross-outs | claude/sprint-ask-marks | 2026-11-26T11:55Z
-39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
