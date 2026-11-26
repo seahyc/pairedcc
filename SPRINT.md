@@ -374,8 +374,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     every board call fail with ENOENT, shown as a Vite error overlay, until the folder is made by
     hand (seen while resetting boards for item 46's screenshots). Done when list answers empty and
     the next save recreates the folder, with a failing-first test.
+59. **The safety measure covers restoring an earlier version.** Restore (#32, #35) can lose another
+    browser's newer edit if it ever merges or overwrites. Done when the eval's Safety row has a race:
+    browser A restores an earlier revision after browser B saved a newer edit; the restore is
+    refused and B's edit is still on the server and in A after reload (0 human edits lost).
 
 ## Claims
+59. Safety race for restore | claude/sprint-eval-restore | 2026-11-26T12:27Z
 57. Dev board store survives its folder being removed | claude/sprint-dev-store-dir | 2026-11-26T12:19Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
