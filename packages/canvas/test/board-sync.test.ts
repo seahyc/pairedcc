@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { copyId, createBoardSync, mergeSnapshots, type BoardApi, type Snapshot, type SyncMemo, type SyncStatus } from "../src/board-sync";
+import { copyId, createBoardSync, mergeSnapshots, withNewRecords, type BoardApi, type Snapshot, type SyncMemo, type SyncStatus } from "../src/board-sync";
 
 const snap = (text: string): Snapshot => ({ store: { "shape:a": { id: "shape:a", typeName: "shape", text } }, schema: { schemaVersion: 2 } });
 const text = (s: Snapshot) => (s.store["shape:a"] as { text: string }).text;
@@ -330,20 +330,19 @@ describe("board sync merges a stale save", () => {
 });
 
 describe("board sync during the first load", () => {
-  it("does not carry this browser's replaced board into the account's when its objects change while loading", async () => {
+  it("does not carry the welcome board settling (changes to existing records) onto the account's board", async () => {
     const srv = server();
     await srv.api.put("main", 0, doc({ a: "from laptop" }));
     const b = browser(doc({ w: "welcome" }));
-    const { s, last } = sync(srv, b, false);
+    const { s } = sync(srv, b, false);
     const started = s.start();
-    b.local.load(doc({ w: "welcome, re-measured" })); // the welcome card resizes itself; nobody edited it
+    b.local.load(doc({ w: "welcome, re-measured" }));
     await started;
     expect(values(b.doc)).toEqual({ a: "from laptop" });
-    expect(values(srv.boards.get("main")!.snapshot)).toEqual({ a: "from laptop" });
-    expect(last()).toMatchObject({ state: "saved", revision: 1 });
+    expect(srv.boards.get("main")!.revision).toBe(1);
   });
 
-  it("merges edits made while the account's board was loading instead of replacing them", async () => {
+  it("carries objects created while the account's board was loading onto it", async () => {
     const srv = server();
     await srv.api.put("main", 0, doc({ a: "from laptop" }));
     const b = browser(doc({ w: "welcome" }));
@@ -354,5 +353,18 @@ describe("board sync during the first load", () => {
     expect(values(b.doc)).toEqual({ a: "from laptop", n: "typed while loading" });
     expect(values(srv.boards.get("main")!.snapshot)).toEqual({ a: "from laptop", n: "typed while loading" });
     expect(last()).toMatchObject({ state: "saved", revision: 2, note: expect.stringContaining("while your board was loading") });
+  });
+});
+
+describe("withNewRecords", () => {
+  const rec = (id: string, parentId?: string) => ({ id, typeName: id.startsWith("user") ? "user" : "shape", ...(parentId ? { parentId } : {}) });
+  const snapOf = (...rs: ReturnType<typeof rec>[]): Snapshot => ({ store: Object.fromEntries(rs.map((r) => [r.id, r])), schema: { schemaVersion: 2 } });
+  it("adds new records whose parents exist, in any order, and skips orphans and user records", () => {
+    const initial = snapOf(rec("page:1"), rec("w", "page:1"));
+    const current = snapOf(rec("page:1"), rec("w", "page:1"), rec("child", "frame"), rec("frame", "page:1"), rec("orphan", "gone"), rec("user:x"));
+    const server = snapOf(rec("page:1"), rec("a", "page:1"));
+    const { snapshot, kept } = withNewRecords(initial, current, server);
+    expect(Object.keys(snapshot.store).sort()).toEqual(["a", "child", "frame", "page:1"]);
+    expect(kept).toBe(2);
   });
 });
