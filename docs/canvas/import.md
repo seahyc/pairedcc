@@ -45,10 +45,12 @@ Solveit's "the person sees exactly what the AI sees" holds: what the agent is gi
 | Images | Works by drop, the file chooser or the existing image paste |
 | `.xlsx` | Works, by drop or the file chooser: the first sheet's cell values become the same records or table as pasting that range (`src/xlsx.ts`, no dependency: the zip is read with the browser's own decompression). Formulas give their last computed value; dates stay Excel's serial numbers; merged cells are read as their first cell. A workbook with more sheets says only the first was read. A damaged file says it cannot be read. |
 | `.xls`, `.numbers`, `.ods` | Not read. The canvas says only `.xlsx` is, and suggests saving as `.xlsx` or CSV or copying the cells. |
-| PDF, Word, slides | Not read |
+| `.pdf` | Works for text PDFs, by drop or the file chooser (`src/import-pdf.ts`, no dependency). Text is read through each font's ToUnicode map, or as plain characters for standard fonts. Lines, paragraphs, headings (a larger size, or a short line all in bold) and list items (by indent) are rebuilt from position and size, then read like markdown, in page order. Checked against a PDF printed by Chromium and a hand-written one. A protected PDF, a scan with no text, or a damaged file says so and creates nothing. |
+| Word, slides | Not read |
 
 ## Not handled yet
 
+- PDF: tables, columns side by side, footnotes and running headers come out as plain paragraphs in drawing order; compressed object streams (common in PDFs saved by some office suites) are not read yet, and such a file says it cannot be read.
 - A web page with a data table is read as that table, not as its prose. Pages that build their content with scripts, or mark it up without headings, come out as paragraphs or not at all.
 - Older spreadsheet files (above), and sheets after the first in an `.xlsx` workbook. Only the first table of an HTML fragment is read; merged cells are read as their first cell.
 - A table inside a longer markdown document is not drawn as a table; inline formatting (bold, links) is reduced to plain text.

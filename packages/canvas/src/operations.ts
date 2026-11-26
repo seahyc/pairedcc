@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLShape } from "tldraw";
+import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { clip } from "./text";
 
 const color = z.enum(DefaultColorStyle.values);
@@ -227,8 +227,9 @@ export function patchObject(editor: Editor, value: unknown) {
   return describeObject(editor, shape.id);
 }
 
-export function describeObject(editor: Editor, id: string) {
-  const shape = editor.getCurrentPageShapes().find((s) => s.id === id);
+/** One object as agents see it. Only objects on the open page, unless `anyPage` (an answer placed on its ask's page). */
+export function describeObject(editor: Editor, id: string, anyPage = false) {
+  const shape = anyPage ? editor.getShape(id as TLShapeId) : editor.getCurrentPageShapes().find((s) => s.id === id);
   if (!shape) return null;
   const bounds = editor.getShapePageBounds(shape);
   return {
