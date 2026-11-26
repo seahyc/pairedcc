@@ -99,8 +99,10 @@ try {
     check(`${tag}: the zoom is left as the person set it`, a1.camera.z === zoom, `${zoom} → ${a1.camera.z}`);
     await p.screenshot({ path: `${out}/${tag}-1-four-options.png` });
 
-    // 2. A one-card answer, asked from near the bottom right.
-    await p.evaluate(() => { window.__pairedEditor.selectNone(); });
+    // 2. A one-card answer, asked from near the bottom right of an empty stretch of board
+    // (on a phone the four options fill the screen, so a double-click would land on one).
+    await p.evaluate(() => { const ed = window.__pairedEditor; ed.selectNone(); const c = ed.getCamera(); ed.setCamera({ ...c, y: c.y - 1500 }); });
+    await p.waitForTimeout(200);
     const second = await ask(p, phone ? 200 : vw - 420, vh - 150, 'What would a team of three pay?');
     await answer(second, { text: 'About thirty dollars a month at ten a seat. A team that grows to twelve pays four times that, which is the case to test first.' });
     await p.waitForTimeout(900);
