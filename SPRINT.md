@@ -138,17 +138,21 @@ task by which measure is furthest from target, not by backlog order.
 14. (PR #11 open, awaiting review; stacked on #9.) **Transitive staleness.** A result recorded with `inputs: [chart]` is not marked stale when the
     chart's dataset changes, only when the chart itself is recomputed. Done when the eval step
     "Changing an input marks its dependents stale" passes and the read reports the upstream cause.
-15. **Reload must not change objects.** Reopening a board re-measures cards and bumps their height
+15. (PR #17 open, awaiting review.) **Reload must not change objects.** Reopening a board re-measures cards and bumps their height
     and revision, so a revision an agent held before the reload goes stale. Done when the eval step
     "Reload restores everything" passes.
 16. (PRs #14 #16 open, awaiting review; #16 stacked on #14.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
     Done when the performance measure reports 10k load and pan numbers (raise the limit or
     decide another way and record it).
+17. **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
+    out loud, with an agent beside you." wraps onto the shortcut hint line beneath it (seen at
+    1440x900 in headless Chromium; `docs/canvas/screenshots/reload-late-fonts-*.png` runs show the
+    page). Done when the header lines never overlap at 1440 and 390 px widths, with screenshots.
 
 ## Claims
 1. Server-side board storage | claude/sprint-boards-* | 2026-11-26T09:50Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
-15. Reload must not change objects | claude/sprint-reload-stable | 2026-11-26T10:10Z
+13. Person imports a CSV | claude/sprint-csv-drop | 2026-11-26T10:21Z
 
 ## Done
 - 0. Eval harness: PR #8 (`pnpm eval:canvas`, baseline scorecard: acceptance 7/10, safety pass, persistence fail, 10k perf impossible, e2e failing). Gaps filed as items 13 to 16.
@@ -177,6 +181,7 @@ task by which measure is furthest from target, not by backlog order.
 - (build-B, item 12) The switch is `hostedPrototypeTools` in `packages/canvas/tools/tool-defs.ts`, left `true` so hosted behaviour is unchanged. Turning it off removes the five PROTOTYPE tools and the data-prototype sentence from the hosted manifest only; the local stdio server keeps them.
 
 - (build-B, item 16) Raised tldraw's `maxShapesPerPage` from 4,000 to 20,000 (`src/canvas-options.ts`). With #16, a 10k board loads in about 8 s and pans at 39.6 ms per frame when every object is on screen (16.7 ms at 100% zoom; the remaining cost is tldraw's own rendering). Open product choices: level-of-detail or culling when zoomed far out, and virtualising or summarising the layers panel, which still mounts one row per object.
+- (build-B, item 15) A card's auto-sized `props.h` no longer bumps the revision (one definition of derived fields in `src/revision.ts`, shared with run-undo), and reload no longer re-estimates card heights; cards on screen re-measure once fonts load.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -192,3 +197,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T09:52Z | build-B | 14 Transitive staleness | #11 | Results stale when an upstream input changes, with `upstream` cause in read; eval acceptance 7/10 to 8/10 |
 | 2026-11-26T09:56Z | build-B | 12 Prototype tool exposure | #13 | `hostedPrototypeTools` switch with tests; manifest unchanged by default; server tests 117 pass |
 | 2026-11-26T10:10Z | build-B | 16 10k objects | #14 #16 | 10k board can exist; layers panel linear and rich-text read without zod: 10k load 36.5 s to 8.1 s, pan 83.6 to 39.6 ms/frame, 1k load 2.8 to 1.5 s |
+| 2026-11-26T10:21Z | build-B | 15 Reload stability | #17 | Reload leaves objects unchanged; eval acceptance 8/10 to 9/10; late-font reload keeps height and revision |
