@@ -254,7 +254,12 @@ export function createBridge(editor: Editor) {
       selection: editor.getSelectedShapeIds(),
       objects: editor
         .getCurrentPageShapesSorted()
-        .map((s) => describeObject(editor, s.id)),
+        .map((s) => ({
+          ...describeObject(editor, s.id),
+          text: "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
+          meta: s.meta,
+        })),
+      pages: editor.getPages().map((p) => ({ id: p.id, name: p.name })),
     }),
     create: (input: unknown) => createObject(editor, input),
     update: (input: unknown) => patchObject(editor, input),
