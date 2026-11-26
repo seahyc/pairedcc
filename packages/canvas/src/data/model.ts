@@ -158,14 +158,19 @@ export function staleInputs(inputs: readonly InputRef[], versions: ReadonlyMap<s
 export function staleReason(stale: readonly StaleInput[], nameOf: (id: string) => string | undefined): string {
   if (!stale.length) return "";
   const quote = (id: string) => (nameOf(id) ? `“${nameOf(id)}”` : undefined);
-  const describe = (s: StaleInput, via: string[]): string => {
-    if (s.upstream?.length) return describe(s.upstream[0], [...via, s.id]);
-    const what = s.current === null ? (quote(s.id) ? `${quote(s.id)} was deleted` : "an input was deleted") : `${quote(s.id) ?? "an input"} changed`;
-    const path = via.map(quote).filter(Boolean);
-    return path.length ? `${what} (via ${path.join(", ")})` : what;
+  // Every root cause (an input that itself changed or was deleted), with the path to it.
+  const causes: { s: StaleInput; via: string[] }[] = [];
+  const walk = (s: StaleInput, via: string[]) => {
+    if (s.upstream?.length) for (const u of s.upstream) walk(u, [...via, s.id]);
+    else causes.push({ s, via });
   };
-  const first = describe(stale[0], []);
-  return stale.length > 1 ? `${first}, and ${stale.length - 1} more input${stale.length > 2 ? "s" : ""}` : first;
+  for (const s of stale) walk(s, []);
+  const { s: root, via } = causes[0];
+  const what = root.current === null ? (quote(root.id) ? `${quote(root.id)} was deleted` : "an input was deleted") : `${quote(root.id) ?? "an input"} changed`;
+  const path = via.map(quote).filter(Boolean);
+  const first = path.length ? `${what} (via ${path.join(", ")})` : what;
+  const more = causes.length - 1;
+  return more ? `${first}, and ${more} more input${more > 1 ? "s" : ""}` : first;
 }
 
 /** What staleChain needs to know about an object: its content version and recorded inputs. */
