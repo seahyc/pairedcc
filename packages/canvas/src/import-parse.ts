@@ -275,7 +275,7 @@ export function parseJson(text: string): Table {
 
 // ---------- one entry point ----------
 
-export function formatOfFile(name: string): ImportFormat | "image" | "xlsx" | null {
+export function formatOfFile(name: string): ImportFormat | "image" | "xlsx" | "pdf" | null {
   const ext = /\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase();
   if (!ext) return null;
   if (ext === "csv") return "csv";
@@ -285,6 +285,7 @@ export function formatOfFile(name: string): ImportFormat | "image" | "xlsx" | nu
   if (ext === "json") return "json";
   if (ext === "html" || ext === "htm") return "html";
   if (ext === "xlsx" || ext === "xls" || ext === "numbers" || ext === "ods") return "xlsx";
+  if (ext === "pdf") return "pdf";
   if (["png", "jpg", "jpeg", "gif", "webp", "svg", "avif"].includes(ext)) return "image";
   return null;
 }

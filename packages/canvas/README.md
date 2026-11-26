@@ -88,6 +88,8 @@ pnpm build:canvas   # from the repository root: type check and production build
 pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents every tool
 ```
 
+`tools/verify-pdf.mjs <screenshot dir> [origin]` checks a PDF (`test/fixtures/notes.pdf`, the synthetic notes printed by Chromium with `test/fixtures/build-pdf.cjs`).
+
 `tools/verify-webpage.mjs <screenshot dir> [origin]` checks a saved web page and a stretch copied from one.
 
 `tools/verify-import.mjs <screenshot dir> [origin]` checks import and paste the same way (a pasted review as ten record clusters, the stepper, undo, pick / cross out / comment, the ask context, a numeric table, a markdown file, an image drop, the agent operation) against a dev server of this checkout, with the synthetic fixtures in `test/fixtures/`.

@@ -42,10 +42,12 @@ Solveit's "the person sees exactly what the AI sees" holds: what the agent is gi
 | `.html` | The first table in the file, if it has one. Otherwise a web page: the content of its `<article>` or `<main>` (else its body) becomes section cards under its top heading or page title, with headings, paragraphs, lists and preformatted text kept, and navigation, scripts, styles, asides, figures, forms, adverts and the footer left out (`src/import-html.ts`). |
 | Images | Works by drop, the file chooser or the existing image paste |
 | `.xlsx`, `.xls`, `.numbers`, `.ods` | Not read. The canvas says so and suggests copying the cells or saving as CSV. No spreadsheet parser is a dependency. |
-| PDF, Word, slides | Not read |
+| `.pdf` | Works for text PDFs, by drop or the file chooser (`src/import-pdf.ts`, no dependency). Text is read through each font's ToUnicode map, or as plain characters for standard fonts. Lines, paragraphs, headings (a larger size, or a short line all in bold) and list items (by indent) are rebuilt from position and size, then read like markdown, in page order. Checked against a PDF printed by Chromium and a hand-written one. A protected PDF, a scan with no text, or a damaged file says so and creates nothing. |
+| Word, slides | Not read |
 
 ## Not handled yet
 
+- PDF: tables, columns side by side, footnotes and running headers come out as plain paragraphs in drawing order; compressed object streams (common in PDFs saved by some office suites) are not read yet, and such a file says it cannot be read.
 - A web page with a data table is read as that table, not as its prose. Pages that build their content with scripts, or mark it up without headings, come out as paragraphs or not at all.
 - Spreadsheet files (above). Only the first table of an HTML fragment is read; merged cells are read as their first cell.
 - A table inside a longer markdown document is not drawn as a table; inline formatting (bold, links) is reduced to plain text.
