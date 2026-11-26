@@ -8,7 +8,6 @@ import {
   DefaultFillStyle,
   DefaultFontStyle,
   serializeTldrawJson,
-  parseTldrawJsonFile,
   type Editor,
   type TLShape,
   type TLComponents,
@@ -58,6 +57,7 @@ import { agentLink, connectAgentAccess } from "./agent-client";
 import { annotateObject } from "./agent-operations";
 import { isLegacySeed, seed } from "./seed";
 import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
+import { maxImportBytes, parseCanvasFile } from "./import-file";
 import { ChartShapeUtil, DataLayer, DatasetShapeUtil, createDataPrototypePage, dataPrototypeEnabled } from "./data/shapes";
 import {
   PaperBackground,
@@ -400,12 +400,16 @@ function Shell() {
   async function importFile(file: File | undefined) {
     if (!file) return;
     try {
-      const result = parseTldrawJsonFile({
-        json: await file.text(),
-        schema: editor.store.schema,
-      });
-      if (!result.ok) throw Error();
-      editor.store.loadStoreSnapshot(result.value.getStoreSnapshot());
+      if (file.size > maxImportBytes) {
+        setNotice("That file is larger than 50 MB");
+        return;
+      }
+      const result = parseCanvasFile(await file.text(), editor.store.schema);
+      if (!result.ok) {
+        setNotice(`Not imported: ${result.reason}`);
+        return;
+      }
+      editor.store.loadStoreSnapshot(result.snapshot);
       editor.clearHistory();
       editor.zoomToFit();
       setNotice("Canvas imported");
