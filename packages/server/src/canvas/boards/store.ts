@@ -7,6 +7,30 @@ import { z } from 'zod'
 
 export const MAX_BOARD_BYTES = 10 * 1024 * 1024
 export const KEEP_REVISIONS = 50
+/** The newest revisions always kept; older ones are thinned (see revisionsToKeep). */
+export const KEEP_RECENT = 20
+export const THIN_SLOT_MS = 15 * 60_000
+
+/**
+ * Which revisions a board keeps. Sync saves after every pause in editing, so keeping only
+ * the newest 50 covered a few minutes of work. This keeps the newest KEEP_RECENT, then the
+ * newest revision in each older 15-minute slot of wall-clock time, KEEP_REVISIONS in all.
+ * Slots are fixed, so a revision kept for its slot stays kept as new saves arrive.
+ */
+export function revisionsToKeep(history: { revision: number; savedAt: string }[]): Set<number> {
+  const newestFirst = [...history].sort((a, b) => b.revision - a.revision)
+  const keep = new Set<number>()
+  const slots = new Set<number>()
+  for (const [i, h] of newestFirst.entries()) {
+    if (keep.size >= KEEP_REVISIONS) break
+    const slot = Math.floor(Date.parse(h.savedAt) / THIN_SLOT_MS)
+    if (i < KEEP_RECENT || !slots.has(slot)) {
+      keep.add(h.revision)
+      slots.add(slot)
+    }
+  }
+  return keep
+}
 /**
  * Boards one account may keep. Well above normal use (sync adds a board only when it
  * cannot merge), and with the 10 MB and 50-revision caps it bounds one account's storage.
@@ -108,7 +132,8 @@ export class MemoryBoardStore implements BoardStore {
     const revision = current.revision + 1
     Object.assign(current, { revision, sizeBytes, updatedAt: at, snapshot: structuredClone(input.snapshot), ...(name ? { name } : {}) })
     current.history.push({ revision, sizeBytes, savedAt: at, snapshot: current.snapshot })
-    current.history.splice(0, Math.max(0, current.history.length - KEEP_REVISIONS))
+    const keep = revisionsToKeep(current.history)
+    current.history = current.history.filter((h) => keep.has(h.revision))
     return { ok: true, board: this.summary(current) }
   }
   async remove(userId: string, id: string, expectedRevision: number): Promise<RemoveResult> {
