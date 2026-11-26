@@ -273,9 +273,9 @@ describe("starters that fit the selection", () => {
   it("offers questions about the group for a frame, whose contents the ask now sends", () => {
     expect(startersFor([{ type: "frame", text: "" }])[0]).toBe("What do these have in common?");
   });
-  it("does not promise chart answers the ask cannot back", () => {
-    // describeAsk sends a chart without its data.
-    expect(startersFor([{ type: "chart", text: "" }])).toEqual(defaultStarters);
+  it("offers questions about what a chart shows, and about a dataset, now that the ask sends them", () => {
+    expect(startersFor([{ type: "chart", text: "" }])[0]).toBe("What does this show?");
+    expect(startersFor([{ type: "dataset", text: "" }])[0]).toBe("What is in this data?");
   });
   it("never offers more than three", () => {
     for (const sel of [[card("a")], [card("a?")], [card("a"), card("b")], [{ type: "frame", text: "" }], [{ type: "chart", text: "" }]])

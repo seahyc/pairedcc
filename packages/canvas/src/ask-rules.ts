@@ -42,8 +42,9 @@ export function startersFor(selection: readonly { type: string; text: string }[]
   if (!only) return starters;
   // A frame is what the person put together, and its contents are sent with the ask (`inside`).
   if (only.type === "frame") return ["What do these have in common?", "What is missing from this group?", "Which of these matters most?"];
-  // No chart starters yet: an ask about a chart does not send its data, so they would promise
-  // what the agent lacks.
+  // A chart's bars, filter and selection, and a dataset's columns and first rows, go with the ask.
+  if (only.type === "chart") return ["What does this show?", "What stands out here?", "What could explain this?"];
+  if (only.type === "dataset") return ["What is in this data?", "What would be worth charting?", "What looks odd here?"];
   if (/\?\s*$/.test(only.text.trim())) return ["Answer this", "What would change the answer?", "Give me alternatives"];
   return starters;
 }
