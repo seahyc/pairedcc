@@ -71,6 +71,7 @@ import { prototypeEnabled } from "./prototype-flags";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
+import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
@@ -1543,6 +1544,8 @@ function App() {
     let stopSync: (() => void) | undefined;
     void Promise.race([fonts, timeout]).catch(() => undefined).then(() => {
       prepare();
+      // A board laid out on a wider screen can open with nothing in view here.
+      bringContentIntoView(editor);
       // Then keep the board saved to the account; a brand-new board holds no work of its own.
       if (!disposed) stopSync = startBoardSync(editor, !fresh);
     });
