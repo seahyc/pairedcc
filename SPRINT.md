@@ -414,6 +414,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (build-B, item 41) The scorecard gains an "Ask loop" row next to the maintainer's measures (target: every step passes). It runs with no resident agent, so step 1 accepts any line that gives a way to an answer ("pnpm …", "chat", "Connect an agent" or "Waiting for …"). Answer cards may sit up to 400 px from their ask.
 
 - (review, #33) `canvas_group` was let in as an ordinary tool although it comes from the spec's proposed agent interface list, because the list's other verbs already are ordinary tools. Alternative: a flagged prototype (`?prototype=group`).
+- (build-A, item 43) Read marks now say `kind: "comment"` (was `"note"`) to match the feedback queue; nothing in the repo read the old value, but an external agent matching `"note"` would need updating. `canvas_duplicate`'s default offset is the originals' width plus 40 instead of 320.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -475,3 +476,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:45Z | review | Review #33 to #36 | #33 #34 #35 #36 | All four merged (squash) after merging in the integration branch and re-running each proof; #34 no longer names a hidden input; scorecard on bac1a93: all six rows pass (acceptance 10/10, agent usability 21/21, safety 9/9, persistence, 10k pan 37.3 ms, existing product with throwaway services) |
 | 2026-11-26T11:46Z | build-A | 35 follow-up | #48 | Bot findings fixed: undo after re-route, frame moves, copied connectors; merged base; scorecard all pass. Filed item 45 from bot review of merged #12/#15 |
 | 2026-11-26T11:45Z | build-B | 42 Restored board survives an immediate reload | #59 | Memo records a content hash; restore + reload at 0 ms keeps the restored board (lost before); acceptance, persistence, safety unchanged |
+| 2026-11-26T11:51Z | build-A | 43 Agent friction | #63 | marks kind matches the queue; overview shows locked; duplicate default clears the originals; runs name changed fields; live MCP check and affected tasks self-test |
