@@ -450,7 +450,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     `eval/agent-runs/latest.json` holds an attempt against the current branch and task 14's check
     is confirmed or corrected with the reason given.
 
-73. **A board saved before the calm canvas gets the calm board, with sync on.** `verify-calm.mjs`
+73. (PR #91 open, awaiting review.) **A board saved before the calm canvas gets the calm board, with sync on.** `verify-calm.mjs`
     fails "an older saved board gets the calm board beside it" on this branch (32/33 with a stand-in
     model): the first board is laid out before board sync loads the account's board, and the load
     replaces it, so the "Thinking" page never appears, not even after the extra reload the review
@@ -459,12 +459,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
-73. Older board gets the calm board with sync on | claude/sprint-calm-older | 2026-11-26T12:58Z
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 73. Older board gets the calm board with sync on (build-A): PR #91 (layout re-run once after the first load from the account; verify-calm 32/33 → 33/33).
 - 67. The person chooses what an ask leaves out (build-B): PR #90 (`?prototype=context`; verify-leave-out 7 failing before, 17/17 after; first screen unchanged).
 - Reviewed and merged 2026-11-26 by the review lane: #40 to #66, all 27 (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
 - 66. Touch screens say tap (build-A): PR #88, stacked on #83 (first board says tap, no key caps, writing hint is a tappable Ask; verify-touch 7/11 → 11/11).
@@ -508,6 +508,8 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 73) A board saved before the calm canvas now gets the calm board right after the first load from the account (the alternative named in the review of #21), because the recorded "on the next reload" no longer happened at all since #59. Offline at start: on the next reload instead.
+- (build-A) `verify-calm.mjs` can run here with a stand-in for the model: `PAIRED_CLAUDE_BIN=<script printing {"result":"…"} after sleep 3> pnpm agent`. A stand-in that answers instantly fails "progress was shown" (no frame sees working).
 - (review, #46 with #42) An imported record keeps its record starters; other selections get starters fitted to them. Alternative: two selected records get the comparison starters.
 - (review, #47) Each cluster in `canvas_overview` lists its first 50 ids with a `count`, so a pile of thousands stays compact.
 - (review, #43) The scorecard's 10k pan figure still flips between about 38 and 85 ms on unchanged code (backlog 69); the committed 88.2 ms is not a regression.
@@ -706,3 +708,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:48Z | build-B | Bot review of #64 #67 #69 #72 #77 | #67 #69 #86 | #64 merged. Fixed with failing-first browser checks: hidden learning results no longer sent with a frame ask; same-worded asks kept apart; a frame in the history says what it held (#67, 5/8 to 8/8); off-page answers kept off the person's undo stack (red), return their cards, and on-page answers join frames (#69, 11/11). #86 merged up, all four ask checks pass. Yellow findings on #72 (flag at canvas edges, offscreen tab stops) and #77 (3000x2 image rounds to 0 height) confirmed and answered on their threads, to carry in the next push. The ten thread replies carry a tool footer the reply tool appended; no available tool can edit review comments, so it is left for the maintainer to remove |
 | 2026-11-26T12:50Z | review | Review #40 to #66 | #40 to #66 | All 27 merged (squash) after merging in the integration branch; workspace build and tests green after each (canvas 323, server 154 on Postgres 16, e2e 1); live checks re-run for #40 #41 #45 #46 #48 #52 #55 #56 #57 #58 #59 #60 #64 #65. Review fixes: #46 combined with #42 (record starters kept), #47 caps ids per cluster, #64 AGENT_API table. Scorecard on 95a9daf: six rows pass, performance reported; 10k pan 99.3 then 88.2 ms, shown to be noise by measuring before and after (backlog 69). Filed 69 to 72 |
 | 2026-11-26T12:53Z | build-B | 67 The person chooses what an ask leaves out | #90 | New item from Solveit (hidden messages excluded from context); Leave out (L) behind `?prototype=context`; withheld from frame, history and record parts, counted on the ask; real tab 7 fails before, 17/17 after; acceptance, ask loop, safety, persistence unchanged |
+| 2026-11-26T12:56Z | build-A | 73 Older board gets the calm board | #91 | verify-calm 32/33 → 33/33 (stand-in model); persistence and scorecard unchanged |
