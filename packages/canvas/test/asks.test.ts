@@ -169,9 +169,10 @@ describe("starters that fit the selection", () => {
       "What do they have in common?",
     ]);
   });
-  it("speaks to a group or a chart", () => {
-    expect(startersFor([{ type: "frame", text: "" }])[0]).toBe("Sum up this group");
-    expect(startersFor([{ type: "chart", text: "" }])[0]).toBe("What does this show?");
+  it("does not promise group or chart answers the ask cannot back", () => {
+    // describeAsk sends a frame without its children and a chart without its data.
+    expect(startersFor([{ type: "frame", text: "" }])).toEqual(defaultStarters);
+    expect(startersFor([{ type: "chart", text: "" }])).toEqual(defaultStarters);
   });
   it("never offers more than three", () => {
     for (const sel of [[card("a")], [card("a?")], [card("a"), card("b")], [{ type: "frame", text: "" }], [{ type: "chart", text: "" }]])

@@ -37,8 +37,8 @@ export function startersFor(selection: readonly { type: string; text: string }[]
   if (selection.length > 1) return ["Compare these", "What dimensions do these differ on?", "What do they have in common?"];
   const [only] = selection;
   if (!only) return starters;
-  if (only.type === "frame") return ["Sum up this group", "What's missing here?", "Poke holes in this"];
-  if (only.type === "chart" || only.type === "dataset") return ["What does this show?", "What stands out?", "What would you check next?"];
+  // No group or chart starters yet: an ask about a frame does not send its children, and one
+  // about a chart does not send its data, so those starters would promise what the agent lacks.
   if (/\?\s*$/.test(only.text.trim())) return ["Answer this", "What would change the answer?", "Give me alternatives"];
   return starters;
 }
