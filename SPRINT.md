@@ -114,19 +114,19 @@ task by which measure is furthest from target, not by backlog order.
 2. (Merged, see Done.) **The first end-to-end acceptance scenario** in the working spec, built as a prototype: dataset
    object, chart view, direct filtering, agent reads exact widget state, stale marking when an input
    changes. Synthetic data.
-3. (PRs #23 #26 open, awaiting review; #26 stacked on #23.) **Foundational primitives** from the spec as typed objects with tests: Relationship, Source,
+3. (#23 #26 merged; #26 stacked on #23.) **Foundational primitives** from the spec as typed objects with tests: Relationship, Source,
    Transformation and Agent run (request, scope, progress, attributable and reversible changes).
 4. (Merged, see Done.) **Agent interface.** Overview-then-detail reads so agents never need a full-board dump; an agent
    operation undoable as one unit without undoing human edits; tests over HTTP and MCP.
-5. (PR #27 open, awaiting review; stacked on #20.) **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
+5. (#27 merged; stacked on #20.) **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
    what it came from.
 6. (Merged, see Done.) **Learning mode prototypes** from the spec: predict-then-check and generate-first.
-7. **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
+7. (Keyboard loop: PR #105 open, awaiting review. Import fuzzing, 1k/10k performance and 390 px were done by the import PRs, the eval and #80/#87/#88.) **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
    (1k and 10k objects), keyboard accessibility, 390px layout.
 8. (Merged, see Done.) **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
    AGENT_API.md does not yet describe `canvas_dataset`, `canvas_chart`, `canvas_chart_state`,
    `canvas_cell`, the `inputs` field on create, or the `dataset` / `widget` / `stale` read fields.
-9. (PR #25 open, awaiting review.) **Editor-level tests for the data prototype's agent operations.** `test/data-agent.test.ts`
+9. (#25 merged.) **Editor-level tests for the data prototype's agent operations.** `test/data-agent.test.ts`
    checks schemas only; stale-write rejection, locked-object rejection, partial chart state and
    `read` omitting rows are proven only by `tools/verify-data-agent.cjs`, which `pnpm test` does not
    run. Done when breaking any of those behaviours fails `pnpm test:canvas` (or the eval).
@@ -134,7 +134,7 @@ task by which measure is furthest from target, not by backlog order.
     (`test-token-1`) that the server never issues, so it fails at the first step even with Postgres,
     Redis and `JWT_SECRET` available. Done when it passes against a local server with a real
     sign-in path and its required services are documented. Do not delete or skip it.
-11. (PR #22 open, awaiting review.) **Shared-edit gaps found in review of per-run undo.** (a) Undoing a run that deleted a shape
+11. (#22 merged.) **Shared-edit gaps found in review of per-run undo.** (a) Undoing a run that deleted a shape
     puts it back even when its parent frame has since been deleted, leaving an orphan; (b) any
     agent can list and undo another agent's runs in the same tab; (c) an agent can hide an object
     the person made behind a learning prompt. Done when each has a scripted race in the eval's
@@ -184,7 +184,7 @@ task by which measure is furthest from target, not by backlog order.
 25. (Merged, see Done.) **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
     "Offline · saved on this device" and retries for ever, re-uploading each time. Done when a
     refused save says why on the chip, stops retrying until the board changes, and has a test.
-26. (PR #28 open, awaiting review.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
+26. (#28 merged.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
     Done when the server enforces a per-account limit with a test and the choice is recorded.
 
 27. (Merged, see Done.) **Group objects through a structured operation.** The spec's agent interface asks for
@@ -221,17 +221,17 @@ task by which measure is furthest from target, not by backlog order.
     and replies attached to it by the same amount (not those also being moved, not ones about
     several objects), as one undo step, tested, with before/after screenshots.
 
-50. (PR #71 open, awaiting review.) **Stale checks on shared inputs stay linear.** (From an automated review of #11, verified by
+50. (Merged, see Done.) **Stale checks on shared inputs stay linear.** (From an automated review of #11, verified by
     reading `staleChain`.) A shared upstream input is walked once per path: notes built on notes in
     rounds make the board's stale badges and `read` grow exponentially (millions of visits after
     20 rounds). Done when staleness is computed once per object per pass, `read` reports repeated
     causes by reference or bounded, and a test with 20 rounds of shared inputs runs fast.
-51. (PR #68 open, awaiting review.) **CSV import keeps what the file says.** (From an automated review of #18, verified.) (a) A
+51. (Merged, see Done.) **CSV import keeps what the file says.** (From an automated review of #18, verified.) (a) A
     numeric column with integers beyond 2^53 (long IDs) is rounded, merging distinct IDs: keep it
     as text. (b) A one-column file drops rows whose value is a quoted empty string. (c) A
     Windows-1252 file imports with replacement characters: decode strictly and say to re-export as
     UTF-8. Done when each has a failing-first test and is fixed.
-52. (PR #72 open, awaiting review.) **Stale flags never spoil a hidden answer, and are readable by keyboard.** (From an automated
+52. (#72 merged.) **Stale flags never spoil a hidden answer, and are readable by keyboard.** (From an automated
     review of #34.) The stale reason quotes an input's name even when that input is hidden behind
     a learning prompt; and the full reason is only in a hover tooltip. Done when hidden inputs are
     unnamed in the flag and the full reason is reachable without a pointer.
@@ -310,7 +310,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     sibling options with their marks, the resident agent's prompt says to build on picks and not
     offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
 
-45. ((a) to (c): #66 merged; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): PR #70 open, awaiting review. (d): PR #76 open, awaiting review.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
+45. ((a) to (c): #66 merged; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): #70 merged. (d): #76 merged.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
     failing test first, then a fix or a recorded decision: (a) after a board is deleted and
     recreated under the same ID, a save or delete holding the old revision number is accepted
     (revisions restart at 1); (b) PostgreSQL `JSONB` rejects a snapshot holding an unpaired UTF-16
@@ -321,7 +321,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     made while the account's board is loading are replaced (only objects created in that window are
     carried over).
 
-47. (Renumbered from 45 to avoid a clash. PR #67 open, awaiting review; stacked on #64.) **An ask about a frame is about what it holds.** `docs/canvas/principles.md`, finding 3
+47. (Renumbered from 45 to avoid a clash. #67 merged; stacked on #64.) **An ask about a frame is about what it holds.** `docs/canvas/principles.md`, finding 3
     (spatial thinking comes first: inside) and finding 2 (moving things is thinking). Selecting a
     frame and asking gives the agent only "(Pricing, no text)": an ask's `frame` field is the
     frame the selection sits in, so a selected frame's own contents are never sent, though the
@@ -330,31 +330,31 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     left out), the resident prompt lists them under the frame, documented, unit-tested and checked
     in a real tab.
 
-46. (PR #69 open, awaiting review; stacked on #64 and #67.) **An answer lands on its ask's page.** `docs/canvas/principles.md`, "Not done": "An ask on a
+46. (#69 merged; stacked on #64 and #67.) **An answer lands on its ask's page.** `docs/canvas/principles.md`, "Not done": "An ask on a
     page that is not open fails with a message and a retry." If the person asks, then opens another
     page while waiting (the ask loop invites moving on), `answer` throws "That ask is on another
     page" and the ask shows failed although the agent answered. Done when an answer is placed under
     its ask on the ask's own page whatever page is open, the person on another page is told who
     answered and where, the principles' "Not done" line is updated, unit-tested, and checked in a
     real tab (failing before, passing after).
-53. (PR #74 open, awaiting review.) **`canvas_read` can find objects by their text.** The fresh agent reported that `canvas_read`
+53. (#74 merged.) **`canvas_read` can find objects by their text.** The fresh agent reported that `canvas_read`
     is large and has no text filter (Decisions needed, 13), so finding "the card about pricing"
     means reading everything. Done when `read` accepts a `text` filter (case-insensitive, matched
     against an object's text and name) that combines with `ids`, the tool definition and AGENT_API
     document it, unit tests cover matching, and a live MCP call shows the smaller result.
 
-54. (PR #80 open, awaiting review.) **Text never leaves its container, even without spaces.** The brief's rule ("Text never leaves
+54. (#80 merged.) **Text never leaves its container, even without spaces.** The brief's rule ("Text never leaves
     its container") is checked only with ordinary prose (`verify-calm.mjs`). Done when a long URL,
     a long unbroken word, a code card and a long frame name each stay inside their card, comment,
     answer or frame in a real page at 1440 and 390 px, checked by a script that fails before the fix,
     with before/after screenshots.
-55. (PR #75 open, awaiting review.) **Board history reaches back more than a few minutes.** Sync saves after every pause, so the
+55. (#75 merged.) **Board history reaches back more than a few minutes.** Sync saves after every pause, so the
     50 kept revisions cover a few minutes of work and "Earlier versions" cannot reach yesterday.
     Done when the server keeps the newest 20 revisions and thins older ones to about one per 15
     minutes (still at most 50 per board), by one tested pure rule used by both stores, checked
     against real Postgres, with the choice recorded.
 
-56. (PR #77 open, awaiting review.) **A dropped or pasted image arrives at a size that fits beside your thoughts.** Feedback 8
+56. (#77 merged.) **A dropped or pasted image arrives at a size that fits beside your thoughts.** Feedback 8
     ("it should render in a way that's super intuitive") and the calm brief (one obvious thing on
     screen). An image is placed at its pixel size, so a 3000 px photo covers the whole board and
     every card on it (seen while checking item 45 (d)). Done when an image the person adds is
@@ -369,17 +369,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     only combining diacritics (U+0300 to U+036F). Done when each has a failing test, then a fix.
     Build on #74 once it merges.
 
-57. (PR #81 open, awaiting review.) **The development board store survives its folder being removed.** Deleting
+57. (#81 merged.) **The development board store survives its folder being removed.** Deleting
     `packages/canvas/.local/boards` (or `PAIRED_BOARDS_DIR`) while `pnpm dev:canvas` runs makes
     every board call fail with ENOENT, shown as a Vite error overlay, until the folder is made by
     hand (seen while resetting boards for item 46's screenshots). Done when list answers empty and
     the next save recreates the folder, with a failing-first test.
-59. (PR #82 open, awaiting review.) **The safety measure covers restoring an earlier version.** Restore (#32, #35) can lose another
+59. (#82 merged.) **The safety measure covers restoring an earlier version.** Restore (#32, #35) can lose another
     browser's newer edit if it ever merges or overwrites. Done when the eval's Safety row has a race:
     browser A restores an earlier revision after browser B saved a newer edit; the restore is
     refused and B's edit is still on the server and in A after reload (0 human edits lost).
 
-60. (Renumbered from 59 to avoid a clash. PR #83 open, awaiting review.) **Key hints name the person's own keys.** `docs/canvas/principles.md`, finding 7 (recognising
+60. (Renumbered from 59 to avoid a clash. #83 merged.) **Key hints name the person's own keys.** `docs/canvas/principles.md`, finding 7 (recognising
     beats recalling) and playtest item 6 ("I don't know how to trigger the agent"). Every hint on
     screen says ⌘↵ (selection bar, typing hint, tooltips, shortcut sheet, the first board's card),
     but on Windows and Linux the key is Ctrl, so the one way to ask is named in a key those people
@@ -387,7 +387,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested function, with a headless check under a Windows platform finding no ⌘ on the first
     screen or the selection bar, and screenshots.
 
-61. (PR #86 open, awaiting review; stacked on #69, #67, #64.) **An ask about a chart or dataset gives what it shows.** The acceptance scenario's "agent
+61. (#86 merged; stacked on #69, #67, #64.) **An ask about a chart or dataset gives what it shows.** The acceptance scenario's "agent
     reads that exact state" holds for MCP agents (`canvas_chart_state`, `read`'s `widget`), but an
     ask carries only `"(Chart, no text)"`, and the resident agent answers with no tools, so "what
     does this chart show?" is answered blind. `startersFor` withholds chart starters for that
@@ -396,23 +396,23 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     columns, row count and first rows, as text a model can read, from tested pure functions;
     chart starters are offered; checked in a real tab with `?prototype=data`.
 
-62. (PR #85 open, awaiting review.) **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
+62. (#85 merged.) **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
 
-63. (PR #87 open, awaiting review.) **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
+63. (#87 merged.) **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
     (comparing beats describing) and "the agent must visibly respond". Sending an ask makes room
     for one 340 px answer, but four options in a row are about 1,060 px: at 1440 px option D lands
     off the right edge, and on a 390 px phone only A is visible, and nothing brings them into view.
     Done when an answer that lands while the person is looking at its ask (not typing or dragging)
     is brought wholly into view, options wrap into rows that fit the window when one row cannot,
     unit-tested, and checked in a real page at 1440 and 390 px (failing before, passing after).
-64. (PR #84 open, awaiting review.) **CSV codes keep their leading zeros.** Decisions needed 11: an all-numeric column becomes
+64. (#84 merged.) **CSV codes keep their leading zeros.** Decisions needed 11: an all-numeric column becomes
     numbers, so codes such as `007` or the ZIP `02139` lose their zeros. Done when a column holding
     any zero-padded value (`0` followed by a digit, before any decimal point) stays text, plain
     numbers (`0`, `0.5`, `-3`, `1e3`) still become numbers, with unit tests and a drop in the page.
 
-65. **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
+65. (#89 merged.) **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
 
-66. (PR #88 open, awaiting review; stacked on #83.) **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
+66. (#88 merged; #83 has merged and the integration branch is merged into #88, so its diff is the touch change alone, verify-touch 11/11.) **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
     item 6. A phone has no keyboard, yet the first board says "press ⌘↵ to ask" (with #83, Android
     reads "Ctrl+↵"), the selection bar shows key caps, and while writing a card the hint names
     keys and offers no way to ask. Done when, on a touch-only device, the first board says to tap
@@ -420,7 +420,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested rule, checked in a headless phone emulation (failing before, passing after) with
     screenshots; desktop unchanged.
 
-67. (PR #90 open, awaiting review.) **The person chooses what an ask leaves out (prototype, `?prototype=context`).** Solveit:
+67. (#90 merged.) **The person chooses what an ask leaves out (prototype, `?prototype=context`).** Solveit:
     "hidden messages are excluded from AI context"; the brief: "the context the agent sees is
     visible and chosen by the person"; `principles.md` lists hiding objects from context as not
     borrowed yet. An ask sends every text object in the selection's frame and the whole thread,
@@ -431,40 +431,190 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     were left out, tabs without the flag behave as before, unit-tested and checked in a real tab
     with before/after screenshots.
 
-69. **The 10k pan figure survives a slow-mode run.** (Review of #43.) On the sprint container a
+69. (PR #100 open, awaiting review.) **The 10k pan figure survives a slow-mode run.** (Review of #43.) On the sprint container a
     120-frame pan sample is either about 38 ms or about 85 ms, in runs, on unchanged code; when
     three of the five samples land slow the median reads as a regression (38.4 and 45.3 ms on
     1d04324, 45.1, 38.4, 88.2 and 99.3 ms on 95a9daf). Done when three back-to-back runs on one
     commit, including one taken straight after the other measures, stay inside the flag threshold
     (for example the lower quartile of more, shorter samples), with the spread recorded and the
     threshold unchanged.
-70. **Side by side and "Show cited" bring comments along.** (Review of #55 and #58 with #52.) Both
+70. (PR #92 open, awaiting review.) **Side by side and "Show cited" bring comments along.** (Review of #55 and #58 with #52.) Both
     move records and sections with `updateShape` before selecting them, so the comments, notes and
     replies attached to them stay where they were. Done when a comment on a moved record or section
     moves with it in the same undo step, checked in a browser.
-71. **The web page reader stays quick on awkward markup.** (Review of #65.) 50,000 unclosed `<li>`
+71. (PRs #93 and #98 open, awaiting review: two lanes did it at once; review lane, merge one. #98 also covers unclosed comments, brackets that never close, stray "<", headings, pre, article and head, each with a 2 MB test, and keeps the regex structure; #93 rewrites the reader as one tag pass.) **The web page reader stays quick on awkward markup.** (Review of #65.) 50,000 unclosed `<li>`
     take 4 s and 20,000 unclosed advert `<div>`s 1.2 s; the file limit is 2 MB. Done when a 2 MB
     page of unclosed tags is read, or refused with a plain message, in under a second, with a test.
-72. **A fresh agent-usability attempt on the merged branch.** The 23/24 in the scorecard was
+72. (PR #97 open, awaiting review.) **A fresh agent-usability attempt on the merged branch.** The 23/24 in the scorecard was
     recorded before #58 to #66 merged, and before read marks renamed `note` to `comment`. Done when
     `eval/agent-runs/latest.json` holds an attempt against the current branch and task 14's check
     is confirmed or corrected with the reason given.
 
-73. **A board saved before the calm canvas gets the calm board, with sync on.** `verify-calm.mjs`
+73. (PR #91 open, awaiting review.) **A board saved before the calm canvas gets the calm board, with sync on.** `verify-calm.mjs`
     fails "an older saved board gets the calm board beside it" on this branch (32/33 with a stand-in
     model): the first board is laid out before board sync loads the account's board, and the load
     replaces it, so the "Thinking" page never appears, not even after the extra reload the review
     of #21 recorded. Done when an older board gets the calm board once, after the first load from
     the account, without repeating it after a restore, and `verify-calm.mjs` passes 33/33.
 
+74. (PR #94 open, awaiting review.) **Stale flags stay readable at the canvas edge and skip offscreen Tab stops.** (Review of #72,
+    confirmed, merged before the fix.) A stale card at the bottom of the view opens its reason
+    below the visible canvas; a focused flag near the top grows above it; and a flag panned out of
+    view is still a Tab stop with no visible focus. Done when an opened reason stays inside the
+    view (flipping above or below as there is room), only flags in view are in the Tab order,
+    with a headless check of each case.
+
+75. (PR #95 open, awaiting review.) **The first board never moves the view away from work done in the first seconds.** On a new
+    board, the calm first board waits for fonts (up to 2.5 s). If an agent acts in that window (an
+    agent waiting for the tab to connect), the layout makes a "Thinking" page and switches to it,
+    so the agent's objects are on a page that is no longer open and its next reads miss them;
+    `tools/verify-runs.ts` fails on this branch for that reason. Done when work done before the
+    layout keeps its page in view, the calm board still exists, and `verify-runs.ts` passes, with a
+    scripted check that fails before.
+
+76. (PR #99 open, awaiting review.) **An agent never rewrites the person's own words.** `docs/canvas/principles.md`, finding 2 ("the
+    agent … never moves, edits or rearranges the person's objects") and finding 4 (whose is what is
+    seen): `canvas_update` with the current revision rewrites the text of the person's pink card,
+    which then shows the agent's words in the person's handwriting. Done when an agent's text
+    change to an object the person made is refused with a message saying what to do instead, the
+    tool description and AGENT_API say so, a safety race in the scorecard fails before and passes
+    after, and the person's own edits are unaffected. Moving and deleting the person's objects are
+    recorded as a decision, not changed.
+
+77. (PR #102 open, awaiting review.) **Friction from the 26 Nov 13:03 agent-usability attempt (PR #97; reported by the agent, not yet reproduced).** (a) `eval/mcp-call.ts list` prints about 50 KB that does not parse as one JSON value; (b) `canvas_asks` lists every page's asks with no current-page filter; (c) the agent found no `locked` hint or child count in `canvas_overview` under the names it expected, costing a `canvas_read`; (d) `canvas_duplicate`'s default offset (320) overlaps a wider frame; (e) the docs do not say which `canvas_connect` relation means "supports", or whether `canvas_reply` changes the comment's revision before `canvas_resolve`. Done when each is reproduced with a failing test and fixed, or recorded as a decision with the reason.
+
+78. (PR #101 open, awaiting review.) **An ask's progress is announced to assistive technology.** The brief: "The agent must visibly
+    respond. Any ask shows waiting, working, answered or failed." The state line under an ask is
+    plain text that also ticks each second, so a screen-reader user hears nothing when an ask is
+    sent, taken, answered or fails. Done when one polite live region announces each change of an
+    ask's state once (not the ticking clock), from a tested pure function, checked in a real page
+    with an agent over HTTP (failing before, passing after); nothing new is visible. (Separate from
+    item 7's keyboard-only loop: this is what is heard, not what is reachable.)
+
+79. (PR #103 open, awaiting review.) **`read`'s text filter: the two findings left open on #78.** (Decisions needed, build-B item 58.) (a) `ß` does not fold to `ss`, so `STRASSE` misses `Straße`; (b) a match may end inside a grapheme, so `कल` matches `कला` and `かく` matches `かぐ` once normalised. Done when each has a failing-first unit test and is fixed, with Latin, Greek and accented matching unchanged.
+
+80. (PR #104 open, awaiting review.) **An ask about something in a frame is hidden by the frame.** "The agent must visibly respond" and "Text never leaves its container". Selecting a card inside a frame and asking places the ask just right of the card; the canvas parents it into the frame under that spot, and the frame clips it, so the person sees an empty pink strip instead of their question (seen at 1440 px while checking item 67). Comments, replies and answers placed near objects in a frame can be clipped the same way. Done when asks, comments, replies and answers are never clipped by a frame (they sit on the page above it and still follow what they are about when it or its frame moves), checked in a real page that fails before and passes after, with before/after screenshots.
+
+81. (PR #106 open, awaiting review; stacked on #104.) **An agent's note never lands on top of something.** `canvas_annotate` places its note under the target without looking for free space, so it can cover an ask or another note (seen in PR #104's screenshot; also point 10 of the fresh agent in PR #97). Done when an annotation without `x`/`y` is placed clear of other objects (as answers and comments already are, via `freeSpot`), with a test and a before/after screenshot.
+
+82. (PR #108 open, awaiting review; stacked on #105.) **A Tab stop is heard: whose it is, what it says, and its mark.** (Found while building item 7's
+    keyboard loop, #105.) The canvas runs with tldraw's UI hidden, which also removes its screen
+    reader announcer, so when Tab or a click selects a card nothing is said: a screen-reader user
+    cannot tell their own thought from an agent's answer, hear an option's text, or know it was
+    picked or crossed out (finding 4, "whose is what, and what state it is in"). Done when one polite
+    live region says, for each single selection, who made it, its text (clipped), its kind (thought,
+    ask with its state, comment, answer), its mark and its place in the Tab order, from a tested pure
+    function, checked in a real page (failing before, passing after); nothing new is visible.
+
+83. (PR #113 open, awaiting review.) **One command runs every browser check.** About twenty `tools/verify-*` checks exist but each
+    is run by hand, so regressions slip through merges: on 26 Nov `verify-runs.ts` and
+    `verify-calm.mjs` were both failing on this branch (#95, #91). Done when one command starts a
+    dev server with a throwaway board store, runs every check that needs no model, paid API or
+    external service (opening a tab or a stand-in agent where a check needs one), prints a
+    pass/fail table, writes it as JSON, exits non-zero on any failure, and is documented for the
+    review lane.
+
+84. (PR #109 open, awaiting review.) **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
+
+85. (PR #119 open, awaiting review.) **An answer on another page is one step away.** `docs/canvas/principles.md`, "Not done": "they are told who answered and on which page, but the board does not take them there." The toast (#69) names the page, disappears after 3.5 s and offers nothing to press, so the person has to find the page in a hidden menu and then find the answer on it (finding 7, recognising beats recalling; "the agent must visibly respond"). Done when that notice carries a **Show** button (reachable by keyboard, with a key) that opens the ask's page, selects the answer (or the failed ask) and brings it into view, the notice stays long enough to press it, the view never moves unless the person presses it, from a tested pure function, checked in a real page (failing before, passing after), with before/after screenshots.
+
+86. (PR #112 open, awaiting review.) **`canvas_overview` shows what the person left out of asks.** Agents are told to start with `canvas_overview`, which lists no meta, so a left-out object (item 67, `meta.leftOut`) looks like any other there and an agent may read it to answer an ask. Done when overview rows carry `leftOut: true` for left-out objects (as they carry `locked: true`), documented in AGENT_API and unit-tested.
+
+87. (PR #115 open, awaiting review.) **The menu and dialogs work from the keyboard.** (Found while building item 7, #105.) The
+    Menu opens with Enter but its items do not move with the arrow keys; Escape closes it and
+    leaves focus on the board, not on the Menu button; the shortcut dialog (`?`) and the other
+    dialogs open without taking focus, so Tab goes behind them, and closing them does not return
+    focus to where it was. Done when the menu follows the menu pattern (arrows, Home/End,
+    Escape back to its button), each dialog takes focus when it opens, keeps Tab inside, and
+    gives focus back when it closes, with a headless check failing before and passing after,
+    and nothing new on the first screen.
+
+88. (PR #114 open, awaiting review: the check was wrong, not the board.) **A clean profile does not show a large imported image.** Found by `verify-all` (#113) and
+    reproduced by hand against a plain dev server with an empty store: `verify-board-images.mjs
+    fresh` is 3/5. The first profile shows both images, but a clean profile shows the large one
+    with natural width 0 ("a clean profile shows both images — [true,false]", "the large image was
+    scaled to 2048 px — natural width 0"). Item 45 (d), #76, passed when merged; #77 (image size)
+    merged since. Done when `verify-board-images.mjs fresh` passes 5/5, with the cause named.
+
+89. (PR #116 open, awaiting review.) **The two log-only browser checks give a verdict.** `verify-converge.ts` and
+    `verify-data-prototype.cjs` print what they see and exit 0 unless they crash, so `verify-all`
+    (#113) can only say they "ran". Done when each checks every state it prints, prints PASS or
+    FAIL per step, exits non-zero on a failure, and a deliberate break of the behaviour fails it.
+
+91. (Renumbered from 88 to avoid a clash. PR #118 open, awaiting review.) **A failed ask is retried from the keyboard.** (Found while building item 7.) The brief: "Any ask
+    shows waiting, working, answered or failed", and a failed ask offers Retry, but Retry is a small
+    button on the ask's state line that the keyboard reaches only by walking the whole page, and
+    ⌘/Ctrl+Enter on a selected failed ask opens a new ask about the failed ask instead. Done when,
+    with one failed (or unheard) ask selected, the selection bar's first button is Retry (or Send
+    again) with its key, ⌘/Ctrl+Enter retries it, a headless check fails before and passes after,
+    and an answered ask and a card keep Ask.
+
+86. (PR #117 open, awaiting review.) **The principles status table says what the build does now.** `docs/canvas/principles.md`'s "What the build does" and "Still missing" columns date from the calm-canvas pass; since then #42 (starters fit the selection), #47 (overview clusters), #55 (side by side), #64 (picks carried), #67 (frame contents), #83/#88 (keys, tap) and #86 (chart asks) closed gaps it still lists as missing, so a playtester or agent reading it is misled. Done when every row is checked against the code and the merged PRs, each change cites its PR, and nothing unmerged is claimed.
+
+90. (PR #121 open, awaiting review.) **The person pins what every ask should see (prototype, `?prototype=context`).** Solveit, in `docs/canvas/principles.md`: "Not borrowed yet: pinning objects into context." Leave out (#90's item 67) lets the person withhold; nothing lets them include a brief, a constraint or a goal card without selecting it every time. Done when, in the context prototype, **Pin** (I) on the selection bar marks the selection "given to every ask" on the board (pin and leave out exclude each other), every ask on that page gives the pinned objects as their own section (hidden objects never), outlines them with the rest of its context, says how many were pinned, the resident agent's prompt names them as pinned by the person, a pin already on a board is always honoured and drawn, the logic is in tested pure functions, a real page check fails before and passes after, and the first screen is unchanged.
+
+92. (PR #120 open, awaiting review.) **Each answer stays with its own ask.** `docs/canvas/principles.md`, finding 3 ("Its answer sits
+    under it"). Three asks about one card stack under each other; their answers (three options
+    each) then all land in rows below the last ask, so nothing on the board says which row answers
+    which question (found by build-A at 14:05Z: 16 cards, no overlaps, but the rows for "Which is
+    simpler?" and "Which earns more?" sit under "Which do teams prefer?"). The cards carry
+    `meta.replyTo`, the board does not show it. Done when an answer whose space under its ask is
+    taken sits beside its ask (or is visibly joined to it), checked in a real page with several
+    asks answered out of order, with before/after screenshots. Touches `answerAsk` placement
+    (#87's rows).
+
+93. **Stale flag placement follows the drawn flag (review of #94, merged before the fix).** (a) Tab
+    eligibility uses the card's span, not the drawn flag: a card half off the right edge keeps an
+    offscreen flag tabbable, and a selected flag opened into view can be skipped; (b) the fixed
+    120 px room can clip a long reason at high zoom, since the flag scales with the canvas;
+    (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first
+    line. Done when each has a failing-first case in `tools/verify-stale-edges.mjs` and is fixed.
+
+94. **Moving one object on a big board stays quick.** (Item 7, large boards.) On a 10k-object board,
+    moving one object takes about half a second a step (median 494 to 583 ms over 60 steps, headless
+    1440 px), so dragging is unusable. A load profile shows the layers panel building a row for every
+    object although it is hidden by default, and the shell re-rendering on every shape change. Done
+    when a scripted one-object move on a 10k board is measured before and after, the hidden layers
+    panel costs nothing, the panel still works when opened, and the scorecard is not worse.
+
+95. **Before sending, the person sees what an ask will give.** Solveit (brief): "the context the agent sees is visible and chosen by the person." Today what an ask gives is shown only after it is sent (the ask's line and outline), so the person learns that the frame, a pinned card or a withheld card went along, or did not, too late to change it. Done when, while the Ask box is open, the board outlines exactly what the ask would give and the box says it in one muted line ("Gives “Charge per seat” + frame “Pricing”", with "+ N pinned" and "· N left out" where they apply), computed by the same code that builds the ask so the preview cannot differ from what is sent (unit-tested against the sent ask), checked in a real page (failing before, passing after), with before/after screenshots of the Ask box; the first screen is unchanged.
+
 ## Claims
-72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
-73. Older board gets the calm board with sync on | claude/sprint-calm-older | 2026-11-26T12:58Z
-65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
-Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
-7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
+95. Before sending, the person sees what an ask will give | claude/sprint-ask-preview | 2026-11-26T14:16Z
+93. Stale flag placement follows the drawn flag | claude/sprint-stale-drawn | 2026-11-26T14:20Z
+94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
 
 ## Done
+- 90. The person pins what every ask should see (build-B): PR #121 (`?prototype=context`: Pin (I) gives an object to every ask on its page, fenced on the board, outlined and counted on the ask, named in the resident prompt; verify-pin-context 7/18 → 18/18; first screen byte-identical).
+- 92. Each answer stays with its own ask (build-A): PR #120 (beside the ask when the space under it is taken; verify-answer-beside 3/6 → 6/6).
+- 86. Principles status table says what the build does now (build-B): PR #117 (rows 2, 3, 5, 6, 7 and 9 checked against the code and merged PRs; docs only).
+- 85. An answer on another page is one step away (build-B): PR #119 (Show (G) on the notice opens the page with the answer selected beside its ask; verify-answer-show 5/15 → 17/17; first screen byte-identical).
+- 91. A failed ask is retried from the keyboard (build-A): PR #118 (bar's first button is Retry / Send again with its key; Ctrl/⌘+Enter resends; verify-retry-key 2/9 → 9/9).
+- 87. Menu and dialogs from the keyboard (build-A): PR #115 (menu pattern for Menu and More, dialogs take focus, trap Tab and give it back; verify-menu-keys 2/16 → 16/16).
+- 89. Log-only checks give a verdict (build-A): PR #116 (data prototype 11 steps, converge 10; a broken Recompute and missing synthesis inputs each fail). After #113 and #116 both merge, drop `log: true` for them in `verify-all.mjs`.
+- 88. Clean-profile image check (build-A): PR #114 (the large image was off screen so tldraw drew no `<img>`; its bytes were in the board; the check now fits the page first, still requiring each image to load at its real width; 3/5 → 5/5).
+- Reviewed and merged 2026-11-26 by the review lane: #85 to #90, 6 more (squash); 52 in this run.
+- 83. One command runs every browser check (build-A): PR #113 (`pnpm --filter @pairedcc/canvas verify:all <dir>`; first full run 28/31, failing calm (#91), runs (#95) and board-images, which was the check (#114)).
+- 86. canvas_overview marks left-out objects (build-B): PR #112 (failing-first test, live MCP check).
+- 84. Ask about an image says what it is (build-B): PR #109 (real tab 2/5 → 5/5 with the tightened frame check).
+- 82. A Tab stop is heard (build-A): PR #108, stacked on #105 (polite unseen live region says who made the selection, its text, kind, mark and order; verify-heard 2/13 → 13/13).
+- 81. Agent note never lands on top of something (build-B): PR #106, stacked on #104 (verify-annotate-clear 3/4 → 4/4).
+- 7. Robustness, keyboard-only loop (build-A): PR #105 (N then Enter writes a card in view; Tab/Shift+Tab move through the board, skipping connectors and hidden objects; verify-keyboard 6/14 → 14/14).
+- 80. Asks and notes never clipped by a frame (build-B): PR #104 (verify-ask-unclipped 6/16 → 16/16).
+- 79. Read filter folds ß and matches whole characters (build-B): PR #103 (2 failing-first tests).
+- 77. Friction from the second agent attempt (build-B): PR #102 (asks page filter, schema descriptions for duplicate offsets and connect relations, overview and reply documented, `list --brief`; (a) not reproduced).
+- 78. Ask progress announced (build-A): PR #101 (one polite live region says each change of an ask's state once; verify-ask-live 3/8 → 8/8).
+- Reviewed and merged 2026-11-26 by the review lane: #67 to #84 and #96, 19 more (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
+- 76. Agent never rewrites the person's words (build-A): PR #99 (text change to a person's object refused; new safety race 9/10 → 10/10; agent tasks self-test 24/24).
+- 72. Fresh agent-usability attempt (build-B): PR #97 (23/24, median 2 tool calls; task 14's check corrected to accept a fuller answer naming the top region first as highest; friction filed as item 77).
+- 71. Web page reader stays quick (build-B): PR #98, duplicate of #93 from another lane (2 MB of unclosed tags: 145 s worst before, under 0.5 s after; failing-first tests).
+- 70. Side by side and Show cited bring comments along (build-B): PR #92 (verify-import-follow 7/9 → 9/9).
+- Feedback 8, import and paste (build-A): merged #46 (yc/import-paste brought in, CSV drop stays a dataset under the data flag), #55 (side by side, column slots), #58 (cited sections beside a record), #60 (.xlsx), #65 (web pages), #73 (PDF). Open: #85 (item 62), #89 (item 65), #93 (item 71). The feedback item stays open for the second playtest.
+- 51. CSV keeps what the file says (build-A): PR #68.
+- 50. Stale checks stay linear (build-A): PR #71 (16-round read 1.8 s → 8 ms; 18 rounds no longer hangs).
+- 75. First board never moves the view away (build-A): PR #95 (work done before the calm layout keeps its page; verify-early-agent 4/6 → 6/6; verify-runs fail → pass).
+- 74. Stale flags at the canvas edge (build-B): PR #94 (follow-up to #72's review).
+- 73. Older board gets the calm board with sync on (build-A): PR #91 (layout re-run once after the first load from the account; verify-calm 32/33 → 33/33).
 - 67. The person chooses what an ask leaves out (build-B): PR #90 (`?prototype=context`; verify-leave-out 7 failing before, 17/17 after; first screen unchanged).
 - Reviewed and merged 2026-11-26 by the review lane: #40 to #66, all 27 (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
 - 66. Touch screens say tap (build-A): PR #88, stacked on #83 (first board says tap, no key caps, writing hint is a tappable Ask; verify-touch 7/11 → 11/11).
@@ -508,6 +658,24 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B, item 90) Pinning is a prototype under `?prototype=context` beside Leave out, not a default feature: page-scoped, up to six per ask in reading order (the rest counted as `pinnedMore`), Leave out wins over Pin, and setting either clears the other. Key I ("in", opposite L). Product choice for the maintainer: whether pins belong in the default loop, and whether they should be per page or per board.
+- (build-A, item 92) An answer whose space under its ask is taken (later asks stacked below) sits beside its ask, to the right and level with it; no arrow joins a displaced row, to keep ink off the board. Alternative: an arrow from ask to its row.
+- (build-A) `tools/verify-all.mjs` (#113) on `claude/sprint-int` at 14:00Z: 29/32 pass or ran; calm (#91, since merged), runs (#95) and board-images (the check, #114) failing; verify-ask-record and verify-leave-out added to its list.
+- (build-A) Keyboard PRs #105, #108 (stacked on #105), #115 and #118 were combined on `claude/sprint-keyboard-combined` at 14:07Z. #115 and #118 conflict with #105 only in adjacent added lines (an import, the shortcut sheet's first two rows, README lines), and the resolution is to keep both. On the combination: verify-keyboard 16/16, verify-heard 13/13, verify-menu-keys 16/16, verify-retry-key 9/9, verify-keys 16/16, verify-contain 20/20, and 467 unit tests.
+- (build-B, item 85) G goes to an answer on another page only while its notice is up; otherwise the key stays with the canvas. A notice with a button stays 12 s (3.5 s otherwise) and does not pause on hover. The board still never moves without the person pressing Show.
+- (build-B, item 85) The 10k pan median measured 93.9 ms (committed 49 ms) on a run that shared the container with a dev server and headless browsers; the change touches only the notice. Read that row with the known spread in mind; scorecard not committed.
+- (review, #80 and #87) #80 placed a wrapped selection bar over the selected card on a phone; fixed in #87 by lifting the bar by its measured height. Browser checks for the bar should include "the bar does not cover the selection".
+- (review) Build lanes: do not merge the integration branch into a PR branch while the review lane is on it (the Log shows which PR is under review by its order; oldest first). Twice the review's merge and fixes were pushed over and had to be redone (#55, #87).
+- (review, item 71) #93 and #98 both do it. The next review run merges one and closes the other.
+- (build-A, item 78) Ask announcements are polite, failures included, so they never interrupt; only asks on the open page are announced (an answer on another page has #69's toast).
+- (review, #67) That merge reverted #63's AGENT_API paragraphs and a table; restored in b8e69de and 3cdc71b. Merges are now checked for removed lines the PR's own commits did not remove. Build lanes that merge the integration branch into a PR branch should not resolve a conflicted file by taking their own older copy whole.
+- (review, #76) Images are stored in the board snapshot; every save re-uploads them and every revision keeps a copy. Alternative: a server asset store.
+- (review, #73) The PDF reader is built in and refuses PDFs with compressed object streams. Alternative: pdf.js.
+- (build-A, item 76) An agent may not change the words of anything the person made (`authorOf` Human). It may still move, restyle or delete those objects, which `arrange`, `group` and the agent-usability tasks rely on; principles finding 2 says it should not move them either. To go further, extend `rewriteRefusal` (`src/authorship.ts`) to position and removal and re-record the agent-usability attempt.
+- (build-A, item 91) With one failed, quiet or unheard ask selected, Ctrl/⌘+Enter sends it again rather than asking about it, and the bar's first button says Retry or Send again. Asking about a failed ask (its question with no answer) had no use found; the alternative was a separate retry key, which would add one more key to learn.
+- (build-A) Regression sweep of the browser checks on `claude/sprint-int` at 12:59Z (connector-follow and feedback-mcp, the latter after a hand-made comment, also pass): verify-import 51/51, webpage 9/9, cite 15/15, compare 14/14, csv-faithful 5/5, ask-frame 8/8, ask-marks 8/8, answer-page 11/11, api, mcp, composition, converge, board-sync, data-agent, data-prototype, group and learning all pass; verify-calm 32/33 (fixed by #91) and verify-runs failing (fixed by #95). verify-feedback-mcp needs a hand-made comment first and was not run.
+- (build-A, item 73) A board saved before the calm canvas now gets the calm board right after the first load from the account (the alternative named in the review of #21), because the recorded "on the next reload" no longer happened at all since #59. Offline at start: on the next reload instead.
+- (build-A) `verify-calm.mjs` can run here with a stand-in for the model: `PAIRED_CLAUDE_BIN=<script printing {"result":"…"} after sleep 3> pnpm agent`. A stand-in that answers instantly fails "progress was shown" (no frame sees working).
 - (review, #46 with #42) An imported record keeps its record starters; other selections get starters fitted to them. Alternative: two selected records get the comparison starters.
 - (review, #47) Each cluster in `canvas_overview` lists its first 50 ids with a `count`, so a pile of thousands stays compact.
 - (review, #43) The scorecard's 10k pan figure still flips between about 38 and 85 ms on unchanged code (backlog 69); the committed 88.2 ms is not a regression.
@@ -610,6 +778,19 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 
 - (build-B, item 67) Leaving objects out of asks is a prototype (`?prototype=context`), because the context contract is proposed. Choices: (1) an object the person selects for an ask is always given, even when left out, because selecting it is choosing to share it; (2) a left-out frame withholds the whole frame; (3) a mark already on a board is honoured and drawn in every tab, and only setting it is flagged, so nothing marked is ever sent and nothing is kept back invisibly; (4) the ask reports how many objects were withheld, never which; (5) only asks honour the mark. An MCP agent reading the board with `canvas_read` still sees left-out objects, with `meta.leftOut: true`, and AGENT_API tells it not to use them for an ask. Agents cannot set or clear the mark. L is the key, which overrides tldraw's line tool only in flagged tabs. Alternatives: hide left-out objects from `read` as well, or make "pinning into context" the opposite control.
 
+- (build-A, item 71) Item 71 was claimed twice a minute apart (build-A `claude/sprint-html-linear` 13:00Z, then `claude/sprint-html-fast` 13:01Z). PR #93 (from the first claim) is open with the fix and proof; the second claim can be dropped unless that lane finds #93 lacking.
+
+- (build-B, item 72) Task 14's check required a note naming only the top region; the fresh agent wrote a correct note that also gave the other bars' values and failed. Corrected, not weakened: when the note names other regions it must name the top region first and say it is the highest; a bare list, a wrong pick or no pick still fail (unit-tested, self-test OK). The recorded attempt is kept as scored under the old check (23/24); under the corrected check its evidence passes. Alternative: keep "only the top region" and say so in the prompt.
+- (build-B, item 71) Two lanes built item 71 at once (#93 unclaimed at 13:04, #98 under the 13:01 claim). In #98 a "<" with no ">" before the next "<" is text and an unclosed comment runs to the end of the page, as a browser reads them; open list items close at the next item or the end of their list. Lanes should claim before starting.
+
+- (build-B, item 77) Not changed, for the maintainer: tools silently drop input keys they do not know (`canvas_update` with `locked: true` succeeds and changes nothing), so an agent can believe it did something it cannot. Refusing unknown keys would touch every tool's schema (zod `strict`) and could break clients that send extra fields; alternative: return a `ignored` list of dropped keys.
+
+- (build-B, item 79) `read`'s text filter folds case through upper case, so Turkish dotless ı also matches i (looser, never stricter). Matches must start and end on grapheme boundaries (`Intl.Segmenter`, default locale).
+
+- (build-B, item 80) Asks, comments about objects, replies, answers and agent notes are created on the page (above any frame), not inside the frame under them, so a frame never clips them; they follow their target through the follow rule. Alternative: grow the frame to fit them, which changes the person's frame.
+
+- (build-B, review findings on build-B PRs, recorded for the review lane; marked optional by the bot, so not pushed alone. The first three are regressions #104 introduces and should be fixed before or with merging it.) #104: (a) an ask or comment about several cards in one frame no longer moves when the frame is dragged (`followers` skips multi-target cards; they used to be frame children); (b) a selected frame's ask no longer includes comments placed inside it (they are page-level now); (c) `canvas_arrange` moving an unselected frame leaves its page-level comments behind (the follow handler needs a selection). #92: a locked section's comments still move with Show cited, though the section does not. #97: `answersTop` passes "East has 187 orders, but West has the highest bar" (the ranking word is not tied to the top region). #103: `mas` matches `Maß` (folding ß to ss happens before grapheme segmentation). #106: annotation height is estimated from character count, so wide (CJK) text can still overlap; `freeSpot` gives up after 1,680 px under a taller obstacle. #98's three findings (one red) are fixed in 9141bcc.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -706,3 +887,43 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:48Z | build-B | Bot review of #64 #67 #69 #72 #77 | #67 #69 #86 | #64 merged. Fixed with failing-first browser checks: hidden learning results no longer sent with a frame ask; same-worded asks kept apart; a frame in the history says what it held (#67, 5/8 to 8/8); off-page answers kept off the person's undo stack (red), return their cards, and on-page answers join frames (#69, 11/11). #86 merged up, all four ask checks pass. Yellow findings on #72 (flag at canvas edges, offscreen tab stops) and #77 (3000x2 image rounds to 0 height) confirmed and answered on their threads, to carry in the next push. The ten thread replies carry a tool footer the reply tool appended; no available tool can edit review comments, so it is left for the maintainer to remove |
 | 2026-11-26T12:50Z | review | Review #40 to #66 | #40 to #66 | All 27 merged (squash) after merging in the integration branch; workspace build and tests green after each (canvas 323, server 154 on Postgres 16, e2e 1); live checks re-run for #40 #41 #45 #46 #48 #52 #55 #56 #57 #58 #59 #60 #64 #65. Review fixes: #46 combined with #42 (record starters kept), #47 caps ids per cluster, #64 AGENT_API table. Scorecard on 95a9daf: six rows pass, performance reported; 10k pan 99.3 then 88.2 ms, shown to be noise by measuring before and after (backlog 69). Filed 69 to 72 |
 | 2026-11-26T12:53Z | build-B | 67 The person chooses what an ask leaves out | #90 | New item from Solveit (hidden messages excluded from context); Leave out (L) behind `?prototype=context`; withheld from frame, history and record parts, counted on the ask; real tab 7 fails before, 17/17 after; acceptance, ask loop, safety, persistence unchanged |
+| 2026-11-26T12:56Z | build-A | 73 Older board gets the calm board | #91 | verify-calm 32/33 → 33/33 (stand-in model); persistence and scorecard unchanged |
+| 2026-11-26T12:59Z | build-A | 65 Asks and the section reader; #85 review follow-up; merges | #89 #85 #73 | #89: edited titles reach the agent, follow-ups keep record parts (browser before 5/7 → 7/7), marked numeric headers, pipe-less markdown tables, fenced code lines (4+1 failing-first tests); #85: blank-line and cut-quote delimiter cases, pen strokes count as feedback (browser 10/10); #73 and #89 merged with claude/sprint-int after #60 and a frame-history change landed |
+| 2026-11-26T13:04Z | build-A | 71 Web page reader stays quick | #93 | One pass over the tags: 2 MB of unclosed <li> 38 s → 0.2 s, unclosed advert <div>s 31 s → 0.02 s; #65's behaviour tests unchanged; verify-webpage 9/9; scorecard unchanged |
+| 2026-11-26T13:06Z | build-B | 74 Stale flags at the canvas edge; merge-ups | #94 #76 #77 #69 #86 | #94: an opened reason flips above, clear of the selection bar, near the bottom; a focused flag grows down near the top; offscreen flags leave the Tab order; real tab 2/5 before, 5/5 after; scorecard unchanged. #67, #69 and #72 merged; #69, #86, #76 and #77 merged up; #77 also fixes the thin-image rounding (null before, 600 x 0.4 now) |
+| 2026-11-26T13:08Z | build-A | 75 First board never moves the view away | #95 | verify-runs failed on the branch: an agent acting before the calm layout lost its page; verify-early-agent 4/6 → 6/6, verify-runs passes; scorecard unchanged |
+| 2026-11-26T13:08Z | build-B | Merge-ups after #74 | #78 #84 | #78: a leftover plain-text filter from the merge dropped partly bold words (reproduced live, removed); #84: plain-decimal and precision rules for CSV numbers combined |
+| 2026-11-26T13:09Z | build-A | Run end; #89 review follow-up | #89 | Marked headers with blank cells, headings with pipes, appended titles (3 failing-first tests); #85 #89 #93 merge cleanly with claude/sprint-int and with each other (386 tests on the combination); feedback-8 claim released |
+| 2026-11-26T13:10Z | build-B | Review of #94 (three yellow findings) | #94 | Recorded, not yet fixed, for #94's next push or a follow-up: (a) Tab eligibility follows the card's span, not the drawn flag (a card half off the right edge keeps an offscreen flag tabbable; a selected flag opened into view can be skipped); (b) the fixed 120 px room can still clip a long reason at high zoom, since the flag scales with the canvas, so placement should compare its measured height on each side; (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first line, so the anchor should clamp to the top edge. Not answered on the threads, because the reply tool appends a tool footer the hard rules forbid. #76 and #77 merged |
+| 2026-11-26T13:12Z | build-B | 58 follow-up | #96 | #78 merged before its last fix: a duplicate plain-text filter still dropped partly bold words on the integration branch; removed, reproduced live before and after |
+| 2026-11-26T13:16Z | build-B | 70 Side by side and Show cited bring comments along | #92 | moveWithAttached moves programmatic moves with their comments in one undo step; real tab 7/9 before, 9/9 after; acceptance, ask loop, safety, persistence unchanged |
+| 2026-11-26T13:16Z | build-B | 72 Fresh agent-usability attempt | #97 | 23/24, median 2 tool calls on cdd473d; task 14 check corrected with reason; friction filed as 77 |
+| 2026-11-26T13:16Z | build-B | 71 Web page reader stays quick | #98 | Duplicate of #93; one-pass element matching, implicit li close, stray "<" as text; worst 2 MB case 145 s → 0.5 s; reader tests unchanged |
+| 2026-11-26T13:14Z | build-A | 76 Agent never rewrites the person's words | #99 | Agent could rewrite a pink card's text; refused now; safety 9/10 (1 lost) → 10/10 (0 lost) with the new race; agent tasks 24/24; root build and package tests green |
+| 2026-11-26T13:17Z | build-A | 69 10k pan survives a slow-mode run | #100 | Lower quartile of twelve 40-frame samples; three back-to-back runs on one commit 38.2, 41.0, 36.1 ms (13.6% spread; run 1 had 7/12 slow samples, old median ~74.6); threshold unchanged |
+| 2026-11-26T13:19Z | build-A | 78 Ask progress announced | #101 | Screen readers heard nothing of an ask's progress; live region says sent, working, answered, failed once each; verify-ask-live 3/8 → 8/8; first screen unchanged; scorecard unchanged |
+| 2026-11-26T13:18Z | review | Review #67 to #84, #96 | #67 to #84 #96 | 19 merged (squash); workspace build and tests green after each (canvas 377, server 157 on Postgres 16, e2e 1); live checks re-run for #67 #68 #69 #70 #72 #73 #76 #77 #80 #82 #83. Review fixes: #73 page-tree cycle guard with a test, #80 keeps #55's vertical clamp, AGENT_API paragraphs lost in the #67 merge restored. Scorecard on 8da6809: six rows pass, safety 10/10, 10k pan 49 ms |
+| 2026-11-26T13:19Z | build-B | 77 Friction from the second agent attempt | #102 | asks page filter, schema descriptions, overview/reply docs, list --brief; 5 failing-first tests; live MCP check; workspace measure pass with throwaway services |
+| 2026-11-26T13:20Z | build-A | #93 review follow-up | #93 | Bounded byline search (3 s → 65 ms), region outside comments/head and whole tag names, ASCII-only lowercase for offsets, one-pass comment strip; 4 new tests; verify-webpage 9/9 |
+| 2026-11-26T13:21Z | build-B | 79 Read filter ß and grapheme boundaries | #103 | ß/ẞ fold to ss; matches start and end on whole characters; 2 failing-first tests; canvas suite green |
+| 2026-11-26T13:22Z | build-A | #100 review follow-up; run end | #100 | Non-numeric EVAL_PAN_* settings are an error row, not null figures (live check). build-A holds no claims; open: #85 #89 #93 #100 |
+| 2026-11-26T13:28Z | build-B | 80 Ask in a frame hidden by the frame | #104 | New item found in item 67 screenshots; asks, comments, replies, answers, agent notes on the page; real page 6/16 → 16/16; scorecard rows unchanged; filed 81 |
+| 2026-11-26T13:31Z | build-A | 7 Keyboard-only loop | #105 | N then Enter was a dead end and Tab never reached the board or moved on from a selection; verify-keyboard 6/14 → 14/14; 10 unit tests; regression sweep green (calm 32/33 = known #91 case); first screen unchanged; scorecard unchanged |
+| 2026-11-26T13:31Z | build-B | 81 Agent note never lands on top of something | #106 | annotate without x/y uses freeSpot down the target column; real page 3/4 → 4/4; annotate tasks self-test 4/4 |
+| 2026-11-26T13:36Z | build-B | 67 follow-up: merged the integration branch into #90 | #90 | Conflicts with #64/#67/#69/#86/#88 resolved; selected frame contents and history honour left-out marks; Leave out key cap hidden on touch; verify-leave-out 19/19 incl. frame ask and 390 px phone |
+| 2026-11-26T13:37Z | build-A | 82 A Tab stop is heard | #108 | hideUi had dropped tldraw's announcer, so nothing was said on select; verify-heard 2/13 → 13/13; 8 unit tests (one failing-first for answers said as notes); first screen unchanged; scorecard unchanged |
+| 2026-11-26T13:41Z | build-B | 84 Ask about an image says what it is | #109 | File name, size, caption and alt text for image targets, frame contents and history; describeImage unit-tested; real tab 5/5 |
+| 2026-11-26T13:43Z | build-B | Kept open PRs mergeable | #104 #106 #109 | Merged the integration branch into each (asks.ts conflicts after #90 and the answer-row change merged); re-ran build, tests and each real-page check: 16/16, 4/4, 5/5 |
+| 2026-11-26T13:45Z | build-B | 86 canvas_overview shows left-out objects | #112 | leftOut: true on overview rows, documented; failing-first unit test; live stdio MCP check |
+| 2026-11-26T13:49Z | build-A | 83 One command runs every browser check | #113 | 31 checks in one run (about 6 min), stand-in model, throwaway store; its board-images failure (filed 88) turned out to be the check, fixed in #114; open branches #87 #91 #95 #99 #101 #88 merged up to the integration branch and re-verified |
+| 2026-11-26T13:49Z | build-B | Review findings on #92 #97 #98 #103 #104 #106 | #98 | Red finding on #98 (legacy "<!--" in a script dropped the page) fixed with two optional ones, failing-first tests, verify-webpage 9/9; the other optional findings verified and recorded under Decisions needed, #104 flagged as needing (a)-(c) |
+| 2026-11-26T13:50Z | build-A | 88 Clean-profile image check | #114 | Not a product regression: the image was off screen in the clean profile; check fits the page before measuring; verify-board-images 3/5 → 5/5 |
+| 2026-11-26T13:50Z | review | Review #85 to #90 | #85 to #90 | 6 merged (squash); workspace build and tests green after each (canvas 428, server 157, e2e 1); live checks re-run for all six. Review fixes: #87 merged with #69 and given the phone selection-bar fix (a regression from #80). Scorecard on 20ccac9: six rows pass; 10k pan 78.5 ms flagged, shown equal to 95a9daf measured back to back (about 100 ms each). Run total: 52 merged, 0 rejected, 16 left open |
+| 2026-11-26T13:54Z | build-A | 89 Log-only checks give a verdict | #116 | verify-data-prototype 11/11, verify-converge 10/10; mutations fail 3 and 1 steps; no product change |
+| 2026-11-26T13:55Z | build-A | 87 Menu and dialogs from the keyboard; #105 keyboard-trap fix | #115 #105 #108 | #115: verify-menu-keys 2/16 → 16/16, 8 unit tests, Escape in a menu no longer clears the selection; #105: found its own keyboard trap (Tab on the page never reached the menu or tools), fixed with two failing-first checks, 16/16, merged with claude/sprint-int and into #108; scorecard unchanged |
+| 2026-11-26T13:57Z | build-A | 75 follow-up | #95 | The tab's empty first page takes the calm board instead of a third page (verify-early-agent 7/7); verify-runs passes, verify-calm 32/33 as base (older board is #91) |
+| 2026-11-26T14:02Z | build-A | 91 (filed as 88) Retry a failed ask from the keyboard | #118 | ⌘↵ on a failed ask opened a new ask about it; now resends; verify-retry-key 2/9 → 9/9; 4 unit tests; ask loop's Retry step still passes; first screen unchanged; scorecard unchanged |
+| 2026-11-26T14:03Z | build-B | 85 An answer on another page is one step away | #119 | Notice carries Show (G), stays 12 s, opens the page and centres the answer with its ask; failed ask selects the ask; verify-answer-show 5/15 → 17/17; 440 unit tests; verify-answer-page/keys/touch green; first screen unchanged; scorecard unchanged except 10k pan noise |
+| 2026-11-26T14:03Z | build-B | 86 Principles status table | #117 | Six rows brought up to date with merged PRs (#6 #42 #47 #55 #64 #67 #83 #86 #88); nothing unmerged claimed |
+| 2026-11-26T14:11Z | build-A | 92 Each answer stays with its own ask | #120 | Three asks on one card: answers piled under the last ask; now beside their own; verify-answer-beside 3/6 → 6/6; answer-view 14/14, answer-page 11/11, calm 33/33; scorecard unchanged |
+| 2026-11-26T14:13Z | build-B | 90 Pin into every ask (context prototype) | #121 | Pin (I) on the selection bar; asks give `pinned`; fence, outline and "+ N pinned"; resident prompt names it; 8 failing-first unit tests; verify-pin-context 7/18 → 18/18; leave-out 19/19, ask-frame/marks/chart 8/8, ask-record 7/7, answer-page 11/11; first screen unchanged |

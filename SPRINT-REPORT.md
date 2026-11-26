@@ -1,13 +1,54 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-26T12:50Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-26T13:50Z by the review lane. Branch: `claude/sprint-int`.
 
 ## Read first
-- **This run (2026-11-26T12:50Z): 27 PRs reviewed and merged, #40 to #66; none rejected.** Each was merged with
-  the integration branch, then built and tested across the workspace (Postgres 16 and Redis
-  running). Fourteen had their browser or live check re-run by the review; the rest rest on unit
-  tests the review read (the Merged list says which). On `95a9daf` six scorecard rows pass and
-  Performance is reported. What to look at first:
+- **This run (11:55Z to 13:50Z): 52 PRs reviewed and merged, #40 to #90 and #96; none rejected.**
+  Each was merged with the integration branch, then built and tested across the workspace
+  (Postgres 16 and Redis running). Most had their browser or live check re-run by the review; the
+  rest rest on unit tests the review read (the Merged list says which). On `20ccac9` six scorecard
+  rows pass; Performance is flagged and is not a regression (below). What to look at first:
+  - **A review mistake, found and repaired.** Merging #67 silently put back an older copy of four
+    paragraphs of `AGENT_API.md` (the documentation #63 had added) and re-broke a table, because
+    its branch carried an earlier resolution of that file. Merging #74 then #78 left two text
+    filters in `read`. The first was restored by the review (b8e69de, 3cdc71b); the second was
+    caught by a build lane and fixed in #96. Since then every merge is checked for lines it removes
+    that the PR's own commits did not remove. A scan of all 46 merges found no other case, but
+    `AGENT_API.md` and `packages/canvas/src/ask-ui.tsx` were touched by the most PRs and are worth
+    a read.
+  - **A second review mistake: #80 let the selection bar cover the selected card on a phone.** At
+    390 px the bar wraps to two rows and sat on the top 30 px of the card, so a second tap hit a
+    bar button (Cross out, Comment) instead of the card. #80's own 20 checks did not look for it;
+    #87's check tripped over it. Fixed by the review inside #87: the bar is lifted by its measured
+    height (`placeBar`, with a test; measured 508 to 588 above a card at 594).
+  - **Two prototypes of proposed items are in, both behind flags and off by default:** leaving
+    objects out of asks (`?prototype=context`, #90, key L) and asks about charts and datasets
+    (data prototype, #86). A left-out mark already on a board is honoured and drawn in every tab;
+    only setting it needs the flag. Decision 28.
+  - **An answer now pans the view (#87)** when it lands while its ask is on screen and the person
+    is not typing, dragging or asking. It never zooms. This moves the view without a click.
+    Decision 29.
+  - **Images now live inside the board (#76).** A dropped image is stored in the board as a data
+    URL (photos over 1.5 MB scaled to 2048 px), so a clean browser shows it. The cost: every save
+    uploads the whole board again, images included, about a second after each edit, and each kept
+    revision holds a full copy. A board with two photos was 5.3 MB in the review's run. The
+    alternative is a server asset store. Decision 23.
+  - **PDF import is a small built-in reader (#73)**, not pdf.js. It reads text PDFs printed by a
+    browser or word processor; PDFs that use compressed object streams (many modern ones) are
+    refused with a message. Review added a guard: a damaged page tree could hang the tab.
+    Decision 24.
+  - **Board history is thinned on the server (#75):** newest 20 revisions, then one per 15-minute
+    slot, 50 in all. This is server code and changes what "the other version stays in history"
+    means for an edit overwritten more than 20 saves ago. Decision 25.
+  - **An agent can answer an ask on a page that is not open (#69).** The answer is placed on the
+    ask's page, off the person's undo stack, and a notice says who answered and where.
+  - **Asks now carry more:** the contents of a selected frame (#67) and the person's picks and
+    cross-outs (#64). Results hidden by a learning prompt are never sent.
+  - **The selection bar and Ask box stay inside the window (#80)**, including on a 390 px phone,
+    and key hints read Ctrl on Windows and Linux (#83). Both change what is on screen in the first
+    two minutes; the first screen at rest is unchanged on a Mac.
+  - **CSV typing on the data prototype is stricter (#68, #84):** zero-padded codes, long IDs and
+    hex stay text. This takes the alternative in decision 11.
   - **Import and paste (#46) is on the branch**, from your `yc/import-paste`, with four follow-ups:
     side by side (#55), cited sections beside a record (#58), `.xlsx` (#60) and web pages (#65).
     It adds one menu item, "Import a file", and two buttons that appear on the selection bar only
@@ -35,13 +76,18 @@ Last updated 2026-11-26T12:50Z by the review lane. Branch: `claude/sprint-int`.
     median of five samples, but on this machine a sample is either about 38 ms or about 85 ms, and
     a run of mostly slow samples still reads as a regression. The review measured the commit before
     today's merges and the commit after, twice each: 38.4 and 45.3 ms before, 45.1 and 38.4 ms
-    after, with slow samples in both. The committed 88.2 ms is the same code. Backlog 69.
+    after, with slow samples in both. At the end of the run the container itself had slowed: the
+    committed figure is 78.5 ms and reads "regressed" against an earlier lucky 49 ms, but `95a9daf`
+    and `20ccac9` measured back to back gave 98.4 and 107.4 ms against 101 and 98.6 ms. Same code
+    speed. Backlog 69 (PR #100 open).
   - **The recorded agent attempt is 23 of 24 and predates most of today's merges** (#57). Task 14
     failed because the agent's note named all four regions, not only the top one; the check was
     left strict. The 24-task self-test passes on the merged branch. No fresh attempt was recorded
     in this run.
-- **Seventeen more PRs were opened while this run reviewed (#67 to #88 with gaps); none is on the
-  branch.** The build lanes open PRs faster than one review run clears them.
+- **PRs are still arriving: sixteen are open and not reviewed (#91 to #108, with gaps).** The build
+  lanes open them faster than one review run clears them, and merge the integration branch into
+  their own PRs while the review is doing the same, which twice discarded review work in progress.
+  Two lanes both built item 71 (#93 and #98); the next review should merge one and close the other.
 - **The calm-canvas rework (#21) is merged, combined by the review lane with 16 sprint PRs.** It
   conflicted in 15 files (21 places in `packages/canvas/src/App.tsx`). Where the two disagreed the
   calm layout won; board sync, the prototypes, per-run undo and the reload fixes were fitted into
@@ -139,36 +185,34 @@ Last updated 2026-11-26T12:50Z by the review lane. Branch: `claude/sprint-int`.
   of the data and learning prototypes are proven by headless scripts, not `pnpm test` (backlog 9).
 
 ## Status
-`pnpm build` and `pnpm test` pass on `95a9daf` (with Postgres 16, Redis and `JWT_SECRET` provided):
+`pnpm build` and `pnpm test` pass on `20ccac9` (with Postgres 16, Redis and `JWT_SECRET` provided):
 
 | Package | Result |
 |---|---|
-| canvas | 323 passed |
-| server | 154 passed with `TEST_DATABASE_URL` set (the Postgres board suite is skipped without it) |
+| canvas | 428 passed |
+| server | 157 passed with `TEST_DATABASE_URL` set (the Postgres board suite is skipped without it) |
 | sdk | 12 passed |
 | mcp-server | 4 passed |
 | cli, web | no test files |
 | e2e | 1 passed; needs Postgres and Redis, which `pnpm eval:canvas` now starts itself when they are installed |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T12:49Z on `95a9daf`:
+Scorecard from `pnpm eval:canvas` at 2026-11-26T13:42Z on `20ccac9`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
 | Acceptance scenario | every step passes | 10/10 steps | pass |
 | Ask loop | every step passes | 5/5 steps | pass |
 | Agent usability | ≥90% of ≥20 tasks | 23/24 (96%), median 3 tool calls | pass |
-| Safety of shared edits | 0 human edits lost | 0 lost; 9/9 races pass | pass |
+| Safety of shared edits | 0 human edits lost | 0 lost; 10/10 races pass | pass |
 | Persistence | identical in a clean profile | identical | pass |
-| Performance | reported, not worse | 1k: load 1363 ms, pan 16.7 ms/frame; 10k: load 9346 ms, pan 88.2 ms/frame | reported |
+| Performance | reported, not worse | 1k: load 1403 ms, pan 16.7 ms/frame; 10k: load 9864 ms, pan 78.5 ms/frame (worse: 10000 panMedianFrameMs 49 → 78.5) | regressed |
 | Existing product | green | build passes; tests: all packages pass | pass |
-
-Carried over from the previous run, not re-measured: acceptance, askLoop, agentUsability, safety, persistence, workspace.
 <!-- scorecard:end -->
 
-Every row was measured on `95a9daf` at 12:49Z; performance was then measured once more on its own,
-which is why the table says the other rows were carried over. Agent usability reports the attempt
-recorded with #57. See Read first for why the 10k pan figure moves.
+Measured on `20ccac9`, which has everything in the Merged list. Agent usability reports the attempt
+recorded with #57 (a fresh one is PR #97, not yet reviewed). Performance reads "regressed" and is
+not: see Read first.
 
 ## Merged
 - [#2](https://github.com/seahyc/pairedcc/pull/2) Dataset and chart state model (9f19690).
@@ -235,6 +279,31 @@ recorded with #57. See Read first for why the 10k pan figure moves.
 - [#64](https://github.com/seahyc/pairedcc/pull/64) Asks carry the person's picks and cross-outs, and an option's siblings (16c9a38). 8 browser checks re-run. Review repaired a table in AGENT_API.
 - [#65](https://github.com/seahyc/pairedcc/pull/65) Web pages become section cards: a saved `.html` file or a copied stretch with headings (502ae3f). 9 and 51 browser checks re-run.
 - [#66](https://github.com/seahyc/pairedcc/pull/66) Boards holding half an emoji save on Postgres; merged remote changes stay out of undo; restore clears undo (95a9daf). Server contract run on Postgres 16.
+- [#67](https://github.com/seahyc/pairedcc/pull/67) An ask about a frame carries what the frame holds; hidden learning results are never sent (b6cf5b6). 8 browser checks re-run. This squash also reverted #63's documentation; see Read first.
+- [#68](https://github.com/seahyc/pairedcc/pull/68) A dropped CSV keeps long IDs as text, keeps a quoted empty row, and refuses a non-UTF-8 file with the line (df4b30b). 5 browser checks re-run.
+- [#69](https://github.com/seahyc/pairedcc/pull/69) An answer lands on its ask's page even when another page is open, with a notice (e8d313a). 11 browser checks re-run.
+- [#70](https://github.com/seahyc/pairedcc/pull/70) Edits to existing objects made while the account's board loads are kept, field by field (30f1346). Acceptance, safety, persistence and the real-server sync check re-run.
+- [#71](https://github.com/seahyc/pairedcc/pull/71) Staleness is worked out once per object; a repeated cause is reported by reference (947a5e4).
+- [#72](https://github.com/seahyc/pairedcc/pull/72) A stale flag shows its whole reason when the object is selected or the flag is focused (ce3d11d). 8 browser checks re-run.
+- [#73](https://github.com/seahyc/pairedcc/pull/73) Text PDFs become section cards through a built-in reader (641fe0e). 7 browser checks re-run. Review added a visited set so a cyclic page tree cannot hang the tab, with a test.
+- [#74](https://github.com/seahyc/pairedcc/pull/74) `canvas_read` takes `text` to find objects by their words (adcaad8).
+- [#75](https://github.com/seahyc/pairedcc/pull/75) Board history keeps the newest 20 revisions, then one per 15-minute slot, 50 in all (5190d97). Store contract run on Postgres 16.
+- [#76](https://github.com/seahyc/pairedcc/pull/76) Images are stored inside the board so a clean profile shows them (4b04d68). 5 browser checks re-run, including the clean profile.
+- [#77](https://github.com/seahyc/pairedcc/pull/77) A dropped image lands no larger than 600 units on its longest side (0ba07fa). 7 browser checks re-run.
+- [#78](https://github.com/seahyc/pairedcc/pull/78) The text filter reads a partly formatted word as one word and handles Greek sigma and vowel signs (27b3b32).
+- [#79](https://github.com/seahyc/pairedcc/pull/79) README and working spec say boards and earlier versions are on the menu (2fe659c).
+- [#80](https://github.com/seahyc/pairedcc/pull/80) The selection bar, Ask box and ask state line stay inside the window at 1440 and 390 px (ca367d8). 20 browser checks re-run; review kept #55's vertical clamp.
+- [#81](https://github.com/seahyc/pairedcc/pull/81) The development board store survives its folder being removed (e4f1c8a).
+- [#82](https://github.com/seahyc/pairedcc/pull/82) Safety measure: a stale restore against another browser's newer save (0a90525). 10/10 re-run.
+- [#83](https://github.com/seahyc/pairedcc/pull/83) Key hints read Ctrl, Shift and Backspace outside Apple devices (90fb20c). 16 browser checks re-run on Windows and Mac profiles.
+- [#84](https://github.com/seahyc/pairedcc/pull/84) CSV codes with leading zeros, hex and binary spellings stay text (09e83ef).
+- [#85](https://github.com/seahyc/pairedcc/pull/85) The delimiter guess respects quotes; a table cut to 2,000 rows says so; "show as table" refuses to rebuild an import the person has changed (76591e1). 10 and 51 browser checks re-run.
+- [#86](https://github.com/seahyc/pairedcc/pull/86) Data prototype: an ask about a chart or dataset carries what it shows as text (9b6e7a1). 8 browser checks re-run.
+- [#87](https://github.com/seahyc/pairedcc/pull/87) Answers wrap to fit the window and the view pans to a landed answer (7a11dcd). 14, 11 and 20 browser checks re-run. Review merged it with #69 and added the fix for the phone selection bar.
+- [#88](https://github.com/seahyc/pairedcc/pull/88) On a touch-only screen the first board says tap and the bar shows no key caps (af29386). 11 and 16 browser checks re-run.
+- [#89](https://github.com/seahyc/pairedcc/pull/89) An edited imported title reaches the agent as shown; a follow-up ask gives a record as its parts; a marked header row is the header (f6c8bbe). 7 and 51 browser checks re-run.
+- [#90](https://github.com/seahyc/pairedcc/pull/90) Prototype behind `?prototype=context`: Leave out (L) keeps objects back from asks, shown on the board and counted on the ask (20ccac9). 19, 7 and 8 browser checks and the Ask loop re-run.
+- [#96](https://github.com/seahyc/pairedcc/pull/96) Removes the second text filter the #74 and #78 merges left in `read` (b837aa9).
 - Review lane: `packages/cli` and `packages/web` test scripts pass with no test files (a712b50).
 
 How each was checked: the branch was merged with the integration branch, built and tested; every
@@ -289,12 +358,31 @@ None.
     save holding the old revision number is accepted. Fixing it needs a tombstone table, a
     migration that would run on the next deploy; left for you.
 22. **Read `marks` renamed `note` to `comment`** (#63). An outside agent matching on `note` breaks.
+23. **Where images are kept** (#76): inside the board snapshot, so every save and every kept
+    revision carries them and they count against the 10 MB limit. Alternative: a server asset store.
+24. **PDF reader** (#73): built in, text PDFs only, no compressed object streams. Alternative: pdf.js
+    behind the same `readPdf` interface.
+25. **History retention** (#75): newest 20, then one per 15 minutes, 50 in all. Alternatives: an
+    hourly slot for older revisions, or a byte budget per account.
+26. **An answer to an ask on another page** (#69) is kept off the person's undo stack; an agent can
+    still undo it as a run.
+27. **On a phone the selection bar may cover the tool strip while open** (#80). Alternative: hide the
+    strip while asking.
+28. **Leaving objects out of asks** (#90, prototype): an object the person selects for an ask is
+    still given even when marked; the ask says how many were kept back, never what; agents can see
+    the mark in `read` but cannot set it. Alternatives are in `SPRINT.md` (build-B, item 67).
+29. **The view pans when an answer lands** (#87). Alternative: leave the view and show a pointer
+    ("4 options below").
 12. **Document sharing wording** (found by #19, outside canvas scope): a new document says "anyone
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-Open and not yet reviewed: #67 to #88 (ask about a frame, CSV fidelity, answers on the ask's page,
-edits while loading, stale checks, PDF import, a text filter for `canvas_read`, history thinning,
-images in the board, key hints, touch wording and others). Not done in this run: a fresh
-agent-usability attempt on the merged branch. PR descriptions #9 to #20, and several of #43 to #63,
+#110 (review follow-ups) and #111 (bounds on the PDF reader) were merged at about 13:45Z by another
+session while this run was finishing; this review did not check them and its scorecard does not
+include them.
+
+Open and not yet reviewed: #91 to #108 except #96 (older boards and the calm board, comments
+following imports, two versions of the faster web page reader, stale flags at the edge, a fresh
+agent attempt, the person's words protected from agent edits, the pan measure, screen-reader
+announcements, keyboard-only loop and others). PR descriptions #9 to #20, and several from #43 on,
 carry a tool footer; commits on the branch do not.

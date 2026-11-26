@@ -15,6 +15,7 @@ import {
 } from "tldraw";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { revision, shapeName } from "../operations";
+import { flagLayout, SELECTION_BAR_ROOM } from "./flag-layout";
 import {
   aggregate,
   chartStateSchema,
@@ -290,8 +291,10 @@ export function DataLayer() {
   const editor = useEditor();
   const items = useValue(
     "stale derived objects",
-    () =>
-      editor.getCurrentPageShapes().flatMap((s) => {
+    () => {
+      const selected = new Set<string>(editor.getSelectedShapeIds());
+      const viewport = editor.getViewportPageBounds(), zoom = editor.getZoomLevel();
+      return editor.getCurrentPageShapes().flatMap((s) => {
         if (s.type === "chart" || editor.isShapeHidden(s)) return [];
         const stale = staleness(editor, s);
         const b = stale.length ? editor.getShapePageBounds(s) : undefined;
@@ -301,21 +304,35 @@ export function DataLayer() {
           // A result still hidden behind a learning prompt is not named before the person answers.
           return shape && !editor.isShapeHidden(shape) ? shapeName(shape) : undefined;
         };
-        return [{ id: s.id, x: b.x, y: b.y, w: b.w, name: shapeName(s), reason: staleReason(stale, nameOf) }];
-      }),
+        const layout = { ...flagLayout(b, viewport, zoom, selected.has(s.id)), zoom };
+        return [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, name: shapeName(s), reason: staleReason(stale, nameOf), open: selected.has(s.id), ...layout }];
+      });
+    },
     [editor],
   );
-  // The flag says which input changed, so the person knows what to recheck.
+  // The flag says which input changed, so the person knows what to recheck. On the board a
+  // long reason is cut short; selecting the object, or reaching the flag with Tab, shows all of it.
   return (
     <div className="scratch-layer">
       {items.map((i) => (
         <span
           key={i.id}
-          className="stale-flag"
+          className={["stale-flag", i.open && "open", i.growDown && "grow-down"].filter(Boolean).join(" ")}
+          data-shape-id={i.id}
           role="note"
+          // Only flags on screen are Tab stops: focus does not move the camera.
+          tabIndex={i.inView ? 0 : -1}
           aria-label={`${i.name} is out of date: ${i.reason}`}
           title={`Out of date: ${i.reason}`}
-          style={{ transform: `translate(${i.x + i.w}px, ${i.y - 12}px) translateX(-100%)` }}
+          // Selected, the whole reason opens under the object, clear of the selection bar above it,
+          // or above the object when the bottom of the view is too close.
+          style={{
+            transform: !i.open
+              ? `translate(${i.x + i.w}px, ${i.flagY}px) translateX(-100%)`
+              : i.openBelow
+                ? `translate(${i.x}px, ${i.y + i.h + 8}px)`
+                : `translate(${i.x}px, ${i.y - (8 + SELECTION_BAR_ROOM) / i.zoom}px) translateY(-100%)`,
+          }}
         >
           stale · {i.reason}
         </span>

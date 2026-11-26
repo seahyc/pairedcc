@@ -119,6 +119,41 @@ export function describeChart(data: Dataset, state: ChartState) {
   };
 }
 
+/** Most bars an ask spells out; the rest are counted. */
+export const ASK_BARS = 40;
+const num = (v: number) => String(Math.round(v * 100) / 100);
+const rowsWord = (n: number) => `${n} ${n === 1 ? "row" : "rows"}`;
+
+/**
+ * What a chart shows, as text for an ask: an agent answering with no tools reads this instead
+ * of the picture. `stale` is the reason the chart is out of date, when it is.
+ */
+export function chartText(data: Dataset, state: ChartState, opts: { stale?: string; bars?: readonly Bar[] } = {}) {
+  // A stale chart still shows the bars it drew from older data: describe what the person sees.
+  const shown = opts.bars ? { bars: opts.bars, rowsInView: undefined } : describeChart(data, state);
+  const measure = state.aggregate === "count" ? "count of rows" : `${state.aggregate} of ${state.y}`;
+  const bars = shown.bars.slice(0, ASK_BARS).map((b) => `${b.key} ${num(b.value)} (${rowsWord(b.count)}${state.selected.includes(b.key) ? ", selected" : ""})`);
+  const more = shown.bars.length - bars.length;
+  const filter = describeFilter(state);
+  return [
+    ...(opts.stale ? [`Out of date: ${opts.stale}. The bars below were drawn from an older version of the data.`] : []),
+    `Bar chart of ${measure} by ${state.x}, from the dataset “${data.title}”.`,
+    `Filter: ${filter === "no filter" ? "none" : filter}.${shown.rowsInView === undefined ? "" : ` ${shown.rowsInView} of ${data.rows.length} rows in view.`}`,
+    `Bars: ${bars.join(", ")}${more ? `, and ${more} more bars` : ""}.`,
+    `Selected: ${state.selected.length ? state.selected.join(", ") : "none"}.`,
+  ].join("\n");
+}
+
+/** What a dataset holds, as text for an ask: its shape and its first rows. */
+export function datasetText(data: Dataset, firstRows = 5) {
+  const rows = data.rows.slice(0, firstRows).map((r) => data.columns.map((c) => `${c.name}: ${r[c.name]}`).join("; "));
+  return [
+    `Dataset “${data.title}” (source: ${data.source}).`,
+    `Columns: ${data.columns.map((c) => `${c.name} (${c.type})`).join(", ")}. ${rowsWord(data.rows.length)}.`,
+    ...(rows.length ? [`First ${rows.length} rows:`, ...rows] : []),
+  ].join("\n");
+}
+
 /** Distinct values of a column, in first-seen order, for filter controls. */
 export function distinctValues(data: Dataset, name: string) {
   column(data, name);
@@ -142,7 +177,11 @@ export type InputRef = z.infer<typeof inputRefSchema>;
  * A stale input. `current` differs from `recorded` when the input itself changed (`null` when
  * it was deleted). When the input is unchanged but is itself stale, `upstream` says why.
  */
-export type StaleInput = { id: string; recorded: number; current: number | null; upstream?: StaleInput[] };
+/**
+ * `upstream` lists why an unchanged input is itself stale. `repeated` marks an input whose
+ * upstream causes are already listed earlier in the same report.
+ */
+export type StaleInput = { id: string; recorded: number; current: number | null; upstream?: StaleInput[]; repeated?: true };
 
 /** Inputs whose content has changed since they were used, or that no longer exist. */
 export function staleInputs(inputs: readonly InputRef[], versions: ReadonlyMap<string, number>): StaleInput[] {
@@ -159,10 +198,12 @@ export function staleReason(stale: readonly StaleInput[], nameOf: (id: string) =
   if (!stale.length) return "";
   const quote = (id: string) => (nameOf(id) ? `“${nameOf(id)}”` : undefined);
   // Every root cause (an input that itself changed or was deleted), with the path to it.
+  // A root reached by several paths counts once; a repeated input's causes are already listed.
   const causes: { s: StaleInput; via: string[] }[] = [];
   const walk = (s: StaleInput, via: string[]) => {
+    if (s.repeated) return;
     if (s.upstream?.length) for (const u of s.upstream) walk(u, [...via, s.id]);
-    else causes.push({ s, via });
+    else if (!causes.some((c) => c.s.id === s.id)) causes.push({ s, via });
   };
   for (const s of stale) walk(s, []);
   const { s: root, via } = causes[0];
@@ -179,20 +220,50 @@ export type Derivation = { version: number; inputs: readonly InputRef[] };
 /**
  * Stale inputs, followed up the chain: a note derived from a chart is stale when the chart's
  * dataset changed, even before the chart is recomputed. Cycles are not stale by themselves.
+ *
+ * Each object is worked out once per call, however many paths reach it, and an input whose
+ * upstream causes were already listed is reported again only by reference (`repeated: true`,
+ * no `upstream`), so notes built on notes in rounds stay linear rather than doubling per round.
  */
 export function staleChain(
   inputs: readonly InputRef[],
   lookup: (id: string) => Derivation | undefined,
   seen: ReadonlySet<string> = new Set(),
 ): StaleInput[] {
-  return inputs.flatMap((i): StaleInput[] => {
-    const node = lookup(i.id);
-    if (!node) return [{ id: i.id, recorded: i.version, current: null }];
-    if (node.version !== i.version) return [{ id: i.id, recorded: i.version, current: node.version }];
-    if (seen.has(i.id)) return [];
-    const upstream = staleChain(node.inputs, lookup, new Set([...seen, i.id]));
-    return upstream.length ? [{ id: i.id, recorded: i.version, current: node.version, upstream }] : [];
-  });
+  type Edge = { id: string; recorded: number; current: number | null; deep: boolean };
+  const nodes = new Map<string, Derivation | undefined>();
+  const node = (id: string) => {
+    if (!nodes.has(id)) nodes.set(id, lookup(id));
+    return nodes.get(id);
+  };
+  // Upstream edges of each object, computed once. An object still being worked out (a cycle)
+  // counts as not stale, as before.
+  const memo = new Map<string, Edge[]>();
+  const edges = (list: readonly InputRef[]): Edge[] =>
+    list.flatMap((i): Edge[] => {
+      const n = node(i.id);
+      if (!n) return [{ id: i.id, recorded: i.version, current: null, deep: false }];
+      if (n.version !== i.version) return [{ id: i.id, recorded: i.version, current: n.version, deep: false }];
+      if (seen.has(i.id)) return [];
+      return upstream(i.id, n).length ? [{ id: i.id, recorded: i.version, current: n.version, deep: true }] : [];
+    });
+  const upstream = (id: string, n: Derivation): Edge[] => {
+    const known = memo.get(id);
+    if (known) return known;
+    memo.set(id, []);
+    const found = edges(n.inputs);
+    memo.set(id, found);
+    return found;
+  };
+  const listed = new Set<string>();
+  const report = (list: readonly Edge[]): StaleInput[] =>
+    list.map(({ id, recorded, current, deep }) => {
+      if (!deep) return { id, recorded, current };
+      if (listed.has(id)) return { id, recorded, current, repeated: true };
+      listed.add(id);
+      return { id, recorded, current, upstream: report(memo.get(id) ?? []) };
+    });
+  return report(edges(inputs));
 }
 
 // Small deterministic PRNG so the synthetic data is identical on every machine.
