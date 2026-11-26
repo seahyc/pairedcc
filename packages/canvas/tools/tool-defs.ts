@@ -150,7 +150,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_feedback",
     op: "feedback",
     description:
-      "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback.",
+      "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback. Answer an item with canvas_reply, not canvas_annotate, so the answer sits under the comment and is listed in the queue.",
     input: feedbackInput.shape,
     output: "json",
   },
@@ -158,7 +158,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_reply",
     op: "reply",
     description:
-      "Answer a feedback item in place: your note appears directly under the human's comment (or the picked/rejected object) and is listed as a reply in the queue. The item stays open until you or the human resolve it. The item must be on the open page.",
+      "Answer a feedback item in place (use this instead of canvas_annotate for anything in canvas_feedback): your note appears directly under the human's comment (or the picked/rejected object) and is listed as a reply in the queue. The item stays open until you or the human resolve it. The item must be on the open page.",
     input: replyInput.shape,
     output: "json",
   },

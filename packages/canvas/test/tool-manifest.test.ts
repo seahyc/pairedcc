@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 import { hostedPrototypeTools, instructions, manifestJson, toolDefs, toolManifest } from "../tools/tool-defs";
 
 describe("hosted tool manifest", () => {
+  it("tells agents to answer the person's feedback with canvas_reply, not canvas_annotate", () => {
+    const describe = (name: string) => toolDefs.find((t) => t.name === name)?.description ?? "";
+    for (const name of ["canvas_feedback", "canvas_reply"]) expect(describe(name), name).toMatch(/canvas_reply[^.]*not canvas_annotate|instead of canvas_annotate/);
+    expect(readFileSync(new URL("../AGENT_API.md", import.meta.url), "utf8")).toMatch(/answer[^.]*with `canvas_reply`[^.]*not `canvas_annotate`/i);
+  });
   it("matches the tool definitions (run pnpm --filter @pairedcc/canvas manifest)", () => {
     const committed = readFileSync(new URL("../../server/src/canvas/tool-manifest.json", import.meta.url), "utf8");
     expect(committed).toBe(manifestJson());
