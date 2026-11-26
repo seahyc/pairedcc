@@ -541,7 +541,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     (#113) can only say they "ran". Done when each checks every state it prints, prints PASS or
     FAIL per step, exits non-zero on a failure, and a deliberate break of the behaviour fails it.
 
+88. **A failed ask is retried from the keyboard.** (Found while building item 7.) The brief: "Any ask
+    shows waiting, working, answered or failed", and a failed ask offers Retry, but Retry is a small
+    button on the ask's state line that the keyboard reaches only by walking the whole page, and
+    ⌘/Ctrl+Enter on a selected failed ask opens a new ask about the failed ask instead. Done when,
+    with one failed (or unheard) ask selected, the selection bar's first button is Retry (or Send
+    again) with its key, ⌘/Ctrl+Enter retries it, a headless check fails before and passes after,
+    and an answered ask and a card keep Ask.
+
 ## Claims
+88. A failed ask is retried from the keyboard | claude/sprint-retry-key | 2026-11-26T14:00Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 
 ## Done
