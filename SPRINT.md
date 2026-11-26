@@ -483,7 +483,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 77. **Friction from the 26 Nov 13:03 agent-usability attempt (PR #97; reported by the agent, not yet reproduced).** (a) `eval/mcp-call.ts list` prints about 50 KB that does not parse as one JSON value; (b) `canvas_asks` lists every page's asks with no current-page filter; (c) the agent found no `locked` hint or child count in `canvas_overview` under the names it expected, costing a `canvas_read`; (d) `canvas_duplicate`'s default offset (320) overlaps a wider frame; (e) the docs do not say which `canvas_connect` relation means "supports", or whether `canvas_reply` changes the comment's revision before `canvas_resolve`. Done when each is reproduced with a failing test and fixed, or recorded as a decision with the reason.
 
+78. **An ask's progress is announced to assistive technology.** The brief: "The agent must visibly
+    respond. Any ask shows waiting, working, answered or failed." The state line under an ask is
+    plain text that also ticks each second, so a screen-reader user hears nothing when an ask is
+    sent, taken, answered or fails. Done when one polite live region announces each change of an
+    ask's state once (not the ticking clock), from a tested pure function, checked in a real page
+    with an agent over HTTP (failing before, passing after); nothing new is visible. (Separate from
+    item 7's keyboard-only loop: this is what is heard, not what is reachable.)
+
 ## Claims
+78. Ask progress announced | claude/sprint-ask-live | 2026-11-26T13:21Z
 77. Friction from the 13:03 agent-usability attempt | claude/sprint-agent-friction-2 | 2026-11-26T13:17Z
 69. The 10k pan figure survives a slow-mode run | claude/sprint-pan-quartile | 2026-11-26T13:14Z
 7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
