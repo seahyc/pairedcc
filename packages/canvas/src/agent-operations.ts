@@ -1,4 +1,5 @@
 import { relationships, relationshipsOf, sourceOf, transformationOf, type ArrowEnd, type PrimitiveRecord } from "./primitives";
+import { followPause, followers } from "./follow";
 import { prototypeRefusal } from "./prototype-flags";
 import {
   AssetRecordType,
@@ -514,6 +515,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
           "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
         author: authorOf(s),
         ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
+        ...(s.meta.settled === true ? { settled: true } : {}),
         meta: s.meta,
         asset,
       };
@@ -581,13 +583,26 @@ export async function executeCommand(
       });
       const positions = layoutPositions(boxes, input);
       return atomic(editor, "arrange objects", () => {
-        editor.run(() => shapes.forEach((shape, i) => {
+        // Comments, notes and replies about what moves come along, as with the person's own drag.
+        // This one pass owns them: the drag follower is paused, so a selected object's are not moved
+        // twice, and what moves is decided by the arranged objects, never by the selection.
+        const moving = new Set<string>(editor.getShapeAndDescendantIds(shapes.map((s) => s.id)));
+        const page = editor.getCurrentPageShapes();
+        followPause.active = true;
+        try { editor.run(() => shapes.forEach((shape, i) => {
           const bounds = boxes[i], target = positions[i];
           const transform = editor.getShapePageTransform(shape);
           const origin = transform.applyToPoint({ x: 0, y: 0 });
           const point = editor.getPointInParentSpace(shape, { x: origin.x + target.x - bounds.x, y: origin.y + target.y - bounds.y });
           editor.updateShape({ id: shape.id, type: shape.type, x: point.x, y: point.y });
-        }));
+          const dx = target.x - bounds.x, dy = target.y - bounds.y;
+          if (!dx && !dy) return;
+          const attached = followers([...editor.getShapeAndDescendantIds([shape.id])], page, moving);
+          editor.updateShapes(attached.flatMap((id) => {
+            const s = editor.getShape(id as TLShape["id"]);
+            return s && !editor.isShapeOrAncestorLocked(s) ? [{ id: s.id, type: s.type, x: s.x + dx, y: s.y + dy }] : [];
+          }));
+        })); } finally { followPause.active = false; }
         return { objects: shapes.map(shape => describeObject(editor, shape.id)) };
       });
     }

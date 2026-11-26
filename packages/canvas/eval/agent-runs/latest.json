@@ -1,27 +1,27 @@
 {
-  "recordedAt": "2026-11-26T13:03:22.159Z",
-  "agent": "a fresh general-purpose subagent per run, given only AGENT_API.md and eval/mcp-call.ts",
+  "recordedAt": "2026-11-26T14:40:02.386Z",
+  "agent": "a fresh general-purpose subagent given only AGENT_API.md and eval/mcp-call.ts",
   "results": [
     {
       "task": "01-create-note",
       "pass": true,
       "detail": "ok",
       "toolCalls": 1,
-      "seconds": 52
+      "seconds": 56
     },
     {
       "task": "02-arrange-row",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 20
+      "seconds": 28
     },
     {
       "task": "03-annotate",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 19
+      "seconds": 15
     },
     {
       "task": "04-connect",
@@ -35,152 +35,154 @@
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 19
+      "seconds": 34
     },
     {
       "task": "06-picked-done",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 24
+      "seconds": 19
     },
     {
       "task": "07-duplicate-frame",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 23
+      "seconds": 18
     },
     {
       "task": "08-grid",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 22
+      "seconds": 19
     },
     {
       "task": "09-scene-frame",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 1,
-      "seconds": 15
+      "toolCalls": 2,
+      "seconds": 20
     },
     {
       "task": "10-recolour-after-human",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 24
+      "seconds": 22
     },
     {
       "task": "11-locked",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 20
+      "seconds": 21
     },
     {
       "task": "12-resolve-marks",
       "pass": true,
       "detail": "ok",
       "toolCalls": 5,
-      "seconds": 39
+      "seconds": 43
     },
     {
       "task": "13-dataset-chart",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 16
     },
     {
       "task": "14-read-chart",
-      "pass": false,
-      "detail": "no note naming only East within 300 px of the chart",
-      "toolCalls": 2,
-      "seconds": 24,
-      "evidence": [
-        {
-          "type": "card",
-          "text": "East has the highest bar: 187 orders (sum of orders by region; product = Cake; 16 of 48 rows). West 184, South 181, North 176.",
-          "bounds": {
-            "x": 1120,
-            "y": 0,
-            "w": 240,
-            "h": 151
-          }
-        }
-      ]
-    },
-    {
-      "task": "15-edit-cell",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 20
-    },
-    {
-      "task": "16-clear-filter",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 25
-    },
-    {
-      "task": "17-new-page",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 15
-    },
-    {
-      "task": "18-delete-one",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 20
-    },
-    {
-      "task": "19-image-caption",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 1,
-      "seconds": 13
-    },
-    {
-      "task": "20-find-in-many",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
       "seconds": 21
     },
     {
-      "task": "21-undo-run",
+      "task": "15-edit-cell",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 29
+    },
+    {
+      "task": "16-clear-filter",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 30
+      "seconds": 24
+    },
+    {
+      "task": "17-new-page",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 19
+    },
+    {
+      "task": "18-delete-one",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 16
+    },
+    {
+      "task": "19-image-caption",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 1,
+      "seconds": 12
+    },
+    {
+      "task": "20-find-in-many",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 17
+    },
+    {
+      "task": "21-undo-run",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 4,
+      "seconds": 31
     },
     {
       "task": "22-answer-ask",
       "pass": true,
       "detail": "ok",
       "toolCalls": 3,
-      "seconds": 27
+      "seconds": 33
     },
     {
       "task": "23-reply-in-thread",
       "pass": true,
       "detail": "ok",
       "toolCalls": 4,
-      "seconds": 29
+      "seconds": 31
     },
     {
       "task": "24-converge",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 24
+      "seconds": 23
+    },
+    {
+      "task": "25-person-typo",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 20
+    },
+    {
+      "task": "26-quote-style",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 22
     }
   ]
 }

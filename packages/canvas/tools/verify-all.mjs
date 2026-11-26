@@ -79,12 +79,14 @@ const CHECKS = [
   { name: 'ask-image', file: 'verify-ask-image.mjs', args: (d) => [d] },
   { name: 'ask-unclipped', file: 'verify-ask-unclipped.mjs', args: (d) => [d] },
   { name: 'annotate-clear', file: 'verify-annotate-clear.mjs', args: (d) => [d] },
+  { name: 'phone-margin', file: 'verify-phone-margin.mjs', args: (d) => [d] },
   // These start their own dev servers on other ports.
   { name: 'answer-view', file: 'verify-answer-view.mjs', args: (d) => [d] },
   { name: 'touch', file: 'verify-touch.mjs', args: (d) => [d] },
   { name: 'early-agent', file: 'verify-early-agent.mjs', args: (d) => [d] },
   { name: 'ask-live', file: 'verify-ask-live.mjs', args: (d) => [d] },
   { name: 'answer-beside', file: 'verify-answer-beside.mjs', args: (d) => [d] },
+  { name: 'import-author', file: 'verify-import-author.mjs', args: () => [] },
 ].filter((c) => existsSync(join(dirname(fileURLToPath(import.meta.url)), c.file)));
 const SKIPPED = [
   { name: 'board-sync-server', reason: 'needs Postgres and Redis; run `pnpm --filter @pairedcc/canvas verify:sync-server`' },

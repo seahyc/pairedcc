@@ -20,10 +20,22 @@ export class AskDesk {
     private now: () => number = Date.now,
   ) {}
 
-  /** Queue an ask, or hand it straight to a waiting agent. A repeated attempt is ignored. */
+  /**
+   * Queue an ask, or hand it straight to a waiting agent. A repeated attempt is ignored. A newer
+   * attempt (the person pressed Retry or Send again) replaces an older one still in the queue,
+   * so an agent arriving later answers once; the replaced attempt is forgotten, as it was never
+   * delivered. An older attempt is ignored only while a newer one waits in the queue, so a board
+   * restored to an earlier version can still send its ask.
+   */
   announce(sessionId: string, ask: AnnouncedAsk) {
     const key = `${sessionId}:${ask.id}:${ask.attempt}`;
     if (this.known.has(key)) return false;
+    const queued = this.queue.find((q) => q.sessionId === sessionId && q.ask.id === ask.id);
+    if (queued && queued.ask.attempt > ask.attempt) return false;
+    if (queued) {
+      this.known.delete(queued.key);
+      this.queue = this.queue.filter((q) => q !== queued);
+    }
     this.known.add(key);
     if (this.known.size > 2000) this.known.delete(this.known.values().next().value!);
     const waiter = this.waiters.shift();

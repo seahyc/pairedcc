@@ -4,7 +4,7 @@
 // arrows, Home and End move between items; Escape closes it, puts focus back on the Menu button
 // and keeps the board's selection; the shortcut dialog (from the menu, and from ? on the board)
 // takes focus, keeps Tab inside and gives focus back when it closes; the agent dialog does the
-// same; the More tools menu behaves like the Menu.
+// same, and keys meant for the board do nothing behind it; the More tools menu behaves like the Menu.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-menu-keys.mjs <screenshot dir>
 //
@@ -114,6 +114,26 @@ check('Connect an agent opens its dialog with focus inside it', w.dialog === 'Ag
 await press('Escape', 400);
 w = await where();
 check('Escape closes it and focus goes back to the Menu button', !w.dialog && w.label === 'Menu', JSON.stringify(w));
+
+// Keys meant for the board do nothing behind an open dialog.
+const cardsBefore = await p.evaluate(() => window.__pairedEditor.getCurrentPageShapeIds().size);
+await p.evaluate((id) => window.paired.select([id]), card);
+await p.focus('.menu-button');
+await press('Enter');
+for (let i = 0; i < 15 && !/Connect an agent/.test((await where()).label); i++) await press('ArrowDown', 120);
+await press('Enter', 500);
+await press('?', 400);
+const dialogs = await p.evaluate(() => [...document.querySelectorAll('[role=dialog]')].map((d) => d.getAttribute('aria-label')));
+w = await where();
+check('? inside the agent dialog does not open Shortcuts behind it', dialogs.length === 1 && dialogs[0] === 'Agent access' && w.inDialog, JSON.stringify({ dialogs, w }));
+await press('p');
+await press('x');
+await press('Backspace');
+const behind = await p.evaluate((id) => ({ mark: window.__pairedEditor.getShape(id)?.meta.mark ?? null, n: window.__pairedEditor.getCurrentPageShapeIds().size }), card);
+check('P, X and Backspace inside a dialog leave the board alone', behind.mark === null && behind.n === cardsBefore, JSON.stringify(behind));
+await press('Escape', 400);
+w = await where();
+check('Escape still closes the agent dialog after those keys', !w.dialog && w.label === 'Menu', JSON.stringify(w));
 
 // The More tools menu.
 await p.focus('button[title="More tools"]');

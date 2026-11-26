@@ -1,4 +1,4 @@
-// Browser check for item 46: an answer lands on its ask's page.
+// Browser check for item 46: an answer lands on its ask's page (frame step updated for item 80, #104).
 // The person asks about a card, then opens another page while waiting. The agent answers
 // over HTTP. The answer must be accepted, the person told who answered and where, and on
 // the ask's page the answer must sit under the ask with the ask marked answered.
@@ -82,7 +82,7 @@ check('the answer is on the ask\'s page', Boolean(reply), reply?.text);
 check('it sits under the ask', reply && askObj && reply.bounds.y >= askObj.bounds.y + askObj.bounds.h && Math.abs(reply.bounds.x - askObj.bounds.x) < 400, JSON.stringify({ ask: askObj?.bounds, answer: reply?.bounds }));
 check('the ask says answered', askObj?.meta.ask?.state === 'answered', askObj?.meta.ask?.state);
 await p.screenshot({ path: `${out}/answer-page-back.png` });
-// On the open page, an answer that lands inside a frame belongs to it (moves with it).
+// On the open page, an answer about something in a frame stays with it (see the item 80 note below).
 const frame = await command('create', { kind: 'frame', x: 1400, y: 300, width: 1100, height: 900, name: 'Room' });
 const inner = await p.evaluate((x) => window.paired.create({ kind: 'note', x, y: 340, width: 260, text: 'Inside the room' }), 1440);
 const innerId = typeof inner === 'string' ? inner : inner.id;
@@ -90,8 +90,22 @@ await p.evaluate(([id, fid]) => void window.__pairedEditor.reparentShapes([id], 
 await ask([innerId], 'Anything here?');
 const roomAsk = (await command('asks', {})).asks.find((a) => a.question === 'Anything here?');
 const roomAnswer = await command('answer', { id: roomAsk.id, text: 'Just this one card so far.' });
-const parent = await p.evaluate((id) => window.__pairedEditor.getShape(id)?.parentId, roomAnswer.answers[0].id);
-check('an answer that lands inside a frame on the open page belongs to the frame', parent === frame.id, parent);
+// Item 80 (#104): an answer is placed on the page above the frame, so the frame never clips it,
+// and it follows what it answers when the person moves the frame.
+const answerId = roomAnswer.answers[0].id;
+const parent = await p.evaluate((id) => window.__pairedEditor.getShape(id)?.parentId, answerId);
+check('an answer near a frame on the open page sits on the page, where the frame cannot clip it', typeof parent === 'string' && parent.startsWith('page:'), parent);
+const moved = await p.evaluate(([fid, aid]) => {
+  const ed = window.__pairedEditor, before = ed.getShapePageBounds(aid);
+  ed.select(fid);
+  ed.markHistoryStoppingPoint('move frame');
+  const f = ed.getShape(fid);
+  ed.updateShapes([{ id: fid, type: f.type, x: f.x + 200, y: f.y + 40 }]);
+  const after = ed.getShapePageBounds(aid);
+  ed.selectNone();
+  return { dx: Math.round(after.x - before.x), dy: Math.round(after.y - before.y) };
+}, [frame.id, answerId]);
+check('and moves with the frame when the person moves it', moved.dx === 200 && moved.dy === 40, JSON.stringify(moved));
 check('no page errors', errors.length === 0, errors.join(' | '));
 await ctx.close();
 const passed = results.filter(Boolean).length;
