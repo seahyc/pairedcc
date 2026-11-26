@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-11-26T10:37Z",
-  "commit": "8708875",
+  "generatedAt": "2026-11-26T10:49Z",
+  "commit": "816edb9",
   "carriedOver": [],
   "table": [
     {
       "measure": "Acceptance scenario",
       "target": "every step passes",
-      "result": "8/10 steps",
-      "status": "fail"
+      "result": "10/10 steps",
+      "status": "pass"
     },
     {
       "measure": "Agent usability",
@@ -30,7 +30,7 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 2745 ms, pan 16.7 ms/frame; 10k: load 33584 ms, pan 80.6 ms/frame",
+      "result": "1k: load 1311 ms, pan 16.7 ms/frame; 10k: load 9400 ms, pan 89 ms/frame",
       "status": "reported"
     },
     {
@@ -45,67 +45,67 @@
       "steps": [
         {
           "name": "Person imports a dataset by dropping a CSV file",
-          "pass": false,
-          "detail": "no dataset object after the drop (0 other objects added)",
-          "ms": 1514
+          "pass": true,
+          "detail": "ok",
+          "ms": 1516
         },
         {
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 40
+          "ms": 19
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 501
+          "ms": 478
         },
         {
           "name": "Agent charts the selection",
           "pass": true,
           "detail": "ok",
-          "ms": 35
+          "ms": 23
         },
         {
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 855
+          "ms": 861
         },
         {
           "name": "Agent reads that exact chart state",
           "pass": true,
           "detail": "ok",
-          "ms": 4
+          "ms": 5
         },
         {
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 47
+          "ms": 30
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1767
+          "ms": 1266
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": true,
           "detail": "ok",
-          "ms": 981
+          "ms": 924
         },
         {
           "name": "Reload restores everything",
-          "pass": false,
-          "detail": "1 of 5 objects differ after reload: card revision/props/meta (props h); 5 objects now",
-          "ms": 672
+          "pass": true,
+          "detail": "ok",
+          "ms": 510
         }
       ],
       "pageErrors": [],
-      "toolCalls": 28
+      "toolCalls": 29
     },
     "safety": {
       "races": [
@@ -113,21 +113,21 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 113,
+          "ms": 66,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 271,
+          "ms": 147,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 298,
+          "ms": 256,
           "humanEditsLost": 0
         }
       ],
@@ -142,17 +142,17 @@
     "performance": [
       {
         "objects": 1000,
-        "buildMs": 527,
-        "loadMs": 2745,
+        "buildMs": 230,
+        "loadMs": 1311,
         "panMedianFrameMs": 16.7,
-        "panP95FrameMs": 18.9
+        "panP95FrameMs": 17.1
       },
       {
         "objects": 10000,
-        "buildMs": 3892,
-        "loadMs": 33584,
-        "panMedianFrameMs": 80.6,
-        "panP95FrameMs": 112.6
+        "buildMs": 1717,
+        "loadMs": 9400,
+        "panMedianFrameMs": 89,
+        "panP95FrameMs": 122.3
       }
     ],
     "agentUsability": {
@@ -171,15 +171,15 @@
         },
         "canvas": {
           "pass": true,
-          "summary": "114 passed (114)"
-        },
-        "cli": {
-          "pass": true,
-          "summary": "no test files"
+          "summary": "134 passed (134)"
         },
         "mcp-server": {
           "pass": true,
           "summary": "4 passed (4)"
+        },
+        "cli": {
+          "pass": true,
+          "summary": "no test files"
         },
         "sdk": {
           "pass": true,
