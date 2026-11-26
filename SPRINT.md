@@ -310,7 +310,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     sibling options with their marks, the resident agent's prompt says to build on picks and not
     offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
 
-45. ((a) to (c): PR #66 open, awaiting review; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): PR #70 open, awaiting review. (d) open.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
+45. ((a) to (c): PR #66 open, awaiting review; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): PR #70 open, awaiting review. (d): PR #76 open, awaiting review.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
     failing test first, then a fix or a recorded decision: (a) after a board is deleted and
     recreated under the same ID, a save or delete holding the old revision number is accepted
     (revisions restart at 1); (b) PostgreSQL `JSONB` rejects a snapshot holding an unpaired UTF-16
@@ -372,12 +372,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 56. Dropped images fit beside your thoughts | claude/sprint-image-size | 2026-11-26T12:16Z
 54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
-45d. Board sync gap (d): images survive a clean profile | claude/sprint-board-images | 2026-11-26T12:08Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 45 (d). Images survive a clean profile (build-B): PR #76.
 - 52. Stale flags readable without a pointer (build-B): PR #72 ((a) was already true as #34 merged; now pinned by tests).
 - 46. Answer lands on its ask's page (build-B): PR #69, stacked on #64 and #67.
 - 47. Ask about a frame gives its contents (build-B): PR #67, stacked on #64.
@@ -411,6 +411,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B, item 45 d) Images the person adds are kept inside the board snapshot as data URLs, with photos over 1.5 MB scaled to 2048 px WebP, rather than in a server asset store. This needs no new storage or secret, and images count toward the 10 MB board limit (a refused save says so). Images added before this move into the board once sync is listening. Alternative: a server asset store with per-account quotas when boards outgrow this.
 - (build-B, item 52) A stale flag opens its whole reason when its object is selected (under the object, clear of the selection bar) or when the flag is focused with Tab (growing upward). Unselected, it stays one line. Part (a), never naming a hidden input, was already in #34 as merged; it is now pinned by unit tests rather than changed.
 - (build-B, item 46) An answer to an ask on another page is placed on the ask's page, and the person sees a toast naming who answered and on which page. The board never switches their page for them, because moving their view uninvited would undo their own navigation. Alternative: a "Go there" button in the toast.
 - (build-B, item 47) A selected frame's contents go to the agent as `inside` on that target: up to 20 objects in reading order, with nested frames walked into and `insideMore` counting the rest. Objects with neither text nor media (ink strokes, empty shapes) are left out, as `frame.objects` already does.
@@ -574,3 +575,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:13Z | build-A | Feedback 8 import, part 6 | #73 | Text PDFs as section cards without a library (ToUnicode, layout from size and position, list by indent); Chromium-printed and hand-written fixtures; fuzzed; verify-pdf 7/7; stacked on #65 |
 | 2026-11-26T12:14Z | build-B | 53 canvas_read text filter | #74 | `read` takes `text` (case- and accent-insensitive, with `ids`); live MCP read 5 objects/3,145 B to 2/1,577 B; manifest regenerated; root build green |
 | 2026-11-26T12:24Z | build-B | 55 Board history thinning | #75 | Newest 20 plus one per 15-minute slot, 50 max; 10 h of saves every 5 min spans more than 8 h (was about 4); checked on PostgreSQL 16; root build green |
+| 2026-11-26T12:17Z | build-B | 45 (d) Images survive a clean profile | #76 | Images kept in the board; older ones moved in once sync listens; real tabs: fresh 2/5 before, 5/5 after; legacy 4/4; scorecard unchanged |
