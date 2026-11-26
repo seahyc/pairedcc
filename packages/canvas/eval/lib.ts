@@ -42,9 +42,12 @@ export async function launch(): Promise<Browser> {
 
 export type DevServer = { base: string; stop(): void };
 
-/** Start the canvas dev server (with the local relay) on its own port, or reuse `EVAL_URL`. */
-export async function startServer(port = Number(process.env.EVAL_PORT ?? 5191)): Promise<DevServer> {
-  if (process.env.EVAL_URL) return { base: process.env.EVAL_URL.replace(/\/$/, ""), stop() {} };
+/**
+ * Start the canvas dev server (with the local relay) on its own port, or reuse `EVAL_URL`.
+ * `own: true` always starts a fresh one, for checks no outside agent may take part in.
+ */
+export async function startServer(port = Number(process.env.EVAL_PORT ?? 5191), own = false): Promise<DevServer> {
+  if (process.env.EVAL_URL && !own) return { base: process.env.EVAL_URL.replace(/\/$/, ""), stop() {} };
   // Each run gets an empty development board store, so saved boards never leak between runs.
   const boards = mkdtempSync(join(tmpdir(), "paired-eval-boards-"));
   const child: ChildProcess = spawn(process.execPath, [`${packageDir}/node_modules/vite/bin/vite.js`, "--port", String(port), "--strictPort"], {

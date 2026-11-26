@@ -4,6 +4,7 @@ import { END, START, markdown, perfRegressions, rows, spliceReport, type Raw } f
 
 const allPass: Raw = {
   acceptance: { steps: [{ name: "a", pass: true, detail: "ok" }] },
+  askLoop: { steps: [{ name: "ask", pass: true, detail: "ok" }] },
   agentUsability: { tasks: 20, attempted: 20, completed: 19, medianToolCalls: 4 },
   safety: { races: [{ name: "r", pass: true, detail: "ok", humanEditsLost: 0 }], humanEditsLost: 0 },
   persistence: { cleanProfile: true, sameProfileReload: true, detail: "identical", objects: 3 },
@@ -14,13 +15,21 @@ const status = (raw: Raw, measure: string, previous?: Raw) => rows(raw, previous
 
 describe("scorecard rows", () => {
   it("passes every measure when every target is met", () => {
-    expect(rows(allPass).map((r) => r.status)).toEqual(["pass", "pass", "pass", "pass", "reported", "pass"]);
+    expect(rows(allPass).map((r) => r.status)).toEqual(["pass", "pass", "pass", "pass", "pass", "reported", "pass"]);
   });
 
   it("fails acceptance on any failing step and reports the count", () => {
     const raw = { ...allPass, acceptance: { steps: [...allPass.acceptance!.steps, { name: "b", pass: false, detail: "x" }] } };
     expect(status(raw, "Acceptance scenario")).toBe("fail");
     expect(rows(raw)[0].result).toBe("1/2 steps");
+  });
+
+  it("fails the Ask loop on any failing step, and says when it was not run", () => {
+    const raw = { ...allPass, askLoop: { steps: [{ name: "ask", pass: true, detail: "ok" }, { name: "answer", pass: false, detail: "x" }] } };
+    expect(status(raw, "Ask loop")).toBe("fail");
+    expect(rows(raw).find((r) => r.measure === "Ask loop")?.result).toBe("1/2 steps");
+    expect(status({ ...allPass, askLoop: undefined }, "Ask loop")).toBe("not run");
+    expect(status({ ...allPass, askLoop: { steps: [] } }, "Ask loop")).toBe("fail");
   });
 
   it("requires at least 20 attempted tasks and 90% completion for agent usability", () => {
