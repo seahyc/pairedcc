@@ -999,6 +999,64 @@
           }
         }
       }
+    },
+    {
+      "name": "canvas_learn",
+      "description": "PROTOTYPE learning mode. Use only when the person has asked to understand or learn something (on a frame brief or in the request), never by default. Places a prompt card and hides hideIds until the person answers or skips. mode predict: they guess before seeing the result. mode generate: they explain in their own words before seeing your explanation. Create the hidden result first, then pass its ID. Prompts never block: the person can skip in one click. Read the prompt's status and response afterwards; compare their answer with the outcome and critique it kindly, rather than restating your answer. You cannot answer a prompt.",
+      "op": "learn",
+      "output": "json",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "description": "Which open canvas to use; see canvas_sessions. Optional when only one is open.",
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "predict",
+              "generate"
+            ],
+            "description": "predict: the person guesses before seeing a result. generate: the person explains in their own words before seeing yours."
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "width": {
+            "default": 340,
+            "type": "number",
+            "minimum": 200,
+            "maximum": 1200
+          },
+          "hideIds": {
+            "default": [],
+            "description": "Objects to keep hidden until the person commits or skips: the result to predict, or your explanation.",
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "starts_with",
+              "pattern": "^shape:.*"
+            }
+          }
+        },
+        "required": [
+          "mode",
+          "question",
+          "x",
+          "y"
+        ]
+      }
     }
   ]
 }

@@ -23,6 +23,7 @@ import {
   richTextPlain,
   revision,
 } from "./operations";
+import { createPrompt } from "./learning/prompt-shape";
 import { agentStyle, collectMarks, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 
 const cardInput = z.object({
@@ -418,6 +419,8 @@ export async function executeCommand(
     }
     case "update":
       return patchObject(editor, command.input);
+    case "learn":
+      return createPrompt(editor, command.input, actor);
     case "image":
       return image(editor, command.input, actor);
     case "connect":

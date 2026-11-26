@@ -58,6 +58,7 @@ import { agentLink, connectAgentAccess } from "./agent-client";
 import { annotateObject } from "./agent-operations";
 import { isLegacySeed, seed } from "./seed";
 import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
+import { PromptShapeUtil, createLearningPrototypePage, learningPrototypeEnabled, learningVisibility } from "./learning/prompt-shape";
 import {
   PaperBackground,
   ScratchbookLayer,
@@ -418,6 +419,10 @@ function Shell() {
     editor.createPage({ id, name: `Page ${pages.length + 1}` });
     editor.setCurrentPage(id);
   }
+  // A result hidden behind a learning prompt must not leak through its layer name.
+  function layerName(s: TLShape) {
+    return editor.isShapeHidden(s) ? "Hidden until you answer" : shapeName(s);
+  }
   function layerRows(parentId: string, depth = 0): React.ReactNode {
     return shapes
       .filter((s) => s.parentId === parentId)
@@ -434,7 +439,7 @@ function Shell() {
               {children ? (
                 <button
                   className="disclosure"
-                  aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${shapeName(s)}`}
+                  aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${layerName(s)}`}
                   onClick={() =>
                     setCollapsed((prev) => {
                       const n = new Set(prev);
@@ -467,10 +472,11 @@ function Shell() {
                 onDoubleClick={() =>
                   editor.zoomToSelection({ animation: { duration: 180 } })
                 }
-                aria-label={`Select ${shapeName(s)}`}
+                aria-label={`Select ${layerName(s)}`}
+                disabled={editor.isShapeHidden(s)}
               >
                 <ShapeIcon shape={s} />
-                <span>{shapeName(s)}</span>
+                <span>{layerName(s)}</span>
                 {s.isLocked && <LockKeyhole size={11} />}
               </button>
             </div>
@@ -519,6 +525,12 @@ function Shell() {
             <Plus size={13} />
           </IconButton>
         </div>
+        {learningPrototypeEnabled() && (
+          <button className="page-row prototype-row" onClick={() => createLearningPrototypePage(editor)}>
+            <Plus size={13} />
+            <span>Learning prototype page</span>
+          </button>
+        )}
         <div className="pages">
           {pages.map((p) => (
             <div key={p.id} className="page-row-wrap">
@@ -1059,7 +1071,7 @@ function Shell() {
   );
 }
 import { GeoShapeGeoStyle, PageRecordType } from "tldraw";
-const scratchShapes = [CardShapeUtil];
+const scratchShapes = [CardShapeUtil, PromptShapeUtil];
 const scratchTools = [CardShapeTool];
 function App() {
   const [ready, setReady] = useState(false);
@@ -1161,6 +1173,7 @@ function App() {
           licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
           persistenceKey="picabird-canvas-v1"
           shapeUtils={scratchShapes}
+          getShapeVisibility={learningVisibility}
           tools={scratchTools}
           hideUi
           components={components}

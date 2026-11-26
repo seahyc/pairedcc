@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createInput, patchInput } from "../src/operations";
 import { sceneInput, arrangeInput, duplicateInput } from "../src/composition";
+import { learnInput } from "../src/learning/model";
 import { imageInput, annotationInput, connectionInput, resolveInput } from "../src/protocol";
 
 // One definition of the canvas agent tools, shared by the local stdio MCP server
@@ -143,6 +144,14 @@ export const toolDefs: ToolDef[] = [
       "Render canvas objects as an image so you can inspect visual results. Defaults to the entire current page.",
     input: ids,
     output: "image",
+  },
+  {
+    name: "canvas_learn",
+    op: "learn",
+    description:
+      "PROTOTYPE learning mode. Use only when the person has asked to understand or learn something (on a frame brief or in the request), never by default. Places a prompt card and hides hideIds until the person answers or skips. mode predict: they guess before seeing the result. mode generate: they explain in their own words before seeing your explanation. Create the hidden result first, then pass its ID. Prompts never block: the person can skip in one click. Read the prompt's status and response afterwards; compare their answer with the outcome and critique it kindly, rather than restating your answer. You cannot answer a prompt.",
+    input: learnInput.shape,
+    output: "json",
   },
 ];
 

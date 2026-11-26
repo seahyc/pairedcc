@@ -59,6 +59,7 @@ export const commandSchema = z.object({
     "scene",
     "arrange",
     "duplicate",
+    "learn",
   ]),
   input: z.record(z.string(), z.unknown()).optional(),
 });
