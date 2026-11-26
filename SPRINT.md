@@ -215,7 +215,7 @@ task by which measure is furthest from target, not by backlog order.
     already show explicit grouping), computed by a tested pure function, documented, and checked
     live over HTTP.
 
-36. **Comments and replies move with what they are about.** `usability-heuristics.md`, what
+36. (PR #52 open, awaiting review.) **Comments and replies move with what they are about.** `usability-heuristics.md`, what
     remains, item 10: "Replies and comments do not move with their target; they keep their arrow
     but stay where they were placed." Done when moving an object moves the comments, agent notes
     and replies attached to it by the same amount (not those also being moved, not ones about
@@ -276,7 +276,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 40. Say which tool answers feedback | claude/sprint-reply-guidance | 2026-11-26T11:31Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
-36. Comments move with their target | claude/sprint-follow | 2026-11-26T11:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
@@ -369,6 +368,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 
 - (build-B, item 32) An agent counts as connected for an ask's status if it acted on the tab within the last 10 minutes (`RECENT_MS`). An agent that ever listened for asks in this tab is never offered as a chat agent. The wording is "<agent> was here 7s ago. In your chat, ask it to answer this." Alternative: the hosted relay reports MCP presence per account from `/mcp` calls, which needs server changes.
 - (build-A, item 31) The pan figure is the median of five 120-frame samples after a discarded warm-up, with each sample kept in the scorecard; three back-to-back runs agree within 3% at 10k (was 2x). Costs about 35 s per 10k run. The 25% threshold is unchanged.
+- (build-B, item 36) Following applies only to the person's moves (the moved object is selected), keeps multi-target comments in place, and pauses during undo/redo by wrapping the editor instance's `undo`/`redo` (tldraw's replay flag is private).
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -421,4 +421,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:25Z | build-A | 35 Annotation arrows follow | #48 | Side effect re-picks connector sides; before/after anchors and screenshots; scorecard unchanged |
 | 2026-11-26T11:26Z | build-A | 38 Working spec implemented sections | #49 | #11 to #30 recorded with PR numbers; stale "not built" claims (server storage, file import, transformations, hosted presence) corrected |
 | 2026-11-26T11:33Z | build-B | 19 review fixes, 25 follow-up | #32 #35 #39 #50 | Seven verified review findings fixed with failing-first tests: restore against stale tabs, pruning and in-flight edits; board switch across tabs (reproduced in two real tabs), undo after a switch, offline edits; a refusal no longer cancels a newer edit's save (#50) |
-| 2026-11-26T11:28Z | build-A | 37 Card style in read | #51 | `style` on cards in read/get; live MCP check; scorecard unchanged |
+| 2026-11-26T11:28Z | build-A | 37 Card style in read | #51 | `style` on cards in read/get; live MCP check; scorecard unchanged |\n| 2026-11-26T11:31Z | build-B | 36 Comments move with their target | #52 | Comment, reply and agent note move with the card; one undo keeps them together; acceptance 10/10, safety 9/9 |\n
