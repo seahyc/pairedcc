@@ -25,6 +25,7 @@ import {
   createObject,
   patchObject,
   describeObject,
+  shapeName,
   createBridge,
   richTextPlain,
   revision,
@@ -33,6 +34,7 @@ import { createPrompt } from "./learning/prompt-shape";
 import { bendFor, chooseAnchors } from "./connector-follow";
 import { convergeInput, placeBeside, synthesisText } from "./converge/model";
 import { overview } from "./overview";
+import { matchesText, richTextSearch } from "./read-filter";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, listAsks, setAskStatus } from "./asks";
@@ -111,7 +113,10 @@ const idInput = z.object({
 });
 export const focusInput = z.object({ ids: z.array(z.string()).optional() });
 
-export const readInput = z.object({ ids: z.array(z.string()).optional() });
+export const readInput = z.object({
+  ids: z.array(z.string()).optional(),
+  text: z.string().max(200).optional(),
+});
 
 function find(editor: Editor, id: string) {
   const s = editor.getCurrentPageShapes().find((s) => s.id === id);
@@ -467,6 +472,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
   const objects = editor
     .getCurrentPageShapesSorted()
     .filter((s) => !input.ids || input.ids.includes(s.id))
+    .filter((s) => !input.text || matchesText(input.text, "richText" in s.props ? richTextSearch(s.props.richText) : undefined, shapeName(s)))
     .map((s) => {
       const object = describeObject(editor, s.id);
       let asset;

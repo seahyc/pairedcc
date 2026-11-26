@@ -1,4 +1,5 @@
 import { atom, getSnapshot, loadSnapshot, type Editor } from "tldraw";
+import { withoutUnusedImages } from "./image-assets";
 import { createBoardSync, type BoardApi, type MemoStore, type PutResult, type RevisionSummary, type BoardSummary, type Snapshot, type SyncMemo, type SyncStatus } from "./board-sync";
 import { bringContentIntoView } from "./reframe";
 
@@ -119,7 +120,7 @@ export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
     hadLocalWork,
     onStatus: (s) => boardSync.set(s),
     local: {
-      snapshot: () => getSnapshot(editor.store).document as unknown as Snapshot,
+      snapshot: () => withoutUnusedImages(getSnapshot(editor.store).document as unknown as Snapshot),
       load: (snapshot) => {
         const page = editor.getCurrentPageId();
         // Not an edit made here: keep it out of undo, so Cmd+Z never reverts another
