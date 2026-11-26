@@ -14,7 +14,7 @@ node /Users/yingcong/Code/tools/pairedcc/packages/canvas/node_modules/tsx/dist/c
 
 Set `PAIRED_SESSION` to target a particular tab. Its ID persists across reloads in that tab's session storage. `canvas_sessions` lists connections. If several are open, requests without a session ID fail rather than selecting a canvas arbitrarily.
 
-Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_asks`, `canvas_ask_status`, `canvas_answer`, `canvas_feedback`, `canvas_reply`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
+Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_asks`, `canvas_ask_status`, `canvas_answer`, `canvas_import`, `canvas_feedback`, `canvas_reply`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
 
 Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
 
@@ -67,6 +67,26 @@ An ask carries everything the human sees as its context, and nothing else needs 
 Asks are also items in the feedback queue (`ask` holds the state), so nothing is lost if no agent was waiting. Keep answers to one step: the human does the thinking and judges each answer before asking again. See `docs/canvas/principles.md`.
 
 On paired.cc the three operations work over MCP, but MCP clients have no wait endpoint and are not shown as listening; read `canvas_asks` when the human tells you they asked. The one exception is the site's resident agent, described in the README: it holds a server secret, long-polls `POST /api/canvas/asks/wait` and may only call `ask_status` and `answer`, and only for accounts on the server's allowlist. Those accounts see whether it is listening; every other account sees that no agent is listening for it.
+
+### Importing source material
+
+`import` (`canvas_import`) brings a table or document onto the board as something the human can think with, in one undoable step. It is the same importer that runs when the human pastes or drops a file; the rules are in `docs/canvas/import.md`.
+
+```json
+{ "op": "import", "input": { "content": "No.,Topic,Objection,Severity\n1,Fleet cost,\"Three answers give three totals...\",Critical\n", "format": "csv", "name": "review.csv" } }
+```
+
+| Field | Meaning |
+|---|---|
+| `content` | The text itself, up to 2 MB: CSV, TSV, an HTML table, Markdown, a JSON array of objects, or prose |
+| `format` | `auto` (default), `csv`, `tsv`, `html`, `markdown`, `json`, `text`. Name it for CSV with fewer than three columns |
+| `name` | Where it came from; recorded on every object and shown to the human. Defaults to "from <your name>" |
+| `as` | `auto` (default): rows of prose become record cards, grids of numbers stay one table. `cards` or `table` forces either |
+| `focus` | Move the view to the first records (default true) |
+
+The result has `kind` (`records`, `table` or `prose`), a `summary` line, `importId` and, for records and sections, `objects` in reading order (`id`, `name`, `row`). A record is a group: a title card and one card per long column. Imported objects carry `meta.source` (`importId`, `from`, `at`, `kind`, and `row`, `column`, `values` where they apply); a record's `values` holds every non-empty cell of its row by column name, so one `get` on the group id gives the whole row. Columns left empty for a verdict are listed in `verdictColumns` and not drawn: the human's verdict is a pick, a cross or a comment, which you read with `feedback`. Do not set them yourself.
+
+When the human asks about a record, the ask's `targets` are the record's cards, each with `text` as `Column name: text` and `author` as `Imported source (<from>, row <n>)`.
 
 ### The feedback queue
 
@@ -190,6 +210,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `asks` | Optional `state`; lists the human's asks with their context |
 | `ask_status` | Ask `id`, `state` (working, failed, waiting), optional `note`, `error` |
 | `answer` | Ask `id` and either `text` or 2 to 4 `alternatives`; optional `read`, `question` |
+| `import` | `content`, optional `format`, `name`, `as`, `focus`; lays a table or document out as source material |
 | `remove` | `id`, `expectedRevision`; locked objects cannot be removed |
 | `select` | `ids` |
 | `focus` | Optional `ids`; fits the selected objects or current page |

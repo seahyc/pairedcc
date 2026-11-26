@@ -28,6 +28,7 @@ import {
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
+import { importForAgent } from "./import-board";
 
 const cardInput = z.object({
   x: z.number().finite(),
@@ -308,7 +309,13 @@ export function createComment(editor: Editor, value: { targetIds?: string[]; x?:
   if (targets.length) {
     const boxes = targets.flatMap((t) => editor.getShapePageBounds(t) ?? []);
     if (!boxes.length) throw new Error("Target must have bounds");
-    const right = Math.max(...boxes.map((b) => b.maxX)), top = Math.min(...boxes.map((b) => b.y));
+    // A card inside a group (an imported record) is commented on from beside the whole group, level with the card.
+    const outer = (t: TLShape): TLShape => {
+      const parent = editor.getShape(t.parentId);
+      return parent?.type === "group" ? outer(parent) : t;
+    };
+    const around = targets.flatMap((t) => editor.getShapePageBounds(outer(t)) ?? []);
+    const right = Math.max(...boxes.map((b) => b.maxX), ...around.map((b) => b.maxX)), top = Math.min(...boxes.map((b) => b.y));
     const spot = freeSpot(editor, { x: right + 56, y: top, w: HUMAN_CARD_W, h: 72 }, new Set(targets.map((t) => t.id)));
     x = spot.x;
     y = spot.y;
@@ -544,6 +551,8 @@ export async function executeCommand(
       return setAskStatus(editor, command.input, actor);
     case "answer":
       return answerAsk(editor, command.input, actor);
+    case "import":
+      return importForAgent(editor, command.input, actor);
     case "remove": {
       const input = z
           .object({
