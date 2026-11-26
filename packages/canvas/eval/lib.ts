@@ -1,5 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -43,8 +45,11 @@ export type DevServer = { base: string; stop(): void };
 /** Start the canvas dev server (with the local relay) on its own port, or reuse `EVAL_URL`. */
 export async function startServer(port = Number(process.env.EVAL_PORT ?? 5191)): Promise<DevServer> {
   if (process.env.EVAL_URL) return { base: process.env.EVAL_URL.replace(/\/$/, ""), stop() {} };
+  // Each run gets an empty development board store, so saved boards never leak between runs.
+  const boards = mkdtempSync(join(tmpdir(), "paired-eval-boards-"));
   const child: ChildProcess = spawn(process.execPath, [`${packageDir}/node_modules/vite/bin/vite.js`, "--port", String(port), "--strictPort"], {
     cwd: packageDir,
+    env: { ...process.env, PAIRED_BOARDS_DIR: boards },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let log = "";
