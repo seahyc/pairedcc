@@ -221,7 +221,7 @@ task by which measure is furthest from target, not by backlog order.
     and replies attached to it by the same amount (not those also being moved, not ones about
     several objects), as one undo step, tested, with before/after screenshots.
 
-50. **Stale checks on shared inputs stay linear.** (From an automated review of #11, verified by
+50. (PR #71 open, awaiting review.) **Stale checks on shared inputs stay linear.** (From an automated review of #11, verified by
     reading `staleChain`.) A shared upstream input is walked once per path: notes built on notes in
     rounds make the board's stale badges and `read` grow exponentially (millions of visits after
     20 rounds). Done when staleness is computed once per object per pass, `read` reports repeated
@@ -340,7 +340,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 52. Stale flags never spoil a hidden answer | claude/sprint-stale-hidden | 2026-11-26T12:00Z
-50. Stale checks on shared inputs stay linear | claude/sprint-stale-linear | 2026-11-26T12:02Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
@@ -527,3 +526,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:59Z | build-B | 42 review fixes, 41 review fix | #59 #56 | #59: second-reload, in-flight-save and connecting-edit gaps fixed with failing-first tests, merged with #39; #56: the Ask loop runs on its own dev server so a resident agent never gets the fixture asks |
 | 2026-11-26T12:02Z | build-B | 46 Answer lands on its ask's page | #69 | Answer placed on the ask's page with a toast where the person is; real tab 2/7 before, 7/7 after; first screen unchanged; scorecard unchanged apart from 10k pan noise |
 | 2026-11-26T12:08Z | build-B | 45 Board sync gap (e) | #70 | Edits to existing objects made while the account's board loads are kept, field by field (reproduced with a delayed GET in two browsers); derived fields and welcome boards never carried |
+| 2026-11-26T12:05Z | build-A | 50 Stale checks stay linear | #71 | Memoised per object, repeated causes by reference; 16-round read 1772 ms/28 MB → 8 ms/93 KB, 18 rounds no longer hangs; 3 failing-first tests; scorecard unchanged |
