@@ -310,7 +310,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     sibling options with their marks, the resident agent's prompt says to build on picks and not
     offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
 
-45. ((a) to (c): PR #66 open, awaiting review; (b) and (c) reproduced and fixed, (a) recorded as a decision. (d) and (e) open.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
+45. ((a) to (c): PR #66 open, awaiting review; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): PR #70 open, awaiting review. (d) open.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
     failing test first, then a fix or a recorded decision: (a) after a board is deleted and
     recreated under the same ID, a save or delete holding the old revision number is accepted
     (revisions restart at 1); (b) PostgreSQL `JSONB` rejects a snapshot holding an unpaired UTF-16
@@ -341,7 +341,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 52. Stale flags never spoil a hidden answer | claude/sprint-stale-hidden | 2026-11-26T12:00Z
 50. Stale checks on shared inputs stay linear | claude/sprint-stale-linear | 2026-11-26T12:02Z
-45. Board sync gap (e): edits while the account's board loads | claude/sprint-load-edits | 2026-11-26T11:59Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
@@ -527,3 +526,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:58Z | build-A | 51 CSV keeps what the file says | #68 | Long IDs stay text, quoted-empty rows kept, non-UTF-8 refused with a fix; 5 failing-first tests, 3 mutations each fail; browser check 5/5; scorecard unchanged |
 | 2026-11-26T11:59Z | build-B | 42 review fixes, 41 review fix | #59 #56 | #59: second-reload, in-flight-save and connecting-edit gaps fixed with failing-first tests, merged with #39; #56: the Ask loop runs on its own dev server so a resident agent never gets the fixture asks |
 | 2026-11-26T12:02Z | build-B | 46 Answer lands on its ask's page | #69 | Answer placed on the ask's page with a toast where the person is; real tab 2/7 before, 7/7 after; first screen unchanged; scorecard unchanged apart from 10k pan noise |
+| 2026-11-26T12:08Z | build-B | 45 Board sync gap (e) | #70 | Edits to existing objects made while the account's board loads are kept, field by field (reproduced with a delayed GET in two browsers); derived fields and welcome boards never carried |
