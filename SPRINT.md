@@ -286,7 +286,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     when a scripted check restores, reloads at once and still sees the restored board, for example
     by recording in the memo what content was synced and re-reading the account when it differs.
 
-44. **Asks carry the person's picks and cross-outs.** `docs/canvas/principles.md`, finding 6
+44. (PR #64 open, awaiting review.) **Asks carry the person's picks and cross-outs.** `docs/canvas/principles.md`, finding 6
     (comparing beats describing): "picking one does not carry it forward." An ask's context lists
     the selected objects and the exchange behind them, but not which options the person picked (P)
     or crossed out (X), although the board shows both; an agent asked to "take this further" about
@@ -306,9 +306,18 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     made while the account's board is loading are replaced (only objects created in that window are
     carried over).
 
+45. **An ask about a frame is about what it holds.** `docs/canvas/principles.md`, finding 3
+    (spatial thinking comes first: inside) and finding 2 (moving things is thinking). Selecting a
+    frame and asking gives the agent only "(Pricing, no text)": an ask's `frame` field is the
+    frame the selection sits in, so a selected frame's own contents are never sent, though the
+    ask outlines the frame as its context. Done when a selected frame target carries the objects
+    inside it (nested frames included, reading order, capped, with marks and a count of what was
+    left out), the resident prompt lists them under the frame, documented, unit-tested and checked
+    in a real tab.
+
 ## Claims
 45. Board sync gaps (a) to (c) | claude/sprint-sync-gaps | 2026-11-26T11:49Z
-44. Asks carry picks and cross-outs | claude/sprint-ask-marks | 2026-11-26T11:55Z
+45. Ask about a frame gives its contents | claude/sprint-ask-frame | 2026-11-26T11:52Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
@@ -343,6 +352,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B, item 44) An ask gives the person's marks on every object it hands over, and an ask about one option also gives that answer's other options (each object once). The resident prompt tells the model to build on picks and not re-offer crossed-out ideas. Marks are not a filter: crossed-out objects are still sent, labelled, because the board still shows them.
 - (build-A, item 35) Every connector made by `connect` (agent connections, annotations, feedback) now re-picks facing sides when an end moves, not only annotations; connectors given explicit anchors (converge) and arrows the person draws are left alone. #31 and #48 both touch `connect`; whichever merges second rebases. Claim 36 (comments move with their target, `claude/sprint-follow`) is next to #48: #48 re-picks arrow sides when either end moves, it does not move the comment.
 - (review, #26) `canvas_get`'s prototype fields (relationships, source, transformation) are not behind a flag; they are read-only and add nothing to the board.
 - (build-A, item 5) The person's synthesis card starts empty so the conclusion is theirs (augmentation principle); alternative: prefill an agent draft to edit. build-A had built converge in parallel before seeing #27; rather than open a competing PR it rebuilt its additions on #27 as #31.
@@ -477,3 +487,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:46Z | build-A | 35 follow-up | #48 | Bot findings fixed: undo after re-route, frame moves, copied connectors; merged base; scorecard all pass. Filed item 45 from bot review of merged #12/#15 |
 | 2026-11-26T11:45Z | build-B | 42 Restored board survives an immediate reload | #59 | Memo records a content hash; restore + reload at 0 ms keeps the restored board (lost before); acceptance, persistence, safety unchanged |
 | 2026-11-26T11:55Z | review | Review #38 #39 | #38 #39 | Both merged (squash) after merging in the integration branch; #38 reproduced at 390 px after a 1440 px save; #39 driven with one tab and two; scorecard on e53322f: five rows pass, 10k pan flagged at 77.9 ms and re-measured at 35 ms on the same commit |
+| 2026-11-26T11:52Z | build-B | 44 Asks carry picks and cross-outs | #64 | Targets, frame objects and history report `mark`; sibling options given; real tab 5/8 before, 8/8 after; scorecard unchanged (10k pan noise seen on the old code too) |
