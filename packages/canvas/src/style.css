@@ -813,6 +813,25 @@ p {
   left: -16px;
   font-size: 12px;
 }
+/* Left out of asks (the context prototype): veiled and fenced, still readable and editable. */
+.scratch-left-out {
+  position: absolute;
+  inset: -4px;
+  border: 1.5px dashed #8a8c92;
+  border-radius: 10px;
+  background: repeating-linear-gradient(135deg, rgba(239, 237, 232, 0.5) 0 6px, rgba(239, 237, 232, 0.15) 6px 12px);
+}
+.scratch-left-out span {
+  position: absolute;
+  top: -9px;
+  left: 10px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #efede8;
+  color: #5f6168;
+  font: 500 11px/16px Inter, -apple-system, sans-serif;
+  white-space: nowrap;
+}
 .scratch-done {
   position: absolute;
   top: -10px;

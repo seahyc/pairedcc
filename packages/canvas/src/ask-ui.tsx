@@ -7,6 +7,8 @@ import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
+import { isLeftOut, leftOutLabel, toggleLeftOut } from "./leave-out";
+import { prototypeEnabled } from "./prototype-flags";
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
 const short = (text: string, max = 28) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
@@ -45,7 +47,9 @@ export function AskLayer() {
               return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
             })
           : [];
-        return [{ id: s.id, ask, x: b.x, y: b.maxY, given: givenLabel(editor, ask.contextIds), outlines }];
+        // What the person kept back from this ask, as an agent reading it now would be given it.
+        const kept = leftOutLabel(describeAsk(editor, s).leftOut ?? 0);
+        return [{ id: s.id, ask, x: b.x, y: b.maxY, given: `${givenLabel(editor, ask.contextIds)}${kept ? ` · ${kept}` : ""}`, outlines }];
       });
     },
     [editor],
@@ -121,6 +125,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         editing: Boolean(editor.getEditingShapeId()),
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
+        leftOut: shapes.every((s) => isLeftOut(s.meta)),
         text: only ? textOf(only) : "",
         blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
         // An imported record keeps its own starters; anything else gets ones that fit the selection.
@@ -256,6 +261,18 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       <button onClick={onComment} title="Comment on it (C)">
         Comment <kbd>C</kbd>
       </button>
+      {prototypeEnabled("context") && (
+        <button
+          className={state.leftOut ? "on" : ""}
+          onClick={() => {
+            toggleLeftOut(editor, editor.getSelectedShapes());
+            editor.focus();
+          }}
+          title={state.leftOut ? "Bring back: asks about things nearby may give this to the agent again (L)" : "Leave out: asks about things nearby will not give this to the agent (L)"}
+        >
+          {state.leftOut ? "Bring back" : "Leave out"} <kbd>L</kbd>
+        </button>
+      )}
       {state.cites && (
         <button onClick={bringSources} title={`Bring the sections this record cites (${state.cites.split(" ").join(", ")}) beside it, linked by arrows (one undo)`}>
           Show {state.cites.split(" ").join(", ")}

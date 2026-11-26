@@ -44,7 +44,9 @@ Sources: [the Solveit method](https://www.answer.ai/posts/2025-10-01-solveit-ful
 | AI output is editable and is part of the context | "you can even edit past AI responses"; "The AI always sees the current state of your dialog, not the edit history" | An answer is an ordinary card. Edit it and ask about it: the agent is sent its current text and the exchange that led to it. |
 | The context is visible and curated by the person | "the AI should be able to see everything exactly as the human does"; hidden messages "are excluded from AI context" | The agent is given exactly the selection, the frame it sits in and the thread behind it. The ask says what was given and outlines it. The agent runs with no tools, files or memory. |
 
-Not borrowed yet: pinning or hiding objects from context, token counts, learning/concise/standard modes, ghost text, running code beside notes, undo per message.
+Hiding objects from context is a prototype (`?prototype=context`, item 67): **Leave out** (L) on the selection bar keeps an object out of what asks give the agent, the board marks it "left out of asks", and the ask says how many were withheld; an object the person selects is still given.
+
+Not borrowed yet: pinning objects into context, token counts, learning/concise/standard modes, ghost text, running code beside notes, undo per message.
 
 ## Not done in this pass
 

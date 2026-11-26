@@ -6,6 +6,7 @@ import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
 import { answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
+import { keepForAgent } from "./leave-out";
 
 // An ask is the human's question to an agent, attached to what they selected. It is a
 // pink card on the board (so it is in the feedback queue like any comment) that carries
@@ -49,7 +50,9 @@ export function createAsk(editor: Editor, value: { targetIds: string[]; question
   if (!targets.length) throw new Error("Select what you mean first, then ask");
   const question = value.question.trim();
   if (!question) throw new Error("Type a question first");
-  const frame = frameOf(editor, targets[0]);
+  // A frame the person left out is not part of the context (unless it is itself selected).
+  const around = frameOf(editor, targets[0]);
+  const frame = around && keepForAgent([around], targets.map((t) => t.id)).kept.length ? around : undefined;
   const ask: AskMeta = {
     state: "waiting",
     attempt: 0,
@@ -84,30 +87,32 @@ const said = (s: TLShape, max: number): HistoryEntry => {
   return { id: s.id, who: authorOf(s), said: clip(textOf(s), max), ...(mark ? { mark } : {}) };
 };
 /** A grouped record is given as its parts: the title line, then each field in column order. */
-const parts = (editor: Editor, s: TLShape): TLShape[] => {
+const parts = (editor: Editor, s: TLShape, keep: Keep = (x) => x): TLShape[] => {
   if (s.type !== "group") return [s];
-  const children = editor.getSortedChildIdsForParent(s.id).flatMap((id) => editor.getShape(id) ?? []).filter((c) => c.type !== "arrow");
-  return children.length ? children.flatMap((c) => parts(editor, c)) : [s];
+  const children = keep(editor.getSortedChildIdsForParent(s.id).flatMap((id) => editor.getShape(id) ?? []).filter((c) => c.type !== "arrow"));
+  return children.length ? children.flatMap((c) => parts(editor, c, keep)) : [s];
 };
+/** Drops what the person left out of asks (see leave-out.ts), noting what was withheld. */
+type Keep = (shapes: TLShape[]) => TLShape[];
 
 /** The exchange that led here, oldest first, when the human asks about an agent's answer. */
-function thread(editor: Editor, shape: TLShape, depth = 0, seen = new Set<string>()): HistoryEntry[] {
+function thread(editor: Editor, shape: TLShape, keep: Keep, depth = 0, seen = new Set<string>()): HistoryEntry[] {
   if (depth > 4 || seen.has(shape.id)) return [];
   seen.add(shape.id);
   const parent = typeof shape.meta.replyTo === "string" ? editor.getShape(shape.meta.replyTo as TLShapeId) : undefined;
   if (!parent || !askOf(parent)) return [];
   const about = targetsOf(parent).flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
-  const earlier = about.flatMap((t) => thread(editor, t, depth + 1, seen));
+  const earlier = about.flatMap((t) => thread(editor, t, keep, depth + 1, seen));
   // The other answers to that ask, so an agent asked about option A knows what B and C were
   // and which of them the person crossed out.
-  const siblings = editor.store
+  const siblings = keep(editor.store
     .allRecords()
     .filter((r): r is TLShape => r.typeName === "shape" && (r as TLShape).meta.replyTo === parent.id && r.id !== shape.id && !askOf(r as TLShape))
-    .sort((a, b) => a.y - b.y || a.x - b.x);
+    .sort((a, b) => a.y - b.y || a.x - b.x));
   return [
     ...earlier,
-    ...about.map((t) => said(t, 600)),
-    { who: `${HUMAN} asked`, said: clip(textOf(parent), 600) },
+    ...keep(about).map((t) => said(t, 600)),
+    ...(keep([parent]).length ? [{ who: `${HUMAN} asked`, said: clip(textOf(parent), 600) }] : []),
     ...siblings.map((s) => said(s, 600)),
   ];
 }
@@ -118,8 +123,16 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   if (!ask) throw new Error("Not an ask");
   const page = editor.getPage(editor.getAncestorPageId(shape)!);
   const selected = targetsOf(shape).flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
-  const targets = selected.flatMap((s) => parts(editor, s));
-  const frame = selected[0] ? frameOf(editor, selected[0]) : undefined;
+  // What the person selected is given even if left out; around it, left-out objects are not.
+  const withheld = new Set<string>();
+  const keep: Keep = (shapes) => {
+    const result = keepForAgent(shapes, selected.map((s) => s.id));
+    for (const id of result.withheld) withheld.add(id);
+    return result.kept;
+  };
+  const targets = selected.flatMap((s) => parts(editor, s, keep));
+  const around = selected[0] ? frameOf(editor, selected[0]) : undefined;
+  const frame = around && keep([around]).length ? around : undefined;
   const skip = new Set<string>([shape.id, ...targets.map((t) => t.id)]);
   return {
     id: shape.id,
@@ -134,21 +147,25 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     pageId: page?.id,
     pageName: page?.name,
     targets: targets.map((t) => given(t)),
-    history: mergeHistory(targets.flatMap((t) => thread(editor, t)), targets.map((t) => t.id)),
+    history: mergeHistory(targets.flatMap((t) => thread(editor, t, keep)), targets.map((t) => t.id)),
     ...(frame
       ? {
           frame: {
             id: frame.id,
             name: shapeName(frame),
-            objects: editor
-              .getSortedChildIdsForParent(frame.id)
-              .flatMap((id) => editor.getShape(id) ?? [])
-              .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && textOf(s))
+            objects: keep(
+              editor
+                .getSortedChildIdsForParent(frame.id)
+                .flatMap((id) => editor.getShape(id) ?? [])
+                .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && textOf(s)),
+            )
               .slice(0, 12)
               .map((s) => given(s, 400)),
           },
         }
       : {}),
+    // Counted once the parts above are built: how many objects the person kept out of this ask.
+    ...(withheld.size ? { leftOut: withheld.size } : {}),
   };
 }
 export type AskView = ReturnType<typeof describeAsk>;
