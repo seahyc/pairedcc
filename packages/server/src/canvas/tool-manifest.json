@@ -1433,7 +1433,7 @@
     },
     {
       "name": "canvas_runs",
-      "description": "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, and the object IDs each one created, updated and removed. Use a runId with canvas_undo_run.",
+      "description": "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, the pages each touched, and the object IDs each one created, updated and removed. Pass page: \"current\" for only the open page. Use a runId with canvas_undo_run.",
       "op": "runs",
       "output": "json",
       "inputSchema": {
@@ -1449,6 +1449,15 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 100
+          },
+          "page": {
+            "default": "all",
+            "description": "current: only runs that changed something on the page open in the tab. all (default): runs on every page.",
+            "type": "string",
+            "enum": [
+              "current",
+              "all"
+            ]
           }
         }
       }

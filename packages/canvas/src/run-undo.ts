@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { isDerivedField } from "./revision";
 
-export const runsInput = z.object({ limit: z.number().int().min(1).max(100).default(20) });
+export const runsInput = z.object({
+  limit: z.number().int().min(1).max(100).default(20),
+  page: z.enum(["current", "all"]).default("all").describe("current: only runs that changed something on the page open in the tab. all (default): runs on every page."),
+});
 export const undoRunInput = z.object({ runId: z.string().min(1).max(100) });
 
 // Selective undo for one agent run. A run's store diff is reversed field by field,
