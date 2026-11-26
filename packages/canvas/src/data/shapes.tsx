@@ -15,6 +15,7 @@ import {
 } from "tldraw";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { revision, shapeName } from "../operations";
+import { flagLayout, SELECTION_BAR_ROOM } from "./flag-layout";
 import {
   aggregate,
   chartStateSchema,
@@ -292,6 +293,7 @@ export function DataLayer() {
     "stale derived objects",
     () => {
       const selected = new Set<string>(editor.getSelectedShapeIds());
+      const viewport = editor.getViewportPageBounds(), zoom = editor.getZoomLevel();
       return editor.getCurrentPageShapes().flatMap((s) => {
         if (s.type === "chart" || editor.isShapeHidden(s)) return [];
         const stale = staleness(editor, s);
@@ -302,7 +304,8 @@ export function DataLayer() {
           // A result still hidden behind a learning prompt is not named before the person answers.
           return shape && !editor.isShapeHidden(shape) ? shapeName(shape) : undefined;
         };
-        return [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, name: shapeName(s), reason: staleReason(stale, nameOf), open: selected.has(s.id) }];
+        const layout = { ...flagLayout(b, viewport, zoom), zoom };
+        return [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, name: shapeName(s), reason: staleReason(stale, nameOf), open: selected.has(s.id), ...layout }];
       });
     },
     [editor],
@@ -314,14 +317,22 @@ export function DataLayer() {
       {items.map((i) => (
         <span
           key={i.id}
-          className={i.open ? "stale-flag open" : "stale-flag"}
+          className={["stale-flag", i.open && "open", i.growDown && "grow-down"].filter(Boolean).join(" ")}
           data-shape-id={i.id}
           role="note"
-          tabIndex={0}
+          // Only flags on screen are Tab stops: focus does not move the camera.
+          tabIndex={i.inView ? 0 : -1}
           aria-label={`${i.name} is out of date: ${i.reason}`}
           title={`Out of date: ${i.reason}`}
-          // Selected, the whole reason opens under the object, clear of the selection bar above it.
-          style={{ transform: i.open ? `translate(${i.x}px, ${i.y + i.h + 8}px)` : `translate(${i.x + i.w}px, ${i.y - 12}px) translateX(-100%)` }}
+          // Selected, the whole reason opens under the object, clear of the selection bar above it,
+          // or above the object when the bottom of the view is too close.
+          style={{
+            transform: !i.open
+              ? `translate(${i.x + i.w}px, ${i.y - 12}px) translateX(-100%)`
+              : i.openBelow
+                ? `translate(${i.x}px, ${i.y + i.h + 8}px)`
+                : `translate(${i.x}px, ${i.y - (8 + SELECTION_BAR_ROOM) / i.zoom}px) translateY(-100%)`,
+          }}
         >
           stale · {i.reason}
         </span>
