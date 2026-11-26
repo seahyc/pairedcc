@@ -1,4 +1,4 @@
-import { byText, gap, task } from "../task-kit";
+import { answersTop, gap, task } from "../task-kit";
 export default task({
   id: "14-read-chart",
   prompt: "Which region has the highest bar in the chart, as the person has filtered it right now? Write the region's name in a note next to the chart.",
@@ -12,9 +12,8 @@ export default task({
     if (!bars.length) return "chart has no bars";
     const top = bars.reduce((a: any, b: any) => (b.value > a.value ? b : a));
     const others = bars.filter((b: any) => b.key !== top.key).map((b: any) => b.key);
-    const note = read.objects.find((o: any) => o.id !== ch.id && o.type !== "dataset" && new RegExp(`\\b${top.key}\\b`, "i").test(o.text ?? "") && !others.some((k: string) => new RegExp(`\\b${k}\\b`, "i").test(o.text ?? "")) && gap(o, ch) <= 300);
-    void byText;
-    return note ? true : `no note naming only ${top.key} within 300 px of the chart`;
+    const note = read.objects.find((o: any) => o.id !== ch.id && o.type !== "dataset" && answersTop(o.text ?? "", top.key, others) && gap(o, ch) <= 300);
+    return note ? true : `no note within 300 px of the chart that names ${top.key} as highest`;
   },
   async solution({ call, refs }) {
     const ch = await call("canvas_get", { id: refs.ch.id });

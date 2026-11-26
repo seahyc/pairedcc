@@ -13,6 +13,7 @@ import {
   type Editor,
   type TLShape,
   type TLShapeId,
+  Box,
   type TLComponents,
 } from "tldraw";
 import {
@@ -77,10 +78,10 @@ import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
-import { AskLayer, SelectionBar } from "./ask-ui";
+import { AskLayer, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
-import { elsewhereNotice } from "./ask-rules";
+import { elsewhereNotice, elsewhereShow, noticeMs } from "./ask-rules";
 import { askOf } from "./asks";
 import { landedAnswers } from "./ask-rules";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
@@ -104,6 +105,7 @@ import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followers } from "./follow";
 import { firstTabStop, keyboardCardSpot } from "./keyboard-nav";
+import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
@@ -275,7 +277,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
     title: "Think",
     rows: [
       ["Write a thought", "N, then click or Enter; or double-click the board"],
-      ["Ask your agent about the selection", keys("⌘ ↵")],
+      ["Ask your agent about the selection, or send a failed ask again", keys("⌘ ↵")],
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
@@ -283,6 +285,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Open or close the feedback queue", "Shift C"],
       ["Bring in a table or document as cards", keys("⌘ V, or drop a file")],
       ["Next / previous imported record", "J / K"],
+      ["Go to an answer that landed on another page, while its notice is up", "G"],
       ["Finish typing", "Esc"],
     ],
   },
@@ -312,10 +315,21 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
   },
 ];
 
+/** A dialog's section that takes focus, keeps Tab inside, closes on Escape and gives focus back. */
+function FocusSection({ onClose, children, ...rest }: { onClose: () => void } & React.HTMLAttributes<HTMLElement>) {
+  const focus = useDialogFocus<HTMLElement>(onClose);
+  return (
+    <section {...rest} {...focus}>
+      {children}
+    </section>
+  );
+}
+
 function ShortcutHelp({ onClose }: { onClose: () => void }) {
+  const focus = useDialogFocus<HTMLElement>(onClose);
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <section className="agent-dialog shortcut-dialog" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
+      <section {...focus} className="agent-dialog shortcut-dialog" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-heading">
           <Keyboard size={18} />
           <h2>Keyboard shortcuts</h2>
@@ -353,6 +367,10 @@ function Shell() {
   const setRightTab = setPanel;
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null),
+    moreButton = useRef<HTMLButtonElement>(null);
+  const mainMenu = useMenuKeys<HTMLDivElement>(menuOpen, () => setMenuOpen(false), menuButton),
+    moreMenu = useMenuKeys<HTMLDivElement>(moreOpen, () => setMoreOpen(false), moreButton);
   const [asking, setAsking] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -397,8 +415,15 @@ function Shell() {
     redo = useValue("can redo", () => editor.getCanRedo(), [editor]);
   const [leftOpen, setLeftOpen] = useState(false),
     [agentOpen, setAgentOpen] = useState(false),
-    [notice, setNotice] = useState(""),
+    [notice, setNoticeText] = useState(""),
+    // The ask a notice is about when it was answered (or failed) on another page: Show goes there.
+    [noticeShow, setNoticeShow] = useState<string | null>(null),
     [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Any other notice is about something else, so it drops the Show from the one before.
+  const setNotice = (text: string) => {
+    setNoticeText(text);
+    setNoticeShow(null);
+  };
   const importRef = useRef<HTMLInputElement>(null),
     imageRef = useRef<HTMLInputElement>(null);
   const shape = selected.length === 1 ? selected[0] : undefined;
@@ -520,6 +545,13 @@ function Shell() {
         return;
       }
       if (event.shiftKey) return;
+      // G goes to an ask answered on another page, while the notice about it is up.
+      if (key === "g" && showing.current) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) showRef.current();
+        return;
+      }
       // L leaves the selection out of asks (the context prototype). Capture first so tldraw's own L (line) doesn't fire.
       if (key === "l" && prototypeEnabled("context")) {
         const chosen = editor.getSelectedShapes();
@@ -676,6 +708,12 @@ function Shell() {
       setNotice("Select what you mean first, then ask");
       return;
     }
+    // A failed or unheard ask is sent again rather than asked about.
+    const retry = editing ? undefined : selectedRetry(editor);
+    if (retry) {
+      resendAsk(editor, retry.id);
+      return;
+    }
     setAsking(true);
   }
   /** C: comment on the selection, or pin a comment where the pointer is, and start typing. */
@@ -716,7 +754,10 @@ function Shell() {
               question: "richText" in shape.props ? richTextPlain(shape.props.richText).trim() : "",
               pageName: (pageId && editor.getPage(pageId)?.name) || "another page",
             });
-            if (said) setNotice(said);
+            if (said) {
+              setNoticeText(said);
+              setNoticeShow(shape.id);
+            }
           }
         },
         { scope: "document" },
@@ -725,9 +766,34 @@ function Shell() {
   );
   useEffect(() => {
     if (!notice) return;
-    const t = setTimeout(() => setNotice(""), 3500);
+    const t = setTimeout(() => setNotice(""), noticeMs(Boolean(noticeShow)));
     return () => clearTimeout(t);
-  }, [notice]);
+  }, [notice, noticeShow]);
+  /** Show: open the ask's page, select its answer (or the failed ask) and bring it into view. */
+  function showElsewhere(askId: string) {
+    setNotice("");
+    const ask = editor.getShape(askId as TLShapeId), pageId = ask && editor.getAncestorPageId(ask);
+    if (!ask || !pageId) {
+      setNotice("That ask is no longer on the board");
+      return;
+    }
+    editor.setCurrentPage(pageId);
+    const onPage = [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []);
+    const ids = elsewhereShow(askOf(ask)?.state ?? "", ask.id, onPage.map((s) => ({ id: s.id, replyTo: s.meta.replyTo, hidden: editor.isShapeHidden(s) })));
+    editor.setCurrentTool("select");
+    editor.select(...(ids as TLShapeId[]));
+    // Centre the ask and what answered it together, so the answer is seen with its question;
+    // zoom out only when they do not fit the window at this zoom.
+    const box = Box.Common([ask.id, ...ids].flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []));
+    const view = editor.getViewportPageBounds();
+    if (box.w > view.w * 0.8 || box.h > view.h * 0.7) editor.zoomToBounds(box, { inset: 80, animation: { duration: 180 } });
+    else editor.centerOnPoint(box.center, { animation: { duration: 180 } });
+    editor.focus();
+  }
+  const showRef = useRef<() => void>(() => {});
+  showRef.current = () => noticeShow && showElsewhere(noticeShow);
+  const showing = useRef(false);
+  showing.current = Boolean(notice && noticeShow);
   function chooseTool(id: string) {
     // Scratchbook defaults: the human writes in pink ink and handwriting.
     const scratch = id === "draw" || id === "note" || id === "arrow";
@@ -944,12 +1010,12 @@ function Shell() {
           <SaveState />
           {openCount > 0 && <MarksCounter onOpen={() => setPanel("feedback")} />}
           <AgentChip onOpen={() => setAgentOpen(true)} />
-          <button className={`subtle-button menu-button ${menuOpen ? "open" : ""}`} aria-label="Menu" aria-expanded={menuOpen} title="Boards, panels, export" onClick={() => setMenuOpen((open) => !open)}>
+          <button ref={menuButton} className={`subtle-button menu-button ${menuOpen ? "open" : ""}`} aria-label="Menu" aria-haspopup="menu" aria-expanded={menuOpen} title="Boards, panels, export" onClick={() => setMenuOpen((open) => !open)}>
             <Menu size={15} />
           </button>
         </div>
         {menuOpen && (
-          <div className="menu" role="menu" aria-label="Menu">
+          <div ref={mainMenu.ref} onClickCapture={mainMenu.onClickCapture} className="menu" role="menu" aria-label="Menu">
             <button role="menuitem" onClick={addPage}>
               <FilePlus2 size={14} /> New board
             </button>
@@ -1113,12 +1179,12 @@ function Shell() {
           <span>Ask</span>
         </button>
         <div className="tool-divider" />
-        <button type="button" className={`tool-button ${moreOpen || moreTools.some((t) => t.id === currentTool) ? "active" : ""}`} aria-expanded={moreOpen} title="More tools" onClick={() => setMoreOpen((open) => !open)}>
+        <button ref={moreButton} type="button" className={`tool-button ${moreOpen || moreTools.some((t) => t.id === currentTool) ? "active" : ""}`} aria-haspopup="menu" aria-expanded={moreOpen} title="More tools" onClick={() => setMoreOpen((open) => !open)}>
           <Ellipsis size={18} strokeWidth={1.6} />
           <span>More</span>
         </button>
         {moreOpen && (
-          <div className="menu more-menu" role="menu" aria-label="More tools">
+          <div ref={moreMenu.ref} onClickCapture={moreMenu.onClickCapture} className="menu more-menu" role="menu" aria-label="More tools">
             {moreTools.map((t) => (
               <button key={t.id} role="menuitem" className={currentTool === t.id ? "current" : ""} onClick={() => { chooseTool(t.id); setMoreOpen(false); }}>
                 <t.icon size={14} /> {t.name} <kbd>{t.key}</kbd>
@@ -1494,6 +1560,11 @@ function Shell() {
       {notice && (
         <div className="toast" role="status">
           {notice}
+          {noticeShow && (
+            <button type="button" className="toast-action" onClick={() => showRef.current()}>
+              Show{!TOUCH && <kbd>G</kbd>}
+            </button>
+          )}
         </div>
       )}
       {link.mode === "local" && link.state === "disconnected" && (
@@ -1506,7 +1577,8 @@ function Shell() {
       {boardsOpen && historyWhere && <SavedBoardsDialog where={historyWhere} onClose={() => setBoardsOpen(false)} />}
       {agentOpen && (
         <div className="modal-backdrop" onClick={() => setAgentOpen(false)}>
-          <section
+          <FocusSection
+            onClose={() => setAgentOpen(false)}
             className="agent-dialog"
             role="dialog"
             aria-modal="true"
@@ -1543,14 +1615,14 @@ function Shell() {
               open. Access is local to this computer.
             </p>
             </> : <HostedAgentAccess onCopied={setNotice} />}
-          </section>
+          </FocusSection>
         </div>
       )}
     </div>
   );
 }
 import { GeoShapeGeoStyle, PageRecordType, createShapeId, react } from "tldraw";
-import { keys } from "./keys";
+import { TOUCH, keys } from "./keys";
 const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil, BoardImageShapeUtil];
 const TEXT_WRAP = 460;
 // One set of editor options: the page limit, and double-click writes a card rather than plain text.
@@ -1740,9 +1812,23 @@ function App() {
       const untouched = editor.getPages().length === 1 && editor.getCurrentPageShapes().length === 0;
       if (untouched) editor.updatePage({ id: editor.getCurrentPageId(), name: "Board 1", meta: { seeded: 3 } });
       else {
-        const id = PageRecordType.createId();
-        editor.createPage({ id, name: "Thinking", meta: { seeded: 3 } });
+        const working = editor.getCurrentPageId();
+        // A board that was empty when this tab opened and has been worked on since (an agent
+        // acted before the fonts arrived, or the person started writing) keeps that work in
+        // view: the calm board is laid out on its own page without moving there. If the tab's
+        // first page was left empty (an agent made a page of its own), that page takes it.
+        const empty = fresh ? editor.getPages().find((p) => p.id !== working && editor.getSortedChildIdsForParent(p.id).length === 0) : undefined;
+        const id = empty?.id ?? PageRecordType.createId();
+        if (empty) editor.updatePage({ id: empty.id, name: "Board 1", meta: { ...empty.meta, seeded: 3 } });
+        else editor.createPage({ id, name: "Thinking", meta: { seeded: 3 } });
         editor.setCurrentPage(id);
+        if (fresh) {
+          calmSeed(editor);
+          editor.setCurrentPage(working);
+          editor.updateDocumentSettings({ meta: { ...settings.meta, calm: 3 } });
+          editor.clearHistory();
+          return;
+        }
       }
       calmSeed(editor);
       editor.updateDocumentSettings({ meta: { ...settings.meta, calm: 3 } });
@@ -1755,7 +1841,13 @@ function App() {
       // A board laid out on a wider screen can open with nothing in view here.
       bringContentIntoView(editor);
       // Then keep the board saved to the account; a brand-new board holds no work of its own.
-      if (!disposed) stopSync = startBoardSync(editor, !fresh);
+      // A board saved before the calm canvas, loaded from the account, gets the calm board too:
+      // the load replaces what prepare() laid out on this tab's copy.
+      if (!disposed) stopSync = startBoardSync(editor, !fresh, () => {
+        if (disposed) return;
+        prepare();
+        bringContentIntoView(editor);
+      });
     });
     setReady(true);
     return () => {
