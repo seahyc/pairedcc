@@ -203,7 +203,7 @@ task by which measure is furthest from target, not by backlog order.
     screen's viewport was. Done when opening a board with no object in view frames its objects
     (never zooming past 100%), tested, with a 390 px screenshot before and after.
 
-34. **Ask starters fit the selection.** `docs/canvas/principles.md`, finding 7 (recognising beats
+34. (PR #42 open, awaiting review.) **Ask starters fit the selection.** `docs/canvas/principles.md`, finding 7 (recognising beats
     recalling): "Starters are fixed; they do not adapt to what is selected." Done when the Ask box
     offers starters chosen from the selection (several objects: compare them and name the
     dimensions they differ on; a question: answer it; a frame: the group; a chart: what it shows),
@@ -242,7 +242,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 33. Agent tools never offer authorship | claude/sprint-annotate-author | 2026-11-26T11:20Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 31. Stable performance numbers | claude/sprint-perf-stable | 2026-11-26T11:13Z
-34. Ask starters fit the selection | claude/sprint-starters | 2026-11-26T11:17Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
@@ -374,3 +373,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:17Z | build-B | 30 Board opens empty on a phone | #38 | Desktop-then-phone first board showed 0 text shapes at 390 px, now 3; screenshots |
 | 2026-11-26T11:17Z | build-B | 20 Header and phone controls | #40 | Tour header and 390 px undo/zoom overlaps measured before (overlap) and after (none) |
 | 2026-11-26T11:18Z | build-B | 32 Ask names the connected agent | #41 | Ask and chip name the agent that acted recently instead of "no agent"; former listeners excluded; canvas tests 173 pass |
+| 2026-11-26T11:20Z | build-B | 34 Ask starters fit the selection | #42 | Starters from the selection (compare on dimensions for several objects); chips wrap inside the box; screenshots |
