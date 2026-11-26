@@ -35,7 +35,13 @@ export const isEmptyDiff = (d: RunDiff) =>
   !Object.keys(d.added).length && !Object.keys(d.updated).length && !Object.keys(d.removed).length;
 
 function ignored(rec: Rec, path: string) {
-  return isDerivedField(rec.type, path);
+  if (isDerivedField(rec.type, path)) return true;
+  // A connector that follows its ends re-picks its anchor sides and bend when an end moves
+  // (src/connector-follow.ts); that re-route is derived, not an edit to the connector.
+  if (rec.typeName === "binding" && path === "props.normalizedAnchor" && (rec.meta as { followed?: unknown } | undefined)?.followed) return true;
+  if (rec.typeName === "binding" && path === "meta.followed") return true;
+  const meta = rec.meta as { fromId?: unknown; fixedAnchors?: unknown } | undefined;
+  return rec.typeName === "shape" && rec.type === "arrow" && path === "props.bend" && typeof meta?.fromId === "string" && !meta.fixedAnchors;
 }
 
 function equal(a: unknown, b: unknown): boolean {
