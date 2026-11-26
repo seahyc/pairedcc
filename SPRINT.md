@@ -221,12 +221,12 @@ task by which measure is furthest from target, not by backlog order.
     and replies attached to it by the same amount (not those also being moved, not ones about
     several objects), as one undo step, tested, with before/after screenshots.
 
-50. (PR #71 open, awaiting review.) **Stale checks on shared inputs stay linear.** (From an automated review of #11, verified by
+50. (Merged, see Done.) **Stale checks on shared inputs stay linear.** (From an automated review of #11, verified by
     reading `staleChain`.) A shared upstream input is walked once per path: notes built on notes in
     rounds make the board's stale badges and `read` grow exponentially (millions of visits after
     20 rounds). Done when staleness is computed once per object per pass, `read` reports repeated
     causes by reference or bounded, and a test with 20 rounds of shared inputs runs fast.
-51. (PR #68 open, awaiting review.) **CSV import keeps what the file says.** (From an automated review of #18, verified.) (a) A
+51. (Merged, see Done.) **CSV import keeps what the file says.** (From an automated review of #18, verified.) (a) A
     numeric column with integers beyond 2^53 (long IDs) is rounded, merging distinct IDs: keep it
     as text. (b) A one-column file drops rows whose value is a quoted empty string. (c) A
     Windows-1252 file imports with replacement characters: decode strictly and say to re-export as
@@ -442,7 +442,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     move records and sections with `updateShape` before selecting them, so the comments, notes and
     replies attached to them stay where they were. Done when a comment on a moved record or section
     moves with it in the same undo step, checked in a browser.
-71. **The web page reader stays quick on awkward markup.** (Review of #65.) 50,000 unclosed `<li>`
+71. (PR #93 open, awaiting review.) **The web page reader stays quick on awkward markup.** (Review of #65.) 50,000 unclosed `<li>`
     take 4 s and 20,000 unclosed advert `<div>`s 1.2 s; the file limit is 2 MB. Done when a 2 MB
     page of unclosed tags is read, or refused with a plain message, in under a second, with a test.
 72. **A fresh agent-usability attempt on the merged branch.** The 23/24 in the scorecard was
@@ -457,23 +457,44 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     of #21 recorded. Done when an older board gets the calm board once, after the first load from
     the account, without repeating it after a restore, and `verify-calm.mjs` passes 33/33.
 
-74. **Stale flags stay readable at the canvas edge and skip offscreen Tab stops.** (Review of #72,
+74. (PR #94 open, awaiting review.) **Stale flags stay readable at the canvas edge and skip offscreen Tab stops.** (Review of #72,
     confirmed, merged before the fix.) A stale card at the bottom of the view opens its reason
     below the visible canvas; a focused flag near the top grows above it; and a flag panned out of
     view is still a Tab stop with no visible focus. Done when an opened reason stays inside the
     view (flipping above or below as there is room), only flags in view are in the Tab order,
     with a headless check of each case.
 
+75. (PR #95 open, awaiting review.) **The first board never moves the view away from work done in the first seconds.** On a new
+    board, the calm first board waits for fonts (up to 2.5 s). If an agent acts in that window (an
+    agent waiting for the tab to connect), the layout makes a "Thinking" page and switches to it,
+    so the agent's objects are on a page that is no longer open and its next reads miss them;
+    `tools/verify-runs.ts` fails on this branch for that reason. Done when work done before the
+    layout keeps its page in view, the calm board still exists, and `verify-runs.ts` passes, with a
+    scripted check that fails before.
+
+76. **An agent never rewrites the person's own words.** `docs/canvas/principles.md`, finding 2 ("the
+    agent … never moves, edits or rearranges the person's objects") and finding 4 (whose is what is
+    seen): `canvas_update` with the current revision rewrites the text of the person's pink card,
+    which then shows the agent's words in the person's handwriting. Done when an agent's text
+    change to an object the person made is refused with a message saying what to do instead, the
+    tool description and AGENT_API say so, a safety race in the scorecard fails before and passes
+    after, and the person's own edits are unaffected. Moving and deleting the person's objects are
+    recorded as a decision, not changed.
+
 ## Claims
+76. Agent never rewrites the person's words | claude/sprint-human-words | 2026-11-26T13:14Z
+69. The 10k pan figure survives a slow-mode run | claude/sprint-pan-quartile | 2026-11-26T13:14Z
 71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
-71. Web page reader stays quick on awkward markup | claude/sprint-html-linear | 2026-11-26T13:00Z
-74. Stale flags at the canvas edge | claude/sprint-stale-edges | 2026-11-26T12:58Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
-Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- Feedback 8, import and paste (build-A): merged #46 (yc/import-paste brought in, CSV drop stays a dataset under the data flag), #55 (side by side, column slots), #58 (cited sections beside a record), #60 (.xlsx), #65 (web pages), #73 (PDF). Open: #85 (item 62), #89 (item 65), #93 (item 71). The feedback item stays open for the second playtest.
+- 51. CSV keeps what the file says (build-A): PR #68.
+- 50. Stale checks stay linear (build-A): PR #71 (16-round read 1.8 s → 8 ms; 18 rounds no longer hangs).
+- 75. First board never moves the view away (build-A): PR #95 (work done before the calm layout keeps its page; verify-early-agent 4/6 → 6/6; verify-runs fail → pass).
+- 74. Stale flags at the canvas edge (build-B): PR #94 (follow-up to #72's review).
 - 73. Older board gets the calm board with sync on (build-A): PR #91 (layout re-run once after the first load from the account; verify-calm 32/33 → 33/33).
 - 67. The person chooses what an ask leaves out (build-B): PR #90 (`?prototype=context`; verify-leave-out 7 failing before, 17/17 after; first screen unchanged).
 - Reviewed and merged 2026-11-26 by the review lane: #40 to #66, all 27 (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
@@ -518,6 +539,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A) Regression sweep of the browser checks on `claude/sprint-int` at 12:59Z: verify-import 51/51, webpage 9/9, cite 15/15, compare 14/14, csv-faithful 5/5, ask-frame 8/8, ask-marks 8/8, answer-page 11/11, api, mcp, composition, converge, board-sync, data-agent, data-prototype, group and learning all pass; verify-calm 32/33 (fixed by #91) and verify-runs failing (fixed by #95). verify-feedback-mcp needs a hand-made comment first and was not run.
 - (build-A, item 73) A board saved before the calm canvas now gets the calm board right after the first load from the account (the alternative named in the review of #21), because the recorded "on the next reload" no longer happened at all since #59. Offline at start: on the next reload instead.
 - (build-A) `verify-calm.mjs` can run here with a stand-in for the model: `PAIRED_CLAUDE_BIN=<script printing {"result":"…"} after sleep 3> pnpm agent`. A stand-in that answers instantly fails "progress was shown" (no frame sees working).
 - (review, #46 with #42) An imported record keeps its record starters; other selections get starters fitted to them. Alternative: two selected records get the comparison starters.
@@ -622,6 +644,8 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 
 - (build-B, item 67) Leaving objects out of asks is a prototype (`?prototype=context`), because the context contract is proposed. Choices: (1) an object the person selects for an ask is always given, even when left out, because selecting it is choosing to share it; (2) a left-out frame withholds the whole frame; (3) a mark already on a board is honoured and drawn in every tab, and only setting it is flagged, so nothing marked is ever sent and nothing is kept back invisibly; (4) the ask reports how many objects were withheld, never which; (5) only asks honour the mark. An MCP agent reading the board with `canvas_read` still sees left-out objects, with `meta.leftOut: true`, and AGENT_API tells it not to use them for an ask. Agents cannot set or clear the mark. L is the key, which overrides tldraw's line tool only in flagged tabs. Alternatives: hide left-out objects from `read` as well, or make "pinning into context" the opposite control.
 
+- (build-A, item 71) Item 71 was claimed twice a minute apart (build-A `claude/sprint-html-linear` 13:00Z, then `claude/sprint-html-fast` 13:01Z). PR #93 (from the first claim) is open with the fix and proof; the second claim can be dropped unless that lane finds #93 lacking.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -720,3 +744,10 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:53Z | build-B | 67 The person chooses what an ask leaves out | #90 | New item from Solveit (hidden messages excluded from context); Leave out (L) behind `?prototype=context`; withheld from frame, history and record parts, counted on the ask; real tab 7 fails before, 17/17 after; acceptance, ask loop, safety, persistence unchanged |
 | 2026-11-26T12:56Z | build-A | 73 Older board gets the calm board | #91 | verify-calm 32/33 → 33/33 (stand-in model); persistence and scorecard unchanged |
 | 2026-11-26T12:59Z | build-A | 65 Asks and the section reader; #85 review follow-up; merges | #89 #85 #73 | #89: edited titles reach the agent, follow-ups keep record parts (browser before 5/7 → 7/7), marked numeric headers, pipe-less markdown tables, fenced code lines (4+1 failing-first tests); #85: blank-line and cut-quote delimiter cases, pen strokes count as feedback (browser 10/10); #73 and #89 merged with claude/sprint-int after #60 and a frame-history change landed |
+| 2026-11-26T13:04Z | build-A | 71 Web page reader stays quick | #93 | One pass over the tags: 2 MB of unclosed <li> 38 s → 0.2 s, unclosed advert <div>s 31 s → 0.02 s; #65's behaviour tests unchanged; verify-webpage 9/9; scorecard unchanged |
+| 2026-11-26T13:06Z | build-B | 74 Stale flags at the canvas edge; merge-ups | #94 #76 #77 #69 #86 | #94: an opened reason flips above, clear of the selection bar, near the bottom; a focused flag grows down near the top; offscreen flags leave the Tab order; real tab 2/5 before, 5/5 after; scorecard unchanged. #67, #69 and #72 merged; #69, #86, #76 and #77 merged up; #77 also fixes the thin-image rounding (null before, 600 x 0.4 now) |
+| 2026-11-26T13:08Z | build-A | 75 First board never moves the view away | #95 | verify-runs failed on the branch: an agent acting before the calm layout lost its page; verify-early-agent 4/6 → 6/6, verify-runs passes; scorecard unchanged |
+| 2026-11-26T13:08Z | build-B | Merge-ups after #74 | #78 #84 | #78: a leftover plain-text filter from the merge dropped partly bold words (reproduced live, removed); #84: plain-decimal and precision rules for CSV numbers combined |
+| 2026-11-26T13:09Z | build-A | Run end; #89 review follow-up | #89 | Marked headers with blank cells, headings with pipes, appended titles (3 failing-first tests); #85 #89 #93 merge cleanly with claude/sprint-int and with each other (386 tests on the combination); feedback-8 claim released |
+| 2026-11-26T13:10Z | build-B | Review of #94 (three yellow findings) | #94 | Recorded, not yet fixed, for #94's next push or a follow-up: (a) Tab eligibility follows the card's span, not the drawn flag (a card half off the right edge keeps an offscreen flag tabbable; a selected flag opened into view can be skipped); (b) the fixed 120 px room can still clip a long reason at high zoom, since the flag scales with the canvas, so placement should compare its measured height on each side; (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first line, so the anchor should clamp to the top edge. Not answered on the threads, because the reply tool appends a tool footer the hard rules forbid. #76 and #77 merged |
+| 2026-11-26T13:12Z | build-B | 58 follow-up | #96 | #78 merged before its last fix: a duplicate plain-text filter still dropped partly bold words on the integration branch; removed, reproduced live before and after |

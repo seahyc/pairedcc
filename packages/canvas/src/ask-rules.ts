@@ -126,3 +126,28 @@ export function elsewhereNotice(
   if (after.state === "failed") return `Your ask ${asked} ${page} could not be answered. Open that page to retry.`;
   return undefined;
 }
+
+/** Gap kept between the selection bar and the window's edges. */
+export const BAR_MARGIN = 8;
+/** Left edge that keeps the bar clear of the tool strip, when the window has room for that. */
+export const TOOLS_CLEAR = 70;
+
+/**
+ * Where the selection bar (or the Ask box) goes, given its real width and the window's width:
+ * at the selection's left edge, above it if there is room, never past either edge of the
+ * window. On a phone it narrows to the window and may cover the tool strip rather than run off
+ * screen, because a send button nobody can reach is worse than a strip hidden for a moment.
+ */
+export function placeBar(sel: { x: number; y: number; bottom: number }, barWidth: number, viewWidth: number) {
+  const width = Math.min(barWidth, viewWidth - 2 * BAR_MARGIN);
+  const right = viewWidth - width - BAR_MARGIN;
+  const minLeft = right >= TOOLS_CLEAR ? TOOLS_CLEAR : BAR_MARGIN;
+  const left = Math.max(minLeft, Math.min(sel.x, right));
+  const top = sel.y - 50 > 52 ? sel.y - 50 : sel.bottom + 12;
+  return { left, top, width };
+}
+
+/** An ask's state line wraps within its card's width (page units): readable, never a long strip. */
+export function statusWidth(cardWidth: number) {
+  return Math.min(640, Math.max(260, Math.round(cardWidth)));
+}
