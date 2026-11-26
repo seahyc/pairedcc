@@ -11,6 +11,9 @@ export type ColumnRole = "title" | "tag" | "field" | "verdict";
 
 export class ImportError extends Error {}
 
+/** A table object keeps at most this many rows; an import says when it kept fewer than the source had. */
+export const MAX_TABLE_ROWS = 2000;
+
 // ---------- delimited text ----------
 
 /** RFC 4180 style parsing: quoted fields, doubled quotes and line breaks inside quotes. */
@@ -55,10 +58,25 @@ export function parseDelimited(text: string, delimiter: "\t" | "," | ";"): strin
 
 /** Which delimiter a text uses: the one that splits its first lines most evenly. */
 export function sniffDelimiter(text: string): "\t" | "," | ";" {
-  const head = text.split(/\r?\n/).filter((l) => l.trim()).slice(0, 8);
-  const count = (d: string) => head.reduce((n, l) => n + l.split(d).length - 1, 0);
-  if (count("\t") >= head.length) return "\t";
-  return count(";") > count(",") ? ";" : ",";
+  // Each candidate is tried with quotes respected (punctuation inside a quoted note is content,
+  // not a separator). The one that splits the most rows into the same number of cells (two or
+  // more) wins; a single-cell title row above the table does not count against it.
+  const head = text.slice(0, 20_000);
+  const score = (d: "\t" | "," | ";") => {
+    // Blank lines (some exports lead with many) carry no evidence, so they are dropped first.
+    const rows = parseDelimited(head, d).filter((r) => r.some((c) => c.trim())).slice(0, 30);
+    const counts = rows.map((r) => r.length).filter((n) => n > 1);
+    if (!counts.length) return 0;
+    const tally = new Map<number, number>();
+    for (const n of counts) tally.set(n, (tally.get(n) ?? 0) + 1);
+    const [width, agree] = [...tally.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0];
+    // A quote left inside a cell means this delimiter cut through a quoted field.
+    const stray = rows.filter((r) => r.some((c) => c.includes('"'))).length;
+    return (Math.max(0, agree - stray) / rows.length) * 1000 + Math.min(width, 50);
+  };
+  const scores = (["\t", ",", ";"] as const).map((d) => [d, score(d)] as const);
+  const best = scores.reduce((a, b) => (b[1] > a[1] ? b : a));
+  return best[1] > 0 ? best[0] : ",";
 }
 
 // ---------- HTML tables (what a spreadsheet puts on the clipboard) ----------
@@ -275,7 +293,7 @@ export function parseJson(text: string): Table {
 
 // ---------- one entry point ----------
 
-export function formatOfFile(name: string): ImportFormat | "image" | "xlsx" | null {
+export function formatOfFile(name: string): ImportFormat | "image" | "xlsx" | "pdf" | null {
   const ext = /\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase();
   if (!ext) return null;
   if (ext === "csv") return "csv";
@@ -285,6 +303,7 @@ export function formatOfFile(name: string): ImportFormat | "image" | "xlsx" | nu
   if (ext === "json") return "json";
   if (ext === "html" || ext === "htm") return "html";
   if (ext === "xlsx" || ext === "xls" || ext === "numbers" || ext === "ods") return "xlsx";
+  if (ext === "pdf") return "pdf";
   if (["png", "jpg", "jpeg", "gif", "webp", "svg", "avif"].includes(ext)) return "image";
   return null;
 }
@@ -497,7 +516,12 @@ export function planImport(parsed: Parsed, as: ImportAs = "auto"): ImportPlan {
 export function summarise(plan: ImportPlan, from: string) {
   const many = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
   if (plan.kind === "records") return `${many(plan.records.length, "record")} from ${from}, as cards${plan.sorted ? ", most severe first" : ""}`;
-  if (plan.kind === "table") return `${many(plan.table.rows.length, "row")} from ${from}, as a table`;
+  if (plan.kind === "table") {
+    const n = plan.table.rows.length;
+    return n > MAX_TABLE_ROWS
+      ? `${MAX_TABLE_ROWS.toLocaleString("en")} of ${n.toLocaleString("en")} rows from ${from}, as a table (the first ${MAX_TABLE_ROWS.toLocaleString("en")} are kept)`
+      : `${many(n, "row")} from ${from}, as a table`;
+  }
   return `${many(plan.sections.length, "section")} from ${from}, as cards`;
 }
 

@@ -5,7 +5,7 @@ import postgres from 'postgres'
 import { Hono } from 'hono'
 import { signJwt } from '../src/auth/jwt.js'
 import { createBoardRoutes } from '../src/canvas/boards/routes.js'
-import { MemoryBoardStore, KEEP_REVISIONS, MAX_BOARD_BYTES, MAX_BOARDS_PER_ACCOUNT, type BoardLimits, type BoardStore, type Snapshot } from '../src/canvas/boards/store.js'
+import { MemoryBoardStore, KEEP_RECENT, KEEP_REVISIONS, THIN_SLOT_MS, revisionsToKeep, MAX_BOARD_BYTES, MAX_BOARDS_PER_ACCOUNT, type BoardLimits, type BoardStore, type Snapshot } from '../src/canvas/boards/store.js'
 import { PostgresBoardStore } from '../src/canvas/boards/postgres-store.js'
 
 const snap = (text: string, name?: string): Snapshot => ({
@@ -111,14 +111,15 @@ function contract(name: string, make: () => Promise<Made>) {
       expect(board?.revision).toBe(3)
     })
 
-    it('keeps recent revisions, newest first, and prunes old ones', async () => {
+    it('keeps the newest revisions, newest first, and thins a burst of older ones', async () => {
       await store.save(alice, 'hist', { expectedRevision: 0, snapshot: snap('r1') })
       for (let r = 1; r < KEEP_REVISIONS + 5; r++) await store.save(alice, 'hist', { expectedRevision: r, snapshot: snap(`r${r + 1}`) })
       const list = (await store.revisions(alice, 'hist'))!
-      expect(list).toHaveLength(KEEP_REVISIONS)
-      expect(list[0].revision).toBe(KEEP_REVISIONS + 5)
-      expect(list.at(-1)!.revision).toBe(6)
-      expect((await store.revision(alice, 'hist', 10))?.snapshot).toEqual(snap('r10'))
+      // All saved within seconds: one 15-minute slot, already represented by the newest 20
+      // (21 if the burst happened to cross a slot boundary).
+      expect(list.slice(0, KEEP_RECENT).map((r) => r.revision)).toEqual(Array.from({ length: KEEP_RECENT }, (_, i) => KEEP_REVISIONS + 5 - i))
+      expect(list.length).toBeLessThanOrEqual(KEEP_RECENT + 1)
+      expect((await store.revision(alice, 'hist', KEEP_REVISIONS))?.snapshot).toEqual(snap(`r${KEEP_REVISIONS}`))
       expect(await store.revision(alice, 'hist', 2)).toBeNull()
       expect(await store.revisions(bob, 'hist')).toBeNull()
     })
@@ -241,5 +242,52 @@ describe('board limit over HTTP', () => {
   })
   it('defaults to a limit well above normal use', () => {
     expect(MAX_BOARDS_PER_ACCOUNT).toBe(50)
+  })
+})
+
+describe('board history over hours', () => {
+  it('keeps the newest 20, then one revision per older 15-minute slot, 50 in all', () => {
+    const start = Date.UTC(2026, 10, 26, 8, 0)
+    // A save every 5 minutes for 10 hours: 121 revisions.
+    const history = Array.from({ length: 121 }, (_, i) => ({ revision: i + 1, savedAt: new Date(start + i * 5 * 60_000).toISOString() }))
+    const keep = [...revisionsToKeep(history)].sort((a, b) => b - a)
+    expect(keep).toHaveLength(KEEP_REVISIONS)
+    expect(keep.slice(0, KEEP_RECENT)).toEqual(Array.from({ length: KEEP_RECENT }, (_, i) => 121 - i))
+    // Older ones are one per slot: three saves per 15 minutes, so every third revision.
+    const older = keep.slice(KEEP_RECENT)
+    expect(older.every((r, i) => i === 0 || older[i - 1] - r === 3)).toBe(true)
+    const span = (Date.parse(history[keep[0] - 1].savedAt) - Date.parse(history[keep.at(-1)! - 1].savedAt)) / 3_600_000
+    expect(span).toBeGreaterThan(8) // reaches back hours, where the newest 50 reached about 4
+  })
+
+  it('never drops a revision kept for its slot as new saves arrive', () => {
+    const start = Date.UTC(2026, 10, 26, 8, 0)
+    const at = (i: number) => new Date(start + i * 5 * 60_000).toISOString()
+    let history: { revision: number; savedAt: string }[] = []
+    const ever = new Set<number>()
+    for (let i = 0; i < 200; i++) {
+      history.push({ revision: i + 1, savedAt: at(i) })
+      const keep = revisionsToKeep(history)
+      history = history.filter((h) => keep.has(h.revision))
+      // A revision once kept as the newest of its (older) slot stays until the 50 cap pushes it out.
+      for (const r of ever) if (!keep.has(r) && r > Math.min(...keep)) throw new Error(`revision ${r} was dropped though newer ones were kept`)
+      for (const r of keep) if (r < i + 1 - KEEP_RECENT) ever.add(r)
+    }
+    expect(history).toHaveLength(KEEP_REVISIONS)
+  })
+
+  it('applies the rule in the memory store with a moving clock', async () => {
+    let t = Date.UTC(2026, 10, 26, 8, 0)
+    const store = new MemoryBoardStore(() => new Date(t))
+    const user = randomUUID()
+    await store.save(user, 'day', { expectedRevision: 0, snapshot: snap('r1') })
+    for (let r = 1; r < 121; r++) {
+      t += 5 * 60_000
+      await store.save(user, 'day', { expectedRevision: r, snapshot: snap(`r${r + 1}`) })
+    }
+    const list = (await store.revisions(user, 'day'))!
+    expect(list).toHaveLength(KEEP_REVISIONS)
+    expect(list[0].revision).toBe(121)
+    expect(THIN_SLOT_MS).toBe(15 * 60_000)
   })
 })

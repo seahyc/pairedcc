@@ -18,13 +18,15 @@ export function devBoardStore(dir: string) {
   mkdirSync(dir, { recursive: true });
   const file = (id: string) => join(dir, `${id}.json`);
   const read = (id: string): Stored | null => (existsSync(file(id)) ? JSON.parse(readFileSync(file(id), "utf8")) : null);
+  // The folder may be removed while the server runs (to start over): recreate it on save.
   const write = (b: Stored) => {
+    mkdirSync(dir, { recursive: true });
     writeFileSync(`${file(b.id)}.tmp`, JSON.stringify(b));
     renameSync(`${file(b.id)}.tmp`, file(b.id));
   };
   const summary = (b: Stored) => ({ id: b.id, name: b.name, revision: b.revision, sizeBytes: JSON.stringify(b.snapshot).length, updatedAt: b.updatedAt });
   return {
-    list: () => readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => summary(read(f.slice(0, -5))!)).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
+    list: () => (existsSync(dir) ? readdirSync(dir) : []).filter((f) => f.endsWith(".json")).map((f) => summary(read(f.slice(0, -5))!)).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
     get: (id: string) => read(id),
     /** Kept revisions, newest first, without snapshots (server: GET /:id/revisions). */
     revisions(id: string) {
