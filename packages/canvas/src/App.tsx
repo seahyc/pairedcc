@@ -71,6 +71,7 @@ import {
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { convergeForPerson, createComment } from "./agent-operations";
 import { prototypeEnabled, canvasReturnTo } from "./prototype-flags";
+import { toggleLeftOut } from "./leave-out";
 import { followConnectors } from "./connector-follow";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
@@ -82,6 +83,7 @@ import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
 import { elsewhereNotice, markOf } from "./ask-rules";
 import { askOf } from "./asks";
+import { landedAnswers } from "./ask-rules";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
 import { DataTableShapeUtil } from "./table-shape";
 import { ImportLayer, chooseImportFile } from "./import-ui";
@@ -274,12 +276,13 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
     title: "Think",
     rows: [
       ["Write a thought", "N, then click or Enter; or double-click the board"],
-      ["Ask your agent about the selection", "⌘ ↵"],
+      ["Ask your agent about the selection", keys("⌘ ↵")],
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
+      ...(prototypeEnabled("context") ? [["Leave the selection out of asks (again to bring it back)", "L"] as [string, string]] : []),
       ["Open or close the feedback queue", "Shift C"],
-      ["Bring in a table or document as cards", "⌘ V, or drop a file"],
+      ["Bring in a table or document as cards", keys("⌘ V, or drop a file")],
       ["Next / previous imported record", "J / K"],
       ["Finish typing", "Esc"],
     ],
@@ -291,7 +294,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Next / previous thing on the board", "Tab / Shift Tab"],
       ["To the menu and tools", "Esc, then Shift Tab"],
       ["Pan", "Space + drag, or scroll"],
-      ["Zoom", "Pinch, or ⌘ scroll"],
+      ["Zoom", keys("Pinch, or ⌘ scroll")],
       ["Fit everything", "Shift 1"],
       ["Fit selection", "Shift 2"],
     ],
@@ -299,10 +302,10 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
   {
     title: "Edit",
     rows: [
-      ["Undo / redo", "⌘ Z / ⇧ ⌘ Z"],
-      ["Duplicate", "⌘ D"],
-      ["Select all", "⌘ A"],
-      ["Delete", "⌫"],
+      ["Undo / redo", keys("⌘ Z / ⇧ ⌘ Z")],
+      ["Duplicate", keys("⌘ D")],
+      ["Select all", keys("⌘ A")],
+      ["Delete", keys("⌫")],
       ["Edit text", "Double-click or Enter"],
       ["Deselect, back to Move", "Esc"],
       ["This list", "?"],
@@ -577,6 +580,15 @@ function Shell() {
         return;
       }
       if (event.shiftKey) return;
+      // L leaves the selection out of asks (the context prototype). Capture first so tldraw's own L (line) doesn't fire.
+      if (key === "l" && prototypeEnabled("context")) {
+        const chosen = editor.getSelectedShapes();
+        if (!chosen.length) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) toggleLeftOut(editor, chosen);
+        return;
+      }
       if (key !== "p" && key !== "x") return;
       const picked = editor.getSelectedShapes();
       if (!picked.length) return;
@@ -885,6 +897,32 @@ function Shell() {
     if (box && editor.pageToScreen({ x: box.x, y: box.maxY }).y > window.innerHeight - 60) keepInView(box);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingBottom]);
+  // An answer that lands while the person is looking at its ask is brought wholly into view:
+  // four options in a row are wider than the room made when the ask was sent. Never while they
+  // are typing, dragging or asking about something else, and never if they have looked away.
+  const answeredAsks = useValue("answered asks", () => editor.getCurrentPageShapes().flatMap((s) => {
+    const ask = askOf(s);
+    return ask?.state === "answered" && ask.answeredAt ? [`${s.id}@${ask.answeredAt}`] : [];
+  }).join(","), [editor]);
+  const seenAnswers = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const asks = answeredAsks ? answeredAsks.split(",").map((key) => { const at = key.lastIndexOf("@"); return { id: key.slice(0, at), answeredAt: Number(key.slice(at + 1)) }; }) : [];
+    if (!seenAnswers.current) {
+      // Answers already on the board when this tab opened are not landing now.
+      seenAnswers.current = new Set(asks.map((a) => `${a.id}@${a.answeredAt}`));
+      return;
+    }
+    const landed = landedAnswers(asks, seenAnswers.current, Date.now());
+    if (!landed.length || asking || editor.getEditingShapeId() || !editor.isIn("select.idle")) return;
+    const view = editor.getViewportPageBounds();
+    for (const id of landed) {
+      const ask = editor.getShapePageBounds(id as TLShape["id"]);
+      if (!ask || !view.collides(ask)) continue;
+      const boxes = [ask, ...editor.getCurrentPageShapes().filter((s) => s.meta.replyTo === id).flatMap((s) => editor.getShapePageBounds(s) ?? [])];
+      keepInView({ x: Math.min(...boxes.map((b) => b.x)), y: Math.min(...boxes.map((b) => b.y)), maxX: Math.max(...boxes.map((b) => b.maxX)), maxY: Math.max(...boxes.map((b) => b.maxY)) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answeredAsks]);
   // A result hidden behind a learning prompt must not leak through its layer name.
   function layerName(s: TLShape) {
     return editor.isShapeHidden(s) ? "Hidden until you answer" : shapeName(s);
@@ -987,7 +1025,7 @@ function Shell() {
               ))}
             <div className="menu-rule" />
             <button role="menuitem" onClick={() => { setPanel(panel === "feedback" ? null : "feedback"); setMenuOpen(false); }}>
-              <MessagesSquare size={14} /> Feedback queue <kbd>⇧C</kbd>
+              <MessagesSquare size={14} /> Feedback queue <kbd>{keys("⇧C")}</kbd>
             </button>
             <button role="menuitem" onClick={() => { setLeftOpen(!leftOpen); setMenuOpen(false); }}>
               <Layers size={14} /> {leftOpen ? "Hide" : "Show"} layers and pages
@@ -1125,7 +1163,7 @@ function Shell() {
             <span>{t.name}</span>
           </button>
         ))}
-        <button type="button" className="tool-button ask" title="Ask your agent about the selection (⌘↵)" onClick={askAboutSelection}>
+        <button type="button" className="tool-button ask" title={keys("Ask your agent about the selection (⌘↵)")} onClick={askAboutSelection}>
           <Sparkles size={18} strokeWidth={1.6} />
           <span>Ask</span>
         </button>
@@ -1447,11 +1485,11 @@ function Shell() {
                 </div>
                 <div>
                   <dt>Duplicate</dt>
-                  <dd>⌘ D</dd>
+                  <dd>{keys("⌘ D")}</dd>
                 </div>
                 <div>
                   <dt>Undo</dt>
-                  <dd>⌘ Z</dd>
+                  <dd>{keys("⌘ Z")}</dd>
                 </div>
               </dl>
             </div>
@@ -1568,6 +1606,7 @@ function Shell() {
   );
 }
 import { GeoShapeGeoStyle, PageRecordType, createShapeId, react } from "tldraw";
+import { keys } from "./keys";
 const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil, BoardImageShapeUtil];
 const TEXT_WRAP = 460;
 // One set of editor options: the page limit, and double-click writes a card rather than plain text.
