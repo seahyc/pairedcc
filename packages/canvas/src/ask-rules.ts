@@ -28,12 +28,15 @@ export function suggestQuestion(selectedText: string) {
 }
 
 export const starters = ["What's missing?", "Give me alternatives", "Poke holes in this"];
+/** An imported record is an argument to judge, so its first starter asks exactly that. */
+export const recordStarters = ["Is this point valid?", "Is the defence enough?", "Poke holes in this"];
 
 /**
  * Starters chosen from what is selected, so the person recognises a next step rather than
  * recalling one. Several objects invite comparison on stated dimensions, not a verdict.
  */
-export function startersFor(selection: readonly { type: string; text: string }[]): string[] {
+export function startersFor(selection: readonly { type: string; text: string }[], record = false): string[] {
+  if (record) return recordStarters;
   if (selection.length > 1) return ["Compare these", "What dimensions do these differ on?", "What do they have in common?"];
   const [only] = selection;
   if (!only) return starters;
