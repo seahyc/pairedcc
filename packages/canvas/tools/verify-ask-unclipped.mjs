@@ -139,6 +139,26 @@ for (const [name, id] of Object.entries(tracked)) {
   const s3 = await state(id), b = pre2[name];
   check(`the ${name} moves once when the arranged frame is selected`, Math.abs(s3.x - b.x + 100) < 1 && Math.abs(s3.y - b.y) < 1, `${Math.round(s3.x - b.x)},${Math.round(s3.y - b.y)}`);
 }
+// A selected comment still follows when an agent arranges only its frame (review of #122).
+await select([comment.id]);
+const cPre = await state(comment.id), rPre = await state(reply), fPre = await state(frame);
+const frev3 = await p.evaluate((id) => window.paired.read().objects.find((o) => o.id === id).revision, frame);
+await command('arrange', { objects: [{ id: frame, expectedRevision: frev3 }], layout: 'row', x: fPre.x + 150, y: fPre.y });
+await p.waitForTimeout(300);
+const cNow = await state(comment.id), rNow = await state(reply);
+check('a selected comment and its reply follow when an agent arranges only the frame', Math.abs(cNow.x - cPre.x - 150) < 1 && Math.abs(rNow.x - rPre.x - 150) < 1, `${Math.round(cNow.x - cPre.x)}, ${Math.round(rNow.x - rPre.x)}`);
+await select([]);
+// Leave out (item 67) also covers what is said about a left-out object: with the commented card
+// left out, an ask about the frame gives neither the comment on it nor the reply.
+await p.evaluate((id) => { const e = window.__pairedEditor, s = e.getShape(id); e.updateShape({ id, type: s.type, meta: { ...s.meta, leftOut: true } }); }, usage);
+await select([frame]);
+await p.locator('.selection-bar button.primary').click();
+await p.locator('.selection-bar.asking input').fill('Summarise this frame');
+await p.keyboard.press('Enter');
+await p.waitForTimeout(500);
+const privateAsk = (await command('asks', { state: 'all' })).asks.find((a) => a.question === 'Summarise this frame');
+const shared = JSON.stringify(privateAsk?.targets ?? []);
+check('a comment about a left-out card is not given with its frame', !shared.includes('Too vague') && !shared.includes('Say per what'), (privateAsk?.targets?.[0]?.inside ?? []).map((o) => o.text).join(' | '));
 check('no page errors', errors.length === 0, errors.join(' | '));
 await browser.close();
 const passed = results.filter(Boolean).length;

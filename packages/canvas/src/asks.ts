@@ -6,7 +6,7 @@ import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
 import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
-import { keepForAgent } from "./leave-out";
+import { isLeftOut, keepForAgent } from "./leave-out";
 import { followers } from "./follow";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
@@ -144,7 +144,11 @@ function attachedTo(editor: Editor, frame: TLShape) {
   const page = [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []);
   const subtree = [...editor.getShapeAndDescendantIds([frame.id])] as string[];
   const within = new Set(subtree);
-  return followers(subtree, page, new Set())
+  // What the person left out of asks inside the frame, and what it holds, brings nothing along:
+  // a comment about a left-out card is as private as the card.
+  const leftOut = subtree.filter((id) => id !== frame.id && isLeftOut(editor.getShape(id as TLShapeId)?.meta));
+  const blocked = new Set<string>(leftOut.length ? (editor.getShapeAndDescendantIds(leftOut as TLShapeId[]) as Set<string>) : []);
+  return followers(subtree.filter((id) => !blocked.has(id)), page, new Set())
     .flatMap((id) => editor.getShape(id as TLShapeId) ?? [])
     .filter((s) => !within.has(s.id) && !askOf(s) && !editor.isShapeHidden(s) && textOf(s));
 }
