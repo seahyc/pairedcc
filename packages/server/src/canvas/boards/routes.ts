@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { requireAuth } from '../../auth/middleware.js'
-import { MAX_BOARD_BYTES, boardIdSchema, byteSize, saveSchema, type BoardStore } from './store.js'
+import { BrokenTextError, MAX_BOARD_BYTES, boardIdSchema, byteSize, saveSchema, type BoardStore } from './store.js'
 
 // /api/canvas/boards: the signed-in account's canvas boards.
 //   GET    /                      list (newest first, no snapshots)
@@ -51,7 +51,13 @@ export function createBoardRoutes(store: BoardStore) {
         return c.json({ error: `${issue.path.join('.') || 'body'}: ${issue.message}` }, 400)
       }
       if (byteSize(input.data.snapshot) > MAX_BOARD_BYTES) return c.json({ error: TOO_LARGE }, 413)
-      const result = await store.save(c.get('user').userId, parsed.data, input.data)
+      let result
+      try {
+        result = await store.save(c.get('user').userId, parsed.data, input.data)
+      } catch (error) {
+        if (error instanceof BrokenTextError) return c.json({ error: error.message }, 400)
+        throw error
+      }
       if (result.ok) return c.json({ board: result.board }, input.data.expectedRevision === 0 ? 201 : 200)
       if (result.reason === 'missing') return c.json({ error: 'Board not found. Save with expectedRevision 0 to create it.' }, 404)
       if (result.reason === 'limit')

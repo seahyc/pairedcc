@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { copyId, createBoardSync, mergeSnapshots, withNewRecords, type BoardApi, type Snapshot, type SyncMemo, type SyncStatus } from "../src/board-sync";
+import { wellFormed } from "../src/text";
 
 const snap = (text: string): Snapshot => ({ store: { "shape:a": { id: "shape:a", typeName: "shape", text } }, schema: { schemaVersion: 2 } });
 const text = (s: Snapshot) => (s.store["shape:a"] as { text: string }).text;
@@ -27,6 +28,7 @@ function server(signedIn: string | null = "alice", keep = 50) {
       uploads.push(id);
       if (JSON.stringify(snapshot).includes("HUGE")) return { ok: false, stale: false, refused: 413, error: "Boards are limited to 10 MB" };
       const b = boards.get(id);
+      snapshot = wellFormed(snapshot);
       if (!b) {
         if (expectedRevision !== 0) return { ok: false, stale: false, error: "Board not found" };
         boards.set(id, { revision: 1, snapshot: structuredClone(snapshot), history: [structuredClone(snapshot)], first: 1 });
@@ -635,5 +637,36 @@ describe("withNewRecords", () => {
     expect(b.timers).toHaveLength(0);
   });
 
+
+  it("holds what the server stores when the board has half an emoji, so a deletion is not undone by a merge", async () => {
+    const card = (id: string, text: string) => ({ id, typeName: "shape", text });
+    const board = (...cards: ReturnType<typeof card>[]): Snapshot => ({ store: Object.fromEntries(cards.map((c) => [c.id, c])), schema: { schemaVersion: 2 } });
+    const srv = server();
+    const a = browser(board(card("shape:a", "Plans \uD83D"), card("shape:b", "other")));
+    const tabA = sync(srv, a, true);
+    await tabA.s.start(); // first save; the server repairs the half emoji
+    expect((a.doc.store["shape:a"] as { text: string }).text).toBe("Plans \uFFFD"); // this tab holds the same
+    // Another browser opens the board and adds a card.
+    const b = browser(board(), null);
+    await sync(srv, b, false).s.start();
+    b.local.load(board(...(Object.values(srv.boards.get("main")!.snapshot.store) as ReturnType<typeof card>[]), card("shape:c", "from B")));
+    await srv.api.put("main", 1, b.local.snapshot());
+    // A deletes card a; its save is stale and merges B's card in.
+    const { "shape:a": _gone, ...rest } = a.doc.store;
+    a.local.load({ ...a.doc, store: rest });
+    await tabA.s.save();
+    expect(Object.keys(srv.boards.get("main")!.snapshot.store).sort()).toEqual(["shape:b", "shape:c"]);
+  });
+
+  it("forgets undo and redo after a restore, so redo cannot bring a newer object back", async () => {
+    const srv = server(), b = browser(snap("Draft"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("Final");
+    await b.flush();
+    await s.restore(1);
+    expect(text(b.doc)).toBe("Draft");
+    expect(b.resets).toBe(1);
+  });
 });
 
