@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { AskDesk, LISTENER_GRACE_MS } from "../server/asks";
-import { answerLayout, askStatusLine, capWords, elsewhereNotice, markOf, mergeHistory, suggestQuestion, OPTION_W } from "../src/ask-rules";
+import { answerLayout, askStatusLine, retryLabel, capWords, elsewhereNotice, markOf, mergeHistory, suggestQuestion, OPTION_W } from "../src/ask-rules";
 import { answerInput, askStatusInput } from "../src/protocol";
 import { buildPrompt, parseReply, readingNote, systemPrompt } from "../tools/resident-prompt";
 import { toolDefs } from "../tools/tool-defs";
@@ -285,5 +285,25 @@ describe("starters that fit the selection", () => {
   it("never offers more than three", () => {
     for (const sel of [[card("a")], [card("a?")], [card("a"), card("b")], [{ type: "frame", text: "" }], [{ type: "chart", text: "" }]])
       expect(startersFor(sel).length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("retryLabel: the selection bar's first button on one selected ask", () => {
+  const ask = (state: string, extra: Record<string, unknown> = {}) => ({ state, attempt: 0, contextIds: [], askedAt: 0, ...extra }) as never;
+  const line = (a: never, listeners: string[] | null = ["Claude"], now = 1000) => askStatusLine(a, { listeners, hosted: false, now, given: "" });
+  it("retries a failed ask", () => {
+    expect(retryLabel(line(ask("failed", { error: "Took too long" })))).toBe("Retry");
+  });
+  it("retries an ask whose agent went quiet", () => {
+    expect(retryLabel(line(ask("working", { startedAt: 0, agent: "Claude" }), ["Claude"], 200_000))).toBe("Retry");
+  });
+  it("sends again an ask nobody heard", () => {
+    const said = retryLabel(line(ask("waiting"), [], 60_000));
+    expect(said).toBe("Send again");
+  });
+  it("keeps Ask for an answered, working or waiting ask", () => {
+    expect(retryLabel(line(ask("answered", { answeredAt: 10, agent: "Claude" })))).toBeUndefined();
+    expect(retryLabel(line(ask("working", { startedAt: 900, agent: "Claude" })))).toBeUndefined();
+    expect(retryLabel(line(ask("waiting")))).toBeUndefined();
   });
 });

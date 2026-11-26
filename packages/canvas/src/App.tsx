@@ -76,7 +76,7 @@ import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
-import { AskLayer, SelectionBar } from "./ask-ui";
+import { AskLayer, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
 import { elsewhereNotice } from "./ask-rules";
@@ -273,7 +273,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
     title: "Think",
     rows: [
       ["Write a thought", "N, or double-click the board"],
-      ["Ask your agent about the selection", keys("⌘ ↵")],
+      ["Ask your agent about the selection, or send a failed ask again", keys("⌘ ↵")],
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
@@ -569,6 +569,12 @@ function Shell() {
     }
     if (!editor.getSelectedShapes().some((s) => s.type !== "arrow")) {
       setNotice("Select what you mean first, then ask");
+      return;
+    }
+    // A failed or unheard ask is sent again rather than asked about.
+    const retry = editing ? undefined : selectedRetry(editor);
+    if (retry) {
+      resendAsk(editor, retry.id);
       return;
     }
     setAsking(true);
