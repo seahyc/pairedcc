@@ -118,7 +118,7 @@ for (const [tag, options] of [['phone', phone], ['desktop', desktop]]) {
     const caps = await p.locator('.selection-bar kbd').count();
     const bar = (await p.locator('.selection-bar').innerText()).replace(/\s+/g, ' ');
     if (touch) check('phone: the selection bar shows no key caps', caps === 0 && /Ask/.test(bar), bar);
-    else check('desktop: the selection bar keeps its key caps', caps === 4, `${caps} caps: ${bar}`);
+    else check('desktop: the selection bar keeps its key caps', caps > 0 && caps === (await p.locator('.selection-bar > button').count()), `${caps} caps: ${bar}`);
     await p.screenshot({ path: `${out}/${tag}-4-selection-bar.png` });
     check(`${tag}: no page errors`, errs.length === 0, errs.join(' | '));
     await ctx.close();

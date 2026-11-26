@@ -515,6 +515,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
           "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
         author: authorOf(s),
         ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
+        ...(s.meta.settled === true ? { settled: true } : {}),
         meta: s.meta,
         asset,
       };

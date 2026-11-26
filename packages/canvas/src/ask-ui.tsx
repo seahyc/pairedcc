@@ -9,6 +9,7 @@ import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
 import { isLeftOut, isPinned, leftOutLabel, pinnedLabel, toggleLeftOut, togglePinned } from "./leave-out";
+import { toggleSettled } from "./settled";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
 
@@ -278,6 +279,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         editing: Boolean(editor.getEditingShapeId()),
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
+        settled: shapes.every((s) => s.meta.settled === true),
         leftOut: shapes.every((s) => isLeftOut(s.meta)),
         pinned: shapes.every((s) => isPinned(s.meta)),
         text: only ? textOf(only) : "",
@@ -418,6 +420,9 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       </button>
       <button className={state.rejected ? "on" : ""} onClick={() => judge("rejected")} title="Cross out: not this (X)">
         Cross out <Kbd>X</Kbd>
+      </button>
+      <button className={state.settled ? "on" : ""} onClick={() => { toggleSettled(editor, editor.getSelectedShapes()); editor.focus(); }} title={state.settled ? "Reopen: not settled after all (S)" : "Settle: done for now (S)"}>
+        {state.settled ? "Settled ✓" : "Settle"} <Kbd>S</Kbd>
       </button>
       <button onClick={onComment} title="Comment on it (C)">
         Comment <Kbd>C</Kbd>
