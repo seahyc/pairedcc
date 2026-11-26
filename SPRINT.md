@@ -42,27 +42,40 @@ defensible option, record the choice and the reason under Decisions needed, and 
 6. If time remains, take another task. When the backlog runs low, add tasks that follow from the
    working spec, each with a testable definition of done.
 
-## What the canvas is for (added 26 Nov by the maintainer's direction; this outranks the scorecard)
-The user experience is the product. Two anchors, both written up in
-`docs/canvas/usability-heuristics.md` (arrives with PR #7; read it before any UI work):
-1. **Jakob Nielsen's ten usability heuristics**, as applied there to a canvas shared with agents.
-   Every UI PR names the heuristics it serves and shows before/after screenshots.
-2. **Michael Nielsen's augmentation principle** (Carter and Nielsen, "Using Artificial Intelligence to
-   Augment Human Intelligence", Distill 2017; Matuschak and Nielsen on tools for thought): the aim is
-   to improve the person's own mental representation, not to hand over an answer. Agent output should
-   be something the person can manipulate and internalise: alternatives with the dimensions they vary
-   along, groupings the person can accept or redraw, predict-before-reveal.
+## What the canvas is for (the maintainer's direction, corrected 26 Nov; this outranks the scorecard)
+The user experience is the product. The maintainer playtested the 26 Nov build and rejected it:
+"it's hard to use, and not built on the principles; it's too noisy, and too flexible, my text just
+flows out of the canvas, and I don't know how to trigger the agent to respond. It's too open ended."
+
+**The anchor is this project's own list**, "How humans think intuitively" in
+`docs/canvas/working-spec.md` (working memory holds about four things; moving things is thinking;
+spatial thinking comes first; we think with our eyes; concrete before abstract; comparing beats
+describing; recognising beats recalling; rough means unfinished; understanding needs effort and
+repetition), with "What produces understanding" beside it. `docs/canvas/principles.md` (arriving on
+branch `yc/calm-canvas`) applies them. Jakob Nielsen's usability heuristics
+(`docs/canvas/usability-heuristics.md`) are only a secondary checklist.
+
+**Solveit's principles apply to every agent interaction** (sources in the spec's Solveit section):
+small steps, each one checked; the person thinks and writes first; agent replies are short and one
+step at a time; everything the agent made is editable and becomes shared context; the context the
+agent sees is visible and chosen by the person.
+
+What this means for every PR:
+- **Calm and opinionated beats flexible.** One obvious next step on screen. No new panels, modes,
+  toolbar items or object types in the default view; a new capability must fit the loop (write a
+  thought, select, Ask, compare short answers, pick or cross out or comment, ask again) or stay
+  behind a flag. Removing things is welcome work.
+- **The agent must visibly respond.** Any ask shows waiting, working, answered or failed. Never silence.
+- **Text never leaves its container.**
+- Every UI PR names the principles it serves and shows before and after screenshots of the default
+  first screen. The review lane rejects work that makes the first two minutes noisier or more
+  open-ended, whatever the scorecard says. Prototypes already merged that add noise to the default
+  view (data objects, learning prompts, run tools) must be behind flags; fix that before new features.
 
 **The maintainer's playtest feedback is the top of the backlog.** It is filed under
-`docs/canvas/feedback/` as it arrives. Before choosing any task, read the newest file there; an
-unaddressed item in it comes before every numbered backlog item. Address items one PR each where
-possible, quote the feedback item in `## Why`, and mark it addressed in the file with the PR link.
-Feedback is a native primitive of the canvas (comments, picks, rejects, one queue, readable by
-agents through `canvas_feedback`): keep improving it, and use it in your own verification scripts.
-
-After feedback, prefer work from the "what remains" list in the heuristics document over new
-features. The review lane rejects UI work that makes a first two minutes of use more confusing,
-whatever the scorecard says.
+`docs/canvas/feedback/`. Before choosing any task, read the newest file there; an unaddressed item
+comes before every numbered backlog item. Quote the item in `## Why` and mark it addressed in the
+file with the PR link.
 
 ## Goal and eval (added 26 Nov; read before choosing a task)
 **Goal for the sprint:** the working spec's first end-to-end acceptance scenario runs for real on
@@ -132,25 +145,44 @@ task by which measure is furthest from target, not by backlog order.
     (and a test) that leaves prototype tools out of the hosted manifest, defaulting to the current
     behaviour until the maintainer chooses.
 
-13. **Person imports a CSV.** Dropping a `.csv` file on the canvas creates a dataset object with
+13. (PR #18 open, awaiting review.) **Person imports a CSV.** Dropping a `.csv` file on the canvas creates a dataset object with
     typed columns (validation errors shown, nothing partial created). Done when the eval's first
     acceptance step passes.
 14. (PR #11 open, awaiting review; stacked on #9.) **Transitive staleness.** A result recorded with `inputs: [chart]` is not marked stale when the
     chart's dataset changes, only when the chart itself is recomputed. Done when the eval step
     "Changing an input marks its dependents stale" passes and the read reports the upstream cause.
-15. **Reload must not change objects.** Reopening a board re-measures cards and bumps their height
+15. (PR #17 open, awaiting review.) **Reload must not change objects.** Reopening a board re-measures cards and bumps their height
     and revision, so a revision an agent held before the reload goes stale. Done when the eval step
     "Reload restores everything" passes.
 16. (PRs #14 #16 open, awaiting review; #16 stacked on #14.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
     Done when the performance measure reports 10k load and pan numbers (raise the limit or
     decide another way and record it).
+20. (Renumbered from 17 to avoid a clash; likely covered by the `yc/calm-canvas` rework for playtest 1, so check that PR before starting.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
+    out loud, with an agent beside you." wraps onto the shortcut hint line beneath it (seen at
+    1440x900 in headless Chromium; `docs/canvas/screenshots/reload-late-fonts-*.png` runs show the
+    page). Done when the header lines never overlap at 1440 and 390 px widths, with screenshots.
+
+18. **Agent-usability tasks and a recorded attempt.** At least 20 board tasks in
+    `packages/canvas/eval/tasks/`, each with a machine-checked end state, a runner that sets each
+    one up in a real tab, and a recorded attempt by a fresh agent that has only `AGENT_API.md` and
+    the tools. Done when the scorecard reports a completion rate and median tool calls.
+19. **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
+    by sync) and earlier revisions are reachable only through the API. Done when a person can list
+    their boards, open one, and restore an earlier revision from the canvas.
+17. **Agent-usability tasks and a recorded attempt.** The scorecard's Agent usability row reports
+    0 tasks. Add at least 20 board tasks in `packages/canvas/eval/tasks/` with machine-checked end
+    states, a harness that gives a fresh agent only `AGENT_API.md` and the MCP tools, and a recorded
+    attempt in `eval/agent-runs/latest.json`. Tasks avoid board sync (build-A's own feature). Done
+    when the row reports a real completion rate and median tool calls.
 
 ## Claims
-1. Server-side board storage | claude/sprint-boards-* | 2026-11-26T09:50Z
+17. Agent-usability tasks | claude/sprint-agent-tasks | 2026-11-26T10:27Z
+18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
-15. Reload must not change objects | claude/sprint-reload-stable | 2026-11-26T10:10Z
+10. Repair e2e editor-collab spec | claude/sprint-e2e-collab | 2026-11-26T10:30Z
 
 ## Done
+- 1. Server-side boards: PRs #12 (server API, Postgres store, revisions, stale-write 409) and #15 (canvas sync, merge by object, move from IndexedDB, dev board store). Persistence passes on #15.
 - 0. Eval harness: PR #8 (`pnpm eval:canvas`, baseline scorecard: acceptance 7/10, safety pass, persistence fail, 10k perf impossible, e2e failing). Gaps filed as items 13 to 16.
 - 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Reviewed and merged 2026-11-26 as f47a23f, with a fix so undo never writes to an object locked since the run.
 - 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Reviewed and merged 2026-11-26 as 9f19690, 68d7ff3, ff68adc.
@@ -158,6 +190,9 @@ task by which measure is furthest from target, not by backlog order.
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 1) Board sync merges a stale save by object: different objects both survive, an edit beats a deletion, and where both changed one object the saving tab wins while the other version stays in server revision history (no history UI yet, item 19). Alternative: show both and ask.
+- (build-A, item 1) One board per account (`main`). A browser's own earlier work found at first sync is kept as a separate server board, never overwritten. Another account's unsaved local work is never uploaded.
+- (build-A, item 1) The dev server serves the board API for one local person from `.local/boards` (`PAIRED_BOARDS_DIR`), so `pnpm eval:canvas` can measure persistence without Postgres; this includes the maintainer's local LaunchAgent server.
 - (build-A, item 0) Eval choices: "import dataset" requires a person to drop a CSV (agent import is a separate step); a result derived from a chart counts as a dependent of the chart's dataset; 10k objects means one page; "Existing product" fails while e2e fails. Performance boards are built through a development-only `window.__pairedEditor`, because building through the agent interface costs about 28 ms per object at 1k. Agent usability reports a recorded attempt; the script never calls a model.
 - (build-B, item 2) Filtering or selecting a stale chart re-runs it on current data and clears the stale state (spec: immediate feedback). Alternative: keep the old snapshot until an explicit Recompute.
 - (build-B, item 2) The data prototype is reached through a "Data prototype page" button shown only with `?prototype=data`; dataset and chart shapes are always registered so saved boards load.
@@ -177,6 +212,8 @@ task by which measure is furthest from target, not by backlog order.
 - (build-B, item 12) The switch is `hostedPrototypeTools` in `packages/canvas/tools/tool-defs.ts`, left `true` so hosted behaviour is unchanged. Turning it off removes the five PROTOTYPE tools and the data-prototype sentence from the hosted manifest only; the local stdio server keeps them.
 
 - (build-B, item 16) Raised tldraw's `maxShapesPerPage` from 4,000 to 20,000 (`src/canvas-options.ts`). With #16, a 10k board loads in about 8 s and pans at 39.6 ms per frame when every object is on screen (16.7 ms at 100% zoom; the remaining cost is tldraw's own rendering). Open product choices: level-of-detail or culling when zoomed far out, and virtualising or summarising the layers panel, which still mounts one row per object.
+- (build-B, item 15) A card's auto-sized `props.h` no longer bumps the revision (one definition of derived fields in `src/revision.ts`, shared with run-undo), and reload no longer re-estimates card heights; cards on screen re-measure once fonts load.
+- (build-B, item 13) Dropping a CSV creates a dataset only with `?prototype=data`, since the scenario is still proposed; without the flag a CSV drop does what it did before. The dataset's top-left corner lands at the drop point; a column is numeric only if every value is.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -192,3 +229,6 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T09:52Z | build-B | 14 Transitive staleness | #11 | Results stale when an upstream input changes, with `upstream` cause in read; eval acceptance 7/10 to 8/10 |
 | 2026-11-26T09:56Z | build-B | 12 Prototype tool exposure | #13 | `hostedPrototypeTools` switch with tests; manifest unchanged by default; server tests 117 pass |
 | 2026-11-26T10:10Z | build-B | 16 10k objects | #14 #16 | 10k board can exist; layers panel linear and rich-text read without zod: 10k load 36.5 s to 8.1 s, pan 83.6 to 39.6 ms/frame, 1k load 2.8 to 1.5 s |
+| 2026-11-26T10:21Z | build-B | 15 Reload stability | #17 | Reload leaves objects unchanged; eval acceptance 8/10 to 9/10; late-font reload keeps height and revision |
+| 2026-11-26T10:23Z | build-A | 1 Server-side boards | #12 #15 | Server API with Postgres tests and live check; canvas sync; scorecard Persistence fail→pass |
+| 2026-11-26T10:29Z | build-B | 13 CSV import | #18 | CSV drop creates a typed dataset or reports row/column errors; eval CSV step passes; with #17 the acceptance scenario is 10/10 |
