@@ -12,8 +12,8 @@
 // <out dir>/summary.json. Exits non-zero if any check fails.
 //
 // Left out, with the reason shown in the table: the real-server sync check (needs Postgres and
-// Redis) and the two-step legacy image modes. Two checks only log what they see and exit 0
-// unless they crash; the table marks them "ran" rather than "pass".
+// Redis) and the two-step legacy image modes. A check marked `log` only logs what it sees and
+// exits 0 unless it crashes; the table would mark it "ran" rather than "pass" (none does now).
 import { createRequire } from 'node:module';
 import { chmodSync, existsSync, mkdirSync, renameSync, mkdtempSync, readdirSync, rmSync, writeFileSync, createWriteStream } from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -56,21 +56,34 @@ const CHECKS = [
   { name: 'stale-linear', file: 'verify-stale-linear.cjs', args: (d) => ['20', ORIGIN, join(d, 'stale-linear.png')] },
   { name: 'board-sync', file: 'verify-board-sync.cjs', args: () => [] },
   { name: 'data-agent', file: 'verify-data-agent.cjs', args: () => [] },
-  { name: 'data-prototype', file: 'verify-data-prototype.cjs', args: () => [], log: true },
+  { name: 'data-prototype', file: 'verify-data-prototype.cjs', args: () => [] },
   { name: 'group', file: 'verify-group.cjs', args: () => [] },
   { name: 'learning', file: 'verify-learning.cjs', args: () => [] },
   { name: 'runs', file: 'verify-runs.ts', args: () => [] },
   { name: 'api', file: 'verify-api.ts', args: () => [], tab: '/canvas/' },
   { name: 'mcp', file: 'verify-mcp.ts', args: () => [], tab: '/canvas/' },
   { name: 'composition', file: 'verify-composition.ts', args: () => [], tab: '/canvas/' },
-  { name: 'converge', file: 'verify-converge.ts', args: () => [], tab: '/canvas/?prototype=converge', log: true },
+  { name: 'converge', file: 'verify-converge.ts', args: () => [], tab: '/canvas/?prototype=converge' },
   { name: 'feedback-mcp', file: 'verify-feedback-mcp.ts', args: () => [], tab: '/canvas/', comment: true },
   { name: 'connector-follow', file: 'verify-connector-follow.ts', args: (d) => [join(d, 'connector')] },
+  { name: 'answer-show', file: 'verify-answer-show.mjs', args: (d) => [d] },
+  { name: 'retry-key', file: 'verify-retry-key.mjs', args: (d) => [d] },
+  { name: 'menu-keys', file: 'verify-menu-keys.mjs', args: (d) => [d] },
+  { name: 'import-follow', file: 'verify-import-follow.mjs', args: (d) => [d, ORIGIN] },
+  { name: 'stale-edges', file: 'verify-stale-edges.mjs', args: (d) => [d] },
+  // Listed ahead of their merge; a check whose file is not in tools/ yet is passed over.
+  { name: 'keyboard', file: 'verify-keyboard.mjs', args: (d) => [d] },
+  { name: 'heard', file: 'verify-heard.mjs', args: (d) => [d] },
+  { name: 'pin-context', file: 'verify-pin-context.mjs', args: (d) => [d] },
+  { name: 'ask-image', file: 'verify-ask-image.mjs', args: (d) => [d] },
+  { name: 'ask-unclipped', file: 'verify-ask-unclipped.mjs', args: (d) => [d] },
+  { name: 'annotate-clear', file: 'verify-annotate-clear.mjs', args: (d) => [d] },
   // These start their own dev servers on other ports.
   { name: 'answer-view', file: 'verify-answer-view.mjs', args: (d) => [d] },
   { name: 'touch', file: 'verify-touch.mjs', args: (d) => [d] },
   { name: 'early-agent', file: 'verify-early-agent.mjs', args: (d) => [d] },
   { name: 'ask-live', file: 'verify-ask-live.mjs', args: (d) => [d] },
+  { name: 'answer-beside', file: 'verify-answer-beside.mjs', args: (d) => [d] },
 ].filter((c) => existsSync(join(dirname(fileURLToPath(import.meta.url)), c.file)));
 const SKIPPED = [
   { name: 'board-sync-server', reason: 'needs Postgres and Redis; run `pnpm --filter @pairedcc/canvas verify:sync-server`' },
