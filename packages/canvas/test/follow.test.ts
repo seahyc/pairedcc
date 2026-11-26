@@ -19,10 +19,14 @@ describe("what follows a moved object", () => {
   it("leaves comments about several objects where they are", () => {
     expect(followers(["shape:card"], board, new Set())).not.toContain("shape:about-two");
   });
-  it("never moves something that is being moved anyway, but still brings what hangs off it", () => {
-    // The person drags the card and its comment together: the comment is not moved twice,
-    // and the reply to the comment still comes along.
-    expect(followers(["shape:card"], board, new Set(["shape:card", "shape:comment"])).sort()).toEqual(["shape:note", "shape:reply"]);
+  it("stops at anything being moved anyway: its own move brings its replies, exactly once", () => {
+    // The person drags the card and its comment together. From the card: only the note.
+    // From the comment (moved too, so it gets its own call): the reply. Never the reply twice.
+    const moving = new Set(["shape:card", "shape:comment"]);
+    const fromCard = followers(["shape:card"], board, moving), fromComment = followers(["shape:comment"], board, moving);
+    expect(fromCard).toEqual(["shape:note"]);
+    expect(fromComment).toEqual(["shape:reply"]);
+    expect([...fromCard, ...fromComment].filter((id) => id === "shape:reply")).toHaveLength(1);
   });
   it("survives a cycle", () => {
     const loop = [s("shape:a", { targetId: "shape:b" }), s("shape:b", { targetId: "shape:a" })];

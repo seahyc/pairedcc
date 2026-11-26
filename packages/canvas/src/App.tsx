@@ -1459,14 +1459,15 @@ function App() {
     });
     editor.sideEffects.registerAfterChangeHandler("shape", (_previous, next) => wrapText(next));
     // What the person moves takes its comments, notes and replies along (same step, same undo).
-    // Undo and redo restore followers from history themselves, so following pauses while they run.
+    // Undo, redo and a cancelled drag (bail) restore followers from history themselves, so
+    // following pauses while they run.
     let replaying = false;
-    for (const name of ["undo", "redo"] as const) {
-      const original = editor[name].bind(editor);
-      editor[name] = () => {
+    for (const name of ["undo", "redo", "bail", "bailToMark"] as const) {
+      const original = editor[name].bind(editor) as (...args: unknown[]) => Editor;
+      (editor as unknown as Record<string, unknown>)[name] = (...args: unknown[]) => {
         replaying = true;
         try {
-          return original();
+          return original(...args);
         } finally {
           replaying = false;
         }

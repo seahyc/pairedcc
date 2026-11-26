@@ -1,6 +1,7 @@
 // Comments, agent notes and replies stay with what they are about: when the person moves an
 // object, everything attached to it (meta.targetId, transitively) moves by the same amount.
-// Comments about several objects stay put, and anything also being moved is left alone.
+// Comments about several objects stay put. Anything also being moved is left alone, and so is
+// what hangs off it: its own move brings those, so nothing moves twice.
 
 type Attached = { id: string; meta: Record<string, unknown> };
 
@@ -18,8 +19,10 @@ export function followers(moved: readonly string[], shapes: readonly Attached[],
     for (const id of byTarget.get(queue.shift()!) ?? []) {
       if (seen.has(id)) continue;
       seen.add(id);
+      // Something moving anyway brings its own followers when its move is handled.
+      if (movingAnyway.has(id)) continue;
       queue.push(id);
-      if (!movingAnyway.has(id)) out.push(id);
+      out.push(id);
     }
   }
   return out;
