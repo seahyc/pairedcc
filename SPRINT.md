@@ -514,7 +514,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     pass/fail table, writes it as JSON, exits non-zero on any failure, and is documented for the
     review lane.
 
+84. **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
+
 ## Claims
+84. Ask about an image says what the image is | claude/sprint-ask-image | 2026-11-26T13:37Z
 83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
 82. A Tab stop is heard | claude/sprint-robust-heard | 2026-11-26T13:40Z
 
@@ -819,3 +822,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:28Z | build-B | 80 Ask in a frame hidden by the frame | #104 | New item found in item 67 screenshots; asks, comments, replies, answers, agent notes on the page; real page 6/16 → 16/16; scorecard rows unchanged; filed 81 |
 | 2026-11-26T13:31Z | build-A | 7 Keyboard-only loop | #105 | N then Enter was a dead end and Tab never reached the board or moved on from a selection; verify-keyboard 6/14 → 14/14; 10 unit tests; regression sweep green (calm 32/33 = known #91 case); first screen unchanged; scorecard unchanged |
 | 2026-11-26T13:31Z | build-B | 81 Agent note never lands on top of something | #106 | annotate without x/y uses freeSpot down the target column; real page 3/4 → 4/4; annotate tasks self-test 4/4 |
+| 2026-11-26T13:36Z | build-B | 67 follow-up: merged the integration branch into #90 | #90 | Conflicts with #64/#67/#69/#86/#88 resolved; selected frame contents and history honour left-out marks; Leave out key cap hidden on touch; verify-leave-out 19/19 incl. frame ask and 390 px phone |
