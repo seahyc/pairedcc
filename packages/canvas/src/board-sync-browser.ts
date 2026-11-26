@@ -43,6 +43,12 @@ export const boardApi: BoardApi = {
     return me.userId ?? me.id ?? me.email ?? null;
   },
   async get(id) {
+    // Look in the list first: asking for a board that does not exist yet (every first
+    // sign-in) would log a 404 in the person's console for something that is not an error.
+    const list = await fetch("/api/canvas/boards", { credentials: "same-origin" });
+    if (!list.ok) throw new Error(`Loading your boards failed (${list.status})`);
+    const { boards } = (await list.json()) as { boards: { id: string }[] };
+    if (!boards.some((b) => b.id === id)) return null;
     const r = await fetch(`/api/canvas/boards/${encodeURIComponent(id)}`, { credentials: "same-origin" });
     if (r.status === 404) return null;
     if (!r.ok) throw new Error(`Loading the board failed (${r.status})`);

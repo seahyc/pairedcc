@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isDerivedField } from "./revision";
 
 export const runsInput = z.object({ limit: z.number().int().min(1).max(100).default(20) });
 export const undoRunInput = z.object({ runId: z.string().min(1).max(100) });
@@ -33,9 +34,8 @@ export function documentDiff(diff: RunDiff): RunDiff {
 export const isEmptyDiff = (d: RunDiff) =>
   !Object.keys(d.added).length && !Object.keys(d.updated).length && !Object.keys(d.removed).length;
 
-/** Fields derived by the canvas rather than set by anyone (revision counter, text-edit timestamp, auto-sized card height). */
 function ignored(rec: Rec, path: string) {
-  return path === "meta.revision" || path === "meta.updatedAt" || (rec.type === "card" && path === "props.h");
+  return isDerivedField(rec.type, path);
 }
 
 function equal(a: unknown, b: unknown): boolean {
@@ -109,6 +109,17 @@ export function planUndo(diff: RunDiff, current: (id: string) => Rec | undefined
   for (const [id, deleted] of Object.entries(diff.removed)) {
     if (current(id)) conflicts.push({ id, reason: "recreated after the run deleted it" });
     else put.push(deleted);
+  }
+  // What comes back must not point at something deleted since: a shape needs its parent
+  // frame or page, a binding both of its ends, either still there or restored with it.
+  const present = (ref: unknown) => typeof ref !== "string" || !!current(ref) || ref in diff.removed;
+  for (const rec of put) {
+    if (!(rec.id in diff.removed)) continue;
+    if (rec.typeName === "shape" && !present(rec.parentId))
+      conflicts.push({ id: rec.id, reason: `its parent ${String(rec.parentId)} was deleted after the run` });
+    if (rec.typeName === "binding")
+      for (const end of [rec.fromId, rec.toId])
+        if (!present(end)) conflicts.push({ id: rec.id, reason: `it connects ${String(end)}, which was deleted after the run` });
   }
   if (conflicts.length) return { put: [], remove: [], conflicts };
   put.sort((a, b) => rank(a) - rank(b));

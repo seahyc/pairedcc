@@ -1,3 +1,4 @@
+import { prototypeEnabled } from "../prototype-flags";
 import {
   BaseBoxShapeUtil,
   HTMLContainer,
@@ -47,7 +48,7 @@ export type DatasetShape = TLShape<"dataset">;
 export type ChartShape = TLShape<"chart">;
 
 export function dataPrototypeEnabled(search = typeof location === "undefined" ? "" : location.search) {
-  return new URLSearchParams(search).getAll("prototype").includes("data");
+  return prototypeEnabled("data", search);
 }
 
 const keepToCanvas = (editor: Editor) => (e: ReactPointerEvent) => editor.markEventAsHandled(e);
