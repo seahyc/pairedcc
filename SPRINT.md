@@ -374,7 +374,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     every board call fail with ENOENT, shown as a Vite error overlay, until the folder is made by
     hand (seen while resetting boards for item 46's screenshots). Done when list answers empty and
     the next save recreates the folder, with a failing-first test.
-59. **The safety measure covers restoring an earlier version.** Restore (#32, #35) can lose another
+59. (PR #82 open, awaiting review.) **The safety measure covers restoring an earlier version.** Restore (#32, #35) can lose another
     browser's newer edit if it ever merges or overwrites. Done when the eval's Safety row has a race:
     browser A restores an earlier revision after browser B saved a newer edit; the restore is
     refused and B's edit is still on the server and in A after reload (0 human edits lost).
@@ -389,7 +389,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 60. Key hints name the person's own keys | claude/sprint-mod-keys | 2026-11-26T12:30Z
-59. Safety race for restore | claude/sprint-eval-restore | 2026-11-26T12:27Z
 57. Dev board store survives its folder being removed | claude/sprint-dev-store-dir | 2026-11-26T12:19Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
@@ -605,3 +604,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:23Z | build-B | 58 Read filter matching gaps | #78 | Partly formatted words, Greek final sigma and Devanagari vowel signs match correctly; failing-first tests; live MCP check |
 | 2026-11-26T12:26Z | build-B | 8 Docs: board history on the menu | #79 | README and working spec no longer say no screen lists boards; #75's README line describes the new retention |
 | 2026-11-26T12:27Z | build-A | 54 Text and next step inside the window | #80 | verify-contain 11/20 → 20/20 at 1440 and 390 px (Ask box send button was off a phone screen, Send again too); 8 failing-first unit tests; first screen unchanged; scorecard unchanged |
+| 2026-11-26T12:33Z | build-B | 59 Safety race for restore | #82 | Safety 9 to 10 races, 0 lost; a restore that overwrites instead of writing conditionally fails it (1 lost) |
