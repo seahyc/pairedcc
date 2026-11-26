@@ -664,7 +664,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 97. (PR #126 open, awaiting review.) **verify-answer-page's frame step after #104.** On `claude/sprint-int` at 8cea125, `tools/verify-answer-page.mjs` fails "an answer that lands inside a frame on the open page belongs to the frame" (10/11); #104 made answers land clear of frames so they are never clipped. Done when the product choice (answer inside the frame, unclipped, or beside it) is recorded and the check asserts that choice, passing on the branch.
 
-100. **Bot review findings on build-A's merged PRs (not yet reproduced).** Each needs a failing test
+100. ((a)-(c): PR #129 open, awaiting review.) **Bot review findings on build-A's merged PRs (not yet reproduced).** Each needs a failing test
     first, then a fix or a recorded decision. #101: (a) two answers announced with identical text in
     a row are spoken once (React keeps the same live-region text); (b) an ask that goes quiet past
     the two-minute timeout gets Retry on screen but no announcement; (c) a clarifying question and a
@@ -675,7 +675,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     can run past the rectangle `freeSpot` checked (estimated heights) and cover a note below; (g) an
     ask and answer taller than the window are panned to the ask's top, leaving the answer cut off.
 
-101. **Agent-usability tasks for #99 and #51, and a fresh attempt.** Two agent-facing features merged after the 24-task set have no task: the refusal to rewrite the person's words (#99, build-A) and `style` in read (#51, build-A). Done when tasks for both exist with a passing self-test, written by a lane that did not build them, and a fresh attempt by an agent given only `AGENT_API.md` and the tools is recorded so the scorecard counts them, with its friction filed.
+101. (PR #131 open, awaiting review.) **Agent-usability tasks for #99 and #51, and a fresh attempt.** Two agent-facing features merged after the 24-task set have no task: the refusal to rewrite the person's words (#99, build-A) and `style` in read (#51, build-A). Done when tasks for both exist with a passing self-test, written by a lane that did not build them, and a fresh attempt by an agent given only `AGENT_API.md` and the tools is recorded so the scorecard counts them, with its friction filed.
 
 102. **Review follow-ups to #115 and #118 (bot review, verified by reading the code).** (a) With a dialog
     open, the board's keys still act: `?` opens Shortcuts behind the agent dialog and takes focus
@@ -687,13 +687,18 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 103. (Renumbered from 102 to avoid a clash. PR #128 open, awaiting review.) **A notice stays while the person is on it.** (Follow-up to #119.) Notices disappear on a timer (3.5 s, or 12 s with Show), even while the pointer is over one or its Show button has keyboard focus, so a slow reader or a keyboard user reaching Show can lose it mid-press (WCAG 2.2.1, timing adjustable; "the agent must visibly respond"). Done when the timer pauses while the pointer is over the notice or focus is inside it and restarts when they leave, from a tested pure function, checked in a real page (failing before, passing after).
 
+104. **The Ask loop measure follows the card-is-the-question loop.** Since 7cc29ef there is no question box, and `eval/measures/ask-loop.ts` (#56) still presses ⌘↵ and waits for it, so the scorecard's Ask loop row is 0/5 on `claude/sprint-int`. Every P-item PR must keep `pnpm eval:canvas` no worse, so this blocks them. Done when the measure walks the new loop (a card ending in "?" is sent when the person finishes writing it; another card is sent with ⌘↵; the agent finds the ask over MCP, works, answers beside it; a failed ask offers Retry) and passes 5/5, with each step still failing when its behaviour is broken.
+
+105. **Friction from the 26-task agent attempt (PR #131; reported by the agent, not yet reproduced).** (a) `canvas_update` with `text` leaves the layer `name` at the old text, and `read` and `overview` show the stale name; (b) clearing a chart filter (`filter: {}`) has no example in AGENT_API; (c) `canvas_runs` lists every page's runs, with no page filter; (d) `canvas_annotate`'s placement without x/y and its fixed 420 px width are undocumented; (e) results are large (full richText props, long `created` lists in `canvas_runs`). Done when each is reproduced and fixed or recorded as a decision.
+
 ## Claims
+104. The Ask loop measure follows the card-is-the-question loop | claude/sprint-askloop-card | 2026-11-26T14:48Z
 100 (f)-(g). Answer rows and panning findings on #87 | claude/sprint-answer-rows | 2026-11-26T14:48Z
-100 (a)-(c). Ask announcement findings on #101 | claude/sprint-announce-fixes | 2026-11-26T14:40Z
 102. Review follow-ups to #115 and #118 | claude/sprint-keys-followup | 2026-11-26T14:32Z
-101. Agent-usability tasks for #99 and #51, and a fresh attempt | claude/sprint-agent-tasks-3 | 2026-11-26T14:30Z
 
 ## Done
+- 101. Agent-usability tasks for #99 and #51 (build-B): PR #131 (tasks 25 and 26 self-tested; fresh attempt 26/26, median 2 tool calls; friction filed as item 105).
+- 100 (a)-(c). Ask announcement findings on #101 (build-B): PR #129 (repeats said, going quiet said, options counted per answer; verify-announce-fixes 1/4 → 4/4).
 - 99 (filed as 97). The first board keeps a margin on a phone (build-A): PR #130 (new board narrows right of or below the tool strip at 100%; reframe fits marks included, clear of the strip; verify-phone-margin 3/5 → 5/5; desktop unchanged; verify-all 46/47, answer-page is item 97).
 - 103. A notice stays while the person is on it (build-B): PR #128 (timer pauses on pointer or focus, full time after; the notice body now takes the pointer; verify-notice-hold 5/9 → 9/9).
 - 94. Moving one object on a big board stays quick (build-A): PR #127 (10k board, one-object move 534/498 → 81/83 ms unselected/selected; hidden layers panel no longer built; 10k load 9.9 s → 6.1 s on this container).
@@ -775,6 +780,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B) PR #123 (item 95, a "Gives …" line in the Ask box) is superseded by 7cc29ef: there is no question box any more, and the brief says never to bring one back. Closed unmerged. The idea (show what an ask gives before it goes) belongs with P2, where what an ask gives grows to the cluster around it.
 - (build-A, item 99) On a phone the first board is laid out narrower at 100% (cards wrap) rather than 460 px zoomed out; it goes below the tool strip or right of it, whichever leaves it wider (below, at 390 px). Reframing a board with nothing in view fits it, ✦ marks included, clear of the strip in whichever position shows it larger, centred in the room left; alternative: top-align below the strip.
 - (build-A, item 93) A stale flag is a Tab stop when half its drawn width and half a line are on screen (requiring all of it would drop a card fully in view whose long flag sticks out a little). Its size is computed from the flag's monospace metrics (6.6 px a character, 14 px lines) rather than measured in the DOM, so placement stays a pure function; changing `.stale-flag`'s font or padding means changing `flag-layout.ts`.
 - (build-B, item 95) The Ask box's "Gives …" line is in the default flow, not behind a flag: one muted line inside the open box, serving the Solveit principle in the brief; the first screen is unchanged. It outlines targets, frame and pins (as the sent ask does), not the thread behind an answer.
@@ -1058,3 +1064,5 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:32Z | build-B | Review of #122 | #122 | Red finding variant reproduced (a comment about a left-out card was given with its frame) and fixed; arrange now owns its followers with the drag follower paused (two optional findings); failing first 30/32, after 32/32; merged integration branch; 551 tests; scorecard rows unchanged |
 | 2026-11-26T14:37Z | build-B | 103 Notice stays while the person is on it | #128 | noticeDelay (failing-first test); notice body took no pointer (chrome passes it through), fixed; verify-notice-hold 5/9 → 9/9; verify-answer-show 17/17 |
 | 2026-11-26T14:46Z | build-A | 99 (filed as 97) First board keeps a margin on a phone | #130 | A board made at 390 px ran off both edges (−57/−35 px) and under the tool strip; a desktop board reframed at 78% put marks at −1 px; verify-phone-margin 3/5 → 5/5; 559 unit tests; verify-all 46/47 (answer-page = item 97, known) |
+| 2026-11-26T14:48Z | build-B | 101 Agent tasks for #99 and #51 | #131 | Tasks 25, 26 self-tested; fresh attempt 26/26, median 2; AGENT_API says annotate answers "fix the person's typo"; friction filed |
+| 2026-11-26T14:48Z | build-B | 100 (a)-(c) Ask announcements | #129 | liveText, announceState, optionsInLatestRound (failing-first tests); answers stamped with answeredAt; verify-announce-fixes 1/4 → 4/4 |
