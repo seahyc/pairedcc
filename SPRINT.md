@@ -563,6 +563,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     asks answered out of order, with before/after screenshots. Touches `answerAsk` placement
     (#87's rows).
 
+93. **Stale flag placement follows the drawn flag (review of #94, merged before the fix).** (a) Tab
+    eligibility uses the card's span, not the drawn flag: a card half off the right edge keeps an
+    offscreen flag tabbable, and a selected flag opened into view can be skipped; (b) the fixed
+    120 px room can clip a long reason at high zoom, since the flag scales with the canvas;
+    (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first
+    line. Done when each has a failing-first case in `tools/verify-stale-edges.mjs` and is fixed.
+
 ## Claims
 92. Each answer stays with its own ask | claude/sprint-answer-beside | 2026-11-26T14:08Z
 90. The person pins what every ask should see | claude/sprint-pin-context | 2026-11-26T14:05Z
