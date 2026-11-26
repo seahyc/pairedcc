@@ -1,5 +1,6 @@
 import { atom, getSnapshot, loadSnapshot, type Editor } from "tldraw";
 import { createBoardSync, type BoardApi, type MemoStore, type PutResult, type Snapshot, type SyncMemo, type SyncStatus } from "./board-sync";
+import { bringContentIntoView } from "./reframe";
 
 // Wires board sync to the editor, the network and localStorage. On paired.cc the account
 // comes from the session (/auth/me) and boards from /api/canvas/boards. The development
@@ -82,6 +83,7 @@ export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
         const page = editor.getCurrentPageId();
         loadSnapshot(editor.store, { document: snapshot as never });
         if (editor.getPage(page)) editor.setCurrentPage(page);
+        bringContentIntoView(editor);
       },
       listen: (fn) => editor.store.listen(fn, { scope: "document", source: "user" }),
     },
