@@ -41,6 +41,28 @@ defensible option, record the choice and the reason under Decisions needed, and 
 6. If time remains, take another task. When the backlog runs low, add tasks that follow from the
    working spec, each with a testable definition of done.
 
+## What the canvas is for (added 26 Nov by the maintainer's direction; this outranks the scorecard)
+The user experience is the product. Two anchors, both written up in
+`docs/canvas/usability-heuristics.md` (arrives with PR #7; read it before any UI work):
+1. **Jakob Nielsen's ten usability heuristics**, as applied there to a canvas shared with agents.
+   Every UI PR names the heuristics it serves and shows before/after screenshots.
+2. **Michael Nielsen's augmentation principle** (Carter and Nielsen, "Using Artificial Intelligence to
+   Augment Human Intelligence", Distill 2017; Matuschak and Nielsen on tools for thought): the aim is
+   to improve the person's own mental representation, not to hand over an answer. Agent output should
+   be something the person can manipulate and internalise: alternatives with the dimensions they vary
+   along, groupings the person can accept or redraw, predict-before-reveal.
+
+**The maintainer's playtest feedback is the top of the backlog.** It is filed under
+`docs/canvas/feedback/` as it arrives. Before choosing any task, read the newest file there; an
+unaddressed item in it comes before every numbered backlog item. Address items one PR each where
+possible, quote the feedback item in `## Why`, and mark it addressed in the file with the PR link.
+Feedback is a native primitive of the canvas (comments, picks, rejects, one queue, readable by
+agents through `canvas_feedback`): keep improving it, and use it in your own verification scripts.
+
+After feedback, prefer work from the "what remains" list in the heuristics document over new
+features. The review lane rejects UI work that makes a first two minutes of use more confusing,
+whatever the scorecard says.
+
 ## Goal and eval (added 26 Nov; read before choosing a task)
 **Goal for the sprint:** the working spec's first end-to-end acceptance scenario runs for real on
 this branch, driven both by a person in the browser and by an external agent over MCP, with boards
