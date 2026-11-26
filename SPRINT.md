@@ -398,7 +398,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 62. (PR #85 open, awaiting review.) **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
 
-63. **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
+63. (PR #87 open, awaiting review.) **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
     (comparing beats describing) and "the agent must visibly respond". Sending an ask makes room
     for one 340 px answer, but four options in a row are about 1,060 px: at 1440 px option D lands
     off the right edge, and on a 390 px phone only A is visible, and nothing brings them into view.
@@ -414,12 +414,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
-63. Answer lands in view | claude/sprint-answer-view | 2026-11-26T12:38Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 63. Answer lands in view (build-A): PR #87 (options wrap into rows that fit the window, cards narrow on a phone, the view pans to a landed answer; verify-answer-view 11/14 → 14/14).
 - 61. Ask about a chart or dataset gives what it shows (build-B): PR #86, stacked on #69.
 - 60. Key hints in the person's own keys (build-A): PR #83 (Ctrl on Windows, Linux and Android, ⌘ on Apple; verify-keys 10/16 → 16/16).
 - 57. Dev board store survives its folder being removed (build-B): PR #81.
@@ -459,6 +459,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 63) When an answer lands and the person can see its ask (not typing, dragging or asking), the view pans to show all of it, never zooming. On a phone, options wrap one per row, so comparing means scrolling down. Alternatives: a "4 options below →" pointer instead of panning; zooming out to fit a row.
 - (build-B, item 61) An ask about a chart gives its bars as text (up to 40, then a count) and, when stale, the bars still drawn with the reason, rather than bars recomputed from current data, so the agent sees what the person sees. A dataset gives its first five rows. Chart and dataset starters are offered (behind `?prototype=data`, where these objects exist).
 - (build-A, item 60) The first board's "How to ask" card is board text, written in the keys of the device that laid it out; a board seeded on a Mac and opened on Windows keeps ⌘↵ on that card while the bar and hints say Ctrl. Alternative: render that card's key at display time.
 - (build-B, item 47) With frame contents sent on an ask (#67), a selected frame now gets group starters ("What do these have in common?", "What is missing from this group?", "Which of these matters most?"). #42 had held these back because the frame's children were not sent. Charts still get the default three.
@@ -644,3 +645,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:39Z | build-A | Review follow-ups on #55 #68; 62 import keeps what was said | #55 #68 #85 | #55: blank cells keep column slots, side by side never overlaps (2 failing-first tests, browser 14/14); #68: unsafe integers in any spelling stay text; #85: quote-aware delimiter, view switch refused after edits and one undo, 2,000-row cap stated, table height derived (browser before 3 pass/6 fail → 9/9). All import branches merged with claude/sprint-int after #46 landed |
 | 2026-11-26T12:39Z | build-B | 61 Ask about a chart or dataset | #86 | Chart and dataset text from tested pure functions; starters; real tab 1/8 before, 8/8 after; scorecard unchanged |
 | 2026-11-26T12:39Z | build-B | Process slip, fixed | #64 #67 #69 #72 #76 #77 #81 #86 | The PR tool added a tool-link footer to these descriptions, against the hard rules; removed from all eight (re-read to confirm). The edit also escaped the inner HTML of another bot's Devin review badge in those bodies; the PR text is unchanged |
+| 2026-11-26T12:40Z | build-A | 63 Answer lands in view | #87 | 1440 px: option D landed off screen; 390 px: only A visible; now all in view, zoom unchanged, typing elsewhere undisturbed; verify-answer-view 11/14 → 14/14; 9 failing-first unit tests; scorecard unchanged |
