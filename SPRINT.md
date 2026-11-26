@@ -607,7 +607,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     can run past the rectangle `freeSpot` checked (estimated heights) and cover a note below; (g) an
     ask and answer taller than the window are panned to the ask's top, leaving the answer cut off.
 
+101. **Agent-usability tasks for #99 and #51, and a fresh attempt.** Two agent-facing features merged after the 24-task set have no task: the refusal to rewrite the person's words (#99, build-A) and `style` in read (#51, build-A). Done when tasks for both exist with a passing self-test, written by a lane that did not build them, and a fresh attempt by an agent given only `AGENT_API.md` and the tools is recorded so the scorecard counts them, with its friction filed.
+
 ## Claims
+101. Agent-usability tasks for #99 and #51, and a fresh attempt | claude/sprint-agent-tasks-3 | 2026-11-26T14:30Z
 99. The first board keeps a margin on a phone | claude/sprint-phone-margin | 2026-11-26T14:29Z
 
 ## Done
