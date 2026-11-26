@@ -111,7 +111,9 @@ export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
       snapshot: () => getSnapshot(editor.store).document as unknown as Snapshot,
       load: (snapshot) => {
         const page = editor.getCurrentPageId();
-        loadSnapshot(editor.store, { document: snapshot as never });
+        // Not an edit made here: keep it out of undo, so Cmd+Z never reverts another
+        // browser's change (merged in from the account) and saves the reversal.
+        editor.run(() => loadSnapshot(editor.store, { document: snapshot as never }), { history: "ignore" });
         if (editor.getPage(page)) editor.setCurrentPage(page);
         bringContentIntoView(editor);
       },

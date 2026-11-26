@@ -56,8 +56,26 @@ export interface BoardStore {
 /** The name stored in the tldraw document record, if any. */
 export function documentName(snapshot: Snapshot): string | undefined {
   const doc = snapshot.store['document:document'] as { name?: unknown } | undefined
-  return typeof doc?.name === 'string' && doc.name.trim() ? doc.name.trim().slice(0, 200) : undefined
+  return typeof doc?.name === 'string' && doc.name.trim() ? wellFormed(doc.name.trim().slice(0, 200)) : undefined
 }
+
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
+
+/**
+ * The same value with every unpaired UTF-16 surrogate (half of an emoji, left by text
+ * clipped mid-character) replaced by U+FFFD. PostgreSQL rejects such text in JSONB, which
+ * would fail the whole board's save; paired characters and everything else are untouched.
+ */
+export function wellFormed<T>(value: T): T {
+  if (typeof value === 'string') return value.replace(LONE_SURROGATE, '\uFFFD') as T
+  if (Array.isArray(value)) return value.map(wellFormed) as T
+  if (value && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [wellFormed(k), wellFormed(v)])) as T
+  return value
+}
+
+/** A save as stored: text made well-formed (see wellFormed). */
+export const storable = (input: SaveInput): SaveInput => ({ ...input, ...(input.name ? { name: wellFormed(input.name) } : {}), snapshot: wellFormed(input.snapshot) })
 
 export const byteSize = (snapshot: Snapshot) => Buffer.byteLength(JSON.stringify(snapshot))
 
@@ -89,7 +107,8 @@ export class MemoryBoardStore implements BoardStore {
     const b = this.boards.get(this.key(userId, id))
     return b ? { ...this.summary(b), snapshot: structuredClone(b.snapshot) } : null
   }
-  async save(userId: string, id: string, input: SaveInput): Promise<SaveResult> {
+  async save(userId: string, id: string, raw: SaveInput): Promise<SaveResult> {
+    const input = storable(raw)
     const k = this.key(userId, id)
     const current = this.boards.get(k)
     const at = this.now().toISOString(), sizeBytes = byteSize(input.snapshot)

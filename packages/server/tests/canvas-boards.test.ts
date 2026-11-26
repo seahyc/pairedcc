@@ -50,6 +50,22 @@ function contract(name: string, make: () => Promise<Made>) {
       expect(await limited.list(erin)).toHaveLength(2)
     })
 
+    it('saves a board holding half of an emoji (text clipped mid-character), replacing only that half', async () => {
+      const clipped = 'Café plans \u{1F600}'.slice(0, -1) // ends in an unpaired high surrogate
+      const carol = await made.newUser()
+      const created = await store.save(carol, 'clipped', { expectedRevision: 0, snapshot: snap(`${clipped} and \udc00 alone`, `Name ${clipped}`) })
+      expect(created).toMatchObject({ ok: true, board: { revision: 1, name: 'Name Café plans \ufffd' } })
+      const saved = await store.save(carol, 'clipped', { expectedRevision: 1, snapshot: snap(`kept \u{1F600} whole, ${clipped}`) })
+      expect(saved).toMatchObject({ ok: true, board: { revision: 2 } })
+      const board = await store.get(carol, 'clipped')
+      expect((board!.snapshot.store['shape:a'] as { props: { text: string } }).props.text).toBe('kept \u{1F600} whole, Café plans \ufffd')
+      // A long name is cut to 200 characters without leaving half an emoji behind.
+      const long = await store.save(carol, 'clipped', { expectedRevision: 2, snapshot: snap('x', `${'a'.repeat(199)}\u{1F600}`) })
+      expect(long).toMatchObject({ ok: true, board: { name: `${'a'.repeat(199)}\ufffd` } })
+      const first = await store.revision(carol, 'clipped', 1)
+      expect((first!.snapshot.store['shape:a'] as { props: { text: string } }).props.text).toBe('Café plans \ufffd and \ufffd alone')
+    })
+
     it('creates at revision 1 only when the board does not exist', async () => {
       const r = await store.save(alice, 'b1', { expectedRevision: 0, snapshot: snap('one', 'Field notes') })
       expect(r).toMatchObject({ ok: true, board: { id: 'b1', name: 'Field notes', revision: 1 } })
