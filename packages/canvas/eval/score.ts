@@ -43,12 +43,16 @@ export function rows(raw: Raw, previous?: Raw): Row[] {
   if (!u || u.attempted === 0)
     out.push({ measure: "Agent usability", target: "≥90% of ≥20 tasks", result: `${u?.tasks ?? 0} tasks, no recorded attempt`, status: "not run" });
   else {
-    const rate = u.completed / u.attempted;
+    // Tasks added since the recorded attempt count as not completed, so a stale attempt over
+    // fewer tasks cannot read as a full pass.
+    const total = Math.max(u.tasks, u.attempted);
+    const rate = u.completed / total;
+    const missing = total - u.attempted;
     out.push({
       measure: "Agent usability",
       target: "≥90% of ≥20 tasks",
-      result: `${u.completed}/${u.attempted} (${Math.round(rate * 100)}%), median ${u.medianToolCalls ?? "?"} tool calls`,
-      status: rate >= 0.9 && u.attempted >= 20 ? "pass" : "fail",
+      result: `${u.completed}/${total} (${Math.round(rate * 100)}%), median ${u.medianToolCalls ?? "?"} tool calls${missing ? `; ${missing} task${missing === 1 ? "" : "s"} not in the recorded attempt` : ""}`,
+      status: rate >= 0.9 && total >= 20 ? "pass" : "fail",
     });
   }
 
