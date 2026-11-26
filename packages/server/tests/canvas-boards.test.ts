@@ -5,7 +5,7 @@ import postgres from 'postgres'
 import { Hono } from 'hono'
 import { signJwt } from '../src/auth/jwt.js'
 import { createBoardRoutes } from '../src/canvas/boards/routes.js'
-import { MemoryBoardStore, KEEP_REVISIONS, MAX_BOARD_BYTES, type BoardStore, type Snapshot } from '../src/canvas/boards/store.js'
+import { MemoryBoardStore, KEEP_REVISIONS, MAX_BOARD_BYTES, MAX_BOARDS_PER_ACCOUNT, type BoardLimits, type BoardStore, type Snapshot } from '../src/canvas/boards/store.js'
 import { PostgresBoardStore } from '../src/canvas/boards/postgres-store.js'
 
 const snap = (text: string, name?: string): Snapshot => ({
@@ -17,13 +17,37 @@ const snap = (text: string, name?: string): Snapshot => ({
 })
 
 /** The same behaviour is required of every store. */
-function contract(name: string, make: () => Promise<{ store: BoardStore; users: [string, string] }>) {
+type Made = { store: BoardStore; users: [string, string]; limited: (limits: BoardLimits) => BoardStore; newUser: () => Promise<string> }
+function contract(name: string, make: () => Promise<Made>) {
   describe(`${name} board store`, () => {
-    let store: BoardStore, alice: string, bob: string
+    let store: BoardStore, alice: string, bob: string, made: Made
     beforeAll(async () => {
-      const made = await make()
+      made = await make()
       store = made.store
       ;[alice, bob] = made.users
+    })
+
+    it('limits how many boards one account can create, and only that', async () => {
+      const limited = made.limited({ maxBoards: 3 })
+      const carol = await made.newUser(), dave = await made.newUser()
+      for (const id of ['l1', 'l2', 'l3']) expect((await limited.save(carol, id, { expectedRevision: 0, snapshot: snap(id) })).ok).toBe(true)
+      expect(await limited.save(carol, 'l4', { expectedRevision: 0, snapshot: snap('l4') })).toEqual({ ok: false, reason: 'limit', limit: 3 })
+      expect(await limited.get(carol, 'l4')).toBeNull()
+      // Saving an existing board is never limited, and other accounts are unaffected.
+      expect((await limited.save(carol, 'l1', { expectedRevision: 1, snapshot: snap('l1 again') })).ok).toBe(true)
+      expect((await limited.save(dave, 'l4', { expectedRevision: 0, snapshot: snap('dave') })).ok).toBe(true)
+      // Deleting a board frees its place.
+      expect(await limited.remove(carol, 'l2', 1)).toEqual({ ok: true })
+      expect((await limited.save(carol, 'l4', { expectedRevision: 0, snapshot: snap('l4') })).ok).toBe(true)
+    })
+
+    it('never lets concurrent creates exceed the limit', async () => {
+      const limited = made.limited({ maxBoards: 2 })
+      const erin = await made.newUser()
+      const results = await Promise.all([0, 1, 2, 3, 4].map((i) => limited.save(erin, `c${i}`, { expectedRevision: 0, snapshot: snap(`c${i}`) })))
+      expect(results.filter((r) => r.ok)).toHaveLength(2)
+      expect(results.filter((r) => !r.ok && r.reason === 'limit')).toHaveLength(3)
+      expect(await limited.list(erin)).toHaveLength(2)
     })
 
     it('creates at revision 1 only when the board does not exist', async () => {
@@ -88,7 +112,11 @@ function contract(name: string, make: () => Promise<{ store: BoardStore; users: 
   })
 }
 
-contract('memory', async () => ({ store: new MemoryBoardStore(), users: [randomUUID(), randomUUID()] }))
+contract('memory', async () => {
+  // One shared map of boards, so a limited view sees what the default store saved.
+  const store = new MemoryBoardStore()
+  return { store, users: [randomUUID(), randomUUID()], limited: (limits) => store.withLimits(limits), newUser: async () => randomUUID() }
+})
 
 // Runs against a real database when TEST_DATABASE_URL points at an empty Postgres;
 // the migrations are applied to it first.
@@ -105,9 +133,13 @@ describe.runIf(Boolean(testDb))('postgres', () => {
       await sql.unsafe(await readFile(new URL(file, dir), 'utf8'))
       await sql`INSERT INTO _migrations (name) VALUES (${file})`
     }
-    const users = [randomUUID(), randomUUID()] as [string, string]
-    for (const id of users) await sql`INSERT INTO users (id, email) VALUES (${id}, ${`${id}@boards.test`})`
-    return { store: new PostgresBoardStore(sql), users }
+    const newUser = async () => {
+      const id = randomUUID()
+      await sql`INSERT INTO users (id, email) VALUES (${id}, ${`${id}@boards.test`})`
+      return id
+    }
+    const users = [await newUser(), await newUser()] as [string, string]
+    return { store: new PostgresBoardStore(sql), users, limited: (limits) => new PostgresBoardStore(sql, limits), newUser }
   })
 })
 
@@ -164,5 +196,20 @@ describe('board routes', () => {
     expect((await app.request('/api/canvas/boards/main', { method: 'DELETE', headers: alice })).status).toBe(400)
     expect((await app.request('/api/canvas/boards/main?expectedRevision=2', { method: 'DELETE', headers: alice })).status).toBe(204)
     expect((await app.request('/api/canvas/boards/main', { headers: alice })).status).toBe(404)
+  })
+})
+
+describe('board limit over HTTP', () => {
+  const app = new Hono().route('/api/canvas/boards', createBoardRoutes(new MemoryBoardStore(undefined, { maxBoards: 1 })))
+  const auth = { Authorization: `Bearer ${signJwt({ userId: randomUUID(), email: 'frank@boards.test' })}`, 'Content-Type': 'application/json' }
+  it('refuses a new board past the limit with 403, naming the limit', async () => {
+    const put = (id: string) => app.request(`/api/canvas/boards/${id}`, { method: 'PUT', headers: auth, body: JSON.stringify({ expectedRevision: 0, snapshot: snap(id) }) })
+    expect((await put('first')).status).toBe(201)
+    const refused = await put('second')
+    expect(refused.status).toBe(403)
+    expect(await refused.json()).toEqual({ error: 'This account already has 1 board, the most it can keep. Delete one to make room.', limit: 1 })
+  })
+  it('defaults to a limit well above normal use', () => {
+    expect(MAX_BOARDS_PER_ACCOUNT).toBe(50)
   })
 })

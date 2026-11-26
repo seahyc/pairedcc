@@ -35,6 +35,11 @@ export class AskDesk {
     return true;
   }
 
+  /** Whether this attempt of an ask was already announced. */
+  has(sessionId: string, ask: AnnouncedAsk) {
+    return this.known.has(`${sessionId}:${ask.id}:${ask.attempt}`);
+  }
+
   /** Wait for the next ask. Resolves with null when nothing arrives in time. */
   wait(agent: string, waitMs: number) {
     let cancel = () => undefined as void;

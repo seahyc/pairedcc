@@ -8,13 +8,15 @@
 //    board and the account's board is opened; a whole board is never replaced by another.
 // 2. The server rejects a save on a stale revision; the controller then re-reads and decides.
 // 3. Offline is normal: work stays in this browser and is saved when the server is back.
+// 4. A save the server refuses (too large, invalid) is not offline: retrying the same board
+//    cannot succeed, so the controller says why and waits until the board changes.
 
 export type Snapshot = { store: Record<string, unknown>; schema: Record<string, unknown> };
 export type ServerBoard = { revision: number; snapshot: Snapshot };
 export type PutResult =
   | { ok: true; revision: number }
   | { ok: false; stale: true; revision: number }
-  | { ok: false; stale: false; error: string };
+  | { ok: false; stale: false; error: string; /** HTTP status when the server refused this board itself (400, 403 board limit, 413); retrying it unchanged cannot work. */ refused?: number };
 
 export type BoardApi = {
   /** The signed-in account, or null when signed out. Throws when the server is unreachable. */
@@ -41,7 +43,8 @@ export type SyncStatus =
   | { state: "local"; note?: string }
   | { state: "loading" | "saving"; account: string }
   | { state: "saved"; account: string; revision: number; at: number; note?: string }
-  | { state: "offline"; account?: string; error: string };
+  | { state: "offline"; account?: string; error: string }
+  | { state: "refused"; account: string; code: number; error: string };
 
 export type SyncOptions = {
   api: BoardApi;
@@ -104,6 +107,13 @@ export function withNewRecords(initial: Snapshot, current: Snapshot, server: Sna
   return { snapshot: { store, schema: server.schema }, kept };
 }
 
+/** The server refused this board itself; trying the same board again cannot succeed. */
+export class SaveRefused extends Error {
+  constructor(readonly code: number, message: string) {
+    super(message);
+  }
+}
+
 export function copyId(boardId: string, at: Date) {
   return `${boardId}-browser-${at.toISOString().slice(0, 16).replace(/[-:T]/g, "")}`;
 }
@@ -127,6 +137,8 @@ export function createBoardSync(o: SyncOptions) {
   let started = false;
   let synced = "";
   let base: Snapshot | null = null;
+  // The board content the server last refused; it is not uploaded again until it changes.
+  let refusedJson = "";
   // The board as it was when sync was created; objects created while the account's board
   // is loading are carried onto it instead of being replaced.
   const initial = o.local.snapshot();
@@ -142,6 +154,10 @@ export function createBoardSync(o: SyncOptions) {
     else if (!m?.dirty) o.memo.set({ account: m?.account ?? "", boardId, revision: m?.revision ?? 0, dirty: true });
   };
   const failed = (error: unknown) => {
+    if (error instanceof SaveRefused && account) {
+      clearTimer(timer);
+      return emit({ state: "refused", account, code: error.code, error: error.message });
+    }
     emit({ state: "offline", ...(account ? { account } : {}), error: error instanceof Error ? error.message : String(error) });
     if (!stopped) timer = setTimer(() => (account ? save() : start()), (retry = Math.min(retry * 2, 30_000)));
   };
@@ -161,11 +177,17 @@ export function createBoardSync(o: SyncOptions) {
       remember(false);
       return emit({ state: "saved", account: account!, revision, at: now().getTime() });
     }
+    if (json === refusedJson && status.state === "refused") return emit(status);
     emit({ state: "saving", account: account! });
     const result = await o.api.put(boardId, revision, snapshot);
+    if (!result.ok && !result.stale && result.refused) {
+      refusedJson = json;
+      throw new SaveRefused(result.refused, result.error);
+    }
     if (result.ok) {
       revision = result.revision;
       synced = json;
+      refusedJson = "";
       base = snapshot;
       remember(again);
       retry = 1000;
@@ -205,6 +227,7 @@ export function createBoardSync(o: SyncOptions) {
   async function setAside(why: string) {
     const id = copyId(boardId, now());
     const copy = await o.api.put(id, 0, o.local.snapshot());
+    if (!copy.ok && !copy.stale && copy.refused) throw new SaveRefused(copy.refused, copy.error);
     if (!copy.ok) throw new Error(copy.stale ? `Board ${id} already exists` : copy.error);
     return `${why} This browser's board was saved to your account as "${id}".`;
   }

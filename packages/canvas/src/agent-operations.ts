@@ -1,3 +1,4 @@
+import { relationships, relationshipsOf, sourceOf, transformationOf, type ArrowEnd, type PrimitiveRecord } from "./primitives";
 import { prototypeRefusal } from "./prototype-flags";
 import {
   AssetRecordType,
@@ -6,6 +7,7 @@ import {
   toRichText,
   type Editor,
   type TLShape,
+  type TLShapeId,
 } from "tldraw";
 import { sceneInput, orderedScene, arrangeInput, duplicateInput, layoutPositions } from "./composition";
 import { z } from "zod";
@@ -27,8 +29,9 @@ import {
   revision,
 } from "./operations";
 import { createPrompt } from "./learning/prompt-shape";
+import { convergeInput, placeBeside, synthesisText } from "./converge/model";
 import { overview } from "./overview";
-import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell } from "./data/agent";
+import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
@@ -211,7 +214,10 @@ export function image(editor: Editor, value: unknown, actor: string) {
   if (!described) throw new Error("Could not place the image");
   return { ...described, ...(captionId ? { captionId } : {}) };
 }
-export function connect(editor: Editor, value: unknown, actor: string) {
+type Anchor = { x: number; y: number };
+/** Fixed anchors (normalised 0..1 on each shape) instead of choosing sides from the angle. */
+export type ConnectAnchors = { start: Anchor; end: Anchor };
+export function connect(editor: Editor, value: unknown, actor: string, anchors?: ConnectAnchors) {
   const input = connectionInput.parse(value),
     { fromId, toId } = input,
     from = find(editor, fromId),
@@ -225,9 +231,10 @@ export function connect(editor: Editor, value: unknown, actor: string) {
   // side of a card share one anchor point, so several of them fan out from it.
   const dx = b.center.x - a.center.x, dy = b.center.y - a.center.y;
   const vertical = Math.abs(dy) >= Math.abs(dx) * 0.6;
-  const startAnchor = vertical ? { x: 0.5, y: dy > 0 ? 1 : 0 } : { x: dx > 0 ? 1 : 0, y: 0.5 };
-  const endAnchor = vertical ? { x: 0.5, y: dy > 0 ? 0 : 1 } : { x: dx > 0 ? 0 : 1, y: 0.5 };
-  const bend = Math.max(-60, Math.min(60, (vertical ? dx : -dy) * 0.12)) * (vertical ? (dy > 0 ? 1 : -1) : dx > 0 ? 1 : -1);
+  const startAnchor = anchors?.start ?? (vertical ? { x: 0.5, y: dy > 0 ? 1 : 0 } : { x: dx > 0 ? 1 : 0, y: 0.5 });
+  const endAnchor = anchors?.end ?? (vertical ? { x: 0.5, y: dy > 0 ? 0 : 1 } : { x: dx > 0 ? 0 : 1, y: 0.5 });
+  // A fixed edge-to-edge route runs straight; the bend is tuned for the chosen sides only.
+  const bend = anchors ? 0 : Math.max(-60, Math.min(60, (vertical ? dx : -dy) * 0.12)) * (vertical ? (dy > 0 ? 1 : -1) : dx > 0 ? 1 : -1);
   editor.markHistoryStoppingPoint("connect objects");
   editor.run(() => {
     editor.createShape({
@@ -267,6 +274,63 @@ export function connect(editor: Editor, value: unknown, actor: string) {
   });
   return describeObject(editor, id);
 }
+/**
+ * PROTOTYPE: pull alternatives into one synthesis card. The card records each source as an
+ * input (so it shows as stale when a source changes) and gets a derived-from arrow from each.
+ */
+export function converge(editor: Editor, value: unknown, actor: string) {
+  const input = convergeInput.parse(value);
+  return placeSynthesis(editor, input.sourceIds, actor, { ...synthesisText(input), name: input.name ?? "Synthesis", points: input.points, at: input.x !== undefined && input.y !== undefined ? { x: input.x, y: input.y } : undefined });
+}
+
+/**
+ * The person's converge: from two or more selected objects, an empty synthesis card linked
+ * the same way, in typing mode, so they write the conclusion in their own words.
+ */
+export function convergeForPerson(editor: Editor, sourceIds: string[]) {
+  if (sourceIds.length < 2) throw new Error("Select at least two objects to pull together");
+  const { letters } = synthesisText({ sourceIds, text: "", points: [] });
+  const made = placeSynthesis(editor, sourceIds, HUMAN, { text: "", letters, name: "Synthesis" });
+  editor.setEditingShape(made.synthesis!.id as TLShapeId);
+  return made;
+}
+
+function placeSynthesis(
+  editor: Editor,
+  sourceIds: string[],
+  actor: string,
+  card: { text: string; letters: Map<string, string>; name: string; points?: unknown; at?: { x: number; y: number } },
+) {
+  const sources = sourceIds.map((id) => find(editor, id));
+  for (const s of sources) if (editor.isShapeHidden(s)) throw new Error(`${s.id} is hidden; a synthesis must come from what the person can see`);
+  if (sources.some((s) => s.type === "arrow")) throw new Error("Connections cannot be sources; pass the objects they join");
+  const boxes = sources.map((s) => editor.getShapePageBounds(s)).filter((b): b is NonNullable<typeof b> => !!b);
+  const at = card.at ?? placeBeside(boxes);
+  const inputs = recordInputs(editor, sourceIds);
+  editor.markHistoryStoppingPoint("converge");
+  let id = "";
+  const connections: unknown[] = [];
+  editor.run(() => {
+    id = createCard(editor, { kind: "note", x: at.x, y: at.y, text: card.text, name: card.name }, actor, {
+      role: "synthesis",
+      convergedFrom: sourceIds,
+      ...(card.points ? { points: card.points } : {}),
+      inputs,
+    });
+    // Each arrow carries its source's letter, which the card's claims cite. With the synthesis
+    // to the right of its sources, arrows run from each source's right edge to the card's left
+    // edge, so they never cut across the stacked sources.
+    const placed = editor.getShapePageBounds(id as never);
+    for (const [i, source] of sourceIds.entries()) {
+      const box = boxes[i];
+      const rightward = placed && box && placed.x >= box.x + box.w;
+      const anchors = rightward ? { start: { x: 1, y: 0.5 }, end: { x: 0, y: (i + 1) / (sourceIds.length + 1) } } : undefined;
+      connections.push(connect(editor, { fromId: source, toId: id, relation: "derived-from", label: card.letters.get(source) }, actor, anchors));
+    }
+  });
+  return { synthesis: describeObject(editor, id), sources: sourceIds, labels: Object.fromEntries(card.letters), connections };
+}
+
 export function annotateObject(editor: Editor, value: unknown) {
   const input = annotationInput.parse(value),
     target = find(editor, input.targetId),
@@ -397,9 +461,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
           };
       }
       // Data objects are summarised: rows and bars appear in dataset/widget, rows only via get.
-      const props = object && (s.type === "dataset" || s.type === "chart")
-        ? Object.fromEntries(Object.entries(object.props).filter(([k]) => k !== "data" && k !== "bars"))
-        : object?.props;
+      const props = object && summaryProps(s.type, object.props as Record<string, unknown>);
       return {
         ...object,
         props,
@@ -433,6 +495,24 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
       .getCurrentPageShapes()
       .filter((s) => s.type === "arrow")
       .flatMap((s) => editor.getBindingsFromShape(s.id, "arrow")),
+  };
+}
+
+/** PROTOTYPE: the object's relationships on its page, its source and the transformation behind it. */
+function primitiveFields(editor: Editor, s: TLShape) {
+  const page = editor.getAncestorPageId(s.id);
+  const shapes = page ? [...editor.getSortedChildIdsForParent(page)].flatMap(function all(id): TLShape[] {
+    const shape = editor.getShape(id);
+    return shape ? [shape, ...editor.getSortedChildIdsForParent(id).flatMap(all)] : [];
+  }) : [s];
+  const ends: ArrowEnd[] = shapes
+    .filter((a) => a.type === "arrow")
+    .flatMap((a) => editor.getBindingsFromShape(a.id, "arrow").map((b) => ({ arrowId: a.id, terminal: (b.props as { terminal: "start" | "end" }).terminal, toId: b.toId })));
+  const source = sourceOf(s as PrimitiveRecord), transformation = transformationOf(s as PrimitiveRecord);
+  return {
+    relationships: relationshipsOf(s.id, relationships(shapes as PrimitiveRecord[], ends)),
+    ...(source ? { source } : {}),
+    ...(transformation ? { transformation } : {}),
   };
 }
 
@@ -517,6 +597,7 @@ export async function executeCommand(
         ...result,
         meta: s.meta,
         ...dataFields(editor, s, true),
+        ...primitiveFields(editor, s),
         ...(asset && includeAsset ? { asset } : {}),
       };
     }
@@ -536,6 +617,8 @@ export async function executeCommand(
       return patchObject(editor, command.input);
     case "learn":
       return createPrompt(editor, command.input, actor);
+    case "converge":
+      return converge(editor, command.input, actor);
     case "dataset":
       return createDataset(editor, command.input, actor);
     case "chart":

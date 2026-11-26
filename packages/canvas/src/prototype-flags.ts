@@ -3,7 +3,7 @@
 // that would put a prototype object on the board, so a default board never gains one.
 // Their shapes stay registered so saved boards that contain them still load.
 
-export type Prototype = "data" | "learning";
+export type Prototype = "data" | "learning" | "converge";
 
 export const PROTOTYPE_OPS: Record<string, Prototype> = {
   dataset: "data",
@@ -11,9 +11,10 @@ export const PROTOTYPE_OPS: Record<string, Prototype> = {
   chart_state: "data",
   cell: "data",
   learn: "learning",
+  converge: "converge",
 };
 
-const TOOL: Record<string, string> = { dataset: "canvas_dataset", chart: "canvas_chart", chart_state: "canvas_chart_state", cell: "canvas_cell", learn: "canvas_learn" };
+const TOOL: Record<string, string> = { dataset: "canvas_dataset", chart: "canvas_chart", chart_state: "canvas_chart_state", cell: "canvas_cell", learn: "canvas_learn", converge: "canvas_converge" };
 
 export function prototypeEnabled(name: Prototype, search = typeof location === "undefined" ? "" : location.search) {
   return new URLSearchParams(search).getAll("prototype").includes(name);

@@ -144,6 +144,7 @@ export async function sessionOf(page: Page, base: string): Promise<string> {
 export type Agent = {
   call(name: string, args?: Record<string, unknown>): Promise<any>;
   tools(): Promise<string[]>;
+  describe(): Promise<{ instructions?: string; tools: { name: string; description?: string; inputSchema: unknown }[] }>;
   calls: number;
   close(): Promise<void>;
 };
@@ -176,6 +177,9 @@ export async function mcpAgent(base: string, session: string, actor?: string): P
     },
     async tools() {
       return (await client.listTools()).tools.map((t) => t.name);
+    },
+    async describe() {
+      return { instructions: client.getInstructions(), tools: (await client.listTools()).tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) };
     },
     close: () => client.close(),
   };
