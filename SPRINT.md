@@ -221,6 +221,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     one thing to do (ask it in your chat to read your asks), the no-agent wording stays when no
     agent has acted, and both cases are unit-tested and shown in a headless screenshot.
 
+32. **Record the agent-usability attempt again on the calm canvas.** The 20/21 in the scorecard was
+    recorded before #21 merged and before the ask, converge and group tools existed. Done when
+    `eval/agent-runs/latest.json` holds an attempt by a fresh agent against the current branch
+    (`tsx eval/agent-tasks.ts attempt`), with board evidence kept for any failure, and task 14's
+    check is either confirmed or corrected with the reason given.
+
 ## Claims
 32. Ask names the connected agent | claude/sprint-ask-recent-agent | 2026-11-26T11:17Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
@@ -304,6 +310,10 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (build-A, item 28) The eval's workspace measure gives e2e `DATABASE_URL`/`REDIS_URL` from the environment, else starts throwaway Postgres and Redis when installed (Postgres as `nobody` under root), else reports "had no database". Existing product fail→pass in this sandbox. The 10k pan median swings 36–74 ms between back-to-back runs here, so the 25% regression flag fires on noise; threshold left unchanged.
 
 - (build-B, item 19) "Saved boards" shows in the Menu only when the account holds more than one server board, so most people never see it. Opening a board saves the current one first, and the browser remembers which board is open (the sync memo's `boardId`), so a reload reopens it. Board names are derived from IDs ("Your board", "Kept from a browser · date"), and boards cannot be renamed or deleted from the canvas yet.
+- (review, #21) The first combination of #21 used the branch before its last commit, so the hosted resident-agent channel was added afterwards (ed4fda1). Its secret check now guards only `/api/canvas/asks/wait` and `/api/canvas/command`; the PR guarded all of `/api/canvas/*`, which would shadow the board API if route order changed.
+- (review, #21) Not changed, for the maintainer: a clean browser that loads an account board saved before the calm canvas shows that board as it was, and only on the next reload adds the "Thinking" page and switches to it. Alternative: lay out the calm board right after the first load from the account.
+- (review, #24) The recorded attempt (20/21) predates the calm canvas and the tools added since. It is kept as the scorecard's figure until it is recorded again (backlog 32).
+- (review) Two review runs overlapped on 26 Nov (10:55Z to 11:15Z) and both combined #21. A review run should fetch and re-read the open PR list and the Log before each merge, not only at the start.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -342,3 +352,5 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:08Z | build-B | 19 Board history, part 2 | #35 | Menu → Earlier versions lists and restores revisions; first screen unchanged except the clock; checked at 1440 and 390 px |
 | 2026-11-26T11:10Z | build-A | 28 Existing product runs e2e | #36 | e2e runs against throwaway services in the eval; Existing product fail→pass; 10k pan flag shown to be noise (base 69.1 vs branch 35.7 ms back to back) |
 | 2026-11-26T11:13Z | build-B | 19 Board picker, part 3 | #39 | Menu → Saved boards opens another server board, saving first; reload reopens it; item 19 complete with #32 #35 |
+| 2026-11-26T11:08Z | review | Rest of #21 | #21 | The hosted resident-agent channel (the PR's last commit, missed by the first combination) added as ed4fda1; secret check narrowed to its two paths with a test; 143 server and 163 canvas tests, e2e, calm check 33/33 and the no-agent state by hand |
+| 2026-11-26T11:15Z | review | Review #24 | #24 | Merged (squash) as 984374b after merging in the integration branch; self-test 21/21 once the task tab opens with ?prototype=data; scorecard on 984374b: acceptance 10/10, agent usability 20/21, safety 9/9, persistence pass, existing product pass, 10k pan flagged (noise) |

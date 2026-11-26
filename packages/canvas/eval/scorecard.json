@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T11:00Z",
-  "commit": "16ce025",
+  "generatedAt": "2026-11-26T11:13Z",
+  "commit": "984374b",
   "carriedOver": [],
   "table": [
     {
@@ -12,13 +12,13 @@
     {
       "measure": "Agent usability",
       "target": "≥90% of ≥20 tasks",
-      "result": "0 tasks, no recorded attempt",
-      "status": "not run"
+      "result": "20/21 (95%), median 3 tool calls",
+      "status": "pass"
     },
     {
       "measure": "Safety of shared edits",
       "target": "0 human edits lost",
-      "result": "0 lost; 3/3 races pass",
+      "result": "0 lost; 9/9 races pass",
       "status": "pass"
     },
     {
@@ -30,14 +30,14 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 1358 ms, pan 16.7 ms/frame; 10k: load 7135 ms, pan 40 ms/frame",
-      "status": "reported"
+      "result": "1k: load 1529 ms, pan 16.7 ms/frame; 10k: load 7620 ms, pan 76.6 ms/frame (worse: 10000 panMedianFrameMs 40 → 76.6)",
+      "status": "regressed"
     },
     {
       "measure": "Existing product",
       "target": "green",
-      "result": "build passes; tests: e2e failing",
-      "status": "fail"
+      "result": "build passes; tests: all packages pass",
+      "status": "pass"
     }
   ],
   "raw": {
@@ -53,13 +53,13 @@
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 15
+          "ms": 16
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 496
+          "ms": 478
         },
         {
           "name": "Agent charts the selection",
@@ -71,41 +71,41 @@
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 826
+          "ms": 822
         },
         {
           "name": "Agent reads that exact chart state",
           "pass": true,
           "detail": "ok",
-          "ms": 4
+          "ms": 9
         },
         {
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 27
+          "ms": 28
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1154
+          "ms": 1168
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": true,
           "detail": "ok",
-          "ms": 920
+          "ms": 940
         },
         {
           "name": "Reload restores everything",
           "pass": true,
           "detail": "ok",
-          "ms": 391
+          "ms": 475
         }
       ],
       "pageErrors": [],
-      "toolCalls": 29
+      "toolCalls": 30
     },
     "safety": {
       "races": [
@@ -113,21 +113,63 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 69,
+          "ms": 75,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 134,
+          "ms": 165,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 246,
+          "ms": 263,
+          "humanEditsLost": 0
+        },
+        {
+          "name": "Agent undo of a deletion after the person deleted its frame",
+          "pass": true,
+          "detail": "ok",
+          "ms": 72,
+          "humanEditsLost": 0
+        },
+        {
+          "name": "One agent cannot undo another agent's run",
+          "pass": true,
+          "detail": "ok",
+          "ms": 3024,
+          "humanEditsLost": 0
+        },
+        {
+          "name": "Agent cannot hide the person's work behind a learning prompt",
+          "pass": true,
+          "detail": "ok",
+          "ms": 3766,
+          "humanEditsLost": 0
+        },
+        {
+          "name": "Stale agent chart state against a newer human filter",
+          "pass": true,
+          "detail": "ok",
+          "ms": 396,
+          "humanEditsLost": 0
+        },
+        {
+          "name": "Stale agent cell edit against a newer human cell edit",
+          "pass": true,
+          "detail": "ok",
+          "ms": 398,
+          "humanEditsLost": 0
+        },
+        {
+          "name": "Agent data write to a locked dataset or chart",
+          "pass": true,
+          "detail": "ok",
+          "ms": 472,
           "humanEditsLost": 0
         }
       ],
@@ -142,40 +184,40 @@
     "performance": [
       {
         "objects": 1000,
-        "buildMs": 166,
-        "loadMs": 1358,
+        "buildMs": 185,
+        "loadMs": 1529,
         "panMedianFrameMs": 16.7,
-        "panP95FrameMs": 16.9
+        "panP95FrameMs": 17.1
       },
       {
         "objects": 10000,
-        "buildMs": 1221,
-        "loadMs": 7135,
-        "panMedianFrameMs": 40,
-        "panP95FrameMs": 83.9
+        "buildMs": 1613,
+        "loadMs": 7620,
+        "panMedianFrameMs": 76.6,
+        "panP95FrameMs": 89.2
       }
     ],
     "agentUsability": {
-      "tasks": 0,
-      "attempted": 0,
-      "completed": 0,
-      "medianToolCalls": null,
-      "recordedAt": null
+      "tasks": 21,
+      "attempted": 21,
+      "completed": 20,
+      "medianToolCalls": 3,
+      "recordedAt": "2026-11-26T10:44:31.300Z"
     },
     "workspace": {
       "build": true,
       "packages": {
         "e2e": {
-          "pass": false,
+          "pass": true,
           "summary": ""
+        },
+        "canvas": {
+          "pass": true,
+          "summary": "171 passed (171)"
         },
         "cli": {
           "pass": true,
           "summary": "no test files"
-        },
-        "canvas": {
-          "pass": true,
-          "summary": "150 passed (150)"
         },
         "mcp-server": {
           "pass": true,
@@ -187,14 +229,14 @@
         },
         "server": {
           "pass": true,
-          "summary": "129 passed | 7 skipped (136)"
+          "summary": "143 passed (143)"
         },
         "web": {
           "pass": true,
           "summary": "no test files"
         }
       },
-      "testExit": 1
+      "testExit": 0
     }
   }
 }
