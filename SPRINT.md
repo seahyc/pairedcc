@@ -518,7 +518,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 85. **An answer on another page is one step away.** `docs/canvas/principles.md`, "Not done": "they are told who answered and on which page, but the board does not take them there." The toast (#69) names the page, disappears after 3.5 s and offers nothing to press, so the person has to find the page in a hidden menu and then find the answer on it (finding 7, recognising beats recalling; "the agent must visibly respond"). Done when that notice carries a **Show** button (reachable by keyboard, with a key) that opens the ask's page, selects the answer (or the failed ask) and brings it into view, the notice stays long enough to press it, the view never moves unless the person presses it, from a tested pure function, checked in a real page (failing before, passing after), with before/after screenshots.
 
+86. **`canvas_overview` shows what the person left out of asks.** Agents are told to start with `canvas_overview`, which lists no meta, so a left-out object (item 67, `meta.leftOut`) looks like any other there and an agent may read it to answer an ask. Done when overview rows carry `leftOut: true` for left-out objects (as they carry `locked: true`), documented in AGENT_API and unit-tested.
+
 ## Claims
+86. canvas_overview shows what was left out of asks | claude/sprint-overview-leftout | 2026-11-26T13:44Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
 
