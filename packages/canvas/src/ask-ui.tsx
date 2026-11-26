@@ -75,9 +75,22 @@ export function AskLayer() {
               return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
             })
           : [];
+        // While the ask is in view of the person (selected or being answered), the group its card
+        // sits in is drawn as one soft outline: the agent is given it, so the person sees it.
+        const view = focused || anyLeftOut ? describeAsk(editor, s) : undefined;
+        const groupIds = focused ? (view?.cluster ?? []).map((m) => m.id) : [];
+        const groupBoxes = groupIds.length ? [s.id, ...groupIds].flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []) : [];
+        const group = groupBoxes.length
+          ? (() => {
+              const x = Math.min(...groupBoxes.map((g) => g.x)), y = Math.min(...groupBoxes.map((g) => g.y));
+              return { x, y, w: Math.max(...groupBoxes.map((g) => g.maxX)) - x, h: Math.max(...groupBoxes.map((g) => g.maxY)) - y, count: groupIds.length + (view?.clusterMore ?? 0) };
+            })()
+          : undefined;
         // What the person kept back from this ask, as an agent reading it now would be given it.
-        const kept = anyLeftOut ? leftOutLabel(describeAsk(editor, s).leftOut ?? 0) : "";
-        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds.filter((id) => id !== s.id))}${kept ? ` · ${kept}` : ""}`, outlines }];
+        const kept = anyLeftOut ? leftOutLabel(view?.leftOut ?? 0) : "";
+        const groupSaid = group ? `${group.count} more in its group` : "";
+        const base = givenLabel(editor, ask.contextIds.filter((id) => id !== s.id));
+        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given: `${[base, groupSaid].filter(Boolean).join(" + ")}${kept ? ` · ${kept}` : ""}`, outlines, group }];
       });
     },
     [editor],
@@ -117,6 +130,9 @@ export function AskLayer() {
         const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given, recent });
         return (
           <div key={a.id}>
+            {a.group && (
+              <div className="ask-group" data-ask-group={a.id} style={{ transform: `translate(${a.group.x - 18}px, ${a.group.y - 18}px)`, width: a.group.w + 36, height: a.group.h + 36 }} />
+            )}
             {a.outlines.map((o) => (
               <div key={o.id} className="ask-given" style={{ transform: `translate(${o.x - 6}px, ${o.y - 6}px)`, width: o.w + 12, height: o.h + 12 }} />
             ))}

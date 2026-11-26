@@ -7,6 +7,7 @@ import { atomic, createCard, createComment, freeSpot } from "./agent-operations"
 import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { keepForAgent } from "./leave-out";
+import { clusterAround } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -255,6 +256,27 @@ function thread(editor: Editor, shape: TLShape, keep: Keep, depth = 0, seen = ne
   ];
 }
 
+/**
+ * The rest of the group the ask's card sits in (objects chained within CLUSTER_GAP at its own
+ * level), each with where it sits relative to the card, minus what the ask already gives.
+ * Answers to this ask, the first board's seeded cards, hidden and left-out objects are not part of it.
+ */
+function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep: Keep) {
+  const placed = editor
+    .getSortedChildIdsForParent(host.parentId)
+    .flatMap((id) => editor.getShape(id) ?? [])
+    .filter((s) => s.id === host.id || (s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s)))
+    .flatMap((s) => {
+      const b = editor.getShapePageBounds(s);
+      return b ? [{ id: s.id as string, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
+    });
+  const found = clusterAround(placed, host.id, skip);
+  // A left-out member is withheld (and counted as such), like anything else around the ask.
+  const kept = new Set<string>(keep(found.members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? [])).map((s) => s.id));
+  const members = found.members.filter((m) => kept.has(m.id)).map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
+  return { members, more: found.more };
+}
+
 /** Everything an agent is given for one ask: exactly what the board shows as its context. */
 export function describeAsk(editor: Editor, shape: TLShape) {
   const ask = askOf(shape);
@@ -272,6 +294,11 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   const around = frameOf(editor, selected[0] ?? shape);
   const frame = around && keep([around]).length ? around : undefined;
   const skip = new Set<string>([shape.id, ...targets.map((t) => t.id)]);
+  // Where things sit carries meaning: the group the card is in, said with relations. What the
+  // ask already gives (targets, and the frame's objects when the card is in a frame) is not repeated.
+  const group = editor.getShapePageBounds(shape)
+    ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : [])]), keep)
+    : { members: [], more: 0 };
   return {
     id: shape.id,
     revision: revision(shape),
@@ -306,6 +333,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
           },
         }
       : {}),
+    ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
     ...(withheld.size ? { leftOut: withheld.size } : {}),
   };
