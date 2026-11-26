@@ -39,7 +39,7 @@ Prototype tools (`canvas_learn`, `canvas_converge` and the data tools) are flagg
 
 ### Overview, then detail
 
-`canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count, `locked: true` when the object is locked, and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects.
+`canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count, `locked: true` when the object or a frame around it is locked, and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects.
 
 ### Data prototype
 
@@ -200,7 +200,7 @@ Primitive creation and updates accept `font` (draw/sans/serif/mono), `size` (s/m
 
 `canvas_arrange` accepts `objects: [{id, expectedRevision}]`, `layout: "row" | "column" | "grid"`, page-space `x`, `y`, optional `gap` (default 40) and `columns` (default 3). It sizes cells using actual object bounds, including rotated objects. Input order determines placement. A stale revision or locked object rejects the entire layout. Pass a frame or its children, never both.
 
-`canvas_duplicate` accepts the same guarded `objects` list plus optional `offsetX` (default: the width of the duplicated objects plus 40, so the copy sits just to their right without overlapping) and `offsetY` (default 0). Frames bring their descendants. Include arrows in the duplicated set to preserve bindings between copies. The result contains copied objects and the new selection; originals remain intact.
+`canvas_duplicate` accepts the same guarded `objects` list plus optional `offsetX` and `offsetY`. Without them the copy goes just right of the originals (their width plus 40), or below them when a copy beside would leave the frame that holds them; a copy keeps its parent frame, which hides anything outside it, so if neither fits the call is refused and nothing changes. `locked: true` in `canvas_overview` also covers children of a locked frame. Frames bring their descendants. Include arrows in the duplicated set to preserve bindings between copies. The result contains copied objects and the new selection; originals remain intact.
 
 `canvas_group` wraps objects in a named frame without moving them, to show they belong together. Pass the same guarded `objects` list, a `name` for the frame, and optional `padding` (default 40) around their combined bounds. The objects must share a parent: all on the page, or all in one frame, in which case the new frame nests inside it. A stale revision or a locked object rejects the whole call. The result has the `frame` and the `objects`, now inside it, with their new revisions. It is one run, so `canvas_undo_run` takes it back.
 

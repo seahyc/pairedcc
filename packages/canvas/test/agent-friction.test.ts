@@ -1,17 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { summariseRun, type AgentRun } from "../src/agent-runs";
-import { defaultDuplicateOffset, duplicateInput } from "../src/composition";
+import { chooseDuplicateOffset, duplicateInput } from "../src/composition";
 
 describe("canvas_duplicate default offset", () => {
+  const box = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
   it("puts the copy just right of the originals instead of a fixed 320", () => {
-    expect(defaultDuplicateOffset([{ x: 0, w: 600 }])).toBe(640);
-    expect(defaultDuplicateOffset([{ x: 100, w: 200 }, { x: 500, w: 240 }])).toBe(680);
-    expect(defaultDuplicateOffset([])).toBe(320);
+    expect(chooseDuplicateOffset([{ box: box(0, 0, 600, 300) }])).toEqual({ x: 640, y: 0 });
+    expect(chooseDuplicateOffset([{ box: box(100, 0, 200, 50) }, { box: box(500, 0, 240, 50) }])).toEqual({ x: 680, y: 0 });
+    expect(chooseDuplicateOffset([])).toEqual({ x: 320, y: 0 });
+  });
+  it("keeps copies inside the frame that will still hold them: below when beside would leave it, refused when neither fits", () => {
+    const frame = box(0, 0, 1200, 800);
+    // Two children 180 wide at x 40 and 640: beside would put the second at x 1460, past the frame.
+    expect(chooseDuplicateOffset([{ box: box(40, 80, 180, 120), container: frame }, { box: box(640, 80, 180, 120), container: frame }])).toEqual({ x: 0, y: 160 });
+    // A child that fills the frame: no room anywhere.
+    expect(chooseDuplicateOffset([{ box: box(20, 20, 1100, 700), container: frame }])).toBeNull();
+    // Room beside: beside wins.
+    expect(chooseDuplicateOffset([{ box: box(40, 80, 180, 120), container: frame }])).toEqual({ x: 220, y: 0 });
   });
   it("still honours an explicit offset", () => {
     const input = duplicateInput.parse({ objects: [{ id: "shape:a", expectedRevision: 0 }], offsetX: 320 });
     expect(input.offsetX).toBe(320);
-    expect(duplicateInput.parse({ objects: [{ id: "shape:a", expectedRevision: 0 }] }).offsetX).toBeUndefined();
+    const bare = duplicateInput.parse({ objects: [{ id: "shape:a", expectedRevision: 0 }] });
+    expect([bare.offsetX, bare.offsetY]).toEqual([undefined, undefined]);
   });
 });
 

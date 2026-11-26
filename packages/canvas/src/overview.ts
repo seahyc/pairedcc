@@ -54,7 +54,8 @@ export function overview(editor: Editor, value: unknown = {}) {
         revision: revision(s),
         bounds: b ? { x: round(b.x), y: round(b.y), w: round(b.w), h: round(b.h) } : undefined,
         ...(childCount.get(s.id) ? { children: childCount.get(s.id) } : {}),
-        ...(s.isLocked ? { locked: true } : {}),
+        // A child of a locked frame is locked too: agents cannot change it.
+        ...(editor.isShapeOrAncestorLocked(s) ? { locked: true } : {}),
         ...(snippet(s) ? { text: snippet(s) } : {}),
       };
     }),

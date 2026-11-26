@@ -409,7 +409,6 @@
             "type": "number"
           },
           "offsetY": {
-            "default": 0,
             "type": "number"
           }
         },
