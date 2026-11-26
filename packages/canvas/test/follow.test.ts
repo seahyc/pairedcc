@@ -46,6 +46,16 @@ describe("moving a frame or group", () => {
     const subtree = ["shape:frame", "shape:child", "shape:inside-about-frame"];
     expect(followers(subtree, board, new Set(subtree))).toEqual(["shape:outside-about-child"]);
   });
+  it("brings a comment about several of its children, and that comment's replies", () => {
+    const subtree = ["shape:frame", "shape:a", "shape:b"];
+    const shapes = [
+      ...subtree.map((id) => ({ id, meta: {} })),
+      { id: "shape:about-both", meta: { targetId: "shape:a", targetIds: ["shape:a", "shape:b"] } },
+      { id: "shape:answer", meta: { targetId: "shape:about-both", replyTo: "shape:about-both" } },
+      { id: "shape:about-one-outside", meta: { targetId: "shape:a", targetIds: ["shape:a", "shape:elsewhere"] } },
+    ];
+    expect(followers(subtree, shapes, new Set(subtree)).sort()).toEqual(["shape:about-both", "shape:answer"]);
+  });
 });
 
 describe("moving by a program brings what is attached", () => {

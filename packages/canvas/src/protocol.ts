@@ -33,7 +33,10 @@ export const connectionInput = z.object({
   toId: shapeId,
   relation: z
     .enum(["reference", "alternative", "derived-from", "feedback"])
-    .default("derived-from"),
+    .default("derived-from")
+    .describe(
+      "What the arrow means. reference: one supports, cites or is evidence for the other (use it for 'supports', with a label); alternative: both are options for the same thing; derived-from (the default): one was made from the other, drawn from the source to what was made; feedback: a comment on the other.",
+    ),
   label: z.string().max(200).default(""),
 });
 export const resolveInput = z.object({
@@ -54,6 +57,7 @@ export const askStates = ["waiting", "working", "answered", "failed"] as const;
 export type AskState = (typeof askStates)[number];
 export const asksInput = z.object({
   state: z.enum([...askStates, "all"]).default("waiting").describe("Which asks to return. Waiting asks are the ones nobody has picked up yet."),
+  page: z.enum(["all", "current"]).default("all").describe("all (default): asks on every page, each with pageName. current: only the page open in the tab."),
 });
 export const askStatusInput = z.object({
   id: shapeId.describe("Ask id from canvas_asks."),

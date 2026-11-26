@@ -45,6 +45,9 @@ export function answerLayout(anchor: { x: number; y: number }, texts: string[], 
   return { box: { x: anchor.x, y: anchor.y + STATUS_ROOM, w: across * w + (across - 1) * OPTION_GAP, h }, cards };
 }
 
+/** A card that ends in a question mark is a question, and is sent as soon as it is written. */
+export const isQuestion = (text: string) => /[?？]\s*$/.test(text.trim());
+
 /** A sensible first question for what is selected: a question is answered, a thought is probed. */
 export function suggestQuestion(selectedText: string) {
   return /\?\s*$/.test(selectedText.trim()) ? "Answer this" : "";
@@ -88,7 +91,7 @@ export function askStatusLine(
 ) {
   const secs = (from: number, to: number) => `${Math.max(1, Math.round((to - from) / 1000))}s`;
   if (ask.state === "answered")
-    return { tone: "done", text: `${ask.agent ?? "Agent"} answered in ${secs(ask.askedAt, ask.answeredAt ?? opts.now)} · given ${opts.given}` };
+    return { tone: "done", text: `${ask.agent ?? "Agent"} answered in ${secs(ask.askedAt, ask.answeredAt ?? opts.now)}${opts.given ? ` · also read ${opts.given}` : ""}` };
   if (ask.state === "failed") return { tone: "failed", text: `No answer: ${ask.error ?? "something went wrong"}`, retry: true };
   if (ask.state === "working") {
     // An agent that says nothing for two minutes has stopped; offer the way out.
@@ -254,4 +257,17 @@ export function askAnnouncement(
 export function retryLabel(line: { tone: string; retry?: boolean }): "Retry" | "Send again" | undefined {
   if (!line.retry) return undefined;
   return line.tone === "nobody" ? "Send again" : "Retry";
+}
+
+/**
+ * An image or video as an ask gives it: the agent answers from text only, so it gets the file
+ * name, size, caption and alt text the board holds, and is told plainly when there is none.
+ */
+export function describeImage(i: { kind: "image" | "video"; name?: string; w?: number; h?: number; caption?: string; alt?: string }) {
+  const label = i.kind === "video" ? "Video" : "Image";
+  const name = i.name?.trim(), caption = i.caption?.trim(), alt = i.alt?.trim();
+  const size = i.w && i.h ? `${Math.round(i.w)}×${Math.round(i.h)} px` : "";
+  if (!name && !caption && !alt) return size ? `${label}, ${size}.` : `${label} with no file name, caption or alt text: you cannot see it.`;
+  const head = [`${label}${name ? ` "${name}"` : ""}`, size].filter(Boolean).join(", ");
+  return [`${head}.`, caption ? `Caption: "${caption}".` : "", alt ? `Alt text: "${alt}".` : ""].filter(Boolean).join(" ");
 }

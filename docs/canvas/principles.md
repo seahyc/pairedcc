@@ -6,7 +6,7 @@ Status as of 26 Nov 2026, after the calm-canvas pass; the table was brought up t
 
 ## The loop
 
-Write a thought (pink, handwritten, yours) → select what you mean → Ask → the agent answers beside it on a short lavender card, or with two to four alternatives side by side → pick (P), cross out (X) or comment (C) → ask again. Each next step appears on the selection at the moment it is possible.
+Write on the board (pink, handwritten, yours). The card is the question: end it with a question mark and it goes to the agent when you finish writing; any other card is sent as it stands with ⌘↵. There is no question box. The agent answers under the card on a short lavender card, reading what sits right beside the card too → pick (P), cross out (X) or write the next thing. To ask about something you did not write (an answer, imported material), Ask opens a pink card beside it and what you write there is sent. (Changed 26 Nov after YC's second playtest: the box made a written question into background and the chip became the ask.)
 
 ## The nine findings
 

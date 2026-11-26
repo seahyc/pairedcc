@@ -1,7 +1,7 @@
 // Browser check for item 90: the person pins what every ask should see (?prototype=context).
 // A goal card sits far from two idea cards. The person pins the goal with I, then asks about one
 // idea without selecting the goal. The agent's view of that ask (the `asks` operation) must give
-// the goal under `pinned`, the board must fence it as pinned, the ask's line must say "+ 1 pinned"
+// the goal under `pinned`, the board must fence it as pinned, the ask's line must count "1 pinned"
 // and the ask's outline must include it. Pinning a left-out card clears the left-out mark, one
 // undo takes a pin back, a pin on another page is not given, and a tab without the flag shows no
 // Pin button and I does nothing, while a pin already on the board is still honoured there.
@@ -47,13 +47,13 @@ async function command(op, input) {
 
 const select = (p, ids) => p.evaluate((ids) => window.paired.select(ids), ids).then(() => p.waitForTimeout(200));
 const meta = (p, id) => p.evaluate((id) => window.__pairedEditor.getShape(id)?.meta ?? null, id);
-async function ask(p, ids, question) {
+// The card is the question: the person's selected card is sent as it stands with ⌘↵ and is
+// the ask itself (the second argument is kept only to name the step).
+async function ask(p, ids, _label) {
   await select(p, ids);
-  await p.locator('.selection-bar button.primary').click();
-  await p.locator('.selection-bar.asking input').fill(question);
-  await p.keyboard.press('Enter');
-  await p.waitForTimeout(400);
-  return (await command('asks', {})).asks.find((a) => a.question === question);
+  await p.keyboard.press('ControlOrMeta+Enter');
+  await p.waitForTimeout(500);
+  return (await command('asks', { state: 'all' })).asks.find((a) => a.id === ids[0]);
 }
 
 // --- Flagged tab ---
@@ -74,13 +74,13 @@ check('the board fences it as pinned', await p.locator('.scratch-pinned', { hasT
 
 const first = await ask(p, [seat], 'Which of these would you try first?');
 check('an ask about something else gives the pinned card', first?.pinned?.length === 1 && first.pinned[0].id === goal && /churn under 3%/.test(first.pinned[0].text), JSON.stringify(first?.pinned));
-check('the selected card is still the target', first?.targets?.length === 1 && first.targets[0].id === seat);
+check('the card asked about is the ask, not given twice as pinned', first?.id === seat && !first?.pinned?.some((g) => g.id === seat));
 // While an agent works on it, selecting the ask shows what it gave, the pinned card included.
 await command('ask_status', { id: first.id, state: 'working' });
 await select(p, [first.id]);
 await p.waitForTimeout(200);
 const line = await p.locator('.ask-status').last().innerText();
-check('the ask says it gave 1 pinned', /\+ 1 pinned/.test(line ?? ''), line ?? '');
+check('the ask says it gave 1 pinned', /\b1 pinned\b/.test(line ?? '') && !/with \+/.test(line ?? ''), line ?? '');
 const outlined = await p.evaluate((goal) => {
   const ed = window.__pairedEditor, b = ed.getShapePageBounds(goal), at = ed.pageToScreen({ x: b.x, y: b.y });
   return [...document.querySelectorAll('.ask-given')].some((el) => { const r = el.getBoundingClientRect(); return Math.abs(r.x - at.x) < 16 && Math.abs(r.y - at.y) < 16; });
@@ -90,7 +90,7 @@ await p.screenshot({ path: `${out}/pin-context-ask.png` });
 
 // Asking about the pinned card itself gives it once, as the target.
 const self = await ask(p, [goal], 'Is this goal realistic?');
-check('a pinned card that is selected is given once, as the target', self?.targets?.[0]?.id === goal && !self?.pinned, JSON.stringify(self?.pinned));
+check('a pinned card that is itself the ask is not given again as pinned', self?.id === goal && !self?.pinned, JSON.stringify(self?.pinned));
 
 // Pin and leave out exclude each other.
 await select(p, [usage]);
@@ -132,7 +132,7 @@ await plainP.waitForTimeout(200);
 check('without the flag I does not pin', !(await meta(plainP, seat))?.pinned);
 check('a pin already on the board is still drawn', await plainP.locator('.scratch-pinned').count() >= 1);
 const later = await ask(plainP, [usage], 'And this one?');
-check('and still given', later?.pinned?.some((g) => g.id === goal), JSON.stringify(later?.pinned));
+check('and still given, even though the pinned card was itself asked with earlier', later?.pinned?.some((g) => g.id === goal), JSON.stringify(later?.pinned));
 await plainP.screenshot({ path: `${out}/pin-context-plain.png` });
 check('no page errors without the flag', plain.errors.length === 0, plain.errors.join(' | '));
 await plain.ctx.close();

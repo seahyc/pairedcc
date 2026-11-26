@@ -53,17 +53,18 @@ export const PIN_LIMIT = 6;
 
 /**
  * What an ask gives as pinned context, from the objects on its page: pinned ones it does not
- * already give, never hidden ones or asks, never one also left out (withholding wins), in
- * reading order (top to bottom, then left to right).
+ * already give, never hidden ones, never one also left out (withholding wins), in reading
+ * order (top to bottom, then left to right). A card the person once asked with is still theirs
+ * to pin (the card is the question), so asks are not excluded.
  */
-export function pinnedFor<T extends { id: string; x: number; y: number; meta?: Meta; hidden?: boolean; ask?: boolean }>(
+export function pinnedFor<T extends { id: string; x: number; y: number; meta?: Meta; hidden?: boolean }>(
   shapes: T[],
   given: Iterable<string> = [],
   limit = PIN_LIMIT,
 ) {
   const skip = new Set(given);
   const found = shapes
-    .filter((s) => isPinned(s.meta) && !isLeftOut(s.meta) && !s.hidden && !s.ask && !skip.has(s.id))
+    .filter((s) => isPinned(s.meta) && !isLeftOut(s.meta) && !s.hidden && !skip.has(s.id))
     .sort((a, b) => a.y - b.y || a.x - b.x);
   return { pinned: found.slice(0, limit), more: Math.max(0, found.length - limit) };
 }

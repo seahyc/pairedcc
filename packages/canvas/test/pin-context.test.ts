@@ -17,9 +17,9 @@ describe("pinning objects into every ask", () => {
     expect(more).toBe(0);
   });
 
-  it("never gives a hidden object or an ask, and a left-out mark wins", () => {
-    const shapes = [{ ...at("hidden", 0, 0), hidden: true }, { ...at("ask", 0, 10), ask: true }, at("both", 0, 20, { pinned: true, leftOut: true }), at("ok", 0, 30)];
-    expect(pinnedFor(shapes).pinned.map((s) => s.id)).toEqual(["ok"]);
+  it("never gives a hidden object, and a left-out mark wins; a card once asked with still counts", () => {
+    const shapes = [{ ...at("hidden", 0, 0), hidden: true }, at("both", 0, 20, { pinned: true, leftOut: true }), at("asked", 0, 25, { pinned: true, ask: { state: "answered" } }), at("ok", 0, 30)];
+    expect(pinnedFor(shapes).pinned.map((s) => s.id)).toEqual(["asked", "ok"]);
   });
 
   it("caps how many are given and counts the rest", () => {
@@ -57,6 +57,6 @@ describe("pinning objects into every ask", () => {
     expect(buildPrompt(ask)).not.toContain("pinned");
     const prompt = buildPrompt({ ...ask, pinned: [{ id: "shape:g", type: "card", author: "Human", text: "Goal: keep churn under 3%" }], pinnedMore: 1 });
     expect(prompt).toContain('The person pinned these for every ask, as standing context:\n- card written by the person: """Goal: keep churn under 3%"""\n- and 1 more not shown');
-    expect(prompt.indexOf("pinned")).toBeLessThan(prompt.indexOf("The ask:"));
+    expect(prompt.indexOf("pinned")).toBeLessThan(prompt.indexOf("The person wrote this"));
   });
 });
