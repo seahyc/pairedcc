@@ -6,6 +6,9 @@
 
 type Attached = { id: string; meta: Record<string, unknown> };
 
+/** Set while an operation moves shapes and their followers itself, so the drag follower stays out. */
+export const followPause = { active: false };
+
 /** IDs that should move with `moved`, given the shapes on the page and what is being moved. */
 export function followers(moved: readonly string[], shapes: readonly Attached[], movingAnyway: ReadonlySet<string>): string[] {
   const byTarget = new Map<string, string[]>();

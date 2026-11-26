@@ -1,8 +1,8 @@
 // Browser check for item 7 (keyboard accessibility): the whole loop works without a pointer.
 //
 // On a fresh profile at 1440 x 900, using only the keyboard (no clicks, no page-side
-// selection): press N and Enter to write a thought, type it, press Ctrl/⌘+Enter to ask and
-// Enter to send; an agent answers with three options over HTTP; Tab reaches the answer
+// selection): press N and Enter to write a thought, type it, press Ctrl/⌘+Enter to send it (the
+// card is the question); an agent answers with three options over HTTP; Tab reaches the answer
 // options, P picks one, Tab and X cross out another, C comments on it; Escape clears the
 // selection and Tab comes back to the board. Every step must leave the person somewhere
 // visible: what Tab selects is on screen and has the selection bar beside it.
@@ -103,16 +103,13 @@ const placed = await p.evaluate((id) => {
 check('the new card is on screen and covers nothing', placed.inView && placed.overlaps.length === 0, JSON.stringify(placed));
 await p.screenshot({ path: `${out}/2-writing.png` });
 
-// 2. Ask about it while writing, and send the suggested question.
-await press(`${mod}+Enter`, 500);
-const asking = await p.evaluate(() => document.activeElement?.getAttribute('aria-label'));
-check('⌘/Ctrl+Enter opens the Ask box with the keyboard in it', asking === 'Your question', String(asking));
-await p.keyboard.press(`${mod}+a`);
-await p.keyboard.type('Give me options', { delay: 0 });
-await press('Enter', 800);
+// 2. Ask about it while writing: Ctrl/⌘+Enter sends the card itself (the card is the question).
+await press(`${mod}+Enter`, 800);
 let asks = card ? (await command('asks', {})).asks : [];
-const ask = asks.find((a) => a.question === 'Give me options');
-check('Enter sends the ask', Boolean(ask), `${asks.length} asks`);
+const ask = asks.find((a) => a.id === card);
+const writing = await p.evaluate(() => Boolean(window.__pairedEditor.getEditingShapeId()));
+check('⌘/Ctrl+Enter while writing sends the card as the ask', Boolean(ask) && ask.question.includes(thought), `${asks.length} asks${ask ? `: "${ask.question}"` : ''}`);
+check('…and writing has finished, with the keyboard back on the board', !writing, `editing ${writing}`);
 
 // 3. The agent answers with three options.
 let options = [];

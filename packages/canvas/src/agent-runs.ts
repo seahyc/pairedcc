@@ -15,7 +15,29 @@ export type AgentRun = {
   at: string;
   changes: RunDiff;
   undone: boolean;
+  /** The pages whose objects this run changed. */
+  pages?: string[];
 };
+
+/**
+ * The pages a run touched, from the shapes it added, changed or removed. `pageOf` finds the page
+ * of an id still on the board (a shape, or the frame a removed shape sat in).
+ */
+export function pagesOfRun(diff: RunDiff, pageOf: (id: string) => string | undefined): string[] {
+  const found: string[] = [];
+  const add = (page: string | undefined) => {
+    if (page && !found.includes(page)) found.push(page);
+  };
+  const isShape = (r: unknown) => (r as { typeName?: string } | undefined)?.typeName === "shape";
+  for (const [id, r] of Object.entries(diff.added)) if (isShape(r)) add(pageOf(id));
+  for (const [id, pair] of Object.entries(diff.updated)) if (isShape((pair as unknown[])[1])) add(pageOf(id));
+  for (const [, r] of Object.entries(diff.removed)) {
+    if (!isShape(r)) continue;
+    const parent = String((r as { parentId?: unknown }).parentId ?? "");
+    add(parent.startsWith("page:") ? parent : pageOf(parent));
+  }
+  return found;
+}
 
 export function summariseRun(run: AgentRun) {
   return {
@@ -28,6 +50,7 @@ export function summariseRun(run: AgentRun) {
     /** For each updated object, the fields this run changed (derived fields left out). */
     fields: Object.fromEntries(Object.entries(run.changes.updated).map(([id, [from, to]]) => [id, changedPaths(from, to)])),
     removed: Object.keys(run.changes.removed),
+    pages: run.pages ?? [],
     undone: run.undone,
   };
 }
@@ -40,8 +63,12 @@ export function createRunLedger(max = 100) {
       if (runs.length > max) runs.shift();
     },
     get: (runId: string) => runs.find((r) => r.runId === runId),
-    /** Newest first; with an actor, only that actor's runs. */
-    list: (limit: number, actor?: string) => runs.filter((r) => actor === undefined || r.actor === actor).slice(-limit).reverse(),
+    /** Newest first; with an actor, only that actor's runs; with a page, only runs that touched it. */
+    list: (limit: number, actor?: string, pageId?: string) =>
+      runs
+        .filter((r) => (actor === undefined || r.actor === actor) && (pageId === undefined || !r.pages || r.pages.includes(pageId)))
+        .slice(-limit)
+        .reverse(),
   };
 }
 export type RunLedger = ReturnType<typeof createRunLedger>;
@@ -70,7 +97,10 @@ export function undoRun(editor: Editor, ledger: RunLedger, value: unknown, actor
 
 /** Run one agent command, recording its document changes as an undoable run. */
 export async function runCommand(editor: Editor, ledger: RunLedger, command: CanvasCommand, actor: string, runId: string) {
-  if (command.op === "runs") return { runs: ledger.list(runsInput.parse(command.input ?? {}).limit, actor).map(summariseRun) };
+  if (command.op === "runs") {
+    const input = runsInput.parse(command.input ?? {});
+    return { runs: ledger.list(input.limit, actor, input.page === "current" ? editor.getCurrentPageId() : undefined).map(summariseRun) };
+  }
   if (command.op === "undo_run") return undoRun(editor, ledger, command.input, actor);
   if (readOnly.has(command.op)) return executeCommand(editor, command, actor);
   // Mutating operations finish synchronously, so every change lands inside this capture.
@@ -80,6 +110,9 @@ export async function runCommand(editor: Editor, ledger: RunLedger, command: Can
   }) as unknown as RunDiff;
   const result = await work; // a failed command rolls back or throws before recording
   const changes = documentDiff(diff);
-  if (!isEmptyDiff(changes)) ledger.add({ runId, op: command.op, actor, at: new Date().toISOString(), changes, undone: false });
+  if (!isEmptyDiff(changes)) {
+    const pageOf = (id: string) => (id && editor.getShape(id as never) ? editor.getAncestorPageId(id as never) : undefined);
+    ledger.add({ runId, op: command.op, actor, at: new Date().toISOString(), changes, undone: false, pages: pagesOfRun(changes, pageOf) });
+  }
   return result;
 }

@@ -105,7 +105,7 @@ describe("document diff", () => {
   });
 });
 
-import { createRunLedger, summariseRun, type AgentRun } from "../src/agent-runs";
+import { createRunLedger, pagesOfRun, summariseRun, type AgentRun } from "../src/agent-runs";
 describe("whose runs an agent sees", () => {
   const run = (runId: string, actor: string): AgentRun => ({ runId, op: "update", actor, at: "2026-11-26T10:00:00Z", changes: diff({}), undone: false });
   it("lists only the calling agent's runs, newest first", () => {
@@ -116,6 +116,31 @@ describe("whose runs an agent sees", () => {
     expect(ledger.list(10, "Agent A").map((r) => r.runId)).toEqual(["r3", "r1"]);
     expect(ledger.list(1, "Agent A").map((r) => r.runId)).toEqual(["r3"]);
     expect(ledger.list(10).map(summariseRun).map((r) => r.runId)).toEqual(["r3", "r2", "r1"]);
+  });
+});
+
+describe("runs by page (friction from the 26-task attempt: canvas_runs listed every page)", () => {
+  const run = (runId: string, pages: string[]): AgentRun => ({ runId, op: "update", actor: "A", at: "2026-11-26T10:00:00Z", changes: diff({}), undone: false, pages });
+  it("lists only runs that touched the page asked for, and says which pages each touched", () => {
+    const ledger = createRunLedger();
+    ledger.add(run("r1", ["page:1"]));
+    ledger.add(run("r2", ["page:2"]));
+    ledger.add(run("r3", ["page:1", "page:2"]));
+    expect(ledger.list(10, "A", "page:1").map((r) => r.runId)).toEqual(["r3", "r1"]);
+    expect(ledger.list(10, "A", "page:2").map((r) => r.runId)).toEqual(["r3", "r2"]);
+    expect(ledger.list(10, "A").map((r) => r.runId)).toEqual(["r3", "r2", "r1"]);
+    expect(summariseRun(ledger.get("r3")!).pages).toEqual(["page:1", "page:2"]);
+  });
+  it("the limit counts runs on that page, not runs anywhere", () => {
+    const ledger = createRunLedger();
+    ledger.add(run("old", ["page:1"]));
+    for (let i = 0; i < 5; i++) ledger.add(run(`other${i}`, ["page:2"]));
+    expect(ledger.list(1, "A", "page:1").map((r) => r.runId)).toEqual(["old"]);
+  });
+  it("the pages a run touched come from the shapes it changed", () => {
+    const parentPage = (id: string) => ({ "shape:a": "page:1", "shape:b": "page:2" })[id];
+    expect(pagesOfRun(diff({ added: { "shape:a": shape("shape:a") as never }, updated: { "shape:b": [shape("shape:b"), shape("shape:b")] as never } }), parentPage)).toEqual(["page:1", "page:2"]);
+    expect(pagesOfRun(diff({ removed: { "shape:gone": shape("shape:gone", { parentId: "page:3" }) as never } }), () => undefined)).toEqual(["page:3"]);
   });
 });
 
