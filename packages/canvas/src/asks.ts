@@ -8,7 +8,7 @@ import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, ca
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
-import { clusterAround } from "./arrangement";
+import { clusterAround, relation } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -317,6 +317,14 @@ function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep:
   return { members, more: found.more };
 }
 
+/** Where a target sits relative to the ask's card, in words, when both are on the board and apart from each other. */
+function whereFrom(editor: Editor, target: TLShape, host: TLShape): { relation?: string } {
+  if (target.id === host.id) return {};
+  const a = editor.getShapePageBounds(target), b = editor.getShapePageBounds(host);
+  if (!a || !b) return {};
+  return { relation: relation({ id: target.id, x: a.x, y: a.y, w: a.w, h: a.h }, { id: host.id, x: b.x, y: b.y, w: b.w, h: b.h }) };
+}
+
 /** Everything an agent is given for one ask: exactly what the board shows as its context. */
 export function describeAsk(editor: Editor, shape: TLShape) {
   const ask = askOf(shape);
@@ -335,7 +343,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   const frame = around && keep([around]).length ? around : undefined;
   const skip = new Set<string>([shape.id, ...targets.map((t) => t.id)]);
   const givenTargets = targets.map((t) => {
-    if (t.type !== "frame") return given(editor, t, 2000, keep);
+    if (t.type !== "frame") return { ...given(editor, t, 2000, keep), ...whereFrom(editor, t, shape) };
     const held = inside(editor, t, skip, keep);
     return { ...given(editor, t, 2000, keep), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
   });

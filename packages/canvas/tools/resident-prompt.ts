@@ -19,7 +19,7 @@ Reply with one JSON object and nothing else:
 {"read":"<what you read, under 12 words, e.g. 'your card on pricing and the frame Pricing'>","kind":"answer"|"alternatives"|"question","text":"<for answer or question>","alternatives":["<for alternatives>"]}`;
 
 type Mark = "picked" | "rejected";
-type Given = { id: string; type: string; author: string; text: string; mark?: Mark; inside?: Given[]; insideMore?: number };
+type Given = { id: string; type: string; author: string; text: string; mark?: Mark; inside?: Given[]; insideMore?: number; relation?: string };
 export type AskForPrompt = {
   question: string;
   targets: Given[];
@@ -54,7 +54,8 @@ export function buildPrompt(ask: AskForPrompt) {
   if (ask.targets.length) lines.push(ask.targets.length === 1 ? "It is about, or sits beside, this object:" : `It is about, or sits beside, these objects (${ask.targets.length}):`);
   for (const t of ask.targets) {
     if (!t.inside) {
-      lines.push(`- ${t.type} written by ${who(t.author)}${judged(t.mark)}: """${t.text}"""`);
+      const where = t.relation ? `, ${t.relation === "overlapping" ? "overlapping it" : `${t.relation} it`}` : "";
+      lines.push(`- ${t.type} written by ${who(t.author)}${judged(t.mark)}${where}: """${t.text}"""`);
       continue;
     }
     // A selected frame is what the person put together: the ask is about everything in it.
