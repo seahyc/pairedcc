@@ -62,7 +62,7 @@ The prototype stores work in the current browser profile. Export a file to move 
 
 ## Agent workflow
 
-Open **Agent access** for the MCP configuration for this tab. The 26 tools include an overview read, the feedback queue (read and reply), four prototype data tools (dataset, chart, chart state, cell), a prototype learning prompt, scene composition, nested frames, layout and duplication, per-operation undo, targeted feedback and image operations. The **Agent studio** page is a scripted SVG demonstration. Integration checks cover the real HTTP/browser bridge and MCP stdio protocol. Locally the API runs in the development server. On paired.cc, Agent access shows a one-line command per client and the hosted endpoint forwards to the signed-in tab.
+Open **Agent access** for the MCP configuration for this tab. The 27 tools include an overview read, the feedback queue (read and reply), four prototype data tools (dataset, chart, chart state, cell), a prototype learning prompt, scene composition, nested frames, grouping, layout and duplication, per-operation undo, targeted feedback and image operations. The **Agent studio** page is a scripted SVG demonstration. Integration checks cover the real HTTP/browser bridge and MCP stdio protocol. Locally the API runs in the development server. On paired.cc, Agent access shows a one-line command per client and the hosted endpoint forwards to the signed-in tab.
 
 ## Migration compatibility
 

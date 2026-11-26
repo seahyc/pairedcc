@@ -18,7 +18,7 @@ Set `PAIRED_SESSION` to target a particular tab. Its ID persists across reloads 
 
 Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_feedback`, `canvas_reply`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
 
-Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
+Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`, `canvas_group`.
 
 ### Learning prompts (prototype)
 
@@ -145,6 +145,8 @@ Primitive creation and updates accept `font` (draw/sans/serif/mono), `size` (s/m
 
 `canvas_duplicate` accepts the same guarded `objects` list plus optional `offsetX` (default 320) and `offsetY` (default 0). Frames bring their descendants. Include arrows in the duplicated set to preserve bindings between copies. The result contains copied objects and the new selection; originals remain intact.
 
+`canvas_group` wraps objects in a named frame without moving them, to show they belong together. Pass the same guarded `objects` list, a `name` for the frame, and optional `padding` (default 40) around their combined bounds. The objects must share a parent: all on the page, or all in one frame, in which case the new frame nests inside it. A stale revision or a locked object rejects the whole call. The result has the `frame` and the `objects`, now inside it, with their new revisions. It is one run, so `canvas_undo_run` takes it back.
+
 A useful first request:
 
 > Read the current canvas. Create three visual alternatives beside the reference. Preserve all originals. Read the annotations attached to those alternatives before making revisions, and use a screenshot to inspect your results.
@@ -211,6 +213,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `scene` | `nodes` with unique keys, optional frame parentKey; optional connections between keys |
 | `arrange` | Guarded objects, `layout` (row/column/grid), page-space x/y, optional gap/columns |
 | `duplicate` | Guarded objects, optional offsetX/offsetY |
+| `group` | Guarded objects, `name`, optional `padding`; wraps them in a frame in place |
 | `learn` | Prototype: `mode` (predict/generate), `question`, `x`, `y`, optional `width`, `hideIds` |
 | `overview` | Optional `parentId`, `limit`, `cursor`; compact listing of one level |
 | `runs` | Optional `limit`; recent agent runs in this tab |

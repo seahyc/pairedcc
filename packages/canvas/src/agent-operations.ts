@@ -7,7 +7,7 @@ import {
   type Editor,
   type TLShape,
 } from "tldraw";
-import { sceneInput, orderedScene, arrangeInput, duplicateInput, layoutPositions } from "./composition";
+import { sceneInput, orderedScene, arrangeInput, duplicateInput, layoutPositions, groupInput, frameAround } from "./composition";
 import { z } from "zod";
 import {
   annotationInput,
@@ -458,6 +458,36 @@ export async function executeCommand(
           editor.updateShape({ id: shape.id, type: shape.type, x: point.x, y: point.y });
         }));
         return { objects: shapes.map(shape => describeObject(editor, shape.id)) };
+      });
+    }
+    case "group": {
+      // Wrap objects in a named frame without moving them. All or nothing: a stale or locked
+      // object rejects the whole call, and the frame and its reparenting are one undo step.
+      const input = groupInput.parse(command.input);
+      const shapes = checkedObjects(editor, input.objects);
+      const parentId = shapes[0].parentId;
+      if (shapes.some((shape) => shape.parentId !== parentId)) throw new Error("Group objects that share a parent: all on the page, or all in one frame");
+      const boxes = shapes.map((shape) => editor.getShapePageBounds(shape));
+      if (boxes.some((b) => !b)) throw new Error("Objects must have visible bounds");
+      const box = frameAround(boxes.map((b) => ({ x: b!.x, y: b!.y, w: b!.w, h: b!.h })), input.padding);
+      // A frame over objects outside the group would hide them and misstate what belongs together.
+      const grouped = new Set(shapes.map((shape) => shape.id));
+      const covered = editor
+        .getSortedChildIdsForParent(parentId)
+        .map((childId) => editor.getShape(childId)!)
+        .filter((other) => other && !grouped.has(other.id) && other.type !== "arrow")
+        .filter((other) => {
+          const b = editor.getShapePageBounds(other);
+          return b && b.x < box.x + box.w && b.x + b.w > box.x && b.y < box.y + box.h && b.y + b.h > box.y;
+        });
+      if (covered.length)
+        throw new Error(`The frame would cover ${covered.map((o) => o.id).join(", ")}, which ${covered.length === 1 ? "is" : "are"} not in the group. Include ${covered.length === 1 ? "it" : "them"}, move ${covered.length === 1 ? "it" : "them"} (canvas_arrange), or lower padding. Nothing was changed.`);
+      return atomic(editor, "group objects", () => {
+        const id = createShapeId();
+        editor.createShape({ id, type: "frame", x: box.x, y: box.y, meta: { name: input.name, revision: 0, createdBy: actor }, props: { w: box.w, h: box.h, name: input.name } });
+        if (parentId !== editor.getCurrentPageId()) editor.reparentShapes([id], parentId);
+        editor.reparentShapes(shapes.map((shape) => shape.id), id);
+        return { frame: describeObject(editor, id), objects: shapes.map((shape) => describeObject(editor, shape.id)) };
       });
     }
     case "duplicate": {

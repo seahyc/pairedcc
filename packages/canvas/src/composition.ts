@@ -56,6 +56,19 @@ export const arrangeInput = z.object({
   gap: z.number().min(0).max(2000).default(40),
   columns: z.number().int().min(1).max(100).default(3),
 });
+export const groupInput = z.object({
+  objects: targets,
+  name: z.string().trim().min(1).max(200).describe("The frame's label: what these objects have in common."),
+  padding: z.number().min(0).max(400).default(40),
+});
+
+/** A frame around boxes (in one coordinate space), with padding on every side. */
+export function frameAround(boxes: { x: number; y: number; w: number; h: number }[], padding: number) {
+  const x = Math.min(...boxes.map((b) => b.x)) - padding, y = Math.min(...boxes.map((b) => b.y)) - padding;
+  const right = Math.max(...boxes.map((b) => b.x + b.w)) + padding, bottom = Math.max(...boxes.map((b) => b.y + b.h)) + padding;
+  return { x, y, w: right - x, h: bottom - y };
+}
+
 export const duplicateInput = z.object({
   objects: targets,
   offsetX: z.number().finite().default(320),

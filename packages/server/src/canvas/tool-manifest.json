@@ -420,6 +420,62 @@
       }
     },
     {
+      "name": "canvas_group",
+      "description": "Wrap objects in a named frame without moving them, to show they belong together (a cluster, a set of alternatives, the evidence for a claim). Pass objects with their current expectedRevision and a name; a stale or locked object rejects the whole call. The objects must share a parent. Returns the frame and the objects, now inside it. canvas_undo_run takes the group back.",
+      "op": "group",
+      "output": "json",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "description": "Which open canvas to use; see canvas_sessions. Optional when only one is open.",
+            "type": "string"
+          },
+          "objects": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "starts_with",
+                  "pattern": "^shape:.*"
+                },
+                "expectedRevision": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "id",
+                "expectedRevision"
+              ]
+            }
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The frame's label: what these objects have in common."
+          },
+          "padding": {
+            "default": 40,
+            "type": "number",
+            "minimum": 0,
+            "maximum": 400
+          }
+        },
+        "required": [
+          "objects",
+          "name"
+        ]
+      }
+    },
+    {
       "name": "canvas_overview",
       "description": "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
       "op": "overview",

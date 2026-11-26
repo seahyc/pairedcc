@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInput, patchInput } from "../src/operations";
-import { sceneInput, arrangeInput, duplicateInput } from "../src/composition";
+import { sceneInput, arrangeInput, duplicateInput, groupInput } from "../src/composition";
 import { imageInput, annotationInput, connectionInput, resolveInput, feedbackInput, replyInput } from "../src/protocol";
 import { learnInput } from "../src/learning/model";
 import { overviewInput } from "../src/overview";
@@ -72,6 +72,14 @@ export const toolDefs: ToolDef[] = [
     description:
       "Branch an exploration by duplicating objects with an offset. Include connecting arrows to retain their bindings; frames include their children. Preserves originals. Requires current revisions and unlocked objects. Returns the copied objects and new selection.",
     input: duplicateInput.shape,
+    output: "json",
+  },
+  {
+    name: "canvas_group",
+    op: "group",
+    description:
+      "Wrap objects in a named frame without moving them, to show they belong together (a cluster, a set of alternatives, the evidence for a claim). Pass objects with their current expectedRevision and a name; a stale or locked object rejects the whole call. The objects must share a parent. Returns the frame and the objects, now inside it. canvas_undo_run takes the group back.",
+    input: groupInput.shape,
     output: "json",
   },
   {
