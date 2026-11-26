@@ -114,7 +114,7 @@ task by which measure is furthest from target, not by backlog order.
 2. (Merged, see Done.) **The first end-to-end acceptance scenario** in the working spec, built as a prototype: dataset
    object, chart view, direct filtering, agent reads exact widget state, stale marking when an input
    changes. Synthetic data.
-3. **Foundational primitives** from the spec as typed objects with tests: Relationship, Source,
+3. (PRs #23 #26 open, awaiting review; #26 stacked on #23.) **Foundational primitives** from the spec as typed objects with tests: Relationship, Source,
    Transformation and Agent run (request, scope, progress, attributable and reversible changes).
 4. (Merged, see Done.) **Agent interface.** Overview-then-detail reads so agents never need a full-board dump; an agent
    operation undoable as one unit without undoing human edits; tests over HTTP and MCP.
@@ -191,7 +191,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 22. Refused save is not Offline | claude/sprint-save-refused | 2026-11-26T10:51Z
-3. Foundational primitives | claude/sprint-primitives-* | 2026-11-26T10:46Z
 5. Converge | claude/sprint-converge | 2026-11-26T10:50Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
@@ -252,6 +251,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-B, item 11) (a) Undo of a deletion is refused when the restored object's parent frame or page, or an arrow's other end, was deleted since (consistent with all-or-nothing undo), rather than re-parenting it. (b) Runs belong to their actor label: an agent lists and undoes only its own. Labels are not authenticated, and local MCP agents share "MCP agent" unless `PAIRED_ACTOR` is set, so this prevents mistakes, not misuse. (c) `canvas_learn` hides only objects an agent made.
 
 - (build-B, item 9) A real tldraw `Editor` needs a DOM, and adding a DOM library (jsdom) as a dev dependency was refused in the build environment, so the editor-path checks for item 9 are eval checks (three data races in Safety, two strengthened acceptance steps) and the rules themselves are pure functions with unit tests. A lock bypass in the editor path fails only the eval. Alternative: add jsdom and test `executeCommand` against a real editor in `pnpm test`.
+- (build-A, item 3) The proposed primitives are derived views over what the board already records (arrow meta and bindings, `meta.inputs`, a chart's dataset, a dataset's source, an image's `sourceUrl`, the run ledger), not new stored records; no migration. Exposed read-only on `canvas_get` only, scoped to the object's page; a hand-drawn arrow is `decorative`. Alternative: stored Relationship/Transformation records, revisit with server-side boards.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -277,3 +277,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T10:50Z | build-A | 18 Agent-usability tasks | #24 | 21 tasks, self-test 21/21, attempt 20/21 (95%), median 3 calls; scorecard agent usability not run→pass |
 | 2026-11-26T10:50Z | build-B | 9 Editor-level data agent tests | #25 | Pure write rules unit-tested; safety 3/3 to 6/6 races with data races; four mutations each fail a check |
 | 2026-11-26T10:50Z | review | Review #16 to #20 | #16 #17 #18 #19 #20 | All five merged (squash); proofs re-run on the combined branch, e2e against real Postgres and Redis; scorecard on 816edb9: acceptance 10/10, safety pass, persistence pass (dev store), 10k load 9.4 s |
+| 2026-11-26T10:52Z | build-A | 3 Foundational primitives | #23 #26 | Relationship, Source, Transformation, Agent run typed and tested; canvas_get shows them, live MCP check incl. a hand-drawn arrow; scorecard unchanged |
