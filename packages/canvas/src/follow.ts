@@ -27,3 +27,33 @@ export function followers(moved: readonly string[], shapes: readonly Attached[],
   }
   return out;
 }
+
+type Shape = { id: string; type: string; x: number; y: number; isLocked?: boolean; meta: Record<string, unknown> };
+export type Mover = {
+  getShape(id: string): Shape | undefined;
+  getShapeAndDescendantIds(ids: string[]): Set<string>;
+  getCurrentPageShapes(): Shape[];
+  updateShapes(partials: { id: string; type: string; x: number; y: number }[]): unknown;
+};
+
+/**
+ * Move shapes by a program (side by side, show cited) with everything attached to them, as the
+ * person's own drag would. Call with nothing selected, inside one undo step: the drag follower
+ * only handles selected shapes, so this does it for shapes that are not.
+ */
+export function moveWithAttached(editor: Mover, moves: readonly { id: string; dx: number; dy: number }[]) {
+  const moving = editor.getShapeAndDescendantIds(moves.map((m) => m.id));
+  const shapes = editor.getCurrentPageShapes();
+  const updates = new Map<string, { id: string; type: string; x: number; y: number }>();
+  const shift = (id: string, dx: number, dy: number, force = false) => {
+    const s = editor.getShape(id);
+    if (!s || updates.has(id) || (!force && s.isLocked)) return;
+    updates.set(id, { id: s.id, type: s.type, x: s.x + dx, y: s.y + dy });
+  };
+  for (const m of moves) {
+    if (!m.dx && !m.dy) continue;
+    shift(m.id, m.dx, m.dy, true);
+    for (const id of followers([...editor.getShapeAndDescendantIds([m.id])], shapes, moving)) shift(id, m.dx, m.dy);
+  }
+  if (updates.size) editor.updateShapes([...updates.values()]);
+}
