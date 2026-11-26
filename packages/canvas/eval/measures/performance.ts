@@ -78,7 +78,7 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
       const samples = [];
       for (let k = 0; k < pan_.samples; k++) samples.push(await frames(page, pan_.frames));
       const pan = summarisePan(samples, pan_.frames);
-      results.push({ objects: size, buildMs: Math.round(buildMs), loadMs, panMedianFrameMs: pan.median, panP95FrameMs: pan.p95, panSampleMediansMs: pan.sampleMedians, panMethod: pan.method });
+      results.push({ objects: size, buildMs: Math.round(buildMs), loadMs, panMedianFrameMs: pan.median, panP95FrameMs: pan.p95, panTypicalFrameMs: pan.typical, panSampleMediansMs: pan.sampleMedians, panMethod: pan.method });
     } catch (error) {
       results.push({ objects: size, error: error instanceof Error ? error.message.split("\n")[0] : String(error), ...(process.env.EVAL_TRACE ? { steps } : {}) });
     } finally {
@@ -109,6 +109,11 @@ const lowerQuartile = (xs: number[]) => {
   return s[Math.floor((s.length - 1) * 0.25)];
 };
 
+const middle = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+};
+
 /**
  * The pan figure: the lower quartile of the samples' medians (and of their p95s), with every
  * sample's median kept to show the spread. Reported as `panMedianFrameMs` so runs before and
@@ -118,6 +123,8 @@ export function summarisePan(samples: { median: number; p95: number }[], framesP
   return {
     median: round(lowerQuartile(samples.map((x) => x.median))),
     p95: round(lowerQuartile(samples.map((x) => x.p95))),
+    // The plain median of the samples' medians: what a frame usually took, slow spells included.
+    typical: round(middle(samples.map((x) => x.median))),
     sampleMedians: samples.map((x) => round(x.median)),
     method: `lower quartile of ${samples.length} sample medians of ${framesPerSample} frames each`,
   };

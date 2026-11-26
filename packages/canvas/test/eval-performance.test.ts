@@ -22,6 +22,12 @@ describe("pan frame summary", () => {
     expect(summary.sampleMedians).toHaveLength(4);
     expect(summary.method).toMatch(/lower quartile/);
   });
+  it("also keeps what a frame usually took, so a slow spell is still on record", () => {
+    // Nine of twelve samples slow: the lower quartile reads the fast mode, the typical figure does not.
+    const summary = summarisePan([...slow(9), ...fast(3)]);
+    expect(summary.median).toBeLessThan(39);
+    expect(summary.typical).toBeGreaterThan(80);
+  });
   it("takes many short samples by default", () => {
     expect(PAN_SAMPLES_DEFAULT).toBeGreaterThanOrEqual(12);
     expect(PAN_FRAMES_DEFAULT).toBeLessThanOrEqual(60);
