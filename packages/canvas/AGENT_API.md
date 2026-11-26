@@ -247,8 +247,8 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 
 | `op` | `input` |
 |---|---|
-| `read` | Optional `ids`; returns page, selection, objects (with `author`, and `dataset`, `widget` or `stale` where they apply), annotations, open/resolved human `marks` and arrow bindings |
-| `get` | `id`, optional `includeAsset`; a dataset's `dataset` includes its `rows`; prototype `relationships`, `source` and `transformation` (see below) |
+| `read` | Optional `ids`; returns page, selection, objects (with `author`, `style` on cards, and `dataset`, `widget` or `stale` where they apply), annotations, open/resolved human `marks` and arrow bindings |
+| `get` | `id`, optional `includeAsset`; cards report `style` (note, heading, quote, code, handwriting for the person, caption); a dataset's `dataset` includes its `rows`; prototype `relationships`, `source` and `transformation` (see below) |
 | `create` | `kind` (frame, rectangle, ellipse, text, note), `x`, `y`, optional dimensions, text, color, name, note `style` (note, heading, quote, code), `inputs` (IDs it was derived from) |
 | `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name |
 | `image` | `src` (base64 image data URL), `x`, `y`, `width`, `height`, optional name, sourceUrl, isAnimated, caption |

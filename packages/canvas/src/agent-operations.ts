@@ -47,6 +47,16 @@ const cardInput = z.object({
 export const HUMAN_CARD_W = 300;
 const agentWidths = { agent: 420, heading: 440, quote: 380, code: 360 } as const;
 
+/**
+ * The style a card was written in, as agents name it on create: note, heading, quote or
+ * code; "handwriting" for the person's cards and "caption" for image captions.
+ */
+export function cardStyle(tone: unknown): string | undefined {
+  if (tone === "agent") return "note";
+  if (tone === "human") return "handwriting";
+  return typeof tone === "string" ? tone : undefined;
+}
+
 /** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
 export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}) {
   const input = cardInput.parse(value), id = createShapeId(), human = author === HUMAN;
@@ -444,6 +454,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         text:
           "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
         author: authorOf(s),
+        ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         meta: s.meta,
         asset,
       };
@@ -570,6 +581,7 @@ export async function executeCommand(
           : undefined;
       return {
         ...result,
+        ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         meta: s.meta,
         ...dataFields(editor, s, true),
         ...primitiveFields(editor, s),
