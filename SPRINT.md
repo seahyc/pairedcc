@@ -405,8 +405,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     Done when an answer that lands while the person is looking at its ask (not typing or dragging)
     is brought wholly into view, options wrap into rows that fit the window when one row cannot,
     unit-tested, and checked in a real page at 1440 and 390 px (failing before, passing after).
+64. **CSV codes keep their leading zeros.** Decisions needed 11: an all-numeric column becomes
+    numbers, so codes such as `007` or the ZIP `02139` lose their zeros. Done when a column holding
+    any zero-padded value (`0` followed by a digit, before any decimal point) stays text, plain
+    numbers (`0`, `0.5`, `-3`, `1e3`) still become numbers, with unit tests and a drop in the page.
 
 ## Claims
+64. CSV codes keep leading zeros | claude/sprint-csv-codes | 2026-11-26T12:38Z
 63. Answer lands in view | claude/sprint-answer-view | 2026-11-26T12:38Z
 62. Import keeps what the source and the person said | claude/sprint-import-faithful | 2026-11-26T12:36Z
 61. Ask about a chart or dataset gives what it shows | claude/sprint-ask-chart | 2026-11-26T12:31Z
