@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T09:43Z",
-  "commit": "d361ba2",
+  "generatedAt": "2026-11-26T09:47Z",
+  "commit": "4bc11fb",
   "carriedOver": [],
   "table": [
     {
@@ -18,8 +18,8 @@
     {
       "measure": "Safety of shared edits",
       "target": "0 human edits lost",
-      "result": "0 lost; 2/3 races pass",
-      "status": "fail"
+      "result": "0 lost; 3/3 races pass",
+      "status": "pass"
     },
     {
       "measure": "Persistence",
@@ -30,7 +30,7 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: error; 10k: error (worse: 1000: now fails (page.evaluate: Execution context was destroyed, most likely because of a navigation.))",
+      "result": "1k: load 2514 ms, pan 16.7 ms/frame; 10k: error",
       "status": "fail"
     },
     {
@@ -47,7 +47,7 @@
           "name": "Person imports a dataset by dropping a CSV file",
           "pass": false,
           "detail": "no dataset object after the drop (0 other objects added)",
-          "ms": 1517
+          "ms": 1514
         },
         {
           "name": "Agent imports a dataset over MCP",
@@ -59,19 +59,19 @@
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 499
+          "ms": 481
         },
         {
           "name": "Agent charts the selection",
           "pass": true,
           "detail": "ok",
-          "ms": 37
+          "ms": 36
         },
         {
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 853
+          "ms": 856
         },
         {
           "name": "Agent reads that exact chart state",
@@ -83,29 +83,29 @@
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 66
+          "ms": 39
         },
         {
           "name": "A manual annotation survives an agent revision",
-          "pass": false,
-          "detail": "annotation text is \"\"",
-          "ms": 1949
+          "pass": true,
+          "detail": "ok",
+          "ms": 1752
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": false,
           "detail": "a result derived from the chart is not marked stale when the chart's dataset changes",
-          "ms": 1008
+          "ms": 959
         },
         {
           "name": "Reload restores everything",
-          "pass": true,
-          "detail": "ok",
-          "ms": 606
+          "pass": false,
+          "detail": "1 of 5 objects differ after reload: card revision/props/meta (props h); 5 objects now",
+          "ms": 582
         }
       ],
       "pageErrors": [],
-      "toolCalls": 24
+      "toolCalls": 28
     },
     "safety": {
       "races": [
@@ -113,21 +113,21 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 107,
+          "ms": 83,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
-          "pass": false,
-          "detail": "canvas_update: This object does not support color",
-          "ms": 113,
+          "pass": true,
+          "detail": "ok",
+          "ms": 208,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 291,
+          "ms": 272,
           "humanEditsLost": 0
         }
       ],
@@ -142,7 +142,10 @@
     "performance": [
       {
         "objects": 1000,
-        "error": "page.evaluate: Execution context was destroyed, most likely because of a navigation."
+        "buildMs": 478,
+        "loadMs": 2514,
+        "panMedianFrameMs": 16.7,
+        "panP95FrameMs": 16.8
       },
       {
         "objects": 10000,
