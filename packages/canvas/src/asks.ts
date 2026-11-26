@@ -5,6 +5,7 @@ import { describeObject, revision, richTextPlain, shapeName } from "./operations
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
 import { answerLayout, capWords } from "./ask-rules";
+import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 
 // An ask is the human's question to an agent, attached to what they selected. It is a
 // pink card on the board (so it is in the feedback queue like any comment) that carries
@@ -67,7 +68,17 @@ export function retryAsk(editor: Editor, id: string) {
 }
 
 type Given = { id: string; type: string; author: string; text: string };
-const given = (s: TLShape, max = 2000): Given => ({ id: s.id, type: s.type, author: authorOf(s), text: clip(textOf(s) || `(${shapeName(s)}, no text)`, max) });
+// Imported material is given with its column names and where it came from.
+const given = (s: TLShape, max = 2000): Given => {
+  const source = sourceOf(s);
+  return { id: s.id, type: s.type, author: source ? sourceAuthor(source) : authorOf(s), text: clip(sourceText(s, textOf(s)) || textOf(s) || `(${shapeName(s)}, no text)`, max) };
+};
+/** A grouped record is given as its parts: the title line, then each field in column order. */
+const parts = (editor: Editor, s: TLShape): TLShape[] => {
+  if (s.type !== "group") return [s];
+  const children = editor.getSortedChildIdsForParent(s.id).flatMap((id) => editor.getShape(id) ?? []).filter((c) => c.type !== "arrow");
+  return children.length ? children.flatMap((c) => parts(editor, c)) : [s];
+};
 
 /** The exchange that led here, oldest first, when the human asks about an agent's answer. */
 function thread(editor: Editor, shape: TLShape, depth = 0, seen = new Set<string>()): { who: string; said: string }[] {
@@ -89,8 +100,9 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   const ask = askOf(shape);
   if (!ask) throw new Error("Not an ask");
   const page = editor.getPage(editor.getAncestorPageId(shape)!);
-  const targets = targetsOf(shape).flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
-  const frame = targets[0] ? frameOf(editor, targets[0]) : undefined;
+  const selected = targetsOf(shape).flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
+  const targets = selected.flatMap((s) => parts(editor, s));
+  const frame = selected[0] ? frameOf(editor, selected[0]) : undefined;
   const skip = new Set<string>([shape.id, ...targets.map((t) => t.id)]);
   return {
     id: shape.id,
