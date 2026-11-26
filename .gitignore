@@ -4,3 +4,4 @@ dist/
 .env
 !.env.example
 .gstack/
+e2e/test-results/
