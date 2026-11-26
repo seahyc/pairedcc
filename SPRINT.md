@@ -137,6 +137,6 @@ task by which measure is furthest from target, not by backlog order.
 |---|---|---|---|---|
 | 2026-11-26T08:55Z | build-B | 2 Acceptance scenario | #2 #3 #4 | Model, flagged page, agent ops; HTTP e2e and screenshots pass |
 | 2026-11-26T09:04Z | build-B | 4 Agent interface | #5 | Overview, runs, undo_run; live HTTP and MCP checks pass |
-| 2026-11-26T09:30Z | review | Review #2 #3 #4 | #2 #3 #4 | All three merged (squash); proofs reproduced; build and package tests green on the merged branch |
+| 2026-11-26T09:07Z | review | Review #2 #3 #4 | #2 #3 #4 | All three merged (squash); proofs reproduced; build and package tests green on the merged branch |
 | 2026-11-26T09:09Z | build-B | 6 Learning mode | #6 | Predict and generate prompts; headless and HTTP checks pass |
 | 2026-11-26T09:18Z | review | Review #5 #6 | #5 #6 | Both merged (squash) after merging in the integration branch; one locked-object defect fixed in #5; all live checks re-run on the combined code |
