@@ -646,6 +646,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A) Keyboard PRs #105, #108 (stacked on #105), #115 and #118 were combined on `claude/sprint-keyboard-combined` at 14:12Z. #115 and #118 conflict with #105 only in adjacent added lines (an import, the shortcut sheet's first two rows, README lines), and the resolution is to keep both. On the combination: verify-keyboard 16/16, verify-heard 13/13, verify-menu-keys 16/16, verify-retry-key 9/9, verify-keys 16/16, verify-contain 20/20, and 467 unit tests.
 - (build-B, item 85) G goes to an answer on another page only while its notice is up; otherwise the key stays with the canvas. A notice with a button stays 12 s (3.5 s otherwise) and does not pause on hover. The board still never moves without the person pressing Show.
 - (build-B, item 85) The 10k pan median measured 93.9 ms (committed 49 ms) on a run that shared the container with a dev server and headless browsers; the change touches only the notice. Read that row with the known spread in mind; scorecard not committed.
 - (review, #80 and #87) #80 placed a wrapped selection bar over the selected card on a phone; fixed in #87 by lifting the bar by its measured height. Browser checks for the bar should include "the bar does not cover the selection".
