@@ -27,6 +27,7 @@ async function request(command: z.infer<typeof commandSchema>, sessionId?: strin
       requestId: randomUUID(),
       sessionId: sessionId ?? process.env.PAIRED_SESSION,
       actor,
+      via: "mcp",
       command,
     }),
     signal: AbortSignal.timeout(20000),
