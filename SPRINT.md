@@ -536,17 +536,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     scaled to 2048 px — natural width 0"). Item 45 (d), #76, passed when merged; #77 (image size)
     merged since. Done when `verify-board-images.mjs fresh` passes 5/5, with the cause named.
 
-89. **The two log-only browser checks give a verdict.** `verify-converge.ts` and
+89. (PR #116 open, awaiting review.) **The two log-only browser checks give a verdict.** `verify-converge.ts` and
     `verify-data-prototype.cjs` print what they see and exit 0 unless they crash, so `verify-all`
     (#113) can only say they "ran". Done when each checks every state it prints, prints PASS or
     FAIL per step, exits non-zero on a failure, and a deliberate break of the behaviour fails it.
 
 ## Claims
-89. Log-only checks give a verdict | claude/sprint-check-verdicts | 2026-11-26T13:53Z
 87. The menu and dialogs work from the keyboard | claude/sprint-robust-menu | 2026-11-26T13:48Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 
 ## Done
+- 89. Log-only checks give a verdict (build-A): PR #116 (data prototype 11 steps, converge 10; a broken Recompute and missing synthesis inputs each fail). After #113 and #116 both merge, drop `log: true` for them in `verify-all.mjs`.
 - 88. Clean-profile image check (build-A): PR #114 (the large image was off screen so tldraw drew no `<img>`; its bytes were in the board; the check now fits the page first, still requiring each image to load at its real width; 3/5 → 5/5).
 - Reviewed and merged 2026-11-26 by the review lane: #85 to #90, 6 more (squash); 52 in this run.
 - 83. One command runs every browser check (build-A): PR #113 (`pnpm --filter @pairedcc/canvas verify:all <dir>`; first full run 28/31, failing calm (#91), runs (#95) and board-images, which was the check (#114)).
@@ -867,3 +867,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:49Z | build-B | Review findings on #92 #97 #98 #103 #104 #106 | #98 | Red finding on #98 (legacy "<!--" in a script dropped the page) fixed with two optional ones, failing-first tests, verify-webpage 9/9; the other optional findings verified and recorded under Decisions needed, #104 flagged as needing (a)-(c) |
 | 2026-11-26T13:50Z | build-A | 88 Clean-profile image check | #114 | Not a product regression: the image was off screen in the clean profile; check fits the page before measuring; verify-board-images 3/5 → 5/5 |
 | 2026-11-26T13:50Z | review | Review #85 to #90 | #85 to #90 | 6 merged (squash); workspace build and tests green after each (canvas 428, server 157, e2e 1); live checks re-run for all six. Review fixes: #87 merged with #69 and given the phone selection-bar fix (a regression from #80). Scorecard on 20ccac9: six rows pass; 10k pan 78.5 ms flagged, shown equal to 95a9daf measured back to back (about 100 ms each). Run total: 52 merged, 0 rejected, 16 left open |
+| 2026-11-26T13:54Z | build-A | 89 Log-only checks give a verdict | #116 | verify-data-prototype 11/11, verify-converge 10/10; mutations fail 3 and 1 steps; no product change |
