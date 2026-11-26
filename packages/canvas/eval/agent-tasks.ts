@@ -50,7 +50,7 @@ const prepare = async (t: Task) => {
   return ctx;
 };
 
-const results: { task: string; pass: boolean; detail: string; toolCalls: number; seconds: number }[] = [];
+const results: { task: string; pass: boolean; detail: string; toolCalls: number; seconds: number; evidence?: unknown }[] = [];
 try {
   if (mode === "self-test") {
     let bad = 0;
@@ -85,7 +85,13 @@ try {
       const toolCalls = existsSync(log) ? readFileSync(log, "utf8").trim().split("\n").filter(Boolean).length : 0;
       const v = existsSync(`${work}/give-up-${t.id}`) ? `gave up; ${(await verdict(t, ctx)) === true ? "but the board satisfies the check" : "board not done"}` : await verdict(t, ctx);
       const pass = v === true || v === "gave up; but the board satisfies the check";
-      results.push({ task: t.id, pass, detail: pass ? "ok" : String(v), toolCalls, seconds: Math.round((Date.now() - start) / 1000) });
+      // For a failure, keep what the agent left on the board so the check can be audited.
+      const evidence = pass
+        ? undefined
+        : (await helper.call("canvas_read")).objects
+            .filter((o: any) => o.text && o.author !== "human")
+            .map((o: any) => ({ type: o.type, text: String(o.text).slice(0, 200), bounds: o.bounds }));
+      results.push({ task: t.id, pass, detail: pass ? "ok" : String(v), toolCalls, seconds: Math.round((Date.now() - start) / 1000), ...(evidence ? { evidence } : {}) });
       console.log(`${pass ? "PASS" : "FAIL"} ${t.id} (${toolCalls} tool calls)${pass ? "" : `: ${v}`}`);
     }
     writeFileSync(`${work}/current.json`, JSON.stringify({ task: "finished" }));

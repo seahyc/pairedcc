@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-11-26T09:47Z",
-  "commit": "4bc11fb",
+  "generatedAt": "2026-11-26T10:47Z",
+  "commit": "0248e9f with uncommitted changes",
   "carriedOver": [],
   "table": [
     {
       "measure": "Acceptance scenario",
       "target": "every step passes",
-      "result": "7/10 steps",
+      "result": "8/10 steps",
       "status": "fail"
     },
     {
       "measure": "Agent usability",
       "target": "≥90% of ≥20 tasks",
-      "result": "0 tasks, no recorded attempt",
-      "status": "not run"
+      "result": "20/21 (95%), median 3 tool calls",
+      "status": "pass"
     },
     {
       "measure": "Safety of shared edits",
@@ -30,8 +30,8 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 2514 ms, pan 16.7 ms/frame; 10k: error",
-      "status": "fail"
+      "result": "1k: load 2485 ms, pan 16.7 ms/frame; 10k: load 25185 ms, pan 40.3 ms/frame",
+      "status": "reported"
     },
     {
       "measure": "Existing product",
@@ -53,13 +53,13 @@
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 36
+          "ms": 35
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 481
+          "ms": 482
         },
         {
           "name": "Agent charts the selection",
@@ -71,7 +71,7 @@
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 856
+          "ms": 853
         },
         {
           "name": "Agent reads that exact chart state",
@@ -83,25 +83,25 @@
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 39
+          "ms": 42
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1752
+          "ms": 1716
         },
         {
           "name": "Changing an input marks its dependents stale",
-          "pass": false,
-          "detail": "a result derived from the chart is not marked stale when the chart's dataset changes",
-          "ms": 959
+          "pass": true,
+          "detail": "ok",
+          "ms": 1001
         },
         {
           "name": "Reload restores everything",
           "pass": false,
           "detail": "1 of 5 objects differ after reload: card revision/props/meta (props h); 5 objects now",
-          "ms": 582
+          "ms": 505
         }
       ],
       "pageErrors": [],
@@ -113,21 +113,21 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 83,
+          "ms": 82,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 208,
+          "ms": 196,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 272,
+          "ms": 269,
           "humanEditsLost": 0
         }
       ],
@@ -142,22 +142,25 @@
     "performance": [
       {
         "objects": 1000,
-        "buildMs": 478,
-        "loadMs": 2514,
+        "buildMs": 481,
+        "loadMs": 2485,
         "panMedianFrameMs": 16.7,
         "panP95FrameMs": 16.8
       },
       {
         "objects": 10000,
-        "error": "only 0 of 10000 objects could be created on one page (tldraw's default maxShapesPerPage is 4,000)"
+        "buildMs": 3458,
+        "loadMs": 25185,
+        "panMedianFrameMs": 40.3,
+        "panP95FrameMs": 93.5
       }
     ],
     "agentUsability": {
-      "tasks": 0,
-      "attempted": 0,
-      "completed": 0,
-      "medianToolCalls": null,
-      "recordedAt": null
+      "tasks": 21,
+      "attempted": 21,
+      "completed": 20,
+      "medianToolCalls": 3,
+      "recordedAt": "2026-11-26T10:44:31.300Z"
     },
     "workspace": {
       "build": true,
@@ -168,7 +171,7 @@
         },
         "canvas": {
           "pass": true,
-          "summary": "71 passed (71)"
+          "summary": "90 passed (90)"
         },
         "cli": {
           "pass": true,
@@ -184,7 +187,7 @@
         },
         "server": {
           "pass": true,
-          "summary": "117 passed (117)"
+          "summary": "129 passed | 7 skipped (136)"
         },
         "web": {
           "pass": true,

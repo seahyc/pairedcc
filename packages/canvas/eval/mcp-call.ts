@@ -21,9 +21,9 @@ try {
   } else {
     appendFileSync(`${dir}/calls-${current.task}.log`, `${JSON.stringify({ tool, at: new Date().toISOString() })}\n`);
     const result = await agent.call(tool, raw ? JSON.parse(raw) : {});
-    const text = JSON.stringify(result);
-    // Image results are large; say what came back instead of printing base64.
-    console.log(text.length > 20000 ? `${text.slice(0, 20000)}… (${text.length} characters)` : text);
+    // Print the whole result: truncating it hands the agent broken JSON. Only image data
+    // (base64) is elided, since a terminal cannot show it anyway.
+    console.log(JSON.stringify(result, (key, value) => (key === "data" && typeof value === "string" && value.length > 1000 ? `<${value.length} characters of base64>` : value)));
   }
 } catch (error) {
   console.log(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
