@@ -7,6 +7,9 @@ describe("hosted tool manifest", () => {
     const describe = (name: string) => toolDefs.find((t) => t.name === name)?.description ?? "";
     for (const name of ["canvas_feedback", "canvas_reply"]) expect(describe(name), name).toMatch(/canvas_reply[^.]*not canvas_annotate|instead of canvas_annotate/);
     expect(readFileSync(new URL("../AGENT_API.md", import.meta.url), "utf8")).toMatch(/answer[^.]*with `canvas_reply`[^.]*not `canvas_annotate`/i);
+    // Asks are queue items too, but only canvas_answer records the answer on the Ask.
+    for (const name of ["canvas_feedback", "canvas_reply"]) expect(describe(name), name).toMatch(/`ask` field[^.;]*canvas_answer/);
+    expect(readFileSync(new URL("../AGENT_API.md", import.meta.url), "utf8")).toMatch(/`ask` field[^.]*`canvas_answer`/);
   });
   it("matches the tool definitions (run pnpm --filter @pairedcc/canvas manifest)", () => {
     const committed = readFileSync(new URL("../../server/src/canvas/tool-manifest.json", import.meta.url), "utf8");

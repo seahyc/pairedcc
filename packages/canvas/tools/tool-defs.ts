@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInput, patchInput } from "../src/operations";
-import { sceneInput, arrangeInput, duplicateInput } from "../src/composition";
+import { sceneInput, arrangeInput, duplicateInput, groupInput } from "../src/composition";
 import { imageInput, annotationInput, connectionInput, resolveInput, feedbackInput, replyInput, asksInput, askStatusInput, answerInput } from "../src/protocol";
 import { learnInput } from "../src/learning/model";
 import { convergeInput } from "../src/converge/model";
@@ -73,6 +73,14 @@ export const toolDefs: ToolDef[] = [
     description:
       "Branch an exploration by duplicating objects with an offset. Include connecting arrows to retain their bindings; frames include their children. Preserves originals. Requires current revisions and unlocked objects. Returns the copied objects and new selection.",
     input: duplicateInput.shape,
+    output: "json",
+  },
+  {
+    name: "canvas_group",
+    op: "group",
+    description:
+      "Wrap objects in a named frame without moving them, to show they belong together (a cluster, a set of alternatives, the evidence for a claim). Pass objects with their current expectedRevision and a name; a stale or locked object rejects the whole call. The objects must share a parent. Returns the frame and the objects, now inside it. canvas_undo_run takes the group back.",
+    input: groupInput.shape,
     output: "json",
   },
   {
@@ -150,7 +158,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_feedback",
     op: "feedback",
     description:
-      "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback. Answer an item with canvas_reply, not canvas_annotate, so the answer sits under the comment and is listed in the queue.",
+      "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback. Answer an item with canvas_reply, not canvas_annotate, so the answer sits under the comment and is listed in the queue; an item with an `ask` field is an Ask: answer it with canvas_answer, which also records the answer on the Ask.",
     input: feedbackInput.shape,
     output: "json",
   },
@@ -158,7 +166,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_reply",
     op: "reply",
     description:
-      "Answer a feedback item in place (use this instead of canvas_annotate for anything in canvas_feedback): your note appears directly under the human's comment (or the picked/rejected object) and is listed as a reply in the queue. The item stays open until you or the human resolve it. The item must be on the open page.",
+      "Answer a feedback item in place (use this instead of canvas_annotate for items in canvas_feedback; for an item with an `ask` field use canvas_answer instead): your note appears directly under the human's comment (or the picked/rejected object) and is listed as a reply in the queue. The item stays open until you or the human resolve it. The item must be on the open page.",
     input: replyInput.shape,
     output: "json",
   },
@@ -281,7 +289,7 @@ export const toolDefs: ToolDef[] = [
     op: "converge",
     prototype: true,
     description:
-      "PROTOTYPE converge. When several alternatives, branches or hypotheses are on the board and the person wants them pulled together, write one synthesis: what they add up to and where they still disagree, naming the sources. Creates an agent card beside the sources (or at x, y) with a derived-from arrow from each source; read reports convergedFrom in its meta and marks it stale when a source changes, so revise it then. Keep the sources; never delete or move them. Runs only in a tab opened with ?prototype=converge.",
+      "PROTOTYPE converge. When several alternatives, branches or hypotheses are on the board and the person wants them pulled together, write one synthesis: what they add up to and where they still disagree, naming the sources. Creates an agent card beside the sources (or at x, y) with a derived-from arrow from each source, labelled A, B, C; give claims as points citing their sources and the card cites them by those letters, so each claim can be checked against its evidence; read reports convergedFrom in its meta and marks it stale when a source changes, so revise it then. Keep the sources; never delete or move them. Runs only in a tab opened with ?prototype=converge.",
     input: convergeInput.shape,
     output: "json",
   },
