@@ -191,10 +191,11 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 3. Foundational primitives | claude/sprint-primitives-* | 2026-11-26T10:46Z
 9. Editor-level data agent tests | claude/sprint-data-agent-tests | 2026-11-26T10:47Z
-18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
+5. Converge | claude/sprint-converge | 2026-11-26T10:50Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 18. Agent-usability tasks: PR #24 (21 tasks, self-test proves every check fails before and passes after a reference solution; first attempt by a fresh agent 20/21, median 3 tool calls).
 - Reviewed and merged 2026-11-26 by the review lane, each re-run against the combined branch: #8 as 6f4f3fb, #9 as e357f71, #10 as f7483a9, #11 as 4e4c9b7, #12 as 204980a, #13 as 054ab83, #14 as 3a4a85f, #15 as 8708875 (with two fixes, see Decisions needed).
 - 8. Docs: PRs #9 (data prototype documented, docs checked by test) and #10 (Agent access fills in the checkout's paths).
 - 12. Prototype tool exposure: PR #13 (`hostedPrototypeTools`, default on).
@@ -207,6 +208,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 18) The agent under test reaches the tools through a counting command-line MCP client (`eval/mcp-call.ts`) rather than native MCP tools in its harness, so calls can be counted and the session pinned. Task 14 failed with no board evidence kept; the check was left strict and the runner now records evidence. The agent's friction list (annotate `author` default, annotation arrow anchors, 39 KB tool list) is in PR #24.
 - (review, item 1) Changed in #15 before merging: when this browser has unsaved edits and the account's board has moved on, or two browsers create the board at once, the two cannot be merged (no shared version is known), so the browser's board is saved as a separate board and the account's is opened. Before, the browser's board replaced the account's and the newer work survived only in the 50-revision history. This supersedes "this browser's edits on top" in the build-A note below.
 - (review, item 1) Board sync was not exercised in a browser against the real server: a production canvas build needs `VITE_TLDRAW_LICENSE_KEY`. The real API was checked with a session cookie and a real board. The scorecard's Persistence pass is against the development board store.
 - (review, item 1) Migration 007 runs on server start, so it reaches production with the first deploy of this branch. No cap on boards per account.
@@ -261,3 +263,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T10:45Z | review | Review #8 to #15 | #8 #9 #10 #11 #12 #13 #14 #15 | All eight merged (squash) after re-running each proof on the combined branch; two defects fixed in #15 (whole-board overwrite, stray welcome cards); scorecard on 8708875: acceptance 8/10, safety pass, persistence pass (dev store), 10k reported |
 | 2026-11-26T10:43Z | build-A | 21 Prototype ops behind flags | #20 | Unflagged tabs refuse the five prototype ops and change nothing; test fails without the gate; live HTTP check; scorecard unchanged |
 | 2026-11-26T10:44Z | build-B | 11 Shared-edit gaps | #22 | Three races added; safety measure 3/6 (1 human edit lost) on the old code to 6/6 (0 lost) |
+| 2026-11-26T10:50Z | build-A | 18 Agent-usability tasks | #24 | 21 tasks, self-test 21/21, attempt 20/21 (95%), median 3 calls; scorecard agent usability not run→pass |
