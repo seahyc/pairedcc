@@ -229,6 +229,15 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     if (!result.ok) onNotice(result.reason);
     editor.focus();
   };
+  const askAboutWriting = () => {
+    const id = editor.getEditingShapeId();
+    if (id) {
+      editor.complete();
+      editor.setCurrentTool("select");
+      editor.select(id);
+    }
+    setAsking(true);
+  };
   if (state.editing) {
     if (state.blank) return null;
     // On a touch screen the hint is the way to ask: no keyboard shortcut can be pressed.
@@ -242,14 +251,10 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
             // Act on the press, before the text editor loses focus and the bar changes under the finger.
             e.preventDefault();
             e.stopPropagation();
-            const id = editor.getEditingShapeId();
-            if (id) {
-              editor.complete();
-              editor.setCurrentTool("select");
-              editor.select(id);
-            }
-            setAsking(true);
+            askAboutWriting();
           }}
+          // A screen reader or switch activates a button with a click and no pointer press.
+          onClick={askAboutWriting}
         >
           ✦ Ask about this
         </button>

@@ -84,7 +84,9 @@ export const INSIDE_LIMIT = 20;
 function dataText(editor: Editor, s: TLShape): string {
   if (s.type === "dataset") return datasetText((s as DatasetShape).props.data);
   if (s.type !== "chart") return "";
-  const chart = s as ChartShape, dataset = editor.getShape(chart.props.datasetId as TLShapeId) as DatasetShape | undefined;
+  const chart = s as ChartShape, found = editor.getShape(chart.props.datasetId as TLShapeId);
+  // Anything but a dataset under that id is treated as a deleted dataset, never read as one.
+  const dataset = found?.type === "dataset" ? (found as DatasetShape) : undefined;
   if (!dataset) return `Bar chart whose dataset was deleted. Its last bars: ${chart.props.bars.map((b) => `${b.key} ${b.value}`).join(", ") || "none"}.`;
   const stale = staleness(editor, s);
   if (!stale.length) return chartText(dataset.props.data, chart.props.state);

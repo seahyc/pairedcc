@@ -11,6 +11,12 @@ describe("tables keep the headers their source marked", () => {
     expect(parsed.kind === "table" && parsed.table.columns).toEqual(["2024", "2025"]);
     expect(parsed.kind === "table" && parsed.table.rows).toEqual([["120", "131"]]);
   });
+  it("a single spanning <th> above the header row is a title, not the header", () => {
+    const html = '<table><tr><th colspan="2">Fleet costs 2024</th></tr><tr><th>Item</th><th>Cost</th></tr><tr><td>Fuel</td><td>120</td></tr></table>';
+    const parsed = parseImport(html, "html");
+    expect(parsed.kind === "table" && parsed.table.columns).toEqual(["Item", "Cost"]);
+    expect(parsed.kind === "table" && parsed.table.rows).toEqual([["Fuel", "120"]]);
+  });
   it("(c) numeric headers above a markdown rule stay headers", () => {
     const parsed = parseImport("| 2024 | 2025 |\n| --- | --- |\n| 120 | 131 |\n", "markdown");
     expect(parsed.kind === "table" && parsed.table.columns).toEqual(["2024", "2025"]);
