@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentHash, copyId, createBoardSync, mergeSnapshots, withNewRecords, type BoardApi, type Snapshot, type SyncMemo, type SyncStatus } from "../src/board-sync";
+import { wellFormed } from "../src/text";
 
 const snap = (text: string): Snapshot => ({ store: { "shape:a": { id: "shape:a", typeName: "shape", text } }, schema: { schemaVersion: 2 } });
 const text = (s: Snapshot) => (s.store["shape:a"] as { text: string }).text;
@@ -28,6 +29,7 @@ function server(signedIn: string | null = "alice", keep = 50) {
       await hooks.beforePut?.();
       if (JSON.stringify(snapshot).includes("HUGE")) return { ok: false, stale: false, refused: 413, error: "Boards are limited to 10 MB" };
       const b = boards.get(id);
+      snapshot = wellFormed(snapshot);
       if (!b) {
         if (expectedRevision !== 0) return { ok: false, stale: false, error: "Board not found" };
         boards.set(id, { revision: 1, snapshot: structuredClone(snapshot), history: [structuredClone(snapshot)], first: 1 });
@@ -443,6 +445,53 @@ describe("withNewRecords", () => {
     expect(kept).toBe(2);
   });
 
+  it("carries the person's edits to objects the account also has, field by field, but not derived fields", () => {
+    const card = (over: Record<string, unknown> = {}, props: Record<string, unknown> = {}, meta: Record<string, unknown> = {}) =>
+      ({ id: "shape:c", typeName: "shape", type: "card", x: 0, y: 0, parentId: "page:1", props: { text: "old", h: 100, color: "black", ...props }, meta: { revision: 1, ...meta }, ...over });
+    const page = { id: "page:1", typeName: "page" };
+    const board = (...rs: object[]): Snapshot => ({ store: Object.fromEntries(rs.map((r) => [(r as { id: string }).id, r])), schema: { schemaVersion: 2 } });
+    const initial = board(page, card());
+    // While loading, the person moved the card; this tab also re-measured its height.
+    const current = board(page, card({ x: 300 }, { h: 140 }, { revision: 2 }));
+    // Meanwhile another device changed its text and colour.
+    const server = board(page, card({}, { text: "new text", color: "violet" }, { revision: 2 }));
+    const { snapshot, kept } = withNewRecords(initial, current, server);
+    expect(kept).toBe(1);
+    expect(snapshot.store["shape:c"]).toMatchObject({ x: 300, props: { text: "new text", color: "violet", h: 100 }, meta: { revision: 3 } });
+    // Only a re-measure (no edit): the account's version stands untouched.
+    const settled = withNewRecords(initial, board(page, card({}, { h: 140 })), server);
+    expect(settled.kept).toBe(0);
+    expect(settled.snapshot.store["shape:c"]).toEqual(server.store["shape:c"]);
+    // A record the account lacks (a new browser's welcome card) is never carried.
+    const welcome = withNewRecords(board(page, card()), board(page, card({ x: 300 })), board(page));
+    expect(welcome.snapshot.store["shape:c"]).toBeUndefined();
+  });
+
+  it("moves parent and position together, and never leaves a card under a frame that is gone", () => {
+    const shape = (id: string, over: Record<string, unknown> = {}, meta: Record<string, unknown> = {}) => ({ id, typeName: "shape", type: id.includes("frame") ? "frame" : "card", x: 0, y: 0, rotation: 0, parentId: "page:1", props: {}, meta: { revision: 10, ...meta }, ...over });
+    const page = { id: "page:1", typeName: "page" };
+    const board = (...rs: object[]): Snapshot => ({ store: Object.fromEntries(rs.map((r) => [(r as { id: string }).id, r])), schema: { schemaVersion: 2 } });
+    // The account grouped the card into a frame (x 50 inside it); this tab moved it on the page to 600.
+    const frame = shape("shape:frame", { x: 450 });
+    const initial = board(page, frame, shape("shape:c", { x: 500 }));
+    const moved = board(page, frame, shape("shape:c", { x: 600 }, { revision: 11 }));
+    const grouped = board(page, frame, shape("shape:c", { x: 50, parentId: "shape:frame" }, { revision: 11 }));
+    const a = withNewRecords(initial, moved, grouped).snapshot.store["shape:c"] as Record<string, unknown>;
+    expect([a.parentId, a.x]).toEqual(["page:1", 600]); // the person's placement, whole: still at page x 600
+    // This tab dropped the card into a frame the account has since deleted: the account's placement stands.
+    const dropped = board(page, frame, shape("shape:c", { x: 20, parentId: "shape:frame" }, { revision: 11 }));
+    const frameGone = board(page, shape("shape:c", { x: 500 }));
+    const b = withNewRecords(initial, dropped, frameGone).snapshot.store["shape:c"] as Record<string, unknown>;
+    expect([b.parentId, b.x]).toEqual(["page:1", 500]);
+  });
+
+  it("never issues an object revision twice when the account changed it and changed it back", () => {
+    const card = (meta: Record<string, unknown>, props: Record<string, unknown> = {}) => ({ id: "shape:c", typeName: "shape", type: "card", x: 0, y: 0, parentId: "page:1", props: { color: "black", ...props }, meta });
+    const board = (r: object): Snapshot => ({ store: { "page:1": { id: "page:1", typeName: "page" }, "shape:c": r }, schema: { schemaVersion: 2 } });
+    const merged = withNewRecords(board(card({ revision: 10 })), board(card({ revision: 11 }, { color: "red" })), board(card({ revision: 12 })));
+    expect((merged.snapshot.store["shape:c"] as { meta: { revision: number } }).meta.revision).toBe(13);
+  });
+
   it("restores an earlier revision as the newest one, keeping the board before it in history", async () => {
     const srv = server(), b = browser(snap("v1"));
     const { s, last } = sync(srv, b, true);
@@ -677,6 +726,37 @@ describe("withNewRecords", () => {
   });
 
 
+  it("holds what the server stores when the board has half an emoji, so a deletion is not undone by a merge", async () => {
+    const card = (id: string, text: string) => ({ id, typeName: "shape", text });
+    const board = (...cards: ReturnType<typeof card>[]): Snapshot => ({ store: Object.fromEntries(cards.map((c) => [c.id, c])), schema: { schemaVersion: 2 } });
+    const srv = server();
+    const a = browser(board(card("shape:a", "Plans \uD83D"), card("shape:b", "other")));
+    const tabA = sync(srv, a, true);
+    await tabA.s.start(); // first save; the server repairs the half emoji
+    expect((a.doc.store["shape:a"] as { text: string }).text).toBe("Plans \uFFFD"); // this tab holds the same
+    // Another browser opens the board and adds a card.
+    const b = browser(board(), null);
+    await sync(srv, b, false).s.start();
+    b.local.load(board(...(Object.values(srv.boards.get("main")!.snapshot.store) as ReturnType<typeof card>[]), card("shape:c", "from B")));
+    await srv.api.put("main", 1, b.local.snapshot());
+    // A deletes card a; its save is stale and merges B's card in.
+    const { "shape:a": _gone, ...rest } = a.doc.store;
+    a.local.load({ ...a.doc, store: rest });
+    await tabA.s.save();
+    expect(Object.keys(srv.boards.get("main")!.snapshot.store).sort()).toEqual(["shape:b", "shape:c"]);
+  });
+
+  it("forgets undo and redo after a restore, so redo cannot bring a newer object back", async () => {
+    const srv = server(), b = browser(snap("Draft"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("Final");
+    await b.flush();
+    await s.restore(1);
+    expect(text(b.doc)).toBe("Draft");
+    expect(b.resets).toBe(1);
+  });
+
   it("reopens the restored board when the tab reloads before the browser stored it", async () => {
     const srv = server(), b = browser(snap("v1"));
     const { s } = sync(srv, b, true);
@@ -787,6 +867,25 @@ describe("withNewRecords", () => {
     await b.flush();
     expect(text(srv.boards.get("main")!.snapshot)).toBe("trimmed to fit");
     expect(last()).toMatchObject({ state: "saved" });
+  });
+
+  it("keeps an edit to an existing object made while the account's newer board loads", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("v1"));
+    await srv.api.put("main", 1, snap("v2 from another device"));
+    // This browser last synced revision 1; its board loads while the person edits the card.
+    const b = browser(snap("v1"), { account: "alice", boardId: "main", revision: 1, dirty: false });
+    let release!: () => void;
+    srv.hooks.beforeGet = () => new Promise<void>((done) => (release = done));
+    const starting = sync(srv, b, true).s.start();
+    await Promise.resolve();
+    b.edit("edited while loading");
+    srv.hooks.beforeGet = undefined;
+    release();
+    await starting;
+    expect(text(b.doc)).toBe("edited while loading");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("edited while loading");
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "v2 from another device", "edited while loading"]);
   });
 });
 
