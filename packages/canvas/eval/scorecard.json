@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T11:42Z",
-  "commit": "bac1a93",
+  "generatedAt": "2026-11-26T11:51Z",
+  "commit": "e53322f",
   "carriedOver": [],
   "table": [
     {
@@ -30,8 +30,8 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 1591 ms, pan 16.7 ms/frame; 10k: load 8290 ms, pan 37.3 ms/frame",
-      "status": "reported"
+      "result": "1k: load 1442 ms, pan 16.7 ms/frame; 10k: load 9164 ms, pan 77.9 ms/frame (worse: 10000 panMedianFrameMs 37.3 → 77.9)",
+      "status": "regressed"
     },
     {
       "measure": "Existing product",
@@ -47,61 +47,61 @@
           "name": "Person imports a dataset by dropping a CSV file",
           "pass": true,
           "detail": "ok",
-          "ms": 1513
+          "ms": 1514
         },
         {
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 18
+          "ms": 16
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 498
+          "ms": 477
         },
         {
           "name": "Agent charts the selection",
           "pass": true,
           "detail": "ok",
-          "ms": 31
+          "ms": 23
         },
         {
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 829
+          "ms": 823
         },
         {
           "name": "Agent reads that exact chart state",
           "pass": true,
           "detail": "ok",
-          "ms": 13
+          "ms": 10
         },
         {
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 49
+          "ms": 26
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1184
+          "ms": 1206
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": true,
           "detail": "ok",
-          "ms": 939
+          "ms": 933
         },
         {
           "name": "Reload restores everything",
           "pass": true,
           "detail": "ok",
-          "ms": 467
+          "ms": 441
         }
       ],
       "pageErrors": [],
@@ -113,63 +113,63 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 71,
+          "ms": 64,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 145,
+          "ms": 139,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 255,
+          "ms": 250,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo of a deletion after the person deleted its frame",
           "pass": true,
           "detail": "ok",
-          "ms": 93,
+          "ms": 87,
           "humanEditsLost": 0
         },
         {
           "name": "One agent cannot undo another agent's run",
           "pass": true,
           "detail": "ok",
-          "ms": 2973,
+          "ms": 2960,
           "humanEditsLost": 0
         },
         {
           "name": "Agent cannot hide the person's work behind a learning prompt",
           "pass": true,
           "detail": "ok",
-          "ms": 3735,
+          "ms": 3846,
           "humanEditsLost": 0
         },
         {
           "name": "Stale agent chart state against a newer human filter",
           "pass": true,
           "detail": "ok",
-          "ms": 391,
+          "ms": 405,
           "humanEditsLost": 0
         },
         {
           "name": "Stale agent cell edit against a newer human cell edit",
           "pass": true,
           "detail": "ok",
-          "ms": 394,
+          "ms": 423,
           "humanEditsLost": 0
         },
         {
           "name": "Agent data write to a locked dataset or chart",
           "pass": true,
           "detail": "ok",
-          "ms": 484,
+          "ms": 493,
           "humanEditsLost": 0
         }
       ],
@@ -184,17 +184,17 @@
     "performance": [
       {
         "objects": 1000,
-        "buildMs": 184,
-        "loadMs": 1591,
+        "buildMs": 276,
+        "loadMs": 1442,
         "panMedianFrameMs": 16.7,
-        "panP95FrameMs": 16.8
+        "panP95FrameMs": 19.9
       },
       {
         "objects": 10000,
-        "buildMs": 1460,
-        "loadMs": 8290,
-        "panMedianFrameMs": 37.3,
-        "panP95FrameMs": 93.8
+        "buildMs": 1482,
+        "loadMs": 9164,
+        "panMedianFrameMs": 77.9,
+        "panP95FrameMs": 122.9
       }
     ],
     "agentUsability": {
@@ -209,11 +209,11 @@
       "packages": {
         "e2e": {
           "pass": true,
-          "summary": "1 passed (12.9s)"
+          "summary": "1 passed (13.0s)"
         },
         "canvas": {
           "pass": true,
-          "summary": "198 passed (198)"
+          "summary": "210 passed (210)"
         },
         "cli": {
           "pass": true,
