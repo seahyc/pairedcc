@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Tldraw,
   useEditor,
@@ -79,7 +80,7 @@ import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
-import { elsewhereNotice } from "./ask-rules";
+import { elsewhereNotice, markOf } from "./ask-rules";
 import { askOf } from "./asks";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
 import { DataTableShapeUtil } from "./table-shape";
@@ -101,7 +102,7 @@ import { onlyDerivedChange } from "./revision";
 import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followers } from "./follow";
-import { firstTabStop, keyboardCardSpot } from "./keyboard-nav";
+import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
@@ -307,6 +308,65 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
     ],
   },
 ];
+
+/**
+ * The board's Tab order: page-level objects in reading order. Connectors are not stops (they
+ * join thoughts and have no next step of their own), nor is anything hidden, such as a result
+ * still behind a learning prompt.
+ */
+function tabStops(editor: Editor) {
+  return editor.getCurrentPageShapesInReadingOrder().flatMap((s) => {
+    const b = s.type === "arrow" || editor.isShapeHidden(s) ? undefined : editor.getShapePageBounds(s.id);
+    return b ? [{ id: s.id as string, box: { x: b.x, y: b.y, w: b.w, h: b.h } }] : [];
+  });
+}
+
+/**
+ * Says the selection to a screen reader, politely and unseen: who made it, its text, its state
+ * and its place in the Tab order. The canvas runs with tldraw's UI hidden, which also drops
+ * tldraw's own announcer.
+ */
+function StopAnnouncer() {
+  const editor = useEditor();
+  const said = useValue(
+    "selection announcement",
+    () => {
+      if (editor.getEditingShapeId()) return "";
+      const ids = editor.getSelectedShapeIds();
+      if (ids.length !== 1) return selectionAnnouncement(ids);
+      const shape = editor.getShape(ids[0]);
+      if (!shape) return "";
+      const author = authorOf(shape);
+      const ask = askOf(shape);
+      const text = "richText" in shape.props ? richTextPlain(shape.props.richText) : "";
+      const repliesTo = typeof shape.meta.replyTo === "string" ? editor.getShape(shape.meta.replyTo as TLShapeId) : undefined;
+      const answer = shape.meta.role === "annotation" && Boolean(askOf(repliesTo));
+      const kind = ask ? "ask" : answer ? "answer" : shape.meta.role === "annotation" ? "comment" : shape.type === "card" ? "card" : "other";
+      const type = shape.type[0].toUpperCase() + shape.type.slice(1);
+      const name = shapeName(shape);
+      const order = tabStops(editor);
+      const index = order.findIndex((o) => o.id === shape.id) + 1;
+      return stopAnnouncement({
+        kind,
+        author,
+        human: author === HUMAN,
+        text,
+        name: name === type ? type : `${type}: ${name}`,
+        question: answer && shape.meta.name === "Question",
+        mark: markOf(shape.meta),
+        ask: ask ? { state: ask.state, agent: ask.agent } : undefined,
+        ...(index ? { index, total: order.length } : {}),
+      });
+    },
+    [editor],
+  );
+  return createPortal(
+    <div role="status" aria-live="polite" data-stop-announcer style={{ position: "absolute", width: 1, height: 1, margin: -1, padding: 0, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }}>
+      {said}
+    </div>,
+    document.body,
+  );
+}
 
 function ShortcutHelp({ onClose }: { onClose: () => void }) {
   return (
@@ -612,12 +672,7 @@ function Shell() {
    * is brought clear of the chrome.
    */
   function tabOnBoard(backwards: boolean) {
-    // Connectors are not stops: they join thoughts and have no next step of their own.
-    // Nor is anything hidden, such as a result still behind a learning prompt.
-    const ordered = editor.getCurrentPageShapesInReadingOrder().flatMap((s) => {
-      const b = s.type === "arrow" || editor.isShapeHidden(s) ? undefined : editor.getShapePageBounds(s.id);
-      return b ? [{ id: s.id as string, box: { x: b.x, y: b.y, w: b.w, h: b.h } }] : [];
-    });
+    const ordered = tabStops(editor);
     const selectedIds = editor.getSelectedShapeIds() as string[];
     const at = ordered.findIndex((o) => o.id === selectedIds[selectedIds.length - 1]);
     let id: string | undefined;
@@ -1090,6 +1145,7 @@ function Shell() {
         />
       </nav>
       <ImportLayer onNotice={setNotice} />
+      <StopAnnouncer />
       <SelectionBar asking={asking} setAsking={setAsking} onComment={addComment} onNotice={setNotice} keepInView={keepInView} />
       <aside className="right-panel">
         <div className="panel-tabs right-tabs" role="tablist">
