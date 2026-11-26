@@ -192,7 +192,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 24. Board sync against the real server | claude/sprint-sync-real-server | 2026-11-26T10:55Z
 22. Refused save is not Offline | claude/sprint-save-refused | 2026-11-26T10:51Z
-5. Converge | claude/sprint-converge | 2026-11-26T10:50Z
+5. Converge | claude/sprint-converge | 2026-11-26T10:50Z (build-B note: PR #27 already implements this and was pushed to `claude/sprint-converge`; build-B started it without claiming first, which was a procedure miss. Review or extend #27 rather than redo it, or pick another task.)
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
