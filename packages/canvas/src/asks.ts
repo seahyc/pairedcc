@@ -4,7 +4,7 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
@@ -263,7 +263,9 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   const texts = input.alternatives
     ? input.alternatives.map((text, i) => `${"ABCD"[i]} · ${capWords(text, 60)}`)
     : [capWords(input.text ?? "", 90)];
-  const layout = answerLayout({ x: anchor.x, y: bottom }, texts);
+  // The room the person's window has beside the canvas chrome, so no answer lands off screen.
+  const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
+  const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
   const spot = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
   // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
   // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
@@ -276,8 +278,14 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     return result;
   };
   const ids = place(() => {
-    const made = texts.map((text, i) =>
-      createCard(editor, { x: spot.x + layout.cards[i].dx, y: spot.y, width: layout.cards[i].w, text }, actor, {
+    // Rows stack under the measured height of the row above (a card sizes to its text when made).
+    let rowY = spot.y, rowBottom = spot.y, row = 0;
+    const made = texts.map((text, i) => {
+      if (layout.cards[i].row !== row) {
+        row = layout.cards[i].row;
+        rowY = rowBottom + OPTION_GAP;
+      }
+      const id = createCard(editor, { x: spot.x + layout.cards[i].dx, y: rowY, width: layout.cards[i].w, text }, actor, {
         name: input.alternatives ? `Option ${"ABCD"[i]}` : input.question ? "Question" : "Answer",
         role: "annotation",
         status: "open",
@@ -285,8 +293,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         targetId: shape.id,
         replyTo: shape.id,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
-      }, offPage ? pageId : undefined),
-    );
+      }, offPage ? pageId : undefined);
+      rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
+      return id;
+    });
     setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt: Date.now(), read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.
     if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
