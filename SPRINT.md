@@ -464,7 +464,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     view (flipping above or below as there is room), only flags in view are in the Tab order,
     with a headless check of each case.
 
+75. **The first board never moves the view away from work done in the first seconds.** On a new
+    board, the calm first board waits for fonts (up to 2.5 s). If an agent acts in that window (an
+    agent waiting for the tab to connect), the layout makes a "Thinking" page and switches to it,
+    so the agent's objects are on a page that is no longer open and its next reads miss them;
+    `tools/verify-runs.ts` fails on this branch for that reason. Done when work done before the
+    layout keeps its page in view, the calm board still exists, and `verify-runs.ts` passes, with a
+    scripted check that fails before.
+
 ## Claims
+75. First board never moves the view away | claude/sprint-calm-early | 2026-11-26T13:05Z
 71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
 71. Web page reader stays quick on awkward markup | claude/sprint-html-linear | 2026-11-26T13:00Z
 74. Stale flags at the canvas edge | claude/sprint-stale-edges | 2026-11-26T12:58Z
