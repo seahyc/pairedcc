@@ -8,7 +8,7 @@
  * Σ still matches the same letter inside a word.
  */
 const fold = (s: string) =>
-  s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ς/g, "σ").replace(/\s+/g, " ").trim();
+  s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/ς/g, "σ").replace(/\s+/g, " ").trim();
 
 /** Whether any of the fields contains the query, ignoring case, accents and spacing. */
 export function matchesText(query: string, ...fields: (string | undefined | null)[]) {
