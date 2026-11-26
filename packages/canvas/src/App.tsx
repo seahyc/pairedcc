@@ -65,7 +65,7 @@ import {
 } from "./operations";
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { convergeForPerson, createComment } from "./agent-operations";
-import { prototypeEnabled } from "./prototype-flags";
+import { prototypeEnabled, canvasReturnTo } from "./prototype-flags";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { startBoardSync } from "./board-sync-browser";
 import { calmSeed, seed } from "./seed";
@@ -220,7 +220,7 @@ function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void })
         </p>
         <button
           className="wide-button dark"
-          onClick={() => (location.href = `/docs/login?returnTo=${encodeURIComponent("/canvas/")}`)}
+          onClick={() => (location.href = `/docs/login?returnTo=${encodeURIComponent(canvasReturnTo())}`)}
         >
           Sign in to connect an agent
         </button>
