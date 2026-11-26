@@ -87,33 +87,57 @@ function region(html: string, tag: string) {
  * pattern below stops at the next "<", so none can rescan the rest of the page from each one.
  */
 function escapeStrayAngles(html: string) {
-  const stray: number[] = [];
-  let pending = -1;
+  const fixes: [number, string][] = [];
+  let pending = -1, quote = 0;
   for (let i = 0; i < html.length; i++) {
     const c = html.charCodeAt(i);
+    if (quote) {
+      // Inside a quoted attribute value "<" and ">" are text: escape them so no tag pattern stops there.
+      if (c === quote) quote = 0;
+      else if (c === 60) fixes.push([i, "&lt;"]);
+      else if (c === 62) fixes.push([i, "&gt;"]);
+      continue;
+    }
     if (c === 60) {
-      if (pending >= 0) stray.push(pending);
+      if (pending >= 0) fixes.push([pending, "&lt;"]);
       pending = i;
     } else if (c === 62) pending = -1;
+    else if (pending >= 0 && (c === 34 || c === 39) && /=\s*$/.test(html.slice(Math.max(pending, i - 8), i))) quote = c;
   }
-  if (pending >= 0) stray.push(pending);
-  if (!stray.length) return html;
+  if (pending >= 0) fixes.push([pending, "&lt;"]);
+  if (!fixes.length) return html;
+  fixes.sort((a, b) => a[0] - b[0]);
   let out = "", from = 0;
-  for (const i of stray) {
-    out += html.slice(from, i) + "&lt;";
+  for (const [i, text] of fixes) {
+    out += html.slice(from, i) + text;
     from = i + 1;
   }
   return out + html.slice(from);
 }
 
-/** Comments out, in one pass; an unclosed one runs to the end, as a browser reads it. */
+/** Elements whose contents are text to a browser, never tags or comments. */
+const RAW_TEXT = /<!--|<(script|style|textarea|title|template|noscript|xmp)\b/gi;
+
+/**
+ * Comments out, in one pass; an unclosed one runs to the end, as a browser reads it. A "<!--"
+ * inside a script or style (a legacy idiom) is not a comment, so those are stepped over.
+ */
 function dropComments(html: string) {
+  const lower = html.toLowerCase();
   let out = "", from = 0;
-  for (let start = html.indexOf("<!--"); start >= 0; start = html.indexOf("<!--", from)) {
-    const end = html.indexOf("-->", start + 4);
-    out += html.slice(from, start);
+  RAW_TEXT.lastIndex = 0;
+  for (let m = RAW_TEXT.exec(html); m; m = RAW_TEXT.exec(html)) {
+    if (m[1]) {
+      const close = lower.indexOf(`</${m[1].toLowerCase()}`, m.index + m[0].length);
+      if (close < 0) break;
+      RAW_TEXT.lastIndex = close;
+      continue;
+    }
+    const end = html.indexOf("-->", m.index + 4);
+    out += html.slice(from, m.index);
     if (end < 0) return out;
     from = end + 3;
+    RAW_TEXT.lastIndex = from;
   }
   return out + html.slice(from);
 }
@@ -144,8 +168,10 @@ export function htmlToMarkdown(html: string): string {
     code.push(decodeEntities(inner.replace(/<[^>]+>/g, "")).replace(/\n$/, ""));
     return `\n\u0000${code.length - 1}\u0000\n`;
   });
-  body = replaceElements(body, "h[1-6]", (name, inner) => `\n\n${"#".repeat(Number(name[1]))} ${inline(inner)}\n\n`);
-  body = replaceElements(closeListItems(body), "li", (_, inner) => `\n- ${inline(inner)}\n`)
+  // Decoded text (an escaped "&lt;li&gt;" in a heading) must not be read as markup by later passes.
+  const shield = (text: string) => text.replace(/</g, "\u0002").replace(/>/g, "\u0003");
+  body = replaceElements(body, "h[1-6]", (name, inner) => `\n\n${"#".repeat(Number(name[1]))} ${shield(inline(inner))}\n\n`);
+  body = replaceElements(closeListItems(body), "li", (_, inner) => `\n- ${shield(inline(inner))}\n`)
     .replace(/<\/?(p|div|section|blockquote|ul|ol|table|tr|dl|dt|dd|hr|br)\b[^>]*>/gi, "\n\n");
   // Items of one list stay one block.
   for (let guard = 0; guard < 500 && /(\n- [^\n]*)\n[ \t]*(\n[ \t]*)+(?=- )/.test(body); guard++) body = body.replace(/(\n- [^\n]*)\n[ \t]*(\n[ \t]*)+(?=- )/g, "$1\n");
@@ -163,5 +189,5 @@ export function htmlToMarkdown(html: string): string {
   }
   let markdown = blocks.join("\n\n");
   if (!/^# /m.test(markdown) && pageTitle && inline(pageTitle)) markdown = `# ${inline(pageTitle).replace(/\s+[|·–—-]\s+[^|·–—-]+$/, "")}\n\n${markdown}`;
-  return markdown.trim() + "\n";
+  return markdown.replace(/\u0002/g, "<").replace(/\u0003/g, ">").trim() + "\n";
 }

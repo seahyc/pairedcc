@@ -41,6 +41,28 @@ describe("web page reader on awkward markup", () => {
     expect(htmlToMarkdown("<p>a < b and c <d</p>")).toBe("a < b and c <d\n");
   });
 
+  it("reads past a legacy <!-- inside a script (review of #98)", () => {
+    const md = htmlToMarkdown("<html><head><script><!--\nwindow.ready = true;\n</script></head><body><h1>Build guide</h1><p>Steps.</p></body></html>");
+    expect(md).toBe("# Build guide\n\nSteps.\n");
+  });
+  it("still drops a real comment, closed or not, and commented-out markup", () => {
+    expect(htmlToMarkdown("<p>Kept</p><!-- <p>old <b>draft</b></p> --><p>Also kept</p>")).toBe("Kept\n\nAlso kept\n");
+    expect(htmlToMarkdown("<p>Kept</p><!-- never closed <p>gone</p>")).toBe("Kept\n");
+  });
+  it("keeps escaped tags in headings as text (review of #98)", () => {
+    expect(htmlToMarkdown("<h2>Writing &lt;li&gt; elements</h2><p>Prose one.</p><h2>Omitting &lt;li&gt; end tags</h2><p>Prose two.</p>")).toBe(
+      "## Writing <li> elements\n\nProse one.\n\n## Omitting <li> end tags\n\nProse two.\n",
+    );
+  });
+  it("reads a tag whose quoted attribute holds < (review of #98)", () => {
+    expect(htmlToMarkdown('<h2 title="5 < 10">Results</h2><p>Keep this</p>')).toBe("## Results\n\nKeep this\n");
+  });
+  it("stays quick on 2 MB of scripts that never close", () => {
+    const start = performance.now();
+    htmlToMarkdown("<script>x ".repeat(200000));
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
+
   it("keeps what well-formed markup meant", () => {
     const html = `<h2>Plan</h2><ul><li>One<li>Two</ul><div class="ad">Buy</div><p>Kept</p><pre>a\n  b</pre><h3>Next</h3>`;
     expect(htmlToMarkdown(html)).toBe("## Plan\n\n- One\n- Two\n\nKept\n\n```\na\n  b\n```\n\n### Next\n");
