@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PAN_FRAMES, PAN_SAMPLES, summarisePan } from "../eval/measures/performance";
+import { PAN_FRAMES_DEFAULT, PAN_SAMPLES_DEFAULT, countSetting, summarisePan } from "../eval/measures/performance";
 
 // Item 69: on the sprint container a pan sample is either fast (~38 ms) or slow (~85 ms), in runs,
 // on unchanged code. The reported figure is the lower quartile of many short samples' medians, so
@@ -23,7 +23,13 @@ describe("pan frame summary", () => {
     expect(summary.method).toMatch(/lower quartile/);
   });
   it("takes many short samples by default", () => {
-    expect(PAN_SAMPLES).toBeGreaterThanOrEqual(12);
-    expect(PAN_FRAMES).toBeLessThanOrEqual(60);
+    expect(PAN_SAMPLES_DEFAULT).toBeGreaterThanOrEqual(12);
+    expect(PAN_FRAMES_DEFAULT).toBeLessThanOrEqual(60);
+  });
+  it("refuses a setting that is not a whole number instead of measuring nothing (review of #100)", () => {
+    expect(countSetting(undefined, 40, 10, "EVAL_PAN_FRAMES")).toBe(40);
+    expect(countSetting("60", 40, 10, "EVAL_PAN_FRAMES")).toBe(60);
+    expect(() => countSetting("40frames", 40, 10, "EVAL_PAN_FRAMES")).toThrow('EVAL_PAN_FRAMES must be a whole number of at least 10 (got "40frames")');
+    expect(() => countSetting("3", 40, 10, "EVAL_PAN_FRAMES")).toThrow("at least 10");
   });
 });

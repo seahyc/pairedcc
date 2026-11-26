@@ -73,10 +73,11 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
       // at 10k on the sprint container). After a discarded warm-up, many short samples are taken
       // and the figure is the lower quartile of their medians: it reads the fast mode whenever a
       // quarter of the samples land there, so a slow spell does not read as a regression.
-      await frames(page, PAN_FRAMES);
+      const pan_ = panSettings();
+      await frames(page, pan_.frames);
       const samples = [];
-      for (let k = 0; k < PAN_SAMPLES; k++) samples.push(await frames(page, PAN_FRAMES));
-      const pan = summarisePan(samples);
+      for (let k = 0; k < pan_.samples; k++) samples.push(await frames(page, pan_.frames));
+      const pan = summarisePan(samples, pan_.frames);
       results.push({ objects: size, buildMs: Math.round(buildMs), loadMs, panMedianFrameMs: pan.median, panP95FrameMs: pan.p95, panSampleMediansMs: pan.sampleMedians, panMethod: pan.method });
     } catch (error) {
       results.push({ objects: size, error: error instanceof Error ? error.message.split("\n")[0] : String(error), ...(process.env.EVAL_TRACE ? { steps } : {}) });
@@ -88,9 +89,19 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
 }
 const round = (n: number) => Math.round(n * 10) / 10;
 
+/** A whole-number setting from the environment; anything else is an error, never a silent NaN. */
+export function countSetting(value: string | undefined, fallback: number, min: number, name: string) {
+  if (value === undefined || value === "") return fallback;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < min) throw new Error(`${name} must be a whole number of at least ${min} (got "${value}")`);
+  return n;
+}
 /** How many pan samples are taken after the warm-up, and how many frames each one is. */
-export const PAN_SAMPLES = Math.max(1, Number(process.env.EVAL_PAN_SAMPLES ?? 12));
-export const PAN_FRAMES = Math.max(10, Number(process.env.EVAL_PAN_FRAMES ?? 40));
+export const PAN_SAMPLES_DEFAULT = 12, PAN_FRAMES_DEFAULT = 40;
+const panSettings = () => ({
+  samples: countSetting(process.env.EVAL_PAN_SAMPLES, PAN_SAMPLES_DEFAULT, 1, "EVAL_PAN_SAMPLES"),
+  frames: countSetting(process.env.EVAL_PAN_FRAMES, PAN_FRAMES_DEFAULT, 10, "EVAL_PAN_FRAMES"),
+});
 
 /** The lower quartile (nearest rank) of a list. */
 const lowerQuartile = (xs: number[]) => {
@@ -103,11 +114,11 @@ const lowerQuartile = (xs: number[]) => {
  * sample's median kept to show the spread. Reported as `panMedianFrameMs` so runs before and
  * after compare on one key; `method` says how it was taken.
  */
-export function summarisePan(samples: { median: number; p95: number }[]) {
+export function summarisePan(samples: { median: number; p95: number }[], framesPerSample = PAN_FRAMES_DEFAULT) {
   return {
     median: round(lowerQuartile(samples.map((x) => x.median))),
     p95: round(lowerQuartile(samples.map((x) => x.p95))),
     sampleMedians: samples.map((x) => round(x.median)),
-    method: `lower quartile of ${samples.length} sample medians of ${PAN_FRAMES} frames each`,
+    method: `lower quartile of ${samples.length} sample medians of ${framesPerSample} frames each`,
   };
 }
