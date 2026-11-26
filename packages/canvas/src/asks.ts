@@ -4,7 +4,7 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
@@ -92,13 +92,26 @@ function dataText(editor: Editor, s: TLShape): string {
   return chartText(dataset.props.data, chart.props.state, { stale: staleReason(stale, nameOf), bars: chart.props.bars });
 }
 
+/** An image or video by what the board knows of it (file name, size, caption, alt text). */
+function mediaText(editor: Editor, s: TLShape) {
+  if (s.type !== "image" && s.type !== "video") return "";
+  const props = s.props as { assetId?: string | null; altText?: string };
+  const asset = props.assetId ? (editor.getAsset(props.assetId as never) as { props?: { name?: string; w?: number; h?: number } } | undefined) : undefined;
+  // Its caption is on the image's own page, which need not be the one open.
+  const pageId = editor.getAncestorPageId(s);
+  const caption = pageId
+    ? [...editor.getPageShapeIds(pageId)].map((id) => editor.getShape(id)).find((c) => c?.meta.role === "caption" && c.meta.captionFor === s.id)
+    : undefined;
+  return describeImage({ kind: s.type, name: asset?.props?.name, w: asset?.props?.w, h: asset?.props?.h, caption: caption ? textOf(caption) : undefined, alt: props.altText });
+}
+
 const given = (editor: Editor, s: TLShape, max = 2000): Given => {
   const source = sourceOf(s), mark = markOf(s.meta);
   return {
     id: s.id,
     type: s.type,
     author: source ? sourceAuthor(source) : authorOf(s),
-    text: clip(sourceText(s, textOf(s)) || textOf(s) || dataText(editor, s) || `(${shapeName(s)}, no text)`, max),
+    text: clip(sourceText(s, textOf(s)) || textOf(s) || dataText(editor, s) || mediaText(editor, s) || `(${shapeName(s)}, no text)`, max),
     ...(mark ? { mark } : {}),
   };
 };
@@ -109,7 +122,7 @@ const said = (editor: Editor, s: TLShape, max: number): HistoryEntry => {
   const text =
     s.type === "frame"
       ? `the frame "${shapeName(s)}", holding: ${inside(editor, s, new Set()).inside.map((o) => o.text).join("; ") || "nothing with text"}`
-      : sourceText(s, textOf(s)) || textOf(s);
+      : sourceText(s, textOf(s)) || textOf(s) || mediaText(editor, s);
   return { id: s.id, who: source ? sourceAuthor(source) : authorOf(s), said: clip(text, max), ...(mark ? { mark } : {}) };
 };
 /** A grouped record is given as its parts: the title line, then each field in column order. */
