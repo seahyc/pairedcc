@@ -46,6 +46,8 @@ check('a large photo lands no larger than 600 on its longest side', photo && Mat
 check('it keeps its shape', photo && Math.abs(photo.w / photo.h - 1.5) < 0.01);
 check('its asset keeps full resolution', photo?.assetW === 3000 && photo?.assetH === 2000);
 const sketch = await drop('sketch', 480, 320, 300, 700);
+const thin = await drop('line', 3000, 2, 300, 1100);
+check('a very thin image still lands, thin but not zero', thin && thin.w === 600 && thin.h > 0, JSON.stringify(thin));
 check('a small image keeps its size', sketch?.w === 480 && sketch?.h === 320, JSON.stringify(sketch));
 
 let n = 0;

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLShape } from "tldraw";
+import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { clip } from "./text";
 
 const color = z.enum(DefaultColorStyle.values);
 const point = { x: z.number().finite(), y: z.number().finite() };
@@ -67,7 +68,7 @@ export function shapeName(shape: TLShape) {
     return shape.props.name;
   if ("richText" in shape.props) {
     const text = richTextPlain(shape.props.richText);
-    if (text) return text.split("\n")[0].slice(0, 48);
+    if (text) return clip(text.split("\n")[0], 48);
   }
   if (shape.type === "geo")
     return shape.props.geo === "ellipse" ? "Ellipse" : "Rectangle";
@@ -226,8 +227,9 @@ export function patchObject(editor: Editor, value: unknown) {
   return describeObject(editor, shape.id);
 }
 
-export function describeObject(editor: Editor, id: string) {
-  const shape = editor.getCurrentPageShapes().find((s) => s.id === id);
+/** One object as agents see it. Only objects on the open page, unless `anyPage` (an answer placed on its ask's page). */
+export function describeObject(editor: Editor, id: string, anyPage = false) {
+  const shape = anyPage ? editor.getShape(id as TLShapeId) : editor.getCurrentPageShapes().find((s) => s.id === id);
   if (!shape) return null;
   const bounds = editor.getShapePageBounds(shape);
   return {

@@ -6,10 +6,11 @@ import {
   PageRecordType,
   toRichText,
   type Editor,
+  type TLPageId,
   type TLShape,
   type TLShapeId,
 } from "tldraw";
-import { sceneInput, orderedScene, arrangeInput, duplicateInput, layoutPositions, groupInput, frameAround } from "./composition";
+import { sceneInput, orderedScene, arrangeInput, duplicateInput, layoutPositions, groupInput, frameAround, chooseDuplicateOffset } from "./composition";
 import { z } from "zod";
 import {
   annotationInput,
@@ -36,6 +37,7 @@ import { createChart, createDataset, dataFields, recordInputs, setChartState, se
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
+import { clip } from "./text";
 import { importForAgent } from "./import-board";
 
 const cardInput = z.object({
@@ -50,18 +52,30 @@ const cardInput = z.object({
 export const HUMAN_CARD_W = 300;
 const agentWidths = { agent: 420, heading: 440, quote: 380, code: 360 } as const;
 
+/**
+ * The style a card was written in, as agents name it on create: note, heading, quote or
+ * code; "handwriting" for the person's cards and "caption" for image captions.
+ */
+export function cardStyle(tone: unknown): string | undefined {
+  if (tone === "agent") return "note";
+  if (tone === "human") return "handwriting";
+  return typeof tone === "string" ? tone : undefined;
+}
+
 /** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
-export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}) {
+export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}, pageId?: TLPageId) {
   const input = cardInput.parse(value), id = createShapeId(), human = author === HUMAN;
   // The human always writes by hand; agents pick a text style for what they are writing.
   const tone = human ? "human" : input.style && input.style !== "note" ? input.style : "agent";
   editor.createShape({
     id,
     type: "card",
+    // A page other than the one on screen (an answer to an ask on another page).
+    ...(pageId ? { parentId: pageId } : {}),
     x: input.x,
     y: input.y,
     meta: {
-      name: input.name ?? (input.text.split("\n")[0].slice(0, 48) || (human ? "Note" : "Agent note")),
+      name: input.name ?? (clip(input.text.split("\n")[0], 48) || (human ? "Note" : "Agent note")),
       revision: 0,
       ...(human ? {} : { createdBy: author }),
       ...meta,
@@ -356,9 +370,9 @@ type Rect = { x: number; y: number; w: number; h: number };
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
 /** Nudge a new card down until it no longer sits on top of something else. */
-export function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set()) {
-  const others = editor
-    .getCurrentPageShapes()
+export function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set(), pageId: TLPageId = editor.getCurrentPageId()) {
+  const others = [...editor.getPageShapeIds(pageId)]
+    .flatMap((id) => editor.getShape(id) ?? [])
     .filter((s) => s.type !== "frame" && s.type !== "arrow" && !ignore.has(s.id))
     .flatMap((s) => editor.getShapePageBounds(s) ?? []);
   const spot = { ...box };
@@ -477,6 +491,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         text:
           "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
         author: authorOf(s),
+        ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         meta: s.meta,
         asset,
       };
@@ -589,7 +604,22 @@ export async function executeCommand(
       const shapes = checkedObjects(editor, input.objects);
       return atomic(editor, "duplicate exploration", () => {
         const before = new Set(editor.getCurrentPageShapeIds());
-        editor.duplicateShapes(shapes, { x: input.offsetX, y: input.offsetY });
+        let offset = { x: input.offsetX ?? 0, y: input.offsetY ?? 0 };
+        if (input.offsetX === undefined && input.offsetY === undefined) {
+          // Copies keep a parent frame that is not itself duplicated, and that frame clips them.
+          const ids = new Set(shapes.map((shape) => shape.id));
+          const items = shapes.flatMap((shape) => {
+            const box = editor.getShapePageBounds(shape);
+            if (!box) return [];
+            const parent = editor.getShape(shape.parentId as TLShape["id"]);
+            const container = parent && parent.type === "frame" && !ids.has(parent.id) ? editor.getShapePageBounds(parent) : undefined;
+            return [{ box, ...(container ? { container } : {}) }];
+          });
+          const chosen = chooseDuplicateOffset(items);
+          if (!chosen) throw new Error("No room for the copy beside or below the originals inside their frame, where it would be hidden. Pass offsetX/offsetY, or duplicate the frame itself. Nothing was changed.");
+          offset = chosen;
+        }
+        editor.duplicateShapes(shapes, offset);
         const created = editor.getCurrentPageShapes().filter(shape => !before.has(shape.id));
         if (!created.length) throw new Error("Canvas could not create the duplicate objects");
         const feedbackTargets = new Map<string, string>();
@@ -633,6 +663,7 @@ export async function executeCommand(
           : undefined;
       return {
         ...result,
+        ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         meta: s.meta,
         ...dataFields(editor, s, true),
         ...primitiveFields(editor, s),

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { AskDesk, LISTENER_GRACE_MS } from "../server/asks";
-import { answerLayout, askStatusLine, capWords, suggestQuestion, OPTION_W } from "../src/ask-rules";
+import { answerLayout, askStatusLine, capWords, elsewhereNotice, markOf, mergeHistory, suggestQuestion, OPTION_W } from "../src/ask-rules";
 import { answerInput, askStatusInput } from "../src/protocol";
 import { buildPrompt, parseReply, readingNote, systemPrompt } from "../tools/resident-prompt";
 import { toolDefs } from "../tools/tool-defs";
@@ -170,6 +170,94 @@ describe("resident agent prompt", () => {
   });
 });
 
+describe("asks carry the person's picks and cross-outs", () => {
+  it("reads a mark only when the person set one", () => {
+    expect(markOf({ mark: "picked" })).toBe("picked");
+    expect(markOf({ mark: "rejected" })).toBe("rejected");
+    expect(markOf({ mark: "maybe" })).toBeUndefined();
+    expect(markOf({})).toBeUndefined();
+  });
+  it("keeps each earlier object once and leaves out what is already selected", () => {
+    const asked = { who: "Human asked", said: "Options for pricing?" };
+    const a = { id: "shape:a", who: "Claude", said: "A · Per seat", mark: "picked" as const };
+    const b = { id: "shape:b", who: "Claude", said: "B · Per post", mark: "rejected" as const };
+    const c = { id: "shape:c", who: "Claude", said: "C · Flat" };
+    // Selecting A and C walks the same thread twice: once from each option.
+    const merged = mergeHistory([asked, b, c, asked, a, b], ["shape:a", "shape:c"]);
+    expect(merged).toEqual([asked, b]);
+  });
+  it("keeps two asks with the same words, and one ask reached twice once", () => {
+    const first = { id: "shape:ask1", who: "Human asked", said: "Give me alternatives" };
+    const again = { id: "shape:ask2", who: "Human asked", said: "Give me alternatives" };
+    expect(mergeHistory([first, again, first], [])).toEqual([first, again]);
+  });
+  it("tells the model what was picked and crossed out, wherever it sits", () => {
+    const prompt = buildPrompt({
+      question: "Take this further",
+      targets: [{ id: "shape:a", type: "card", author: "Claude", text: "A · Per seat", mark: "picked" }],
+      frame: { name: "Pricing", objects: [{ id: "shape:n", type: "card", author: "Human", text: "Usage based", mark: "rejected" }] },
+      history: [
+        { who: "Human asked", said: "Options for pricing?" },
+        { id: "shape:b", who: "Claude", said: "B · Per post", mark: "rejected" },
+        { id: "shape:c", who: "Claude", said: "C · Flat" },
+      ],
+    });
+    expect(prompt).toContain('card written by Claude (an agent), which the person picked: """A · Per seat"""');
+    expect(prompt).toContain('card by the person, which the person crossed out: """Usage based"""');
+    expect(prompt).toContain("- Claude: B · Per post (the person crossed this out)");
+    expect(prompt).toContain("- Claude: C · Flat\n");
+    expect(systemPrompt).toContain("Build on what the person picked");
+    expect(systemPrompt).toContain("Do not offer again what they crossed out");
+  });
+});
+
+describe("an ask about a frame is about what it holds", () => {
+  const ask = {
+    question: "What do these have in common?",
+    targets: [
+      {
+        id: "shape:f", type: "frame", author: "Human", text: "(Pricing, no text)",
+        inside: [
+          { id: "shape:1", type: "card", author: "Human", text: "Per seat" },
+          { id: "shape:2", type: "card", author: "Claude", text: "Per post", mark: "rejected" as const },
+        ],
+        insideMore: 3,
+      },
+    ],
+  };
+  it("lists the frame's objects under it, with marks and what was left out", () => {
+    const prompt = buildPrompt(ask);
+    expect(prompt).toContain('- the frame "Pricing", which holds:');
+    expect(prompt).toContain('  - card by the person: """Per seat"""');
+    expect(prompt).toContain('  - card by Claude (an agent), which the person crossed out: """Per post"""');
+    expect(prompt).toContain("  - and 3 more not shown");
+    expect(prompt).not.toContain("no text");
+    expect(readingNote(ask)).toBe("reading 3 objects");
+  });
+  it("says so when the frame holds nothing with text", () => {
+    const empty = { question: "?", targets: [{ id: "shape:f", type: "frame", author: "Human", text: "(Ideas, no text)", inside: [] }] };
+    expect(buildPrompt(empty)).toContain('- the frame "Ideas", which holds nothing with text.');
+  });
+});
+
+describe("an ask answered on a page the person has left", () => {
+  const where = { onScreen: false, question: "Give me options", pageName: "Pricing" };
+  it("says who answered and where", () => {
+    expect(elsewhereNotice({ state: "working" }, { state: "answered", agent: "Claude" }, where)).toBe("✦ Claude answered “Give me options” on the page “Pricing”.");
+    expect(elsewhereNotice({ state: "working" }, { state: "failed" }, where)).toContain("could not be answered. Open that page to retry.");
+  });
+  it("stays quiet on screen, for other states and for repeats", () => {
+    expect(elsewhereNotice({ state: "working" }, { state: "answered" }, { ...where, onScreen: true })).toBeUndefined();
+    expect(elsewhereNotice({ state: "waiting" }, { state: "working" }, where)).toBeUndefined();
+    expect(elsewhereNotice({ state: "answered" }, { state: "answered" }, where)).toBeUndefined();
+    expect(elsewhereNotice(undefined, undefined, where)).toBeUndefined();
+  });
+  it("shortens a long question", () => {
+    const said = elsewhereNotice({ state: "working" }, { state: "answered" }, { ...where, question: "x".repeat(80) })!;
+    expect(said).toContain(`“${"x".repeat(39)}…”`);
+  });
+});
+
 import { startersFor, starters as defaultStarters } from "../src/ask-rules";
 describe("starters that fit the selection", () => {
   const card = (text: string) => ({ type: "card", text });
@@ -187,9 +275,11 @@ describe("starters that fit the selection", () => {
       "What do they have in common?",
     ]);
   });
-  it("does not promise group or chart answers the ask cannot back", () => {
-    // describeAsk sends a frame without its children and a chart without its data.
-    expect(startersFor([{ type: "frame", text: "" }])).toEqual(defaultStarters);
+  it("offers questions about the group for a frame, whose contents the ask now sends", () => {
+    expect(startersFor([{ type: "frame", text: "" }])[0]).toBe("What do these have in common?");
+  });
+  it("does not promise chart answers the ask cannot back", () => {
+    // describeAsk sends a chart without its data.
     expect(startersFor([{ type: "chart", text: "" }])).toEqual(defaultStarters);
   });
   it("never offers more than three", () => {

@@ -12,7 +12,8 @@ export const IMAGE_PLACE_MAX = 600;
 export function placedSize(w: number, h: number, max = IMAGE_PLACE_MAX) {
   if (!(w > 0) || !(h > 0)) return { w, h };
   const scale = Math.min(1, max / Math.max(w, h));
-  return { w: Math.round(w * scale), h: Math.round(h * scale) };
+  // Not rounded: a very thin image (3000 × 2) would round to zero height, which tldraw refuses.
+  return { w: w * scale, h: h * scale };
 }
 
 /** tldraw's image shape, placing new images at a size that fits beside cards. */
