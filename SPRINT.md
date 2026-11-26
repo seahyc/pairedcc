@@ -157,7 +157,7 @@ task by which measure is furthest from target, not by backlog order.
 16. (Merged, see Done; panning a full 10k board is still slow.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
     Done when the performance measure reports 10k load and pan numbers (raise the limit or
     decide another way and record it).
-20. (Renumbered from 17 to avoid a clash; likely covered by the `yc/calm-canvas` rework for playtest 1, so check that PR before starting.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
+20. (PR #40 open, awaiting review. The calm first board has no overlap; the tour board did.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
     out loud, with an agent beside you." wraps onto the shortcut hint line beneath it (seen at
     1440x900 in headless Chromium; `docs/canvas/screenshots/reload-late-fonts-*.png` runs show the
     page). Done when the header lines never overlap at 1440 and 390 px widths, with screenshots.
@@ -176,7 +176,7 @@ task by which measure is furthest from target, not by backlog order.
     (or `?prototype=learning`) refuses those operations with an error that says how to turn them
     on, flagged tabs and saved boards behave as before, and a test fails if the gate is removed.
 
-24. (PR #30 open, awaiting review.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
+24. (PRs #30 #45 open, awaiting review; #45 stacked on #30.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
     the development board store. Done when a scripted check signs in to a local server (Postgres,
     Redis), opens the canvas, saves, and a second clean browser on the same account opens the same
     board, without needing a tldraw licence key (for example the dev canvas proxying `/auth` and
@@ -198,10 +198,22 @@ task by which measure is furthest from target, not by backlog order.
     the flag names the changed input (and the upstream cause for transitive staleness) in words a
     person can act on, is readable by assistive technology, with before/after screenshots.
 
-30. **A board opened on another device can show nothing.** A board created on a 1440 px screen
+30. (PR #38 open, awaiting review.) **A board opened on another device can show nothing.** A board created on a 1440 px screen
     and opened on a 390 px phone (board sync) opens on an empty view: its cards sit where the first
     screen's viewport was. Done when opening a board with no object in view frames its objects
     (never zooming past 100%), tested, with a 390 px screenshot before and after.
+
+34. (PR #42 open, awaiting review.) **Ask starters fit the selection.** `docs/canvas/principles.md`, finding 7 (recognising beats
+    recalling): "Starters are fixed; they do not adapt to what is selected." Done when the Ask box
+    offers starters chosen from the selection (several objects: compare them and name the
+    dimensions they differ on; a question: answer it; a frame: the group; a chart: what it shows),
+    keeps today's three otherwise, is unit-tested, and shown in screenshots.
+
+35. (PR #47 open, awaiting review.) **Agents see what the person put together.** `docs/canvas/principles.md`, finding 2 (moving
+    things is thinking): "The agent does not read meaning from arrangement (what is near what)."
+    Done when `canvas_overview` reports clusters of nearby objects at the level it lists (frames
+    already show explicit grouping), computed by a tested pure function, documented, and checked
+    live over HTTP.
 
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 28. (PR #36 open, awaiting review.) **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
@@ -209,11 +221,11 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     Chromium; with them it passes. Done when the workspace measure uses `DATABASE_URL`/`REDIS_URL`
     when set, otherwise starts throwaway services when the binaries exist, points Playwright at a
     preinstalled Chromium when needed, cleans up, and reports why when it cannot.
-31. **Stable performance numbers.** Back-to-back runs of the same code measure the 10k pan median
+31. (PR #43 open, awaiting review.) **Stable performance numbers.** Back-to-back runs of the same code measure the 10k pan median
     at 35.7 and 69.1 ms, so the scorecard's 25% "worse" flag fires on noise. Done when the
     performance measure repeats its pan sample and reports a figure whose spread across three
     back-to-back runs on one commit is under the flag threshold, with the spread recorded.
-32. **An ask says "no agent" while the person's agent is connected.** When nothing long-polls for
+32. (PR #41 open, awaiting review.) **An ask says "no agent" while the person's agent is connected.** When nothing long-polls for
     asks (every paired.cc account the resident agent does not serve, and any local board without
     `pnpm agent`), an ask reads "No agent is listening for this account. Connect yours" even while
     an MCP agent is connected and acting on the board, so the person reconnects instead of asking
@@ -232,16 +244,24 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     attributes the note to the caller, but the schema invites an agent to claim the person's voice.
     Done when no agent-facing tool schema has an authorship field, checked by a test.
 
+35. **Annotation arrows follow their note.** After an agent or the person moves an annotation, its
+    arrow keeps the anchor sides chosen when it was made and takes an odd route (reported by the
+    agent-usability attempt, PR #24). Done when moving either end re-routes the arrow to the facing
+    sides, shown by before/after screenshots and a check of the binding anchors.
+36. **Working spec's implemented sections, after the 26 Nov merges.** `docs/canvas/working-spec.md`
+    still lists server-side storage, file import and a general Transformation object as not built,
+    and says nothing of #11 to #30. Done when each merged PR's user- or agent-visible effect is in an
+    implemented section with its PR number, no "not built" claim contradicts the code, and
+    `principles.md`'s "Not done" list matches the code.
+
 ## Claims
-33. Agent tools never offer authorship | claude/sprint-annotate-author | 2026-11-26T11:20Z
-32. Ask names the connected agent | claude/sprint-ask-recent-agent | 2026-11-26T11:17Z
+36. Working spec implemented sections | claude/sprint-spec-sync | 2026-11-26T11:27Z
+35. Annotation arrows follow their note | claude/sprint-annotation-arrows | 2026-11-26T11:22Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
-31. Stable performance numbers | claude/sprint-perf-stable | 2026-11-26T11:13Z
-30. Board opens on an empty view | claude/sprint-reframe | 2026-11-26T11:09Z
-20. Welcome board header overlaps | claude/sprint-welcome-check | 2026-11-26T11:07Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 33. Agent tools never offer authorship (build-A): PR #44 (`canvas_annotate` no longer advertises `author`; manifest test guards every tool).
 - Reviewed and merged 2026-11-26 by the review lane: #22 as 2b33d8c, #23 as 8daf8d3, #25 as a7c8505, #26 as 5f9f355, #27 as 12abf62, #28 as eb63f9b. Agent-usability attempt re-recorded on the calm canvas (21/21).
 - 5. Converge, part 2 (build-A): PR #31, built on build-B's #27: the person's own synthesis from a selection (empty card in typing mode), claims citing sources by arrow letter, placement that keeps arrows clear of sources.
 - Calm canvas (maintainer branch `yc/calm-canvas`, playtest 1 rework): PR #21, merged 2026-11-26 as a local squash combined with the sprint work (15 conflicted files resolved on a copy; the branch itself was not touched). **Build on this layout from now on.**
@@ -322,6 +342,11 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (review, #21) Not changed, for the maintainer: a clean browser that loads an account board saved before the calm canvas shows that board as it was, and only on the next reload adds the "Thinking" page and switches to it. Alternative: lay out the calm board right after the first load from the account.
 - (review, #24) The recorded attempt (20/21) predates the calm canvas and the tools added since. It is kept as the scorecard's figure until it is recorded again (backlog 32).
 - (review) Two review runs overlapped on 26 Nov (10:55Z to 11:15Z) and both combined #21. A review run should fetch and re-read the open PR list and the Log before each merge, not only at the start.
+- (build-B, item 30) A board that opens with none of its objects in view is framed (never past 100%), at startup and after sync loads the account's board; a view with anything in it is never moved.
+- (build-B, item 20) Seeded text with a layout-chosen width carries `meta.fixedWidth` and is exempt from the 460 px reading-width rule from #21; all other text, pasted text included, still wraps. On phones the zoom bar sits right of undo rather than leaving room for the desktop panel.
+
+- (build-B, item 32) An agent counts as connected for an ask's status if it acted on the tab within the last 10 minutes (`RECENT_MS`). An agent that ever listened for asks in this tab is never offered as a chat agent. The wording is "<agent> was here 7s ago. In your chat, ask it to answer this." Alternative: the hosted relay reports MCP presence per account from `/mcp` calls, which needs server changes.
+- (build-A, item 31) The pan figure is the median of five 120-frame samples after a discarded warm-up, with each sample kept in the scorecard; three back-to-back runs agree within 3% at 10k (was 2x). Costs about 35 s per 10k run. The 25% threshold is unchanged.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -363,3 +388,11 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:08Z | review | Rest of #21 | #21 | The hosted resident-agent channel (the PR's last commit, missed by the first combination) added as ed4fda1; secret check narrowed to its two paths with a test; 143 server and 163 canvas tests, e2e, calm check 33/33 and the no-agent state by hand |
 | 2026-11-26T11:15Z | review | Review #24 | #24 | Merged (squash) as 984374b after merging in the integration branch; self-test 21/21 once the task tab opens with ?prototype=data; scorecard on 984374b: acceptance 10/10, agent usability 20/21, safety 9/9, persistence pass, existing product pass, 10k pan flagged (noise) |
 | 2026-11-26T11:20Z | review | Review #22 to #28 | #22 #23 #25 #26 #27 #28 | Six merged (squash) on the calm canvas, each re-run on the combined branch; agent-usability attempt re-recorded with a fresh agent: 21/21, median 2 calls; safety 9/9 |
+| 2026-11-26T11:17Z | build-B | 30 Board opens empty on a phone | #38 | Desktop-then-phone first board showed 0 text shapes at 390 px, now 3; screenshots |
+| 2026-11-26T11:17Z | build-B | 20 Header and phone controls | #40 | Tour header and 390 px undo/zoom overlaps measured before (overlap) and after (none) |
+| 2026-11-26T11:18Z | build-B | 32 Ask names the connected agent | #41 | Ask and chip name the agent that acted recently instead of "no agent"; former listeners excluded; canvas tests 173 pass |
+| 2026-11-26T11:20Z | build-B | 34 Ask starters fit the selection | #42 | Starters from the selection (compare on dimensions for several objects); chips wrap inside the box; screenshots |
+| 2026-11-26T11:21Z | build-A | 31 Stable performance numbers | #43 | 10k pan = median of 5 samples after warm-up; three runs 39.3/38.6/39.8 ms (was 35.7 vs 69.1) |
+| 2026-11-26T11:21Z | build-A | 33 No authorship field for agents | #44 | Schema fix with a failing-then-passing test; live MCP and HTTP check; scorecard unchanged |
+| 2026-11-26T11:23Z | build-A | 24 Sync against the real server (race) | #45 | Real server refuses a stale save with 409 and the canvas merges; both browsers' changes on the server |
+| 2026-11-26T11:24Z | build-B | 35 Agents see clusters | #47 | `canvas_overview` reports piles of nearby objects; tested pure function; live HTTP check; root build and test green |
