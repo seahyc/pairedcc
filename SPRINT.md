@@ -203,6 +203,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- Calm canvas (maintainer branch `yc/calm-canvas`, playtest 1 rework): PR #21, merged 2026-11-26 as a local squash combined with the sprint work (15 conflicted files resolved on a copy; the branch itself was not touched). **Build on this layout from now on.**
 - 18. Agent-usability tasks: PR #24 (21 tasks, self-test proves every check fails before and passes after a reference solution; first attempt by a fresh agent 20/21, median 3 tool calls).
 - Reviewed and merged 2026-11-26 by the review lane: #16 as af63474, #17 as c6b5849, #18 as f104315, #19 as a4b927e, #20 as be3dce9.
 - 10. e2e repair: PR #19 (real magic-link sign-in; root `pnpm build && pnpm test` is green when Postgres, Redis and `JWT_SECRET` are provided).
@@ -222,6 +223,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (review, #21) How the calm canvas was combined with the sprint work: the calm layout, menu and first board win wherever the two disagreed; the legacy welcome-board swap is dropped (an older board is kept as its own page, as #21 does); board sync starts after the calm first board is laid out; the prototype page buttons stay in the pages list, which is now behind Menu → Show layers and pages, so with a prototype flag on they are two clicks away. Alternative: a flagged entry in the menu itself.
+- (review, #21) The resident agent calls the local Claude Code CLI, which the sprint may not spend on, so the Ask loop was verified with a stand-in program that returns a fixed reply. A real model has not answered an ask on this branch.
 - (build-A, item 18) The agent under test reaches the tools through a counting command-line MCP client (`eval/mcp-call.ts`) rather than native MCP tools in its harness, so calls can be counted and the session pinned. Task 14 failed with no board evidence kept; the check was left strict and the runner now records evidence. The agent's friction list (annotate `author` default, annotation arrow anchors, 39 KB tool list) is in PR #24.
 - (review, item 13) CSV typing: a column whose values all parse as numbers becomes numeric, so codes such as `007` lose their leading zeros and `0x10` reads as 16. Alternative: only plain decimal notation without leading zeros counts as a number.
 - (review, item 10) The scorecard's "Existing product" row stays red wherever Postgres and Redis are absent, because the e2e suite now needs them (it stops with a message naming the missing variable). With them it is green.
@@ -294,3 +297,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T10:53Z | build-B | 5 Converge | #27 | Prototype synthesis card with derived-from links and stale marking; gated on ?prototype=converge; live HTTP check and screenshots |
 | 2026-11-26T10:57Z | build-B | 26 Board limits | #28 | Per-account cap with memory and Postgres contract tests (incl. concurrent creates); root build and test green with services |
 | 2026-11-26T11:01Z | build-B | 25 Refused save is not Offline | #29 | Refused save gets its own state and chip text; no retry storm (3 uploads in 12 s to 1); sync tests 26 pass |
+| 2026-11-26T11:00Z | review | Review #21 | #21 | Merged as a local squash with the sprint work; 150 canvas tests, scorecard 10/10 acceptance, calm check 33/33 with a stand-in model, data, learning, run-undo and board-sync live checks pass; board sync no longer logs a 404 on first open |
