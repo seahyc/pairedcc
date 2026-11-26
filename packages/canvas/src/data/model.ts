@@ -119,6 +119,41 @@ export function describeChart(data: Dataset, state: ChartState) {
   };
 }
 
+/** Most bars an ask spells out; the rest are counted. */
+export const ASK_BARS = 40;
+const num = (v: number) => String(Math.round(v * 100) / 100);
+const rowsWord = (n: number) => `${n} ${n === 1 ? "row" : "rows"}`;
+
+/**
+ * What a chart shows, as text for an ask: an agent answering with no tools reads this instead
+ * of the picture. `stale` is the reason the chart is out of date, when it is.
+ */
+export function chartText(data: Dataset, state: ChartState, opts: { stale?: string; bars?: readonly Bar[] } = {}) {
+  // A stale chart still shows the bars it drew from older data: describe what the person sees.
+  const shown = opts.bars ? { bars: opts.bars, rowsInView: undefined } : describeChart(data, state);
+  const measure = state.aggregate === "count" ? "count of rows" : `${state.aggregate} of ${state.y}`;
+  const bars = shown.bars.slice(0, ASK_BARS).map((b) => `${b.key} ${num(b.value)} (${rowsWord(b.count)}${state.selected.includes(b.key) ? ", selected" : ""})`);
+  const more = shown.bars.length - bars.length;
+  const filter = describeFilter(state);
+  return [
+    ...(opts.stale ? [`Out of date: ${opts.stale}. The bars below were drawn from an older version of the data.`] : []),
+    `Bar chart of ${measure} by ${state.x}, from the dataset “${data.title}”.`,
+    `Filter: ${filter === "no filter" ? "none" : filter}.${shown.rowsInView === undefined ? "" : ` ${shown.rowsInView} of ${data.rows.length} rows in view.`}`,
+    `Bars: ${bars.join(", ")}${more ? `, and ${more} more bars` : ""}.`,
+    `Selected: ${state.selected.length ? state.selected.join(", ") : "none"}.`,
+  ].join("\n");
+}
+
+/** What a dataset holds, as text for an ask: its shape and its first rows. */
+export function datasetText(data: Dataset, firstRows = 5) {
+  const rows = data.rows.slice(0, firstRows).map((r) => data.columns.map((c) => `${c.name}: ${r[c.name]}`).join("; "));
+  return [
+    `Dataset “${data.title}” (source: ${data.source}).`,
+    `Columns: ${data.columns.map((c) => `${c.name} (${c.type})`).join(", ")}. ${rowsWord(data.rows.length)}.`,
+    ...(rows.length ? [`First ${rows.length} rows:`, ...rows] : []),
+  ].join("\n");
+}
+
 /** Distinct values of a column, in first-seen order, for filter controls. */
 export function distinctValues(data: Dataset, name: string) {
   column(data, name);
