@@ -26,6 +26,7 @@ import {
   revision,
 } from "./operations";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
+import { answerAsk, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
 
 const cardInput = z.object({
@@ -36,6 +37,8 @@ const cardInput = z.object({
   name: z.string().max(200).optional(),
   style: z.enum(["note", "heading", "quote", "code"]).optional(),
 });
+/** A comfortable line of handwriting: about six words. */
+export const HUMAN_CARD_W = 300;
 const agentWidths = { agent: 420, heading: 440, quote: 380, code: 360 } as const;
 
 /** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
@@ -54,7 +57,7 @@ export function createCard(editor: Editor, value: unknown, author: string, meta:
       ...(human ? {} : { createdBy: author }),
       ...meta,
     },
-    props: { w: input.width ?? (human ? 240 : agentWidths[tone as keyof typeof agentWidths]), richText: toRichText(input.text), tone },
+    props: { w: input.width ?? (human ? HUMAN_CARD_W : agentWidths[tone as keyof typeof agentWidths]), richText: toRichText(input.text), tone },
   });
   return id;
 }
@@ -113,7 +116,7 @@ function checkedObjects(editor: Editor, objects: z.infer<typeof arrangeInput>["o
   return shapes;
 }
 
-function atomic<T>(editor: Editor, name: string, work: () => T): T {
+export function atomic<T>(editor: Editor, name: string, work: () => T): T {
   const mark = editor.markHistoryStoppingPoint(name);
   try {
     const result = work();
@@ -283,13 +286,15 @@ type Rect = { x: number; y: number; w: number; h: number };
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
 /** Nudge a new card down until it no longer sits on top of something else. */
-function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set()) {
+export function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set()) {
   const others = editor
     .getCurrentPageShapes()
     .filter((s) => s.type !== "frame" && s.type !== "arrow" && !ignore.has(s.id))
     .flatMap((s) => editor.getShapePageBounds(s) ?? []);
   const spot = { ...box };
-  for (let i = 0; i < 12 && others.some((o) => hits(spot, o)); i++) spot.y += 28;
+  // Leave a little air around the new card, and keep going past a tall column of earlier answers.
+  const roomy = () => ({ x: spot.x - 8, y: spot.y - 14, w: spot.w + 16, h: spot.h + 28 });
+  for (let i = 0; i < 60 && others.some((o) => hits(roomy(), o)); i++) spot.y += 28;
   return spot;
 }
 
@@ -297,14 +302,14 @@ function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set()) {
  * The human's comment: a pink handwritten card pinned to the selected objects (with an
  * arrow to each) or to a spot on the board. It joins the feedback queue as an open item.
  */
-export function createComment(editor: Editor, value: { targetIds?: string[]; x?: number; y?: number; text?: string }) {
+export function createComment(editor: Editor, value: { targetIds?: string[]; x?: number; y?: number; text?: string }, extra: Record<string, unknown> = {}) {
   const targets = (value.targetIds ?? []).map((id) => find(editor, id));
   let x = value.x ?? 0, y = value.y ?? 0;
   if (targets.length) {
     const boxes = targets.flatMap((t) => editor.getShapePageBounds(t) ?? []);
     if (!boxes.length) throw new Error("Target must have bounds");
     const right = Math.max(...boxes.map((b) => b.maxX)), top = Math.min(...boxes.map((b) => b.y));
-    const spot = freeSpot(editor, { x: right + 56, y: top, w: 240, h: 72 }, new Set(targets.map((t) => t.id)));
+    const spot = freeSpot(editor, { x: right + 56, y: top, w: HUMAN_CARD_W, h: 72 }, new Set(targets.map((t) => t.id)));
     x = spot.x;
     y = spot.y;
   }
@@ -314,6 +319,7 @@ export function createComment(editor: Editor, value: { targetIds?: string[]; x?:
     status: "open",
     author: HUMAN,
     ...(targets.length ? { targetId: targets[0].id, targetIds: targets.map((t) => t.id) } : {}),
+    ...extra,
   };
   let id = createShapeId();
   return atomic(editor, "add comment", () => {
@@ -532,6 +538,12 @@ export async function executeCommand(
       return readFeedback(editor, command.input ?? {});
     case "reply":
       return replyToFeedback(editor, command.input, actor);
+    case "asks":
+      return listAsks(editor, command.input ?? {});
+    case "ask_status":
+      return setAskStatus(editor, command.input, actor);
+    case "answer":
+      return answerAsk(editor, command.input, actor);
     case "remove": {
       const input = z
           .object({

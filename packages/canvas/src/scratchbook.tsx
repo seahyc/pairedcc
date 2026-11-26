@@ -117,7 +117,8 @@ export function toggleMark(editor: Editor, shapes: TLShape[], mark: Mark) {
         delete meta.resolvedAt;
         delete meta.resolvedBy;
       }
-      editor.updateShape({ id: s.id, type: s.type, meta });
+      // updateShape merges metadata, so a removed key would survive; replace the record's meta instead.
+      editor.store.update(s.id, (record) => ({ ...record, meta }));
     }
   });
 }
@@ -398,13 +399,12 @@ export function PaperBackground() {
   );
 }
 
-/** "96 items · 2 open marks", like Thariq's board header. Click to open the feedback queue. */
+/** "2 open marks": what the human has marked that nobody has answered yet. Click to open the queue. */
 export function MarksCounter({ onOpen }: { onOpen: () => void }) {
   const editor = useEditor();
-  const { items, open } = useValue(
+  const { open } = useValue(
     "marks counter",
     () => ({
-      items: editor.getCurrentPageShapes().filter((s) => s.type !== "arrow").length,
       open: collectFeedback(editor).filter((m) => m.status === "open").length,
     }),
     [editor],
@@ -416,7 +416,7 @@ export function MarksCounter({ onOpen }: { onOpen: () => void }) {
       title="Open the feedback queue (Shift + C)"
       onClick={onOpen}
     >
-      {items} items · {open} open {open === 1 ? "mark" : "marks"}
+      {open} open {open === 1 ? "mark" : "marks"}
     </button>
   );
 }

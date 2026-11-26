@@ -1318,3 +1318,325 @@ kbd {
   font-weight: 550;
   white-space: nowrap;
 }
+
+/* Calm canvas: nothing on screen but the board, five tools and one menu. Panels open on request. */
+.right-closed .right-panel {
+  display: none;
+}
+.app:has(.right-closed) .canvas-stage {
+  right: 0;
+}
+.right-closed .zoom-controls {
+  right: 150px;
+}
+.topbar {
+  background: transparent;
+  border-bottom: 0;
+  position: relative;
+}
+.editor-chrome .topbar {
+  pointer-events: none;
+}
+.editor-chrome .topbar > * {
+  pointer-events: auto;
+}
+.brand {
+  width: auto;
+}
+.save-state {
+  opacity: 0.75;
+}
+.menu-button {
+  padding: 7px 8px;
+  background: #fafafa;
+}
+.menu-button.open {
+  background: #e7e5f6;
+}
+.menu {
+  position: absolute;
+  top: 42px;
+  right: 14px;
+  width: 232px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #dedfe4;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px #15172822;
+  pointer-events: auto;
+  z-index: 5;
+}
+.menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  padding: 8px 9px;
+  font: inherit;
+  font-size: 12.5px;
+  color: #34363e;
+  text-align: left;
+}
+.menu button:hover,
+.menu button.current {
+  background: #f1eff9;
+}
+.menu kbd,
+.selection-bar kbd {
+  margin-left: auto;
+  font: 500 10.5px Inter, -apple-system, sans-serif;
+  color: #8a8c92;
+}
+.menu-rule {
+  height: 1px;
+  background: #ececf0;
+  margin: 5px 3px;
+}
+.menu-label {
+  font-size: 10.5px;
+  color: #8a8c92;
+  padding: 8px 9px 3px;
+}
+.menu-gap {
+  width: 14px;
+  flex: none;
+}
+.more-menu {
+  top: auto;
+  bottom: 0;
+  right: auto;
+  left: 64px;
+  width: 190px;
+}
+.tool-strip {
+  top: 64px;
+}
+.left-closed .tool-strip {
+  left: 14px;
+}
+.tool-button {
+  width: 46px;
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+  padding: 6px 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: #666870;
+  font: 500 9.5px Inter, -apple-system, sans-serif;
+}
+.tool-button:hover {
+  background: #ececf0;
+  color: #26272a;
+}
+.tool-button.active {
+  background: #e7e5f6;
+  color: #5246b4;
+}
+.tool-button.ask {
+  color: #3a2fd0;
+}
+.left-closed .bottom-left {
+  left: 14px;
+}
+
+/* The next step, on the selection. */
+.selection-bar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #dedfe4;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px #1517281f;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.selection-bar > button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+  padding: 7px 9px;
+  font: 500 12px Inter, -apple-system, sans-serif;
+  color: #34363e;
+}
+.selection-bar > button:hover {
+  background: #f1eff9;
+}
+.selection-bar > button.on {
+  background: #fbe3ec;
+  color: #b0285a;
+}
+.selection-bar > button.primary {
+  background: #3a2fd0;
+  color: #fff;
+}
+.selection-bar > button.primary kbd {
+  color: #cfcbf7;
+}
+.selection-bar > button.primary:hover {
+  background: #2c22b0;
+}
+.selection-bar kbd {
+  margin-left: 0;
+}
+.selection-bar.hint {
+  padding: 6px 10px;
+  font-size: 11.5px;
+  color: #6c6e76;
+  gap: 5px;
+  pointer-events: none;
+}
+.selection-bar.asking {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px;
+  width: 430px;
+  box-sizing: border-box;
+}
+.ask-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ask-spark {
+  color: #3a2fd0;
+  font-size: 15px;
+}
+.ask-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #d9d6f3;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font: 400 13px Inter, -apple-system, sans-serif;
+  outline-color: #6b5fe0;
+}
+.ask-send {
+  border: 0;
+  border-radius: 7px;
+  padding: 8px 11px;
+  background: #3a2fd0;
+  color: #fff;
+  font: 500 12px Inter, -apple-system, sans-serif;
+}
+.ask-send:disabled {
+  background: #c9c6ea;
+}
+.ask-starters {
+  display: flex;
+  gap: 6px;
+  padding-left: 23px;
+}
+.ask-starters button {
+  border: 1px solid #e1dff5;
+  background: #f6f5fd;
+  color: #4a3fb8;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font: 400 11.5px Inter, -apple-system, sans-serif;
+}
+.ask-starters button:hover {
+  background: #e9e8fb;
+}
+
+/* An ask's state, written under it on the board. */
+.ask-status {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max-content;
+  max-width: 640px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 400 12.5px/1.35 "Shantell Sans", Inter, sans-serif;
+  color: #5d5a78;
+}
+.ask-status.working,
+.ask-status.waiting {
+  color: #3a2fd0;
+}
+.ask-status.failed,
+.ask-status.nobody {
+  color: #a52a2a;
+}
+.ask-status.done {
+  color: #7d7a8c;
+}
+.ask-status button {
+  pointer-events: all;
+  flex: none;
+  border: 1px solid #e3b9b9;
+  background: #fff;
+  color: #a52a2a;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: 500 11.5px Inter, -apple-system, sans-serif;
+  cursor: pointer;
+}
+.ask-pulse {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3a2fd0;
+  animation: save-pulse 0.9s ease-in-out infinite;
+}
+.ask-given {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 1.5px dashed #8f86e3;
+  border-radius: 14px;
+  box-sizing: border-box;
+}
+.agent-chip.idle {
+  background: #fff6e6;
+  border-color: #f0d9a8;
+  color: #8a5a0a;
+}
+.agent-chip.idle .agent-chip-dot {
+  background: #e2a33c;
+}
+/* Long words and links break inside their card instead of poking out of it. */
+.scrap .tl-rich-text,
+.tl-text-shape-label .tl-rich-text {
+  overflow-wrap: anywhere;
+}
+.ask-status > span:not(.ask-pulse) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.right-tabs [role="tab"] {
+  padding-left: 7px;
+  padding-right: 7px;
+}
+.right-tabs .icon-button {
+  flex: none;
+  width: 24px;
+}
+.marks-counter {
+  margin-left: 0;
+  border: 0;
+  cursor: pointer;
+}
+.right-panel {
+  width: 264px;
+}
+.app .canvas-stage {
+  right: 264px;
+}
