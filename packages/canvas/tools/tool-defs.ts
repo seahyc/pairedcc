@@ -95,8 +95,11 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_read",
     op: "read",
     description:
-      "Read the current page, selected objects, readable text, annotations, connections and open human marks (feedback notes, picks, rejects, ink over objects, with target IDs). Each object reports its author. Image bytes are omitted; canvas_get retrieves an image asset.",
-    input: ids,
+      "Read the current page, selected objects, readable text, annotations, connections and open human marks (feedback notes, picks, rejects, ink over objects, with target IDs). Each object reports its author. Image bytes are omitted; canvas_get retrieves an image asset. To find objects by their words instead of reading everything, pass text.",
+    input: {
+      ...ids,
+      text: z.string().max(200).optional().describe("Only objects whose text or name contains this, ignoring case and accents. Combines with ids."),
+    },
     output: "json",
   },
   {

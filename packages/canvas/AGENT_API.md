@@ -39,7 +39,7 @@ Prototype tools (`canvas_learn`, `canvas_converge` and the data tools) are flagg
 
 ### Overview, then detail
 
-`canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects.
+`canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects. To find objects by their words, pass `text` to `canvas_read`: only objects whose text or name contains it (ignoring case and accents) are returned, and it combines with `ids`. Marks and annotations are still listed in full.
 
 ### Data prototype
 

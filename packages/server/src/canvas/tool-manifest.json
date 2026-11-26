@@ -507,7 +507,7 @@
     },
     {
       "name": "canvas_read",
-      "description": "Read the current page, selected objects, readable text, annotations, connections and open human marks (feedback notes, picks, rejects, ink over objects, with target IDs). Each object reports its author. Image bytes are omitted; canvas_get retrieves an image asset.",
+      "description": "Read the current page, selected objects, readable text, annotations, connections and open human marks (feedback notes, picks, rejects, ink over objects, with target IDs). Each object reports its author. Image bytes are omitted; canvas_get retrieves an image asset. To find objects by their words instead of reading everything, pass text.",
       "op": "read",
       "output": "json",
       "inputSchema": {
@@ -523,6 +523,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "text": {
+            "description": "Only objects whose text or name contains this, ignoring case and accents. Combines with ids.",
+            "type": "string",
+            "maxLength": 200
           }
         }
       }
