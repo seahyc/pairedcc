@@ -36,6 +36,7 @@ import { createChart, createDataset, dataFields, recordInputs, setChartState, se
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
+import { clip } from "./text";
 import { importForAgent } from "./import-board";
 
 const cardInput = z.object({
@@ -71,7 +72,7 @@ export function createCard(editor: Editor, value: unknown, author: string, meta:
     x: input.x,
     y: input.y,
     meta: {
-      name: input.name ?? (input.text.split("\n")[0].slice(0, 48) || (human ? "Note" : "Agent note")),
+      name: input.name ?? (clip(input.text.split("\n")[0], 48) || (human ? "Note" : "Agent note")),
       revision: 0,
       ...(human ? {} : { createdBy: author }),
       ...meta,
