@@ -135,9 +135,9 @@ An ask carries everything the human sees as its context, and nothing else needs 
 | `targets` | The selected objects: `id`, `type`, `author`, `text`, and `mark` when the person judged it |
 | `frame` | The frame the selection sits in, with `name` and the text of up to 12 other objects in it (each with its `mark`) |
 | `history` | When the ask is about an agent's answer: the exchange that led to it, oldest first, then the other answers to that ask (an option's siblings). Entries are `who`, `said`, and for objects `id` and `mark`. Each object appears once, and never when it is already in `targets` |
+| `pageId`, `pageName`, `askedAt` | Where and when |
 
 `mark` is `picked` (the person boxed it with Pick, P) or `rejected` (struck through with Cross out, X), and is absent otherwise. It is the person's judgement, shown on the board: build on what they picked, and do not offer a crossed-out idea again. Asked to take option A further after crossing out B, an agent sees A in `targets` with `mark: "picked"` and B in `history` with `mark: "rejected"`.
-| `pageId`, `pageName`, `askedAt` | Where and when |
 
 Asks are also items in the feedback queue (`ask` holds the state), so nothing is lost if no agent was waiting. Keep answers to one step: the human does the thinking and judges each answer before asking again. See `docs/canvas/principles.md`.
 
