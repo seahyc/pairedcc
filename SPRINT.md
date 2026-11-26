@@ -700,9 +700,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 107. **Browser checks that still open the question box.** Since 7cc29ef there is no question box, but seventeen `tools/verify-*` checks still open it (`.selection-bar.asking` or `getByLabel('Your question')`): annotate-clear, answer-page, answer-show, answer-view, ask-chart, ask-frame, ask-image, ask-live, ask-marks, ask-unclipped, calm, contain, keyboard, keys, leave-out, retry-key, touch. Their ask steps now time out, so they no longer prove what they were written for. Done when each asks the new way (the person's card sent with ⌘↵ or by finishing a question; Ask on someone else's object opens a pink card to write in) and passes on the integration branch, with any real regression it then finds filed. (The Ask loop measure and agent task 22 are fixed in #132.)
 
 ## Claims
-P3. See the whole board and what is settled (part 1: the Settled mark) | claude/sprint-p3-settled | 2026-11-26T15:22Z
 P5. Understanding needs effort (part 1: Check me on the default board) | claude/sprint-p5-check | 2026-11-26T15:15Z
-107. Browser checks that still open the question box | claude/sprint-checks-card | 2026-11-26T15:10Z
 P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 
 ## Done
@@ -797,6 +795,7 @@ P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B) Run lapse: line 1 read `STATE: PAUSE (quota reserve)` from 14:30 to 15:11Z and again from 15:15Z; build-B read it only at the start of its run (13:41Z) and kept working until it noticed at 15:24Z. Opened during the pause windows: #129, #131, #132, #135, #136, #137, #139, #140 (and #126, #128 just before 14:30, now merged). Each was checked and is ready for review, but the review lane may hold them until the sprint resumes. A duplicate of P3 part 1 (build-A's #138 was already done) was built locally and never pushed. Claims for P3 and item 107 are released: 107's partial edits to 14 checks are local only and unreviewed, so 107 is open again. From now on build-B re-reads line 1 before each claim and each push.
 - (build-A, P3 part 1) Settle has a button on the selection bar ("Settle S" / "Settled ✓ S") beside Pick and Cross out, shown only on a selection, rather than being key-only, so the mark can be recognised rather than recalled (finding 7). Settled is a separate flag from Pick/Cross out (a picked option can also be settled). Alternative: key-only, which keeps the bar at four buttons.
 - (build-A) Run lapse: the switch read `STATE: PAUSE (quota reserve)` from 14:30 to 15:11Z and build-A did not re-read line 1 during that window, so it kept working (review fixes on #133 and #127, #134, the P3 claim). Line 1 itself was never changed. From now on build-A re-reads line 1 before every claim and push.
 - (build-B) PR #123 (item 95, a "Gives …" line in the Ask box) is superseded by 7cc29ef: there is no question box any more, and the brief says never to bring one back. Closed unmerged. The idea (show what an ask gives before it goes) belongs with P2, where what an ask gives grows to the cluster around it.
@@ -1096,3 +1095,4 @@ P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 | 2026-11-26T15:15Z | build-A | P3 part 1 Settled mark; run end | #138 | S settles/reopens, print with ✓, one undo, saved, agents read settled: true; verify-settled 11/11, 4 unit tests; scorecard unchanged (ask loop 0/5 as on int until #132). Run worked through the 14:30–15:11Z PAUSE without noticing (recorded under Decisions); stopping now that the switch is RUN only for one review cycle. Open from this run: #127 (stacked on #134), #133, #134, #138 |
 | 2026-11-26T15:19Z | build-B | 105 (c) canvas_runs by page | #139 | pagesOfRun and page filter (3 failing-first tests); manifest regenerated; verify-runs-page 1/3 → 3/3; eval workspace row green; task 21 self-test OK |
 | 2026-11-26T15:21Z | build-B | P2 part 2: relations on targets | #140 | Targets carry `relation`; prompt says it; verify-p2-cluster 9/10 → 10/10 (stacked on #135) |
+| 2026-11-26T15:32Z | build-B | Run end (pause noticed) | — | Stopped on STATE: PAUSE; released P3 (duplicate of #138, not pushed) and 107 claims; lapse recorded under Decisions needed |
