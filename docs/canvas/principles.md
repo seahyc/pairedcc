@@ -48,7 +48,7 @@ Not borrowed yet: pinning or hiding objects from context, token counts, learning
 
 ## Not done in this pass
 
-- Asks are answered only on a computer running the resident agent or another agent that waits for asks. On paired.cc an ask waits until a connected agent reads it; the hosted relay does not report who is listening.
+- Asks are answered only on a computer running the resident agent or another agent that waits for asks. On paired.cc the relay reports who is listening only for accounts the resident agent serves; for any other account an ask says no agent is listening for it and waits until a connected agent reads it.
 - The resident agent sees text only: no images, drawings or the look of the board.
 - Answers arrive whole after about three seconds; they are not streamed.
-- One ask is about one selection on one page. An ask on a page that is not open fails with a message and a retry.
+- One ask is about one selection on one page. An answer goes under its ask on that page even when the person has opened another page; they are told who answered and on which page, but the board does not take them there.
