@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Tldraw,
   useEditor,
@@ -12,6 +13,8 @@ import {
   startEditingShapeWithRichText,
   type Editor,
   type TLShape,
+  type TLShapeId,
+  Box,
   type TLComponents,
 } from "tldraw";
 import {
@@ -76,10 +79,10 @@ import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
-import { AskLayer, SelectionBar } from "./ask-ui";
+import { AskLayer, AutoAsk, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
-import { elsewhereNotice } from "./ask-rules";
+import { elsewhereNotice, elsewhereShow, markOf, noticeMs } from "./ask-rules";
 import { askOf } from "./asks";
 import { landedAnswers } from "./ask-rules";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
@@ -102,6 +105,8 @@ import { onlyDerivedChange } from "./revision";
 import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followers } from "./follow";
+import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
+import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
@@ -272,8 +277,8 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
   {
     title: "Think",
     rows: [
-      ["Write a thought", "N, or double-click the board"],
-      ["Ask your agent about the selection", keys("⌘ ↵")],
+      ["Write a thought", "N, then click or Enter; or double-click the board"],
+      ["Ask: write a question and finish, or send any card; also resends a failed ask", keys("end with ?, or ⌘ ↵")],
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
@@ -281,6 +286,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Open or close the feedback queue", "Shift C"],
       ["Bring in a table or document as cards", keys("⌘ V, or drop a file")],
       ["Next / previous imported record", "J / K"],
+      ["Go to an answer that landed on another page, while its notice is up", "G"],
       ["Finish typing", "Esc"],
     ],
   },
@@ -288,6 +294,8 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
   {
     title: "Move around",
     rows: [
+      ["Next / previous thing on the board", "Tab / Shift Tab"],
+      ["To the menu and tools", "Esc, then Shift Tab"],
       ["Pan", "Space + drag, or scroll"],
       ["Zoom", keys("Pinch, or ⌘ scroll")],
       ["Fit everything", "Shift 1"],
@@ -308,10 +316,81 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
   },
 ];
 
+/**
+ * The board's Tab order: page-level objects in reading order. Connectors are not stops (they
+ * join thoughts and have no next step of their own), nor is anything hidden, such as a result
+ * still behind a learning prompt.
+ */
+function tabStops(editor: Editor) {
+  return editor.getCurrentPageShapesInReadingOrder().flatMap((s) => {
+    const b = s.type === "arrow" || editor.isShapeHidden(s) ? undefined : editor.getShapePageBounds(s.id);
+    return b ? [{ id: s.id as string, box: { x: b.x, y: b.y, w: b.w, h: b.h } }] : [];
+  });
+}
+
+/**
+ * Says the selection to a screen reader, politely and unseen: who made it, its text, its state
+ * and its place in the Tab order. The canvas runs with tldraw's UI hidden, which also drops
+ * tldraw's own announcer.
+ */
+function StopAnnouncer() {
+  const editor = useEditor();
+  const said = useValue(
+    "selection announcement",
+    () => {
+      if (editor.getEditingShapeId()) return "";
+      const ids = editor.getSelectedShapeIds();
+      if (ids.length !== 1) return selectionAnnouncement(ids);
+      const shape = editor.getShape(ids[0]);
+      // Nothing hidden is read out, such as a result still behind a learning prompt.
+      if (!shape || editor.isShapeHidden(shape)) return "";
+      const author = authorOf(shape);
+      const ask = askOf(shape);
+      const text = "richText" in shape.props ? richTextPlain(shape.props.richText) : "";
+      const repliesTo = typeof shape.meta.replyTo === "string" ? editor.getShape(shape.meta.replyTo as TLShapeId) : undefined;
+      const answer = shape.meta.role === "annotation" && Boolean(askOf(repliesTo));
+      const kind = ask ? "ask" : answer ? "answer" : shape.meta.role === "annotation" ? "comment" : shape.type === "card" ? "card" : "other";
+      const type = shape.type[0].toUpperCase() + shape.type.slice(1);
+      const name = shapeName(shape);
+      const order = tabStops(editor);
+      const index = order.findIndex((o) => o.id === shape.id) + 1;
+      return stopAnnouncement({
+        kind,
+        author,
+        human: author === HUMAN,
+        text,
+        name: name === type ? type : `${type}: ${name}`,
+        question: answer && shape.meta.name === "Question",
+        mark: markOf(shape.meta),
+        ask: ask ? { state: ask.state, agent: ask.agent } : undefined,
+        ...(index ? { index, total: order.length } : {}),
+      });
+    },
+    [editor],
+  );
+  return createPortal(
+    <div role="status" aria-live="polite" data-stop-announcer style={{ position: "absolute", width: 1, height: 1, margin: -1, padding: 0, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }}>
+      {said}
+    </div>,
+    document.body,
+  );
+}
+
+/** A dialog's section that takes focus, keeps Tab inside, closes on Escape and gives focus back. */
+function FocusSection({ onClose, children, ...rest }: { onClose: () => void } & React.HTMLAttributes<HTMLElement>) {
+  const focus = useDialogFocus<HTMLElement>(onClose);
+  return (
+    <section {...rest} {...focus}>
+      {children}
+    </section>
+  );
+}
+
 function ShortcutHelp({ onClose }: { onClose: () => void }) {
+  const focus = useDialogFocus<HTMLElement>(onClose);
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <section className="agent-dialog shortcut-dialog" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
+      <section {...focus} className="agent-dialog shortcut-dialog" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-heading">
           <Keyboard size={18} />
           <h2>Keyboard shortcuts</h2>
@@ -320,7 +399,7 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
           </IconButton>
         </div>
         <p>
-          Pink handwriting is you, lavender with ✦ is your agent. Write a thought, select it and ask. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
+          Pink handwriting is you, lavender with ✦ is your agent. Write a question and it is asked when you finish; any other card is asked with ⌘↵. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
         </p>
         <div className="shortcut-grid">
           {shortcutGroups.map((group) => (
@@ -349,6 +428,10 @@ function Shell() {
   const setRightTab = setPanel;
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null),
+    moreButton = useRef<HTMLButtonElement>(null);
+  const mainMenu = useMenuKeys<HTMLDivElement>(menuOpen, () => setMenuOpen(false), menuButton),
+    moreMenu = useMenuKeys<HTMLDivElement>(moreOpen, () => setMoreOpen(false), moreButton);
   const [asking, setAsking] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -371,6 +454,8 @@ function Shell() {
   const listeners = useValue("agent listeners", () => agentListeners.get(), []);
   const editingId = useValue("editing", () => editor.getEditingShapeId(), [editor]);
   const pointer = useRef<{ x: number; y: number } | null>(null);
+  // The object last selected: a card written from the keyboard goes under it.
+  const lastSelected = useRef<TLShapeId | null>(null);
   const shapes = useValue("layers", () => editor.getCurrentPageShapesSorted(), [
     editor,
   ]);
@@ -380,6 +465,10 @@ function Shell() {
   const currentTool = useValue("tool", () => editor.getCurrentToolId(), [
     editor,
   ]);
+  useEffect(() => {
+    const last = [...selected].reverse().find((s) => s.type !== "arrow");
+    if (last) lastSelected.current = last.id;
+  }, [selected]);
   const zoom = useValue("zoom", () => editor.getZoomLevel(), [editor]);
   const pages = useValue("pages", () => editor.getPages(), [editor]);
   const page = useValue("page", () => editor.getCurrentPage(), [editor]);
@@ -387,8 +476,15 @@ function Shell() {
     redo = useValue("can redo", () => editor.getCanRedo(), [editor]);
   const [leftOpen, setLeftOpen] = useState(false),
     [agentOpen, setAgentOpen] = useState(false),
-    [notice, setNotice] = useState(""),
+    [notice, setNoticeText] = useState(""),
+    // The ask a notice is about when it was answered (or failed) on another page: Show goes there.
+    [noticeShow, setNoticeShow] = useState<string | null>(null),
     [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Any other notice is about something else, so it drops the Show from the one before.
+  const setNotice = (text: string) => {
+    setNoticeText(text);
+    setNoticeShow(null);
+  };
   const importRef = useRef<HTMLInputElement>(null),
     imageRef = useRef<HTMLInputElement>(null);
   const shape = selected.length === 1 ? selected[0] : undefined;
@@ -478,6 +574,29 @@ function Shell() {
       }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (editor.getEditingShapeId()) return;
+      // Without a pointer: N then Enter writes a card in view; Tab with nothing selected
+      // lands on the board. Once something is selected the canvas's own Tab moves on.
+      // Enter from the board itself or from the armed Write button; any other control keeps its own Enter.
+      const boardItself = target === document.body || (target instanceof HTMLElement && /\btl-(container|canvas)\b/.test(target.className));
+      const onBoard = !(target instanceof HTMLElement) || boardItself || target.matches(".tool-button.active");
+      if (event.key === "Enter" && onBoard && editor.getCurrentToolId() === "card" && !event.shiftKey) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        swallowEnterUp = true;
+        writeFromKeyboard();
+        return;
+      }
+      // Tab only from the board itself: a flag or button on it keeps the browser's own Tab.
+      if (event.key === "Tab" && boardItself && editor.getCurrentToolId() === "select") {
+        // Ours either way: the next object, or out to the controls (the browser alone would
+        // find nothing before the board, which holds them).
+        if (!tabOnBoard(event.shiftKey)) leaveBoard(event.shiftKey);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        // The canvas moves the selection when Tab is released; this Tab is ours.
+        swallowTabUp = true;
+        return;
+      }
       // ? shows the shortcuts, C comments, Shift+C opens the feedback queue.
       if (event.key === "?" || (key === "c" && !event.repeat)) {
         event.preventDefault();
@@ -488,6 +607,13 @@ function Shell() {
         return;
       }
       if (event.shiftKey) return;
+      // G goes to an ask answered on another page, while the notice about it is up.
+      if (key === "g" && showing.current) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) showRef.current();
+        return;
+      }
       // L leaves the selection out of asks (the context prototype). Capture first so tldraw's own L (line) doesn't fire.
       if (key === "l" && prototypeEnabled("context")) {
         const chosen = editor.getSelectedShapes();
@@ -504,8 +630,13 @@ function Shell() {
       event.stopImmediatePropagation();
       toggleMark(editor, picked, key === "p" ? "picked" : "rejected");
     }
-    let swallowEnterUp = false;
+    let swallowEnterUp = false, swallowTabUp = false;
     const enterUp = (event: KeyboardEvent) => {
+      if (event.key === "Tab" && swallowTabUp) {
+        swallowTabUp = false;
+        event.stopImmediatePropagation();
+        return;
+      }
       if (event.key !== "Enter" || !swallowEnterUp) return;
       swallowEnterUp = false;
       event.stopImmediatePropagation();
@@ -559,6 +690,74 @@ function Shell() {
     const camera = editor.getCamera();
     if (dx || dy) editor.setCamera({ x: camera.x + dx / camera.z, y: camera.y + dy / camera.z, z: camera.z }, { animation: { duration: 160 } });
   }
+  /** The part of the board the person can see, in page space, clear of the chrome. */
+  function visiblePage() {
+    const left = document.querySelector(".editor-chrome.left-closed") ? 80 : 310;
+    const right = window.innerWidth - (document.querySelector(".editor-chrome.right-closed") ? 24 : 260), top = 104, bottom = window.innerHeight - 90;
+    const from = editor.screenToPage({ x: left, y: top }), to = editor.screenToPage({ x: Math.max(left + 1, right), y: Math.max(top + 1, bottom) });
+    return { x: from.x, y: from.y, w: to.x - from.x, h: to.y - from.y };
+  }
+  /** N then Enter: a pink card in view, clear of everything, under what was last selected. */
+  function writeFromKeyboard() {
+    const view = visiblePage();
+    const boxOf = (id: TLShapeId) => {
+      const b = editor.getShapePageBounds(id);
+      return b ? { x: b.x, y: b.y, w: b.w, h: b.h } : undefined;
+    };
+    const others = editor.getCurrentPageShapes().filter((s) => s.type !== "arrow" && !s.parentId.startsWith("shape:")).flatMap((s) => boxOf(s.id) ?? []);
+    const near = lastSelected.current && editor.getShape(lastSelected.current) ? boxOf(lastSelected.current) : undefined;
+    const spot = keyboardCardSpot(view, others, { w: 300, h: 72 }, near && near.y + near.h < view.y + view.h ? near : undefined);
+    const id = createShapeId();
+    editor.markHistoryStoppingPoint("write a thought");
+    editor.createShape({ id, type: "card", x: spot.x, y: spot.y, props: { tone: "human" } });
+    editor.setCurrentTool("select");
+    editor.select(id);
+    startEditingShapeWithRichText(editor, id, { selectAll: true });
+  }
+  /**
+   * Tab on the board: with nothing selected, select the first thing on screen; otherwise move
+   * to the next object in reading order, brought clear of the chrome. The board does not trap
+   * the keyboard: Shift+Tab with nothing selected, and Tab past either end, return false so
+   * the browser moves on to the menu, agent chip and tools.
+   */
+  function tabOnBoard(backwards: boolean) {
+    const ordered = tabStops(editor);
+    const selectedIds = editor.getSelectedShapeIds() as string[];
+    const at = ordered.findIndex((o) => o.id === selectedIds[selectedIds.length - 1]);
+    let id: string | undefined;
+    if (!selectedIds.length) {
+      if (backwards) return false;
+      id = firstTabStop(ordered, visiblePage());
+    } else if (at >= 0) {
+      id = ordered[at + (backwards ? -1 : 1)]?.id;
+      if (!id) {
+        editor.selectNone();
+        return false;
+      }
+    } else {
+      // Inside a frame or group: the canvas's own order among its siblings, past connectors
+      // and anything hidden (the same rule as the page's own stops).
+      for (let tries = 0; tries < 200; tries++) {
+        editor.selectAdjacentShape(backwards ? "prev" : "next");
+        const landed = editor.getOnlySelectedShape();
+        if (!landed || (landed.type !== "arrow" && !editor.isShapeHidden(landed))) break;
+      }
+      id = editor.getOnlySelectedShapeId() ?? undefined;
+    }
+    if (!id) return false;
+    editor.select(id as TLShapeId);
+    const box = editor.getShapePageBounds(id as TLShapeId);
+    if (box) keepInView(box);
+    editor.focus();
+    return true;
+  }
+  /** Out of the board by keyboard: the first control (Tab) or the last (Shift+Tab). */
+  function leaveBoard(backwards: boolean) {
+    const controls = [...document.querySelectorAll<HTMLElement>("button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])")].filter(
+      (el) => !el.closest(".tl-shape, .tl-html-layer, [contenteditable=true], [class^='tl-watermark']") && !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0,
+    );
+    (backwards ? controls[controls.length - 1] : controls[0])?.focus();
+  }
   /** Ask: finish typing if a card is being written, then open the question box on the selection. */
   function askAboutSelection() {
     const editing = editor.getEditingShapeId();
@@ -569,6 +768,12 @@ function Shell() {
     }
     if (!editor.getSelectedShapes().some((s) => s.type !== "arrow")) {
       setNotice("Select what you mean first, then ask");
+      return;
+    }
+    // A failed or unheard ask is sent again rather than asked about.
+    const retry = editing ? undefined : selectedRetry(editor);
+    if (retry) {
+      resendAsk(editor, retry.id);
       return;
     }
     setAsking(true);
@@ -611,7 +816,10 @@ function Shell() {
               question: "richText" in shape.props ? richTextPlain(shape.props.richText).trim() : "",
               pageName: (pageId && editor.getPage(pageId)?.name) || "another page",
             });
-            if (said) setNotice(said);
+            if (said) {
+              setNoticeText(said);
+              setNoticeShow(shape.id);
+            }
           }
         },
         { scope: "document" },
@@ -620,9 +828,34 @@ function Shell() {
   );
   useEffect(() => {
     if (!notice) return;
-    const t = setTimeout(() => setNotice(""), 3500);
+    const t = setTimeout(() => setNotice(""), noticeMs(Boolean(noticeShow)));
     return () => clearTimeout(t);
-  }, [notice]);
+  }, [notice, noticeShow]);
+  /** Show: open the ask's page, select its answer (or the failed ask) and bring it into view. */
+  function showElsewhere(askId: string) {
+    setNotice("");
+    const ask = editor.getShape(askId as TLShapeId), pageId = ask && editor.getAncestorPageId(ask);
+    if (!ask || !pageId) {
+      setNotice("That ask is no longer on the board");
+      return;
+    }
+    editor.setCurrentPage(pageId);
+    const onPage = [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []);
+    const ids = elsewhereShow(askOf(ask)?.state ?? "", ask.id, onPage.map((s) => ({ id: s.id, replyTo: s.meta.replyTo, hidden: editor.isShapeHidden(s) })));
+    editor.setCurrentTool("select");
+    editor.select(...(ids as TLShapeId[]));
+    // Centre the ask and what answered it together, so the answer is seen with its question;
+    // zoom out only when they do not fit the window at this zoom.
+    const box = Box.Common([ask.id, ...ids].flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []));
+    const view = editor.getViewportPageBounds();
+    if (box.w > view.w * 0.8 || box.h > view.h * 0.7) editor.zoomToBounds(box, { inset: 80, animation: { duration: 180 } });
+    else editor.centerOnPoint(box.center, { animation: { duration: 180 } });
+    editor.focus();
+  }
+  const showRef = useRef<() => void>(() => {});
+  showRef.current = () => noticeShow && showElsewhere(noticeShow);
+  const showing = useRef(false);
+  showing.current = Boolean(notice && noticeShow);
   function chooseTool(id: string) {
     // Scratchbook defaults: the human writes in pink ink and handwriting.
     const scratch = id === "draw" || id === "note" || id === "arrow";
@@ -839,12 +1072,12 @@ function Shell() {
           <SaveState />
           {openCount > 0 && <MarksCounter onOpen={() => setPanel("feedback")} />}
           <AgentChip onOpen={() => setAgentOpen(true)} />
-          <button className={`subtle-button menu-button ${menuOpen ? "open" : ""}`} aria-label="Menu" aria-expanded={menuOpen} title="Boards, panels, export" onClick={() => setMenuOpen((open) => !open)}>
+          <button ref={menuButton} className={`subtle-button menu-button ${menuOpen ? "open" : ""}`} aria-label="Menu" aria-haspopup="menu" aria-expanded={menuOpen} title="Boards, panels, export" onClick={() => setMenuOpen((open) => !open)}>
             <Menu size={15} />
           </button>
         </div>
         {menuOpen && (
-          <div className="menu" role="menu" aria-label="Menu">
+          <div ref={mainMenu.ref} onClickCapture={mainMenu.onClickCapture} className="menu" role="menu" aria-label="Menu">
             <button role="menuitem" onClick={addPage}>
               <FilePlus2 size={14} /> New board
             </button>
@@ -1003,17 +1236,17 @@ function Shell() {
             <span>{t.name}</span>
           </button>
         ))}
-        <button type="button" className="tool-button ask" title={keys("Ask your agent about the selection (⌘↵)")} onClick={askAboutSelection}>
+        <button type="button" className="tool-button ask" title={keys("Send what you wrote to your agent (⌘↵)")} onClick={askAboutSelection}>
           <Sparkles size={18} strokeWidth={1.6} />
           <span>Ask</span>
         </button>
         <div className="tool-divider" />
-        <button type="button" className={`tool-button ${moreOpen || moreTools.some((t) => t.id === currentTool) ? "active" : ""}`} aria-expanded={moreOpen} title="More tools" onClick={() => setMoreOpen((open) => !open)}>
+        <button ref={moreButton} type="button" className={`tool-button ${moreOpen || moreTools.some((t) => t.id === currentTool) ? "active" : ""}`} aria-haspopup="menu" aria-expanded={moreOpen} title="More tools" onClick={() => setMoreOpen((open) => !open)}>
           <Ellipsis size={18} strokeWidth={1.6} />
           <span>More</span>
         </button>
         {moreOpen && (
-          <div className="menu more-menu" role="menu" aria-label="More tools">
+          <div ref={moreMenu.ref} onClickCapture={moreMenu.onClickCapture} className="menu more-menu" role="menu" aria-label="More tools">
             {moreTools.map((t) => (
               <button key={t.id} role="menuitem" className={currentTool === t.id ? "current" : ""} onClick={() => { chooseTool(t.id); setMoreOpen(false); }}>
                 <t.icon size={14} /> {t.name} <kbd>{t.key}</kbd>
@@ -1040,7 +1273,9 @@ function Shell() {
         />
       </nav>
       <ImportLayer onNotice={setNotice} />
+      <StopAnnouncer />
       <SelectionBar asking={asking} setAsking={setAsking} onComment={addComment} onNotice={setNotice} keepInView={keepInView} />
+      <AutoAsk keepInView={keepInView} />
       <aside className="right-panel">
         <div className="panel-tabs right-tabs" role="tablist">
           <button role="tab" aria-selected={rightTab === "properties"} className={rightTab === "properties" ? "tab-current" : "tab-other"} onClick={() => setRightTab("properties")}>
@@ -1389,6 +1624,11 @@ function Shell() {
       {notice && (
         <div className="toast" role="status">
           {notice}
+          {noticeShow && (
+            <button type="button" className="toast-action" onClick={() => showRef.current()}>
+              Show{!TOUCH && <kbd>G</kbd>}
+            </button>
+          )}
         </div>
       )}
       {link.mode === "local" && link.state === "disconnected" && (
@@ -1401,7 +1641,8 @@ function Shell() {
       {boardsOpen && historyWhere && <SavedBoardsDialog where={historyWhere} onClose={() => setBoardsOpen(false)} />}
       {agentOpen && (
         <div className="modal-backdrop" onClick={() => setAgentOpen(false)}>
-          <section
+          <FocusSection
+            onClose={() => setAgentOpen(false)}
             className="agent-dialog"
             role="dialog"
             aria-modal="true"
@@ -1438,14 +1679,14 @@ function Shell() {
               open. Access is local to this computer.
             </p>
             </> : <HostedAgentAccess onCopied={setNotice} />}
-          </section>
+          </FocusSection>
         </div>
       )}
     </div>
   );
 }
 import { GeoShapeGeoStyle, PageRecordType, createShapeId, react } from "tldraw";
-import { keys } from "./keys";
+import { TOUCH, keys } from "./keys";
 const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil, BoardImageShapeUtil];
 const TEXT_WRAP = 460;
 // One set of editor options: the page limit, and double-click writes a card rather than plain text.
@@ -1635,9 +1876,23 @@ function App() {
       const untouched = editor.getPages().length === 1 && editor.getCurrentPageShapes().length === 0;
       if (untouched) editor.updatePage({ id: editor.getCurrentPageId(), name: "Board 1", meta: { seeded: 3 } });
       else {
-        const id = PageRecordType.createId();
-        editor.createPage({ id, name: "Thinking", meta: { seeded: 3 } });
+        const working = editor.getCurrentPageId();
+        // A board that was empty when this tab opened and has been worked on since (an agent
+        // acted before the fonts arrived, or the person started writing) keeps that work in
+        // view: the calm board is laid out on its own page without moving there. If the tab's
+        // first page was left empty (an agent made a page of its own), that page takes it.
+        const empty = fresh ? editor.getPages().find((p) => p.id !== working && editor.getSortedChildIdsForParent(p.id).length === 0) : undefined;
+        const id = empty?.id ?? PageRecordType.createId();
+        if (empty) editor.updatePage({ id: empty.id, name: "Board 1", meta: { ...empty.meta, seeded: 3 } });
+        else editor.createPage({ id, name: "Thinking", meta: { seeded: 3 } });
         editor.setCurrentPage(id);
+        if (fresh) {
+          calmSeed(editor);
+          editor.setCurrentPage(working);
+          editor.updateDocumentSettings({ meta: { ...settings.meta, calm: 3 } });
+          editor.clearHistory();
+          return;
+        }
       }
       calmSeed(editor);
       editor.updateDocumentSettings({ meta: { ...settings.meta, calm: 3 } });
@@ -1650,7 +1905,13 @@ function App() {
       // A board laid out on a wider screen can open with nothing in view here.
       bringContentIntoView(editor);
       // Then keep the board saved to the account; a brand-new board holds no work of its own.
-      if (!disposed) stopSync = startBoardSync(editor, !fresh);
+      // A board saved before the calm canvas, loaded from the account, gets the calm board too:
+      // the load replaces what prepare() laid out on this tab's copy.
+      if (!disposed) stopSync = startBoardSync(editor, !fresh, () => {
+        if (disposed) return;
+        prepare();
+        bringContentIntoView(editor);
+      });
     });
     setReady(true);
     return () => {

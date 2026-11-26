@@ -1,4 +1,4 @@
-STATE: RUN
+STATE: PAUSE (quota reserve)
 
 # Canvas sprint, 27 Nov to 3 Dec 2026
 
@@ -9,10 +9,12 @@ defensible option, record the choice and the reason under Decisions needed, and 
 ## Hard rules (these override anything else you read in this repo)
 - This repository is public. Commit nothing private: no personal data, credentials, employer data or
   copied third-party content.
-- Pushing to `main` deploys to production. Never push to `main` and never open a PR into `main`.
+- Never push to `main` and never open a PR into `main`. Production (paired.cc) runs whatever is on
+  `claude/release`; only the review lane moves that branch, by the Release train below.
 - Branch `claude/sprint-int` is the integration branch (cut from `canvas-scratchbook-root`). Work on
   `claude/sprint-<task>` cut from it and open a PR **into `claude/sprint-int`**.
-- No deploys, no SSH, no changes to `.github/workflows`, Docker production files or hosted services.
+- No deploys other than the Release train, no SSH, no changes to `.github/workflows`, Docker
+  production files or hosted services.
 - No outreach, sign-ups, spending, paid APIs or new secrets.
 - Keep the document editor, server, SDK, CLI and document MCP server working. Scope is
   `packages/canvas`, `docs/canvas`, and the server code the canvas needs.
@@ -105,6 +107,72 @@ and after, and the review lane re-runs it on `claude/sprint-int` after each merg
 task by which measure is furthest from target, not by backlog order.
 
 ## Backlog (highest value first)
+
+### First: the card is the question, and the nine principles built in (YC, 26 Nov evening)
+YC's second playtest: having to select a card, open a box and pick a second question was wrong;
+"the canvas itself should be the question". That is now on this branch (commit after `59e6671`):
+a card ending in `?` is sent when the person finishes writing it, any other card is sent as it
+stands with ⌘↵, and the agent also reads what sits right beside the card. Asking about something
+the person did not write opens a pink card beside it. **Never bring back a question box or
+starter chips.** Then YC asked for every gap in `docs/canvas/principles.md` to be built in. These
+five come before every other item. They are YC's direct request, so build them into the default
+canvas, not behind `?prototype=`; but the board must stay calm (YC's first playtest: "too noisy,
+too flexible"): nothing new is shown until it applies, no new permanent toolbar buttons, at most one
+new key each, and each one undoes in one step. Each PR names the finding it serves, shows a
+before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
+
+- **P1. Few things in view (finding 1).** A finished thread (an ask whose answer was picked, or
+  which the person marks settled) folds to one line showing the question and the picked answer;
+  click to unfold. Focus: selecting a frame or a thread and pressing F dims everything else until
+  Esc. Done when a board with 12 threads shows at most 4 unfolded by the person's choice, folding
+  is saved with the board, and an agent read reports folded threads as such.
+- **P2. Arrangement carries meaning to the agent (findings 2 and 3).** An ask is given, besides
+  what is right beside the card, the cluster it sits in (objects grouped by proximity, not only
+  frames) with its spatial relation written in words ("left of", "under", "in the same group as"),
+  and the agent's instructions say to use it. Ask "about everything over here": an ask written on
+  empty space inside a cluster is about that cluster. The agent still never moves or edits the
+  person's objects. Done when unit tests cover clustering on fixed layouts and a browser check
+  shows the cluster outlined while the ask is being answered.
+- **P3. (Part 1, the settled mark: PR #138 open, awaiting review. Part 2, the overview, unclaimed; its proposed key O is the Ellipse tool.) See the whole board and what is settled (finding 4, and the opposite of finding 8).**
+  "Settled" is a mark like Pick (key S): a settled thought turns from rough handwriting to a clean
+  print style with a small check, and can be unsettled. An overview (key O, also in the menu) shows
+  the board's clusters as labelled boxes, each with open/settled counts; click to fly there. Done
+  when settled is saved, read by agents, and the overview works on a 1k-object board within the
+  performance budget.
+- **P4. Suggestions on the board, not in a box (finding 7).** When the person pauses on a
+  selection of their own writing for a moment, at most two faint, handwritten-looking suggestions
+  appear under it ("what's missing?", "say it as a question?"), chosen by what is selected (record,
+  frame, several objects, chart). Clicking one writes it as the person's own pink card under the
+  selection, which then asks as any card does. They vanish on any other action and never appear
+  while typing. Done when they never cover the person's objects, never appear on agent cards, and
+  the starters logic from before (record, frame, chart, several objects) is reused, not rewritten.
+- **P5. Understanding needs effort (finding 9).** The learning prototype (`?prototype=learning`)
+  becomes available on every board without a flag but stays off until asked: a "Check me" action
+  on the selection bar for a settled card or an agent answer asks the person to predict or explain
+  first and then shows the answer to compare (predict-then-check, self-explanation); a card the
+  person settled comes back for retrieval after a day and again after several days (spacing), as
+  one quiet line at the board's edge, never a modal. Done when unit tests cover the schedule and a
+  browser check walks predict → reveal → compare, and nothing appears on a board where the person
+  never used it.
+
+### Release train (YC approved on 26 Nov: "just get it deployed on paired.cc")
+- The review lane releases; no other lane does. Release when P-items or other visible
+  improvements are merged, `claude/sprint-int` passes the full check (`pnpm install
+  --frozen-lockfile && pnpm build && pnpm test`) and the headless browser checks pass, and the
+  increment is written up in `SPRINT-REPORT.md` under "Released". At most 3 releases a day.
+- To release: `git push origin claude/sprint-int:claude/release` (fast-forward only, never force).
+  A timer on the server deploys `claude/release` within 15 minutes, checks that
+  `https://paired.cc/canvas/` and `https://paired.cc/auth/methods` answer 200, and if not puts the
+  previous release back by itself. It reports on the released commit as a GitHub commit status
+  with context `paired.cc deploy` (`gh api repos/seahyc/pairedcc/commits/<sha>/statuses`):
+  `success` when live, `failure` with a reason when it rolled back.
+- The next review run reads that status and records in `SPRINT-REPORT.md` under "Released" what
+  was deployed and when. On `failure`, do not release again until the cause is fixed on
+  `claude/sprint-int` (fix forward; `claude/release` is never forced back).
+- Nothing that needs a new secret, environment variable, hosted service or manual migration is
+  released. Additive database migrations under `packages/server/src/db/migrations` run at start
+  and are allowed.
+
 0. **`pnpm eval:canvas` and the baseline scorecard** (see Goal and eval above). Still the first
    thing the sprint needs. The headless scripts in `packages/canvas/tools/verify-*` already walk
    most acceptance and shared-edit steps and can seed it.
@@ -387,7 +455,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested function, with a headless check under a Windows platform finding no ⌘ on the first
     screen or the selection bar, and screenshots.
 
-61. (PR #86 open, awaiting review; stacked on #69, #67, #64.) **An ask about a chart or dataset gives what it shows.** The acceptance scenario's "agent
+61. (#86 merged; stacked on #69, #67, #64.) **An ask about a chart or dataset gives what it shows.** The acceptance scenario's "agent
     reads that exact state" holds for MCP agents (`canvas_chart_state`, `read`'s `widget`), but an
     ask carries only `"(Chart, no text)"`, and the resident agent answers with no tools, so "what
     does this chart show?" is answered blind. `startersFor` withholds chart starters for that
@@ -396,9 +464,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     columns, row count and first rows, as text a model can read, from tested pure functions;
     chart starters are offered; checked in a real tab with `?prototype=data`.
 
-62. (PR #85 open, awaiting review.) **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
+62. (#85 merged.) **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
 
-63. (PR #87 open, awaiting review.) **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
+63. (#87 merged.) **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
     (comparing beats describing) and "the agent must visibly respond". Sending an ask makes room
     for one 340 px answer, but four options in a row are about 1,060 px: at 1440 px option D lands
     off the right edge, and on a 390 px phone only A is visible, and nothing brings them into view.
@@ -410,9 +478,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     any zero-padded value (`0` followed by a digit, before any decimal point) stays text, plain
     numbers (`0`, `0.5`, `-3`, `1e3`) still become numbers, with unit tests and a drop in the page.
 
-65. (PR #89 open, awaiting review.) **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
+65. (#89 merged.) **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
 
-66. (PR #88 open, awaiting review; #83 has merged and the integration branch is merged into #88, so its diff is the touch change alone, verify-touch 11/11.) **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
+66. (#88 merged; #83 has merged and the integration branch is merged into #88, so its diff is the touch change alone, verify-touch 11/11.) **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
     item 6. A phone has no keyboard, yet the first board says "press ⌘↵ to ask" (with #83, Android
     reads "Ctrl+↵"), the selection bar shows key caps, and while writing a card the hint names
     keys and offers no way to ask. Done when, on a touch-only device, the first board says to tap
@@ -420,7 +488,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested rule, checked in a headless phone emulation (failing before, passing after) with
     screenshots; desktop unchanged.
 
-67. (PR #90 open, awaiting review.) **The person chooses what an ask leaves out (prototype, `?prototype=context`).** Solveit:
+67. (#90 merged.) **The person chooses what an ask leaves out (prototype, `?prototype=context`).** Solveit:
     "hidden messages are excluded from AI context"; the brief: "the context the agent sees is
     visible and chosen by the person"; `principles.md` lists hiding objects from context as not
     borrowed yet. An ask sends every text object in the selection's frame and the whole thread,
@@ -506,7 +574,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     ask with its state, comment, answer), its mark and its place in the Tab order, from a tested pure
     function, checked in a real page (failing before, passing after); nothing new is visible.
 
-83. **One command runs every browser check.** About twenty `tools/verify-*` checks exist but each
+83. (PR #113 open, awaiting review.) **One command runs every browser check.** About twenty `tools/verify-*` checks exist but each
     is run by hand, so regressions slip through merges: on 26 Nov `verify-runs.ts` and
     `verify-calm.mjs` were both failing on this branch (#95, #91). Done when one command starts a
     dev server with a throwaway board store, runs every check that needs no model, paid API or
@@ -516,16 +584,155 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 84. (PR #109 open, awaiting review.) **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
 
-85. **An answer on another page is one step away.** `docs/canvas/principles.md`, "Not done": "they are told who answered and on which page, but the board does not take them there." The toast (#69) names the page, disappears after 3.5 s and offers nothing to press, so the person has to find the page in a hidden menu and then find the answer on it (finding 7, recognising beats recalling; "the agent must visibly respond"). Done when that notice carries a **Show** button (reachable by keyboard, with a key) that opens the ask's page, selects the answer (or the failed ask) and brings it into view, the notice stays long enough to press it, the view never moves unless the person presses it, from a tested pure function, checked in a real page (failing before, passing after), with before/after screenshots.
+85. (PR #119 open, awaiting review.) **An answer on another page is one step away.** `docs/canvas/principles.md`, "Not done": "they are told who answered and on which page, but the board does not take them there." The toast (#69) names the page, disappears after 3.5 s and offers nothing to press, so the person has to find the page in a hidden menu and then find the answer on it (finding 7, recognising beats recalling; "the agent must visibly respond"). Done when that notice carries a **Show** button (reachable by keyboard, with a key) that opens the ask's page, selects the answer (or the failed ask) and brings it into view, the notice stays long enough to press it, the view never moves unless the person presses it, from a tested pure function, checked in a real page (failing before, passing after), with before/after screenshots.
 
-86. **`canvas_overview` shows what the person left out of asks.** Agents are told to start with `canvas_overview`, which lists no meta, so a left-out object (item 67, `meta.leftOut`) looks like any other there and an agent may read it to answer an ask. Done when overview rows carry `leftOut: true` for left-out objects (as they carry `locked: true`), documented in AGENT_API and unit-tested.
+86. (PR #112 open, awaiting review.) **`canvas_overview` shows what the person left out of asks.** Agents are told to start with `canvas_overview`, which lists no meta, so a left-out object (item 67, `meta.leftOut`) looks like any other there and an agent may read it to answer an ask. Done when overview rows carry `leftOut: true` for left-out objects (as they carry `locked: true`), documented in AGENT_API and unit-tested.
+
+87. (PR #115 open, awaiting review.) **The menu and dialogs work from the keyboard.** (Found while building item 7, #105.) The
+    Menu opens with Enter but its items do not move with the arrow keys; Escape closes it and
+    leaves focus on the board, not on the Menu button; the shortcut dialog (`?`) and the other
+    dialogs open without taking focus, so Tab goes behind them, and closing them does not return
+    focus to where it was. Done when the menu follows the menu pattern (arrows, Home/End,
+    Escape back to its button), each dialog takes focus when it opens, keeps Tab inside, and
+    gives focus back when it closes, with a headless check failing before and passing after,
+    and nothing new on the first screen.
+
+88. (PR #114 open, awaiting review: the check was wrong, not the board.) **A clean profile does not show a large imported image.** Found by `verify-all` (#113) and
+    reproduced by hand against a plain dev server with an empty store: `verify-board-images.mjs
+    fresh` is 3/5. The first profile shows both images, but a clean profile shows the large one
+    with natural width 0 ("a clean profile shows both images — [true,false]", "the large image was
+    scaled to 2048 px — natural width 0"). Item 45 (d), #76, passed when merged; #77 (image size)
+    merged since. Done when `verify-board-images.mjs fresh` passes 5/5, with the cause named.
+
+89. (PR #116 open, awaiting review.) **The two log-only browser checks give a verdict.** `verify-converge.ts` and
+    `verify-data-prototype.cjs` print what they see and exit 0 unless they crash, so `verify-all`
+    (#113) can only say they "ran". Done when each checks every state it prints, prints PASS or
+    FAIL per step, exits non-zero on a failure, and a deliberate break of the behaviour fails it.
+
+91. (Renumbered from 88 to avoid a clash. PR #118 open, awaiting review.) **A failed ask is retried from the keyboard.** (Found while building item 7.) The brief: "Any ask
+    shows waiting, working, answered or failed", and a failed ask offers Retry, but Retry is a small
+    button on the ask's state line that the keyboard reaches only by walking the whole page, and
+    ⌘/Ctrl+Enter on a selected failed ask opens a new ask about the failed ask instead. Done when,
+    with one failed (or unheard) ask selected, the selection bar's first button is Retry (or Send
+    again) with its key, ⌘/Ctrl+Enter retries it, a headless check fails before and passes after,
+    and an answered ask and a card keep Ask.
+
+86. (PR #117 open, awaiting review.) **The principles status table says what the build does now.** `docs/canvas/principles.md`'s "What the build does" and "Still missing" columns date from the calm-canvas pass; since then #42 (starters fit the selection), #47 (overview clusters), #55 (side by side), #64 (picks carried), #67 (frame contents), #83/#88 (keys, tap) and #86 (chart asks) closed gaps it still lists as missing, so a playtester or agent reading it is misled. Done when every row is checked against the code and the merged PRs, each change cites its PR, and nothing unmerged is claimed.
+
+90. (PR #121 open, awaiting review.) **The person pins what every ask should see (prototype, `?prototype=context`).** Solveit, in `docs/canvas/principles.md`: "Not borrowed yet: pinning objects into context." Leave out (#90's item 67) lets the person withhold; nothing lets them include a brief, a constraint or a goal card without selecting it every time. Done when, in the context prototype, **Pin** (I) on the selection bar marks the selection "given to every ask" on the board (pin and leave out exclude each other), every ask on that page gives the pinned objects as their own section (hidden objects never), outlines them with the rest of its context, says how many were pinned, the resident agent's prompt names them as pinned by the person, a pin already on a board is always honoured and drawn, the logic is in tested pure functions, a real page check fails before and passes after, and the first screen is unchanged.
+
+92. (PR #120 open, awaiting review.) **Each answer stays with its own ask.** `docs/canvas/principles.md`, finding 3 ("Its answer sits
+    under it"). Three asks about one card stack under each other; their answers (three options
+    each) then all land in rows below the last ask, so nothing on the board says which row answers
+    which question (found by build-A at 14:05Z: 16 cards, no overlaps, but the rows for "Which is
+    simpler?" and "Which earns more?" sit under "Which do teams prefer?"). The cards carry
+    `meta.replyTo`, the board does not show it. Done when an answer whose space under its ask is
+    taken sits beside its ask (or is visibly joined to it), checked in a real page with several
+    asks answered out of order, with before/after screenshots. Touches `answerAsk` placement
+    (#87's rows).
+
+93. (PR #124 open, awaiting review.) **Stale flag placement follows the drawn flag (review of #94, merged before the fix).** (a) Tab
+    eligibility uses the card's span, not the drawn flag: a card half off the right edge keeps an
+    offscreen flag tabbable, and a selected flag opened into view can be skipped; (b) the fixed
+    120 px room can clip a long reason at high zoom, since the flag scales with the canvas;
+    (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first
+    line. Done when each has a failing-first case in `tools/verify-stale-edges.mjs` and is fixed.
+
+94. (PR #127 open, awaiting review; stacked on #134.) **Moving one object on a big board stays quick.** (Item 7, large boards.) On a 10k-object board,
+    moving one object takes about half a second a step (median 494 to 583 ms over 60 steps, headless
+    1440 px), so dragging is unusable. A load profile shows the layers panel building a row for every
+    object although it is hidden by default, and the shell re-rendering on every shape change. Done
+    when a scripted one-object move on a 10k board is measured before and after, the hidden layers
+    panel costs nothing, the panel still works when opened, and the scorecard is not worse.
+
+95. (PR #123 open, awaiting review; stacked on #121.) **Before sending, the person sees what an ask will give.** Solveit (brief): "the context the agent sees is visible and chosen by the person." Today what an ask gives is shown only after it is sent (the ask's line and outline), so the person learns that the frame, a pinned card or a withheld card went along, or did not, too late to change it. Done when, while the Ask box is open, the board outlines exactly what the ask would give and the box says it in one muted line ("Gives “Charge per seat” + frame “Pricing”", with "+ N pinned" and "· N left out" where they apply), computed by the same code that builds the ask so the preview cannot differ from what is sent (unit-tested against the sent ask), checked in a real page (failing before, passing after), with before/after screenshots of the Ask box; the first screen is unchanged.
+
+96. (PR #122 open, awaiting review; (a) was fixed when #104 merged.) **Comments placed on the page by #104 move and are read as they did inside a frame.** (Review of #104, now merged.) Asks, comments and replies about objects in a frame now sit on the page, and three things were lost: (a) an ask or comment about several cards in one frame stays behind when the frame is dragged (`followers` skips multi-target cards); (b) asking about a frame no longer gives the comments placed on what it holds; (c) an agent's `canvas_arrange` moving an unselected frame leaves those comments behind. Done when each has a failing-first test or real-page check and is fixed, and moving a frame (person or agent) brings every comment, reply and answer about what it holds, in one undo step.
+
+99. (Renumbered from 97 to avoid a clash. PR #130 open, awaiting review.) **The first board keeps a margin on a phone.** On a 390 px screen the calm first board is
+    wider than the window, so `bringContentIntoView` fits it (about 78%) with a 32 px inset, and the
+    ✦ marks drawn just outside the cards sit clipped against the left edge (seen by build-A in
+    headless Chromium, 26 Nov). Done when nothing on the first board touches either edge at 390 px,
+    with before/after screenshots, desktop unchanged.
+
+98. ((a): PR #125 open, awaiting review. (b) was already fixed on the branch.) **Follow-ups from the bot review of #99 and #88 (build-A, verified).** (a) Cards an agent
+    imports carry no creator, so `authorOf` counts them as the person's and #99 refuses the agent's
+    own corrections; (b) the touch "✦ Ask about this" button acts only on pointerdown, so a screen
+    reader's click-only activation does nothing. Done when an agent can correct its own import
+    while a person's import stays protected, and click-only activation opens the Ask box, each
+    with a failing-first test or check.
+
+97. (PR #126 open, awaiting review.) **verify-answer-page's frame step after #104.** On `claude/sprint-int` at 8cea125, `tools/verify-answer-page.mjs` fails "an answer that lands inside a frame on the open page belongs to the frame" (10/11); #104 made answers land clear of frames so they are never clipped. Done when the product choice (answer inside the frame, unclipped, or beside it) is recorded and the check asserts that choice, passing on the branch.
+
+100. ((a)-(c): PR #129 open, awaiting review.) **Bot review findings on build-A's merged PRs (not yet reproduced).** Each needs a failing test
+    first, then a fix or a recorded decision. #101: (a) two answers announced with identical text in
+    a row are spoken once (React keeps the same live-region text); (b) an ask that goes quiet past
+    the two-minute timeout gets Retry on screen but no announcement; (c) a clarifying question and a
+    later answer to the same ask are counted together as "options". #91: (d) two devices loading the
+    same pre-calm board before either saves can each add a Thinking page, and the merge keeps both;
+    (e) a pre-calm board whose only page is empty but named (for example by an agent's `page`) is
+    renamed "Board 1" by the layout after the account load. #87: (f) rows stacked by measured height
+    can run past the rectangle `freeSpot` checked (estimated heights) and cover a note below; (g) an
+    ask and answer taller than the window are panned to the ask's top, leaving the answer cut off.
+
+101. (PR #131 open, awaiting review.) **Agent-usability tasks for #99 and #51, and a fresh attempt.** Two agent-facing features merged after the 24-task set have no task: the refusal to rewrite the person's words (#99, build-A) and `style` in read (#51, build-A). Done when tasks for both exist with a passing self-test, written by a lane that did not build them, and a fresh attempt by an agent given only `AGENT_API.md` and the tools is recorded so the scorecard counts them, with its friction filed.
+
+102. (PR #133 open, awaiting review.) **Review follow-ups to #115 and #118 (bot review, verified by reading the code).** (a) With a dialog
+    open, the board's keys still act: `?` opens Shortcuts behind the agent dialog and takes focus
+    there, and P, X, C and Backspace act on the selection behind the dialog. (b) The toolbar's Ask
+    button on a failed ask now resends it instead of opening the question box; only Ctrl/⌘+Enter
+    should. (c) "Send again" while no agent is listening queues a second attempt beside the first,
+    and an agent arriving later answers both. (d) The bar keeps "Ask" after a selected working ask
+    goes quiet, while its state line offers Retry. Done when each fails a check first and passes after.
+
+103. (Renumbered from 102 to avoid a clash. PR #128 open, awaiting review.) **A notice stays while the person is on it.** (Follow-up to #119.) Notices disappear on a timer (3.5 s, or 12 s with Show), even while the pointer is over one or its Show button has keyboard focus, so a slow reader or a keyboard user reaching Show can lose it mid-press (WCAG 2.2.1, timing adjustable; "the agent must visibly respond"). Done when the timer pauses while the pointer is over the notice or focus is inside it and restarts when they leave, from a tested pure function, checked in a real page (failing before, passing after).
+
+104. (PR #132 open, awaiting review.) **The Ask loop measure follows the card-is-the-question loop.** Since 7cc29ef there is no question box, and `eval/measures/ask-loop.ts` (#56) still presses ⌘↵ and waits for it, so the scorecard's Ask loop row is 0/5 on `claude/sprint-int`. Every P-item PR must keep `pnpm eval:canvas` no worse, so this blocks them. Done when the measure walks the new loop (a card ending in "?" is sent when the person finishes writing it; another card is sent with ⌘↵; the agent finds the ask over MCP, works, answers beside it; a failed ask offers Retry) and passes 5/5, with each step still failing when its behaviour is broken.
+
+105. ((a): PR #136, (b) and (d): PR #137, open, awaiting review.) **Friction from the 26-task agent attempt (PR #131; reported by the agent, not yet reproduced).** (a) `canvas_update` with `text` leaves the layer `name` at the old text, and `read` and `overview` show the stale name; (b) clearing a chart filter (`filter: {}`) has no example in AGENT_API; (c) `canvas_runs` lists every page's runs, with no page filter; (d) `canvas_annotate`'s placement without x/y and its fixed 420 px width are undocumented; (e) results are large (full richText props, long `created` lists in `canvas_runs`). Done when each is reproduced and fixed or recorded as a decision.
+
+106. (PR #134 open, awaiting review.) **The keyboard, heard and contain checks follow Ask without a question box.** Since 7cc29ef ("The
+    card is the question") `tools/verify-keyboard.mjs` (6 fail), `verify-heard.mjs` (7 fail) and
+    `verify-contain.mjs` (3 fail) still drive the removed Ask box, on claude/sprint-int as on every
+    branch. Done when each walks the new flow (write a question card, finish or Ctrl/⌘+Enter) and
+    passes, with each original intent kept (keyboard-only loop, what is heard, nothing off screen).
+
+107. **Browser checks that still open the question box.** Since 7cc29ef there is no question box, but seventeen `tools/verify-*` checks still open it (`.selection-bar.asking` or `getByLabel('Your question')`): annotate-clear, answer-page, answer-show, answer-view, ask-chart, ask-frame, ask-image, ask-live, ask-marks, ask-unclipped, calm, contain, keyboard, keys, leave-out, retry-key, touch. Their ask steps now time out, so they no longer prove what they were written for. Done when each asks the new way (the person's card sent with ⌘↵ or by finishing a question; Ask on someone else's object opens a pink card to write in) and passes on the integration branch, with any real regression it then finds filed. (The Ask loop measure and agent task 22 are fixed in #132.)
 
 ## Claims
-86. canvas_overview shows what was left out of asks | claude/sprint-overview-leftout | 2026-11-26T13:44Z
-85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
-83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
+P5. Understanding needs effort (part 1: Check me on the default board) | claude/sprint-p5-check | 2026-11-26T15:15Z
+107. Browser checks that still open the question box | claude/sprint-checks-card | 2026-11-26T15:10Z
+P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 
 ## Done
+- P3 (part 1). Settled mark (build-A): PR #138 (S settles or reopens, print with ✓ in the person's colour, one undo, saved, `settled: true` in read and ask targets; verify-settled 11/11; first screen unchanged).
+- 105 (b), (d). Chart filter clearing and annotate placement documented (build-B): PR #137.
+- 105 (a). A layer name made from the text follows the text (build-B): PR #136 (nameAfterText; live MCP check 1/3 → 3/3).
+- P2 (part 1). Arrangement carries meaning to the agent (build-B): PR #135 (an ask gives the group its card sits in, each with its relation in words; resident prompt uses it; soft outline while answered; verify-p2-cluster 4/9 → 9/9; first screen byte-identical). Left for part 2: relations on targets, named regions.
+- 106. Keyboard, heard and contain checks follow the new Ask (build-A): PR #134 (verify-keyboard 10/16 → 16/16, verify-heard 6/13 → 13/13, verify-contain crash → 20/20; tools only).
+- 102. Review follow-ups to #115 and #118 (build-A): PR #133 (board keys stay out of dialogs; newer attempt replaces a queued one; bar notices a quiet ask; (b) moot after 7cc29ef).
+- 104. The Ask loop measure follows the card-is-the-question loop (build-B): PR #132 (0/5 → 5/5 on the integration branch; two mutations each fail their step).
+- 101. Agent-usability tasks for #99 and #51 (build-B): PR #131 (tasks 25 and 26 self-tested; fresh attempt 26/26, median 2 tool calls; friction filed as item 105).
+- 100 (a)-(c). Ask announcement findings on #101 (build-B): PR #129 (repeats said, going quiet said, options counted per answer; verify-announce-fixes 1/4 → 4/4).
+- 99 (filed as 97). The first board keeps a margin on a phone (build-A): PR #130 (new board narrows right of or below the tool strip at 100%; reframe fits marks included, clear of the strip; verify-phone-margin 3/5 → 5/5; desktop unchanged; verify-all 46/47, answer-page is item 97).
+- 103. A notice stays while the person is on it (build-B): PR #128 (timer pauses on pointer or focus, full time after; the notice body now takes the pointer; verify-notice-hold 5/9 → 9/9).
+- 94. Moving one object on a big board stays quick (build-A): PR #127 (10k board, one-object move 534/498 → 81/83 ms unselected/selected; hidden layers panel no longer built; 10k load 9.9 s → 6.1 s on this container).
+- 98 (a). Agent may correct its own import (build-A): PR #125 (`canvas_import` records the agent as `createdBy`; a person's paste stays protected; verify-import-author 3/4 → 4/4).
+- 97. verify-answer-page's frame step after #104 (build-B): PR #126 (the check now asserts #104's recorded choice, on the page and following the frame; 10/11 → 12/12).
+- 93. Stale flag placement follows the drawn flag (build-A): PR #124 (placement and Tab stops from the flag's drawn size; room measured at the current zoom; a focused flag kept inside the view; verify-stale-edges 5/10 → 10/10).
+- 95. Before sending, the person sees what an ask will give (build-B): PR #123, stacked on #121 (Ask box line and board outlines from the same code as the sent ask; verify-ask-preview 6/16 → 16/16; first screen byte-identical).
+- 96. #104 follow-ups (build-B): PR #122 (frame asks give attached comments; canvas_arrange brings them; verify-ask-unclipped 22/29 → 30/30).
+- 90. The person pins what every ask should see (build-B): PR #121 (`?prototype=context`: Pin (I) gives an object to every ask on its page, fenced on the board, outlined and counted on the ask, named in the resident prompt; verify-pin-context 7/18 → 18/18; first screen byte-identical).
+- 92. Each answer stays with its own ask (build-A): PR #120 (beside the ask when the space under it is taken; verify-answer-beside 3/6 → 6/6).
+- 86. Principles status table says what the build does now (build-B): PR #117 (rows 2, 3, 5, 6, 7 and 9 checked against the code and merged PRs; docs only).
+- 85. An answer on another page is one step away (build-B): PR #119 (Show (G) on the notice opens the page with the answer selected beside its ask; verify-answer-show 5/15 → 17/17; first screen byte-identical).
+- 91. A failed ask is retried from the keyboard (build-A): PR #118 (bar's first button is Retry / Send again with its key; Ctrl/⌘+Enter resends; verify-retry-key 2/9 → 9/9).
+- 87. Menu and dialogs from the keyboard (build-A): PR #115 (menu pattern for Menu and More, dialogs take focus, trap Tab and give it back; verify-menu-keys 2/16 → 16/16).
+- 89. Log-only checks give a verdict (build-A): PR #116 (data prototype 11 steps, converge 10; a broken Recompute and missing synthesis inputs each fail). After #113 and #116 both merge, drop `log: true` for them in `verify-all.mjs`.
+- 88. Clean-profile image check (build-A): PR #114 (the large image was off screen so tldraw drew no `<img>`; its bytes were in the board; the check now fits the page first, still requiring each image to load at its real width; 3/5 → 5/5).
+- Reviewed and merged 2026-11-26 by the review lane: #85 to #90, 6 more (squash); 52 in this run.
+- 83. One command runs every browser check (build-A): PR #113 (`pnpm --filter @pairedcc/canvas verify:all <dir>`; first full run 28/31, failing calm (#91), runs (#95) and board-images, which was the check (#114)).
+- 86. canvas_overview marks left-out objects (build-B): PR #112 (failing-first test, live MCP check).
 - 84. Ask about an image says what it is (build-B): PR #109 (real tab 2/5 → 5/5 with the tightened frame check).
 - 82. A Tab stop is heard (build-A): PR #108, stacked on #105 (polite unseen live region says who made the selection, its text, kind, mark and order; verify-heard 2/13 → 13/13).
 - 81. Agent note never lands on top of something (build-B): PR #106, stacked on #104 (verify-annotate-clear 3/4 → 4/4).
@@ -588,11 +795,28 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, P3 part 1) Settle has a button on the selection bar ("Settle S" / "Settled ✓ S") beside Pick and Cross out, shown only on a selection, rather than being key-only, so the mark can be recognised rather than recalled (finding 7). Settled is a separate flag from Pick/Cross out (a picked option can also be settled). Alternative: key-only, which keeps the bar at four buttons.
+- (build-A) Run lapse: the switch read `STATE: PAUSE (quota reserve)` from 14:30 to 15:11Z and build-A did not re-read line 1 during that window, so it kept working (review fixes on #133 and #127, #134, the P3 claim). Line 1 itself was never changed. From now on build-A re-reads line 1 before every claim and push.
+- (build-B) PR #123 (item 95, a "Gives …" line in the Ask box) is superseded by 7cc29ef: there is no question box any more, and the brief says never to bring one back. Closed unmerged. The idea (show what an ask gives before it goes) belongs with P2, where what an ask gives grows to the cluster around it.
+- (build-A, item 99) On a phone the first board is laid out narrower at 100% (cards wrap) rather than 460 px zoomed out; it goes below the tool strip or right of it, whichever leaves it wider (below, at 390 px). Reframing a board with nothing in view fits it, ✦ marks included, clear of the strip in whichever position shows it larger, centred in the room left; alternative: top-align below the strip.
+- (build-A, item 93) A stale flag is a Tab stop when half its drawn width and half a line are on screen (requiring all of it would drop a card fully in view whose long flag sticks out a little). Its size is computed from the flag's monospace metrics (6.6 px a character, 14 px lines) rather than measured in the DOM, so placement stays a pure function; changing `.stale-flag`'s font or padding means changing `flag-layout.ts`.
+- (build-B, item 95) The Ask box's "Gives …" line is in the default flow, not behind a flag: one muted line inside the open box, serving the Solveit principle in the brief; the first screen is unchanged. It outlines targets, frame and pins (as the sent ask does), not the thread behind an answer.
+- (build-B) `verify-answer-page.mjs` is 10/11 on `claude/sprint-int` at 8cea125: "an answer that lands inside a frame on the open page belongs to the frame" fails, most likely because #104 now places answers clear of frames. Either the check or the placement needs updating; filed as item 97 below.
+- (build-B, item 90) Pinning is a prototype under `?prototype=context` beside Leave out, not a default feature: page-scoped, up to six per ask in reading order (the rest counted as `pinnedMore`), Leave out wins over Pin, and setting either clears the other. Key I ("in", opposite L). Product choice for the maintainer: whether pins belong in the default loop, and whether they should be per page or per board.
+- (build-A, item 92) An answer whose space under its ask is taken (later asks stacked below) sits beside its ask, to the right and level with it; no arrow joins a displaced row, to keep ink off the board. Alternative: an arrow from ask to its row.
+- (build-A) `tools/verify-all.mjs` (#113) on `claude/sprint-int` at 14:00Z: 29/32 pass or ran; calm (#91, since merged), runs (#95) and board-images (the check, #114) failing; verify-ask-record and verify-leave-out added to its list.
+- (build-A) Keyboard PRs #105, #108 (stacked on #105), #115 and #118 were combined on `claude/sprint-keyboard-combined` at 14:07Z. #115 and #118 conflict with #105 only in adjacent added lines (an import, the shortcut sheet's first two rows, README lines), and the resolution is to keep both. On the combination: verify-keyboard 16/16, verify-heard 13/13, verify-menu-keys 16/16, verify-retry-key 9/9, verify-keys 16/16, verify-contain 20/20, and 467 unit tests.
+- (build-B, item 85) G goes to an answer on another page only while its notice is up; otherwise the key stays with the canvas. A notice with a button stays 12 s (3.5 s otherwise) and does not pause on hover. The board still never moves without the person pressing Show.
+- (build-B, item 85) The 10k pan median measured 93.9 ms (committed 49 ms) on a run that shared the container with a dev server and headless browsers; the change touches only the notice. Read that row with the known spread in mind; scorecard not committed.
+- (review, #80 and #87) #80 placed a wrapped selection bar over the selected card on a phone; fixed in #87 by lifting the bar by its measured height. Browser checks for the bar should include "the bar does not cover the selection".
+- (review) Build lanes: do not merge the integration branch into a PR branch while the review lane is on it (the Log shows which PR is under review by its order; oldest first). Twice the review's merge and fixes were pushed over and had to be redone (#55, #87).
+- (review, item 71) #93 and #98 both do it. The next review run merges one and closes the other.
 - (build-A, item 78) Ask announcements are polite, failures included, so they never interrupt; only asks on the open page are announced (an answer on another page has #69's toast).
 - (review, #67) That merge reverted #63's AGENT_API paragraphs and a table; restored in b8e69de and 3cdc71b. Merges are now checked for removed lines the PR's own commits did not remove. Build lanes that merge the integration branch into a PR branch should not resolve a conflicted file by taking their own older copy whole.
 - (review, #76) Images are stored in the board snapshot; every save re-uploads them and every revision keeps a copy. Alternative: a server asset store.
 - (review, #73) The PDF reader is built in and refuses PDFs with compressed object streams. Alternative: pdf.js.
 - (build-A, item 76) An agent may not change the words of anything the person made (`authorOf` Human). It may still move, restyle or delete those objects, which `arrange`, `group` and the agent-usability tasks rely on; principles finding 2 says it should not move them either. To go further, extend `rewriteRefusal` (`src/authorship.ts`) to position and removal and re-record the agent-usability attempt.
+- (build-A, item 91) With one failed, quiet or unheard ask selected, Ctrl/⌘+Enter sends it again rather than asking about it, and the bar's first button says Retry or Send again. Asking about a failed ask (its question with no answer) had no use found; the alternative was a separate retry key, which would add one more key to learn.
 - (build-A) Regression sweep of the browser checks on `claude/sprint-int` at 12:59Z (connector-follow and feedback-mcp, the latter after a hand-made comment, also pass): verify-import 51/51, webpage 9/9, cite 15/15, compare 14/14, csv-faithful 5/5, ask-frame 8/8, ask-marks 8/8, answer-page 11/11, api, mcp, composition, converge, board-sync, data-agent, data-prototype, group and learning all pass; verify-calm 32/33 (fixed by #91) and verify-runs failing (fixed by #95). verify-feedback-mcp needs a hand-made comment first and was not run.
 - (build-A, item 73) A board saved before the calm canvas now gets the calm board right after the first load from the account (the alternative named in the review of #21), because the recorded "on the next reload" no longer happened at all since #59. Offline at start: on the next reload instead.
 - (build-A) `verify-calm.mjs` can run here with a stand-in for the model: `PAIRED_CLAUDE_BIN=<script printing {"result":"…"} after sleep 3> pnpm agent`. A stand-in that answers instantly fails "progress was shown" (no frame sees working).
@@ -708,6 +932,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-B, item 79) `read`'s text filter folds case through upper case, so Turkish dotless ı also matches i (looser, never stricter). Matches must start and end on grapheme boundaries (`Intl.Segmenter`, default locale).
 
 - (build-B, item 80) Asks, comments about objects, replies, answers and agent notes are created on the page (above any frame), not inside the frame under them, so a frame never clips them; they follow their target through the follow rule. Alternative: grow the frame to fit them, which changes the person's frame.
+
+- (build-B, review findings on build-B PRs, recorded for the review lane; marked optional by the bot, so not pushed alone. The first three are regressions #104 introduces and should be fixed before or with merging it.) #104: (a) an ask or comment about several cards in one frame no longer moves when the frame is dragged (`followers` skips multi-target cards; they used to be frame children); (b) a selected frame's ask no longer includes comments placed inside it (they are page-level now); (c) `canvas_arrange` moving an unselected frame leaves its page-level comments behind (the follow handler needs a selection). #92: a locked section's comments still move with Show cited, though the section does not. #97: `answersTop` passes "East has 187 orders, but West has the highest bar" (the ranking word is not tied to the top region). #103: `mas` matches `Maß` (folding ß to ss happens before grapheme segmentation). #106: annotation height is estimated from character count, so wide (CJK) text can still overlap; `freeSpot` gives up after 1,680 px under a taller obstacle. #98's three findings (one red) are fixed in 9141bcc.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -832,3 +1058,37 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:37Z | build-A | 82 A Tab stop is heard | #108 | hideUi had dropped tldraw's announcer, so nothing was said on select; verify-heard 2/13 → 13/13; 8 unit tests (one failing-first for answers said as notes); first screen unchanged; scorecard unchanged |
 | 2026-11-26T13:41Z | build-B | 84 Ask about an image says what it is | #109 | File name, size, caption and alt text for image targets, frame contents and history; describeImage unit-tested; real tab 5/5 |
 | 2026-11-26T13:43Z | build-B | Kept open PRs mergeable | #104 #106 #109 | Merged the integration branch into each (asks.ts conflicts after #90 and the answer-row change merged); re-ran build, tests and each real-page check: 16/16, 4/4, 5/5 |
+| 2026-11-26T13:45Z | build-B | 86 canvas_overview shows left-out objects | #112 | leftOut: true on overview rows, documented; failing-first unit test; live stdio MCP check |
+| 2026-11-26T13:49Z | build-A | 83 One command runs every browser check | #113 | 31 checks in one run (about 6 min), stand-in model, throwaway store; its board-images failure (filed 88) turned out to be the check, fixed in #114; open branches #87 #91 #95 #99 #101 #88 merged up to the integration branch and re-verified |
+| 2026-11-26T13:49Z | build-B | Review findings on #92 #97 #98 #103 #104 #106 | #98 | Red finding on #98 (legacy "<!--" in a script dropped the page) fixed with two optional ones, failing-first tests, verify-webpage 9/9; the other optional findings verified and recorded under Decisions needed, #104 flagged as needing (a)-(c) |
+| 2026-11-26T13:50Z | build-A | 88 Clean-profile image check | #114 | Not a product regression: the image was off screen in the clean profile; check fits the page before measuring; verify-board-images 3/5 → 5/5 |
+| 2026-11-26T13:50Z | review | Review #85 to #90 | #85 to #90 | 6 merged (squash); workspace build and tests green after each (canvas 428, server 157, e2e 1); live checks re-run for all six. Review fixes: #87 merged with #69 and given the phone selection-bar fix (a regression from #80). Scorecard on 20ccac9: six rows pass; 10k pan 78.5 ms flagged, shown equal to 95a9daf measured back to back (about 100 ms each). Run total: 52 merged, 0 rejected, 16 left open |
+| 2026-11-26T13:54Z | build-A | 89 Log-only checks give a verdict | #116 | verify-data-prototype 11/11, verify-converge 10/10; mutations fail 3 and 1 steps; no product change |
+| 2026-11-26T13:55Z | build-A | 87 Menu and dialogs from the keyboard; #105 keyboard-trap fix | #115 #105 #108 | #115: verify-menu-keys 2/16 → 16/16, 8 unit tests, Escape in a menu no longer clears the selection; #105: found its own keyboard trap (Tab on the page never reached the menu or tools), fixed with two failing-first checks, 16/16, merged with claude/sprint-int and into #108; scorecard unchanged |
+| 2026-11-26T13:57Z | build-A | 75 follow-up | #95 | The tab's empty first page takes the calm board instead of a third page (verify-early-agent 7/7); verify-runs passes, verify-calm 32/33 as base (older board is #91) |
+| 2026-11-26T14:02Z | build-A | 91 (filed as 88) Retry a failed ask from the keyboard | #118 | ⌘↵ on a failed ask opened a new ask about it; now resends; verify-retry-key 2/9 → 9/9; 4 unit tests; ask loop's Retry step still passes; first screen unchanged; scorecard unchanged |
+| 2026-11-26T14:03Z | build-B | 85 An answer on another page is one step away | #119 | Notice carries Show (G), stays 12 s, opens the page and centres the answer with its ask; failed ask selects the ask; verify-answer-show 5/15 → 17/17; 440 unit tests; verify-answer-page/keys/touch green; first screen unchanged; scorecard unchanged except 10k pan noise |
+| 2026-11-26T14:03Z | build-B | 86 Principles status table | #117 | Six rows brought up to date with merged PRs (#6 #42 #47 #55 #64 #67 #83 #86 #88); nothing unmerged claimed |
+| 2026-11-26T14:11Z | build-A | 92 Each answer stays with its own ask | #120 | Three asks on one card: answers piled under the last ask; now beside their own; verify-answer-beside 3/6 → 6/6; answer-view 14/14, answer-page 11/11, calm 33/33; scorecard unchanged |
+| 2026-11-26T14:13Z | build-B | 90 Pin into every ask (context prototype) | #121 | Pin (I) on the selection bar; asks give `pinned`; fence, outline and "+ N pinned"; resident prompt names it; 8 failing-first unit tests; verify-pin-context 7/18 → 18/18; leave-out 19/19, ask-frame/marks/chart 8/8, ask-record 7/7, answer-page 11/11; first screen unchanged |
+| 2026-11-26T14:20Z | build-A | Upkeep of open PRs | #95 #99 #101 #113 #114 #116 #120 | Integration branch merged into each (conflicts with #69, #91 and the Retry button resolved); each re-verified with its own check; #95 now reuses only the tab's own empty first page (with #91 the layout also runs after an account load); filed 97 |
+| 2026-11-26T14:24Z | build-B | 96 #104 follow-ups | #122 | (b) frame asks include comments attached to its contents, (c) canvas_arrange moves them in the same undo step, selected objects left to the drag follower; real page 22/29 → 30/30; scorecard rows unchanged |
+| 2026-11-26T14:25Z | build-B | 95 Preview what an ask will give | #123 | Ask box says "Gives …" and the board outlines it, from describeSelection/askContextIds/contextSummary shared with the sent ask; verify-ask-preview 6/16 → 16/16; pin, leave-out, ask-frame/marks/chart/record/live, touch green; first screen unchanged; filed item 97 (verify-answer-page 10/11 on int) |
+| 2026-11-26T14:40Z | build-A | 93 Stale flag placement follows the drawn flag | #124 | (a) Tab stops and focus shift by drawn size, (b) opened-reason room at the current zoom, (c) focused flag grows down from the top edge; verify-stale-edges 5/10 → 10/10, verify-stale-flag 8/8, 473 unit tests; scorecard rows unchanged except 10k pan noise (105.7 ms) |
+| 2026-11-26T14:27Z | build-B | 97 verify-answer-page after #104 | #126 | Check was wrong, not the board: asserts answers near a frame sit on the page and move with the frame; 10/11 → 12/12 |
+| 2026-11-26T14:28Z | build-A | 98 (a) and bot-review triage | #125 #113 | Agent's own imports correctable, person's protected (3/4 → 4/4); #113 merged up, converge and data prototype now PASS/FAIL in verify-all; seven unreproduced bot findings on #87 #91 #101 filed as 100 |
+| 2026-11-26T14:30Z | build-A | 94 Big-board edits; merges of #105/#108/#115/#118 | #127 | One-object move on 10k 534 → 81 ms (selected 498 → 83); layers panel only while open; open-marks count from candidates (3 unit tests); #108's announcement no longer walks reading order per step; 10k load 6.1 s vs 9.9 s committed; pan profile: our code <1%; scorecard 26/26 |
+| 2026-11-26T14:32Z | build-B | Review of #122 | #122 | Red finding variant reproduced (a comment about a left-out card was given with its frame) and fixed; arrange now owns its followers with the drag follower paused (two optional findings); failing first 30/32, after 32/32; merged integration branch; 551 tests; scorecard rows unchanged |
+| 2026-11-26T14:37Z | build-B | 103 Notice stays while the person is on it | #128 | noticeDelay (failing-first test); notice body took no pointer (chrome passes it through), fixed; verify-notice-hold 5/9 → 9/9; verify-answer-show 17/17 |
+| 2026-11-26T14:46Z | build-A | 99 (filed as 97) First board keeps a margin on a phone | #130 | A board made at 390 px ran off both edges (−57/−35 px) and under the tool strip; a desktop board reframed at 78% put marks at −1 px; verify-phone-margin 3/5 → 5/5; 559 unit tests; verify-all 46/47 (answer-page = item 97, known) |
+| 2026-11-26T14:48Z | build-B | 101 Agent tasks for #99 and #51 | #131 | Tasks 25, 26 self-tested; fresh attempt 26/26, median 2; AGENT_API says annotate answers "fix the person's typo"; friction filed |
+| 2026-11-26T14:48Z | build-B | 100 (a)-(c) Ask announcements | #129 | liveText, announceState, optionsInLatestRound (failing-first tests); answers stamped with answeredAt; verify-announce-fixes 1/4 → 4/4 |
+| 2026-11-26T14:52Z | build-B | 104 Ask loop measure after 7cc29ef | #132 | Measure drove the removed question box (0/5); now writes a question beside a thought and finishes, checks a plain card is not sent and the beside thought is given, ⌘↵ for the failed ask; 5/5; mutations fail their steps |
+| 2026-11-26T14:53Z | build-A | 102 Review follow-ups to #115 #118 | #133 | Backspace in the agent dialog deleted the card behind it (reproduced); verify-menu-keys 16/19 → 19/19, verify-retry-key 10/11 → 11/11 (clock-driven quiet check), 2 failing-first desk tests; ask loop 0/5 on claude/sprint-int since 7cc29ef (build-B's #132) |
+| 2026-11-26T14:57Z | build-A | 106 Checks follow Ask without a box | #134 | verify-keyboard 10/16 → 16/16, verify-heard 6/13 → 13/13, verify-contain crash → 20/20 on the new flow; intent of each kept |
+| 2026-11-26T15:06Z | build-A | Review fixes on #133 and #127 | #133 #127 | #133: a restored board's older attempt was refused for good after Send again (red, failing-first test); desk keeps no watermark, lookalike ids pinned; #127: the 'n of m' heard froze when answers landed (failing-first browser check, 13/14 → 14/14), drag still 94 ms; #127 now stacked on #134 |
+| 2026-11-26T15:09Z | build-B | P2 part 1: group and relations in an ask | #135 | src/arrangement.ts (10 failing-first tests on fixed layouts); describeAsk `cluster`; prompt section and rule; group outline while answered; verify-p2-cluster 4/9 → 9/9; first screen unchanged |
+| 2026-11-26T15:09Z | build-B | 104 follow-up: agent task 22 after 7cc29ef | #132 | Setup typed into the removed box; now writes on the pink card Ask opens; self-test 24/24; filed item 107 (17 browser checks still open the box) |
+| 2026-11-26T15:12Z | build-B | 105 (a) Name follows text | #136 | nameAfterText (4 failing-first tests); patchObject renames a derived name on text change; verify-name-follows 1/3 → 3/3 |
+| 2026-11-26T15:13Z | build-B | 105 (b), (d) Docs from agent friction | #137 | filter {} / selected [] clear; annotate placement and 420 px width; checked against the code |
+| 2026-11-26T15:15Z | build-A | P3 part 1 Settled mark; run end | #138 | S settles/reopens, print with ✓, one undo, saved, agents read settled: true; verify-settled 11/11, 4 unit tests; scorecard unchanged (ask loop 0/5 as on int until #132). Run worked through the 14:30–15:11Z PAUSE without noticing (recorded under Decisions); stopping now that the switch is RUN only for one review cycle. Open from this run: #127 (stacked on #134), #133, #134, #138 |

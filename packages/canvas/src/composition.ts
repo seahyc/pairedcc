@@ -71,10 +71,16 @@ export function frameAround(boxes: { x: number; y: number; w: number; h: number 
 
 export const duplicateInput = z.object({
   objects: targets,
-  /** Default: the width of the duplicated objects plus 40, so the copy sits just right of them. */
-  offsetX: z.number().finite().optional(),
-  /** Default 0, or below the originals when a copy beside them would leave its frame. */
-  offsetY: z.number().finite().optional(),
+  offsetX: z
+    .number()
+    .finite()
+    .optional()
+    .describe("Leave both offsets out to place the copy just right of the originals: their combined width plus 40, so a wide frame never overlaps its copy."),
+  offsetY: z
+    .number()
+    .finite()
+    .optional()
+    .describe("Default 0, or below the originals when a copy beside them would leave the frame that holds them."),
 });
 
 export function layoutPositions(

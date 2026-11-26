@@ -12,6 +12,7 @@
     "feedback": "tsx tools/pull-feedback.ts",
     "eval": "tsx eval/run.ts",
     "verify:sync-server": "tsx tools/verify-board-sync-server.ts",
+    "verify:all": "node tools/verify-all.mjs",
     "agent": "tsx tools/resident-agent.ts"
   },
   "dependencies": {

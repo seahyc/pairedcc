@@ -55,8 +55,8 @@ describe("firstBoardLines: the first board speaks the device's language", () => 
     expect(write + ask).not.toMatch(/[⌘⇧⌫]|Ctrl|press|\([PXC]\)/);
   });
   it("on a keyboard keeps today's lines, in the keyboard's keys", () => {
-    expect(firstBoardLines(false, true).ask).toMatch(/press ⌘↵ to ask/);
-    expect(firstBoardLines(false, false).ask).toMatch(/press Ctrl\+↵ to ask/);
+    expect(firstBoardLines(false, true).ask).toMatch(/End it with a question mark.*press ⌘↵\./);
+    expect(firstBoardLines(false, false).ask).toMatch(/press Ctrl\+↵\./);
     expect(firstBoardLines(false, true).write).toBe("Double-click anywhere, or press N. Pink handwriting is you.");
   });
 });

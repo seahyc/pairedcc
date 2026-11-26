@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { AskDesk, LISTENER_GRACE_MS } from "../server/asks";
-import { answerLayout, askStatusLine, capWords, elsewhereNotice, markOf, mergeHistory, suggestQuestion, OPTION_W } from "../src/ask-rules";
+import { answerLayout, askStatusLine, retryLabel, capWords, elsewhereNotice, markOf, mergeHistory, suggestQuestion, OPTION_W } from "../src/ask-rules";
 import { answerInput, askStatusInput } from "../src/protocol";
 import { buildPrompt, parseReply, readingNote, systemPrompt } from "../tools/resident-prompt";
 import { toolDefs } from "../tools/tool-defs";
@@ -95,7 +95,7 @@ describe("ask rules", () => {
     expect(askStatusLine({ ...base, state: "working", agent: "Claude", note: "reading 1 object", startedAt: 1000 }, opts).text).toBe("Claude: reading 1 object · 3s");
     expect(askStatusLine({ ...base, state: "working", agent: "Claude", startedAt: 0 }, { ...opts, now: 130_000 }).retry).toBe(true);
     expect(askStatusLine({ ...base, state: "failed", error: "Claude took longer than 90 seconds" }, opts)).toMatchObject({ tone: "failed", retry: true });
-    expect(askStatusLine({ ...base, state: "answered", agent: "Claude", answeredAt: 3500 }, opts).text).toContain("answered in 4s · given “a card”");
+    expect(askStatusLine({ ...base, state: "answered", agent: "Claude", answeredAt: 3500 }, opts).text).toContain("answered in 4s · also read “a card”");
     expect(askStatusLine({ ...base, state: "waiting" }, { ...opts, listeners: null }).text).toContain("Connect an agent");
   });
   it("names a connected agent that acted on the board recently instead of saying there is none", () => {
@@ -147,7 +147,10 @@ describe("resident agent prompt", () => {
   };
   it("sends only what the ask shows: the question, the selection, its frame and the thread", () => {
     const prompt = buildPrompt(given);
-    expect(prompt).toContain('The ask: """What\'s missing?"""');
+    expect(prompt).toContain('The person wrote this, and it is what you respond to: """What\'s missing?"""');
+    const alone = buildPrompt({ question: "What's the GDP of Singapore?", targets: [] });
+    expect(alone).toContain('"""What\'s the GDP of Singapore?"""');
+    expect(alone).not.toContain("sits beside");
     expect(prompt).toContain('card written by the person: """Charge per seat"""');
     expect(prompt).toContain('the frame "Pricing"');
     expect(prompt).toContain("Per post today");
@@ -244,7 +247,7 @@ describe("an ask answered on a page the person has left", () => {
   const where = { onScreen: false, question: "Give me options", pageName: "Pricing" };
   it("says who answered and where", () => {
     expect(elsewhereNotice({ state: "working" }, { state: "answered", agent: "Claude" }, where)).toBe("✦ Claude answered “Give me options” on the page “Pricing”.");
-    expect(elsewhereNotice({ state: "working" }, { state: "failed" }, where)).toContain("could not be answered. Open that page to retry.");
+    expect(elsewhereNotice({ state: "working" }, { state: "failed" }, where)).toContain("could not be answered. Show it to retry.");
   });
   it("stays quiet on screen, for other states and for repeats", () => {
     expect(elsewhereNotice({ state: "working" }, { state: "answered" }, { ...where, onScreen: true })).toBeUndefined();
@@ -255,6 +258,34 @@ describe("an ask answered on a page the person has left", () => {
   it("shortens a long question", () => {
     const said = elsewhereNotice({ state: "working" }, { state: "answered" }, { ...where, question: "x".repeat(80) })!;
     expect(said).toContain(`“${"x".repeat(39)}…”`);
+  });
+});
+
+import { elsewhereShow, noticeMs } from "../src/ask-rules";
+describe("showing an ask answered on another page", () => {
+  const replies = [
+    { id: "shape:a", replyTo: "shape:ask" },
+    { id: "shape:b", replyTo: "shape:ask" },
+    { id: "shape:other", replyTo: "shape:elsewhere" },
+    { id: "shape:gone", replyTo: "shape:ask", hidden: true },
+    { id: "shape:plain" },
+  ];
+  it("selects the answers to that ask, in board order, leaving out hidden ones", () => {
+    expect(elsewhereShow("answered", "shape:ask", replies)).toEqual(["shape:a", "shape:b"]);
+  });
+  it("selects the ask itself when it failed, so Retry is on the selection", () => {
+    expect(elsewhereShow("failed", "shape:ask", replies)).toEqual(["shape:ask"]);
+  });
+  it("falls back to the ask when its answers have been deleted or hidden", () => {
+    expect(elsewhereShow("answered", "shape:ask", [{ id: "shape:gone", replyTo: "shape:ask", hidden: true }])).toEqual(["shape:ask"]);
+  });
+  it("offers nothing for other states", () => {
+    expect(elsewhereShow("working", "shape:ask", replies)).toEqual([]);
+    expect(elsewhereShow("waiting", "shape:ask", replies)).toEqual([]);
+  });
+  it("keeps a notice with something to press long enough to press it", () => {
+    expect(noticeMs(false)).toBe(3500);
+    expect(noticeMs(true)).toBeGreaterThanOrEqual(10000);
   });
 });
 
@@ -285,5 +316,25 @@ describe("starters that fit the selection", () => {
   it("never offers more than three", () => {
     for (const sel of [[card("a")], [card("a?")], [card("a"), card("b")], [{ type: "frame", text: "" }], [{ type: "chart", text: "" }]])
       expect(startersFor(sel).length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("retryLabel: the selection bar's first button on one selected ask", () => {
+  const ask = (state: string, extra: Record<string, unknown> = {}) => ({ state, attempt: 0, contextIds: [], askedAt: 0, ...extra }) as never;
+  const line = (a: never, listeners: string[] | null = ["Claude"], now = 1000) => askStatusLine(a, { listeners, hosted: false, now, given: "" });
+  it("retries a failed ask", () => {
+    expect(retryLabel(line(ask("failed", { error: "Took too long" })))).toBe("Retry");
+  });
+  it("retries an ask whose agent went quiet", () => {
+    expect(retryLabel(line(ask("working", { startedAt: 0, agent: "Claude" }), ["Claude"], 200_000))).toBe("Retry");
+  });
+  it("sends again an ask nobody heard", () => {
+    const said = retryLabel(line(ask("waiting"), [], 60_000));
+    expect(said).toBe("Send again");
+  });
+  it("keeps Ask for an answered, working or waiting ask", () => {
+    expect(retryLabel(line(ask("answered", { answeredAt: 10, agent: "Claude" })))).toBeUndefined();
+    expect(retryLabel(line(ask("working", { startedAt: 900, agent: "Claude" })))).toBeUndefined();
+    expect(retryLabel(line(ask("waiting")))).toBeUndefined();
   });
 });
