@@ -38,8 +38,8 @@ export async function safety(browser: Browser, base: string) {
 
     await race("Agent undo with interleaved human edits", async (lost) => {
       if (!(await agent.tools()).includes("canvas_undo_run")) return "no agent undo operation (canvas_undo_run) is available";
-      const a = await agent.call("canvas_create", { kind: "note", x: 400, y: 0, text: "Agent A" });
-      const b = await agent.call("canvas_create", { kind: "note", x: 800, y: 0, text: "Agent B" });
+      const a = await agent.call("canvas_create", { kind: "rectangle", x: 400, y: 0, width: 200, height: 120, text: "Agent A" });
+      const b = await agent.call("canvas_create", { kind: "rectangle", x: 800, y: 0, width: 200, height: 120, text: "Agent B" });
       const aSeen = await get(a.id);
       await agent.call("canvas_update", { id: a.id, expectedRevision: aSeen.revision, color: "green" });
       // Human edits interleave: move A (the run did not touch position) and retext B.

@@ -27,6 +27,8 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
   const results: Record<string, unknown>[] = [];
   for (const size of sizes) {
     const { context, page } = await openCanvas(browser, base);
+    const steps: string[] = [];
+    page.on("framenavigated", (f: any) => f === page.mainFrame() && steps.push(`navigated ${f.url()}`));
     try {
       const built = await page.evaluate((n: number) => {
         const editor = (window as any).__pairedEditor;
@@ -46,8 +48,10 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
       }, size);
       if (built.created < size) throw new Error(`only ${built.created} of ${size} objects could be created on one page (tldraw's default maxShapesPerPage is 4,000)`);
       const buildMs = built.ms;
+      steps.push("built");
       // Let the board persist to IndexedDB before reloading.
       await page.waitForTimeout(Math.max(2000, size));
+      steps.push("persisted");
       const t = Date.now();
       await page.reload();
       await ready(page);
@@ -61,11 +65,13 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
         throw new Error(`board did not reload with ${size} objects within 120 s (${state})`);
       }
       const loadMs = Date.now() - t;
-      await page.evaluate(() => (window as any).__pairedEditor.zoomToFit());
+      steps.push("loaded");
+      await page.evaluate(() => void (window as any).__pairedEditor.zoomToFit());
+      steps.push("fitted");
       const pan = await frames(page);
       results.push({ objects: size, buildMs: Math.round(buildMs), loadMs, panMedianFrameMs: round(pan.median), panP95FrameMs: round(pan.p95) });
     } catch (error) {
-      results.push({ objects: size, error: error instanceof Error ? error.message.split("\n")[0] : String(error) });
+      results.push({ objects: size, error: error instanceof Error ? error.message.split("\n")[0] : String(error), ...(process.env.EVAL_TRACE ? { steps } : {}) });
     } finally {
       await context.close();
     }

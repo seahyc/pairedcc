@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { launch, packageDir, startServer } from "./lib";
+import { launch, openCanvas, packageDir, startServer } from "./lib";
 import { acceptance } from "./measures/acceptance";
 import { agentUsability } from "./measures/agent-usability";
 import { performanceMeasure } from "./measures/performance";
@@ -26,6 +26,10 @@ const log = (s: string) => process.stderr.write(`${s}\n`);
 const server = await startServer();
 const browser = await launch();
 try {
+  // Warm up: on a fresh server Vite may optimise dependencies and reload the page once.
+  const warm = await openCanvas(browser, server.base, "?prototype=data").catch(() => undefined);
+  await warm?.page.waitForTimeout(3000);
+  await warm?.context.close();
   for (const [name, run] of [
     ["acceptance", () => acceptance(browser, server.base)],
     ["safety", () => safety(browser, server.base)],

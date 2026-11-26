@@ -139,9 +139,11 @@ export async function acceptance(browser: Browser, base: string) {
       await page.keyboard.press("n");
       await page.mouse.click(at.x, at.y);
       await sleep(300);
-      // Placing a card does not start editing; the person double-clicks it to type.
-      await page.mouse.dblclick(at.x, at.y);
-      await sleep(300);
+      // If placing the card did not start typing, the person double-clicks it.
+      if (!(await editor("(e) => e.getEditingShapeId()"))) {
+        await page.mouse.dblclick(at.x, at.y);
+        await sleep(300);
+      }
       await page.keyboard.type(text);
       await page.keyboard.press("Escape");
       await sleep(300);
