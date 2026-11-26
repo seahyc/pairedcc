@@ -4,7 +4,7 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { keepForAgent } from "./leave-out";
 import { chartText, datasetText, staleReason } from "./data/model";
@@ -106,13 +106,14 @@ const given = (editor: Editor, s: TLShape, max = 2000): Given => {
   };
 };
 const said = (editor: Editor, s: TLShape, max: number, keep: Keep = (x) => x): HistoryEntry => {
-  const mark = markOf(s.meta);
+  const mark = markOf(s.meta), source = sourceOf(s);
   // A frame asked about earlier has no text of its own: say what it held, as the ask did then.
+  // Imported material is said with its column names, as in the ask itself.
   const text =
     s.type === "frame"
       ? `the frame "${shapeName(s)}", holding: ${inside(editor, s, new Set(), keep).inside.map((o) => o.text).join("; ") || "nothing with text"}`
-      : textOf(s);
-  return { id: s.id, who: authorOf(s), said: clip(text, max), ...(mark ? { mark } : {}) };
+      : sourceText(s, textOf(s)) || textOf(s);
+  return { id: s.id, who: source ? sourceAuthor(source) : authorOf(s), said: clip(text, max), ...(mark ? { mark } : {}) };
 };
 /** A grouped record is given as its parts: the title line, then each field in column order. */
 const parts = (editor: Editor, s: TLShape, keep: Keep = (x) => x): TLShape[] => {
@@ -164,7 +165,8 @@ function thread(editor: Editor, shape: TLShape, keep: Keep, depth = 0, seen = ne
     .sort((a, b) => a.y - b.y || a.x - b.x));
   return [
     ...earlier,
-    ...keep(about).map((t) => said(editor, t, 600, keep)),
+    // A grouped record is said as its parts, as the first ask gave it, not as its textless group.
+    ...keep(about).flatMap((t) => parts(editor, t, keep)).map((t) => said(editor, t, 600, keep)),
     // The ask card's id keeps two asks with the same words (a starter used twice) apart.
     ...(keep([parent]).length ? [{ id: parent.id, who: `${HUMAN} asked`, said: clip(textOf(parent), 600) }] : []),
     ...siblings.map((s) => said(editor, s, 600, keep)),
@@ -282,7 +284,9 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   const texts = input.alternatives
     ? input.alternatives.map((text, i) => `${"ABCD"[i]} · ${capWords(text, 60)}`)
     : [capWords(input.text ?? "", 90)];
-  const layout = answerLayout({ x: anchor.x, y: bottom }, texts);
+  // The room the person's window has beside the canvas chrome, so no answer lands off screen.
+  const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
+  const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
   const spot = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
   // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
   // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
@@ -295,8 +299,14 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     return result;
   };
   const ids = place(() => {
-    const made = texts.map((text, i) =>
-      createCard(editor, { x: spot.x + layout.cards[i].dx, y: spot.y, width: layout.cards[i].w, text }, actor, {
+    // Rows stack under the measured height of the row above (a card sizes to its text when made).
+    let rowY = spot.y, rowBottom = spot.y, row = 0;
+    const made = texts.map((text, i) => {
+      if (layout.cards[i].row !== row) {
+        row = layout.cards[i].row;
+        rowY = rowBottom + OPTION_GAP;
+      }
+      const id = createCard(editor, { x: spot.x + layout.cards[i].dx, y: rowY, width: layout.cards[i].w, text }, actor, {
         name: input.alternatives ? `Option ${"ABCD"[i]}` : input.question ? "Question" : "Answer",
         role: "annotation",
         status: "open",
@@ -304,8 +314,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         targetId: shape.id,
         replyTo: shape.id,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
-      }, offPage ? pageId : undefined),
-    );
+      }, offPage ? pageId : undefined);
+      rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
+      return id;
+    });
     setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt: Date.now(), read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.
     if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);

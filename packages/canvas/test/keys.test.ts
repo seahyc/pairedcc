@@ -33,3 +33,30 @@ describe("keyHint: hints name the person's own keys", () => {
     for (const t of ["⌘↵", "⌘ ↵", "⇧ ⌘ Z", "⌘ V, or drop a file", "⌫", "⇧ C"]) expect(keyHint(t, false)).not.toMatch(/[⌘⇧⌫]/);
   });
 });
+
+import { firstBoardLines, touchOnly } from "../src/keys";
+
+describe("touchOnly: a touch screen with no pointer that hovers", () => {
+  const device = (queries: string[]) => (q: string) => queries.includes(q);
+  it("is true for a phone", () => {
+    expect(touchOnly(device(["(hover: none) and (pointer: coarse)"]))).toBe(true);
+  });
+  it("is false for a laptop, and for a touch laptop or a tablet with a trackpad", () => {
+    expect(touchOnly(device(["(any-pointer: fine)"]))).toBe(false);
+    expect(touchOnly(device(["(hover: none) and (pointer: coarse)", "(any-pointer: fine)"]))).toBe(false);
+  });
+});
+
+describe("firstBoardLines: the first board speaks the device's language", () => {
+  it("on a touch screen says tap and names no key", () => {
+    const { write, ask } = firstBoardLines(true, false);
+    expect(ask).toMatch(/tap ✦ Ask/);
+    expect(write).toMatch(/tap/i);
+    expect(write + ask).not.toMatch(/[⌘⇧⌫]|Ctrl|press|\([PXC]\)/);
+  });
+  it("on a keyboard keeps today's lines, in the keyboard's keys", () => {
+    expect(firstBoardLines(false, true).ask).toMatch(/press ⌘↵ to ask/);
+    expect(firstBoardLines(false, false).ask).toMatch(/press Ctrl\+↵ to ask/);
+    expect(firstBoardLines(false, true).write).toBe("Double-click anywhere, or press N. Pink handwriting is you.");
+  });
+});

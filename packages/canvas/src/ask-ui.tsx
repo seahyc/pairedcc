@@ -9,7 +9,10 @@ import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
 import { isLeftOut, leftOutLabel, toggleLeftOut } from "./leave-out";
 import { prototypeEnabled } from "./prototype-flags";
-import { keys } from "./keys";
+import { TOUCH, keys } from "./keys";
+
+/** A key cap, left out on a touch screen where it names a key nobody has. */
+const Kbd = ({ children }: { children: string }) => (TOUCH ? null : <kbd>{children}</kbd>);
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
 const short = (text: string, max = 28) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
@@ -159,10 +162,13 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     bar.current = el;
   };
   const [measured, setMeasured] = useState(0);
+  const [measuredHeight, setMeasuredHeight] = useState(0);
   const [viewWidth, setViewWidth] = useState(() => window.innerWidth);
   useLayoutEffect(() => {
     const w = bar.current?.offsetWidth ?? 0;
     if (w && w !== measured) setMeasured(w);
+    const h = bar.current?.offsetHeight ?? 0;
+    if (h && h !== measuredHeight) setMeasuredHeight(h);
   });
   useEffect(() => {
     const onResize = () => setViewWidth(window.innerWidth);
@@ -199,7 +205,8 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
   }
 
   // The Ask box asks for 430 px; the bar is as wide as its buttons. Both narrow to the window.
-  const placed = placeBar(state, asking ? 430 : measured || 380, viewWidth);
+  // The Ask box keeps its usual place; the bar is lifted by its real height when its buttons wrap.
+  const placed = placeBar(state, asking ? 430 : measured || 380, viewWidth, asking || state.editing ? undefined : measuredHeight || undefined);
   const { left, width } = placed;
   // A selection taller than the screen (two records far apart) keeps the bar on screen
   // instead of pushing it out of reach.
@@ -222,12 +229,37 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     if (!result.ok) onNotice(result.reason);
     editor.focus();
   };
-  if (state.editing)
-    return state.blank ? null : (
+  if (state.editing) {
+    if (state.blank) return null;
+    // On a touch screen the hint is the way to ask: no keyboard shortcut can be pressed.
+    if (TOUCH)
+      return (
+        <button
+          ref={setBar}
+          className="selection-bar hint tappable"
+          style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }}
+          onPointerDown={(e) => {
+            // Act on the press, before the text editor loses focus and the bar changes under the finger.
+            e.preventDefault();
+            e.stopPropagation();
+            const id = editor.getEditingShapeId();
+            if (id) {
+              editor.complete();
+              editor.setCurrentTool("select");
+              editor.select(id);
+            }
+            setAsking(true);
+          }}
+        >
+          ✦ Ask about this
+        </button>
+      );
+    return (
       <div ref={setBar} className="selection-bar hint" style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }}>
         <kbd>{keys("⌘↵")}</kbd> ask about this · <kbd>Esc</kbd> done
       </div>
     );
+  }
   if (asking)
     return (
       <form
@@ -272,16 +304,16 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
   return (
     <div ref={setBar} className="selection-bar" style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }} role="toolbar" aria-label="What next">
       <button className="primary" onClick={() => setAsking(true)} title={keys("Ask your agent about the selection (⌘↵)")}>
-        ✦ Ask <kbd>{keys("⌘↵")}</kbd>
+        ✦ Ask <Kbd>{keys("⌘↵")}</Kbd>
       </button>
       <button className={state.picked ? "on" : ""} onClick={() => judge("picked")} title="Pick: this one (P)">
-        Pick <kbd>P</kbd>
+        Pick <Kbd>P</Kbd>
       </button>
       <button className={state.rejected ? "on" : ""} onClick={() => judge("rejected")} title="Cross out: not this (X)">
-        Cross out <kbd>X</kbd>
+        Cross out <Kbd>X</Kbd>
       </button>
       <button onClick={onComment} title="Comment on it (C)">
-        Comment <kbd>C</kbd>
+        Comment <Kbd>C</Kbd>
       </button>
       {prototypeEnabled("context") && (
         <button
@@ -292,7 +324,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
           }}
           title={state.leftOut ? "Bring back: asks about things nearby may give this to the agent again (L)" : "Leave out: asks about things nearby will not give this to the agent (L)"}
         >
-          {state.leftOut ? "Bring back" : "Leave out"} <kbd>L</kbd>
+          {state.leftOut ? "Bring back" : "Leave out"} <Kbd>L</Kbd>
         </button>
       )}
       {state.cites && (
