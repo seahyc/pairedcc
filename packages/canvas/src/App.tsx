@@ -59,6 +59,7 @@ import { annotateObject } from "./agent-operations";
 import { isLegacySeed, seed } from "./seed";
 import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
 import { PromptShapeUtil, createLearningPrototypePage, learningPrototypeEnabled, learningVisibility } from "./learning/prompt-shape";
+import { ChartShapeUtil, DataLayer, DatasetShapeUtil, createDataPrototypePage, dataPrototypeEnabled } from "./data/shapes";
 import {
   PaperBackground,
   ScratchbookLayer,
@@ -529,6 +530,12 @@ function Shell() {
           <button className="page-row prototype-row" onClick={() => createLearningPrototypePage(editor)}>
             <Plus size={13} />
             <span>Learning prototype page</span>
+          </button>
+        )}
+        {dataPrototypeEnabled() && (
+          <button className="page-row prototype-row" onClick={() => createDataPrototypePage(editor)}>
+            <Plus size={13} />
+            <span>Data prototype page</span>
           </button>
         )}
         <div className="pages">
@@ -1071,8 +1078,16 @@ function Shell() {
   );
 }
 import { GeoShapeGeoStyle, PageRecordType } from "tldraw";
-const scratchShapes = [CardShapeUtil, PromptShapeUtil];
+const scratchShapes = [CardShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil];
 const scratchTools = [CardShapeTool];
+function CanvasLayers() {
+  return (
+    <>
+      <ScratchbookLayer />
+      <DataLayer />
+    </>
+  );
+}
 function App() {
   const [ready, setReady] = useState(false);
   const [agentEditor, setAgentEditor] = useState<Editor | null>(null);
@@ -1088,7 +1103,7 @@ function App() {
   }
   const components: TLComponents = {
     InFrontOfTheCanvas: Shell,
-    OnTheCanvas: ScratchbookLayer,
+    OnTheCanvas: CanvasLayers,
     Background: PaperBackground,
   };
   function mount(editor: Editor) {
