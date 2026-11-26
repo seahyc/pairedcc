@@ -227,7 +227,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     (`tsx eval/agent-tasks.ts attempt`), with board evidence kept for any failure, and task 14's
     check is either confirmed or corrected with the reason given.
 
+33. **Agent tools never offer authorship.** `canvas_annotate` advertised an `author` field
+    defaulting to "Human" (found by the agent-usability attempt, PR #24). The canvas ignores it and
+    attributes the note to the caller, but the schema invites an agent to claim the person's voice.
+    Done when no agent-facing tool schema has an authorship field, checked by a test.
+
 ## Claims
+33. Agent tools never offer authorship | claude/sprint-annotate-author | 2026-11-26T11:20Z
 32. Ask names the connected agent | claude/sprint-ask-recent-agent | 2026-11-26T11:17Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 31. Stable performance numbers | claude/sprint-perf-stable | 2026-11-26T11:13Z
