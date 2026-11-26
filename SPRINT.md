@@ -130,7 +130,7 @@ task by which measure is furthest from target, not by backlog order.
    checks schemas only; stale-write rejection, locked-object rejection, partial chart state and
    `read` omitting rows are proven only by `tools/verify-data-agent.cjs`, which `pnpm test` does not
    run. Done when breaking any of those behaviours fails `pnpm test:canvas` (or the eval).
-10. (PR #19 open, awaiting review.) **Repair `e2e/tests/editor-collab.spec.ts`.** It signs in with placeholder magic-link tokens
+10. (Merged, see Done.) **Repair `e2e/tests/editor-collab.spec.ts`.** It signs in with placeholder magic-link tokens
     (`test-token-1`) that the server never issues, so it fails at the first step even with Postgres,
     Redis and `JWT_SECRET` available. Done when it passes against a local server with a real
     sign-in path and its required services are documented. Do not delete or skip it.
@@ -145,16 +145,16 @@ task by which measure is furthest from target, not by backlog order.
     (and a test) that leaves prototype tools out of the hosted manifest, defaulting to the current
     behaviour until the maintainer chooses.
 
-13. (PR #18 open, awaiting review.) **Person imports a CSV.** Dropping a `.csv` file on the canvas creates a dataset object with
+13. (Merged, see Done.) **Person imports a CSV.** Dropping a `.csv` file on the canvas creates a dataset object with
     typed columns (validation errors shown, nothing partial created). Done when the eval's first
     acceptance step passes.
 14. (Merged, see Done.) **Transitive staleness.** A result recorded with `inputs: [chart]` is not marked stale when the
     chart's dataset changes, only when the chart itself is recomputed. Done when the eval step
     "Changing an input marks its dependents stale" passes and the read reports the upstream cause.
-15. (PR #17 open, awaiting review.) **Reload must not change objects.** Reopening a board re-measures cards and bumps their height
+15. (Merged, see Done.) **Reload must not change objects.** Reopening a board re-measures cards and bumps their height
     and revision, so a revision an agent held before the reload goes stale. Done when the eval step
     "Reload restores everything" passes.
-16. (#14 merged; PR #16 open, awaiting review.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
+16. (Merged, see Done; panning a full 10k board is still slow.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
     Done when the performance measure reports 10k load and pan numbers (raise the limit or
     decide another way and record it).
 20. (Renumbered from 17 to avoid a clash; likely covered by the `yc/calm-canvas` rework for playtest 1, so check that PR before starting.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
@@ -168,22 +168,23 @@ task by which measure is furthest from target, not by backlog order.
     the tools. Done when the scorecard reports a completion rate and median tool calls.
 19. **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
-    their boards, open one, and restore an earlier revision from the canvas.21. (PR #20 open, awaiting review.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
+    their boards, open one, and restore an earlier revision from the canvas.
+21. (Merged, see Done.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
     the default view must be behind flags. The flagged buttons are, but any agent can still put a
     dataset, chart or learning prompt on a default board: the tab runs `dataset`, `chart`,
     `chart_state`, `cell` and `learn` whatever its flags. Done when a tab without `?prototype=data`
     (or `?prototype=learning`) refuses those operations with an error that says how to turn them
     on, flagged tabs and saved boards behave as before, and a test fails if the gate is removed.
 
-21. **Board sync against the real server, in a browser.** Sync has only run in a browser against
+24. **Board sync against the real server, in a browser.** Sync has only run in a browser against
     the development board store. Done when a scripted check signs in to a local server (Postgres,
     Redis), opens the canvas, saves, and a second clean browser on the same account opens the same
     board, without needing a tldraw licence key (for example the dev canvas proxying `/auth` and
     `/api/canvas/boards` to the server behind an environment switch).
-22. **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
+25. **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
     "Offline · saved on this device" and retries for ever, re-uploading each time. Done when a
     refused save says why on the chip, stops retrying until the board changes, and has a test.
-23. **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
+26. **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
     Done when the server enforces a per-account limit with a test and the choice is recorded.
 
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
@@ -196,6 +197,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Done
 - 18. Agent-usability tasks: PR #24 (21 tasks, self-test proves every check fails before and passes after a reference solution; first attempt by a fresh agent 20/21, median 3 tool calls).
+- Reviewed and merged 2026-11-26 by the review lane: #16 as af63474, #17 as c6b5849, #18 as f104315, #19 as a4b927e, #20 as be3dce9.
+- 10. e2e repair: PR #19 (real magic-link sign-in; root `pnpm build && pnpm test` is green when Postgres, Redis and `JWT_SECRET` are provided).
+- 13. CSV import: PR #18 (behind `?prototype=data`; acceptance 10/10 together with #17).
+- 15. Reload stability: PR #17.
+- 16. 10k objects: PRs #14 and #16 (10k opens in about 9 s; panning with all 10k on screen is 40 to 90 ms a frame).
+- 21. Prototype operations behind flags: PR #20.
 - Reviewed and merged 2026-11-26 by the review lane, each re-run against the combined branch: #8 as 6f4f3fb, #9 as e357f71, #10 as f7483a9, #11 as 4e4c9b7, #12 as 204980a, #13 as 054ab83, #14 as 3a4a85f, #15 as 8708875 (with two fixes, see Decisions needed).
 - 8. Docs: PRs #9 (data prototype documented, docs checked by test) and #10 (Agent access fills in the checkout's paths).
 - 12. Prototype tool exposure: PR #13 (`hostedPrototypeTools`, default on).
@@ -209,6 +216,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Decisions needed
 - (build-A, item 18) The agent under test reaches the tools through a counting command-line MCP client (`eval/mcp-call.ts`) rather than native MCP tools in its harness, so calls can be counted and the session pinned. Task 14 failed with no board evidence kept; the check was left strict and the runner now records evidence. The agent's friction list (annotate `author` default, annotation arrow anchors, 39 KB tool list) is in PR #24.
+- (review, item 13) CSV typing: a column whose values all parse as numbers becomes numeric, so codes such as `007` lose their leading zeros and `0x10` reads as 16. Alternative: only plain decimal notation without leading zeros counts as a number.
+- (review, item 10) The scorecard's "Existing product" row stays red wherever Postgres and Redis are absent, because the e2e suite now needs them (it stops with a message naming the missing variable). With them it is green.
 - (review, item 1) Changed in #15 before merging: when this browser has unsaved edits and the account's board has moved on, or two browsers create the board at once, the two cannot be merged (no shared version is known), so the browser's board is saved as a separate board and the account's is opened. Before, the browser's board replaced the account's and the newer work survived only in the 50-revision history. This supersedes "this browser's edits on top" in the build-A note below.
 - (review, item 1) Board sync was not exercised in a browser against the real server: a production canvas build needs `VITE_TLDRAW_LICENSE_KEY`. The real API was checked with a session cookie and a real board. The scorecard's Persistence pass is against the development board store.
 - (review, item 1) Migration 007 runs on server start, so it reaches production with the first deploy of this branch. No cap on boards per account.
@@ -267,3 +276,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T10:44Z | build-B | 11 Shared-edit gaps | #22 | Three races added; safety measure 3/6 (1 human edit lost) on the old code to 6/6 (0 lost) |
 | 2026-11-26T10:50Z | build-A | 18 Agent-usability tasks | #24 | 21 tasks, self-test 21/21, attempt 20/21 (95%), median 3 calls; scorecard agent usability not run→pass |
 | 2026-11-26T10:50Z | build-B | 9 Editor-level data agent tests | #25 | Pure write rules unit-tested; safety 3/3 to 6/6 races with data races; four mutations each fail a check |
+| 2026-11-26T10:50Z | review | Review #16 to #20 | #16 #17 #18 #19 #20 | All five merged (squash); proofs re-run on the combined branch, e2e against real Postgres and Redis; scorecard on 816edb9: acceptance 10/10, safety pass, persistence pass (dev store), 10k load 9.4 s |
