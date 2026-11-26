@@ -130,7 +130,7 @@ task by which measure is furthest from target, not by backlog order.
    checks schemas only; stale-write rejection, locked-object rejection, partial chart state and
    `read` omitting rows are proven only by `tools/verify-data-agent.cjs`, which `pnpm test` does not
    run. Done when breaking any of those behaviours fails `pnpm test:canvas` (or the eval).
-10. **Repair `e2e/tests/editor-collab.spec.ts`.** It signs in with placeholder magic-link tokens
+10. (PR #19 open, awaiting review.) **Repair `e2e/tests/editor-collab.spec.ts`.** It signs in with placeholder magic-link tokens
     (`test-token-1`) that the server never issues, so it fails at the first step even with Postgres,
     Redis and `JWT_SECRET` available. Done when it passes against a local server with a real
     sign-in path and its required services are documented. Do not delete or skip it.
@@ -179,7 +179,6 @@ task by which measure is furthest from target, not by backlog order.
 21. Prototype operations behind flags | claude/sprint-proto-gate | 2026-11-26T10:42Z
 18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
-10. Repair e2e editor-collab spec | claude/sprint-e2e-collab | 2026-11-26T10:30Z
 
 ## Done
 - 1. Server-side boards: PRs #12 (server API, Postgres store, revisions, stale-write 409) and #15 (canvas sync, merge by object, move from IndexedDB, dev board store). Persistence passes on #15.
@@ -214,6 +213,7 @@ task by which measure is furthest from target, not by backlog order.
 - (build-B, item 16) Raised tldraw's `maxShapesPerPage` from 4,000 to 20,000 (`src/canvas-options.ts`). With #16, a 10k board loads in about 8 s and pans at 39.6 ms per frame when every object is on screen (16.7 ms at 100% zoom; the remaining cost is tldraw's own rendering). Open product choices: level-of-detail or culling when zoomed far out, and virtualising or summarising the layers panel, which still mounts one row per object.
 - (build-B, item 15) A card's auto-sized `props.h` no longer bumps the revision (one definition of derived fields in `src/revision.ts`, shared with run-undo), and reload no longer re-estimates card heights; cards on screen re-measure once fonts load.
 - (build-B, item 13) Dropping a CSV creates a dataset only with `?prototype=data`, since the scenario is still proposed; without the flag a CSV drop does what it did before. The dataset's top-left corner lands at the drop point; a column is numeric only if every value is.
+- (build-B, item 10) The e2e spec signs in by reading the real magic link from the server log (email sending is not built) and invites the second user through Share, because a signed-in user's document is private. Mismatch found, not changed: the editor tells the owner "anyone with this link can edit", but the API returns 404 to signed-in non-collaborators and the page stays on "Loading document...". Product choice needed: make link access real, or change the banner.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -232,3 +232,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T10:21Z | build-B | 15 Reload stability | #17 | Reload leaves objects unchanged; eval acceptance 8/10 to 9/10; late-font reload keeps height and revision |
 | 2026-11-26T10:23Z | build-A | 1 Server-side boards | #12 #15 | Server API with Postgres tests and live check; canvas sync; scorecard Persistence fail→pass |
 | 2026-11-26T10:29Z | build-B | 13 CSV import | #18 | CSV drop creates a typed dataset or reports row/column errors; eval CSV step passes; with #17 the acceptance scenario is 10/10 |
+| 2026-11-26T10:37Z | build-B | 10 Repair e2e spec | #19 | Real magic-link sign-in and Share invite; passes 3/3 against local Postgres and Redis; root `pnpm build && pnpm test` green with services |
