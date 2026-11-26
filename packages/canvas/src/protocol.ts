@@ -41,6 +41,15 @@ export const resolveInput = z.object({
   expectedRevision: z.number().int().nonnegative(),
   status: z.enum(["open", "resolved"]),
 });
+export const feedbackInput = z.object({
+  status: z.enum(["open", "resolved", "all"]).default("all").describe("Which items to return."),
+  allPages: z.boolean().default(true).describe("Every page of the board (default) or only the open page."),
+  format: z.enum(["json", "markdown"]).default("json").describe("markdown adds a readable `markdown` summary beside the items."),
+});
+export const replyInput = z.object({
+  id: shapeId.describe("Feedback item id from canvas_feedback."),
+  text: z.string().min(1).max(10000),
+});
 export const commandSchema = z.object({
   op: z.enum([
     "read",
@@ -59,6 +68,8 @@ export const commandSchema = z.object({
     "scene",
     "arrange",
     "duplicate",
+    "feedback",
+    "reply",
   ]),
   input: z.record(z.string(), z.unknown()).optional(),
 });

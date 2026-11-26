@@ -1,0 +1,146 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildFeedback,
+  feedbackCounts,
+  feedbackMarkdown,
+  feedbackTitle,
+  filterFeedback,
+  type FeedbackSource,
+} from "../src/feedback";
+import { commandSchema, feedbackInput, replyInput } from "../src/protocol";
+
+const t0 = Date.UTC(2026, 10, 26, 6, 0, 0);
+const source = (id: string, over: Partial<FeedbackSource> = {}): FeedbackSource => ({
+  id: `shape:${id}`,
+  type: "card",
+  pageId: "page:1",
+  pageName: "Page 1",
+  name: id,
+  text: "",
+  author: "Human",
+  revision: 1,
+  meta: {},
+  bounds: { x: 10.4, y: 20.6, w: 100, h: 50 },
+  ...over,
+});
+const comment = (id: string, text: string, meta: Record<string, unknown> = {}, over: Partial<FeedbackSource> = {}) =>
+  source(id, { text, meta: { role: "annotation", status: "open", author: "Human", createdAt: t0, ...meta }, ...over });
+
+describe("feedback queue", () => {
+  const board: FeedbackSource[] = [
+    source("option-a", { type: "image", name: "Option A", author: "Agent", meta: { createdBy: "Agent", mark: "picked", markStatus: "open", markedAt: t0 + 3000 } }),
+    source("option-b", { name: "Option B", text: "Night market", author: "Agent", meta: { mark: "rejected", markStatus: "resolved", markedAt: t0 + 1000, resolvedAt: t0 + 9000, resolvedBy: "MCP agent" } }),
+    comment("c-object", "make this shorter", { targetId: "shape:option-b", createdAt: t0 + 2000, updatedAt: t0 + 2500 }),
+    comment("c-region", "something is missing here", { createdAt: t0 + 4000 }, { pageId: "page:2", pageName: "Ideas" }),
+    comment("c-multi", "these two disagree", { targetId: "shape:option-a", targetIds: ["shape:option-a", "shape:option-b"], createdAt: t0 + 5000 }),
+    comment("c-gone", "about a deleted thing", { targetId: "shape:deleted", createdAt: t0 + 6000 }),
+    source("ink", { type: "draw", inkTargets: ["shape:option-a"], meta: { createdAt: t0 + 7000 } }),
+    source("doodle", { type: "draw", inkTargets: [] }),
+    source("plain-note", { text: "just a note" }),
+    source("reply-1", { text: "Shortened to six words.", author: "MCP agent", meta: { role: "annotation", author: "MCP agent", targetId: "shape:c-object", replyTo: "shape:c-object", createdAt: t0 + 8000 } }),
+    source("reply-2", { text: "Earlier reply", author: "MCP agent", meta: { role: "annotation", author: "MCP agent", targetId: "shape:c-object", createdAt: t0 + 7500 } }),
+    source("agent-note", { text: "My read of A", author: "MCP agent", meta: { role: "annotation", author: "MCP agent", targetId: "shape:option-a" } }),
+    source("pick-reply", { text: "Rendering A properly.", author: "MCP agent", meta: { role: "annotation", author: "MCP agent", targetId: "shape:option-a", replyTo: "shape:option-a", createdAt: t0 + 9500 } }),
+  ];
+  const items = buildFeedback(board);
+  const byId = (id: string, kind?: string) => items.find((i) => i.id === `shape:${id}` && (!kind || i.kind === kind))!;
+
+  it("collects comments, picks, rejects and ink, and nothing else", () => {
+    expect(items.map((i) => `${i.kind}:${i.id}`).sort()).toEqual([
+      "comment:shape:c-gone",
+      "comment:shape:c-multi",
+      "comment:shape:c-object",
+      "comment:shape:c-region",
+      "ink:shape:ink",
+      "pick:shape:option-a",
+      "reject:shape:option-b",
+    ]);
+    expect(feedbackCounts(items)).toEqual({ total: 7, open: 6, resolved: 1, comments: 4, picks: 1, rejects: 1, ink: 1 });
+  });
+
+  it("puts open items first, oldest first, and resolved items last", () => {
+    expect(items.map((i) => i.id.slice(6))).toEqual(["c-object", "option-a", "c-region", "c-multi", "c-gone", "ink", "option-b"]);
+    expect(filterFeedback(items, "resolved").map((i) => i.id)).toEqual(["shape:option-b"]);
+    expect(filterFeedback(items, "open")).toHaveLength(6);
+    expect(filterFeedback(items, "all")).toHaveLength(7);
+  });
+
+  it("describes what each item is about", () => {
+    const onObject = byId("c-object");
+    expect(onObject).toMatchObject({
+      kind: "comment",
+      status: "open",
+      text: "make this shorter",
+      author: "Human",
+      pageName: "Page 1",
+      targetIds: ["shape:option-b"],
+      targets: [{ id: "shape:option-b", type: "card", name: "Option B", text: "Night market" }],
+      position: { x: 10, y: 21 },
+      createdAt: new Date(t0 + 2000).toISOString(),
+      updatedAt: new Date(t0 + 2500).toISOString(),
+    });
+    expect(byId("c-region")).toMatchObject({ targetIds: [], targets: [], pageId: "page:2", pageName: "Ideas" });
+    expect(byId("c-multi").targetIds).toEqual(["shape:option-a", "shape:option-b"]);
+    expect(byId("c-gone").targets).toEqual([{ id: "shape:deleted", missing: true }]);
+    expect(byId("ink").targetIds).toEqual(["shape:option-a"]);
+  });
+
+  it("records who resolved an item and when", () => {
+    expect(byId("option-b")).toMatchObject({ kind: "reject", status: "resolved", resolvedBy: "MCP agent", resolvedAt: new Date(t0 + 9000).toISOString() });
+    expect(byId("option-a").resolvedAt).toBeUndefined();
+  });
+
+  it("threads agent replies under the item they answer, in order", () => {
+    expect(byId("c-object").replies.map((r) => r.text)).toEqual(["Earlier reply", "Shortened to six words."]);
+    // A note about a picked object is a reply only when it says so.
+    expect(byId("option-a", "pick").replies.map((r) => r.id)).toEqual(["shape:pick-reply"]);
+    expect(items.some((i) => i.id === "shape:reply-1" || i.id === "shape:agent-note")).toBe(false);
+  });
+
+  it("ignores agent-authored notes and human notes that are not feedback", () => {
+    const only = buildFeedback([
+      source("agent", { author: "Agent", meta: { role: "annotation", author: "Agent", status: "open" } }),
+      source("plain", { text: "thinking out loud" }),
+    ]);
+    expect(only).toEqual([]);
+  });
+
+  it("titles rows by what was said or judged", () => {
+    expect(feedbackTitle(byId("c-object"))).toBe("make this shorter");
+    expect(feedbackTitle(byId("option-a", "pick"))).toBe("Picked: Option A");
+    expect(feedbackTitle(byId("option-b"))).toBe("Rejected: Option B");
+    expect(feedbackTitle(byId("ink"))).toBe("Ink over Option A");
+  });
+
+  it("exports readable Markdown with text, target, author, state and replies", () => {
+    const md = feedbackMarkdown(items, { title: "Page 1", exportedAt: new Date(t0) });
+    expect(md).toContain("# Feedback: Page 1");
+    expect(md).toContain("6 open, 1 resolved (4 comments, 1 picks, 1 rejects, 1 ink marks). Exported 2026-11-26T06:00:00.000Z.");
+    expect(md).toContain("## Open (6)");
+    expect(md).toContain('1. **Comment** on "Option B" (card, shape:option-b)');
+    expect(md).toContain("   > make this shorter");
+    expect(md).toContain("   - Reply from MCP agent: Shortened to six words.");
+    expect(md).toContain("**Comment** on the board at (10, 21)");
+    expect(md).toContain("a deleted object (shape:deleted)");
+    expect(md).toContain("## Resolved (1)");
+    expect(md).toContain('**Rejected** on "Option B" (card, shape:option-b): "Night market"');
+    expect(md).toContain("resolved by MCP agent at 2026-11-26T06:00:09.000Z");
+    expect(feedbackMarkdown([])).toContain("No feedback has been left on this board.");
+  });
+});
+
+describe("feedback operations boundary", () => {
+  it("defaults to the whole board, every status, as JSON", () => {
+    expect(feedbackInput.parse({})).toEqual({ status: "all", allPages: true, format: "json" });
+    expect(feedbackInput.safeParse({ status: "pending" }).success).toBe(false);
+  });
+  it("requires a feedback item id and text to reply", () => {
+    expect(replyInput.safeParse({ id: "shape:x", text: "ok" }).success).toBe(true);
+    expect(replyInput.safeParse({ id: "x", text: "ok" }).success).toBe(false);
+    expect(replyInput.safeParse({ id: "shape:x", text: "" }).success).toBe(false);
+  });
+  it("accepts the feedback and reply commands", () => {
+    expect(commandSchema.safeParse({ op: "feedback" }).success).toBe(true);
+    expect(commandSchema.safeParse({ op: "reply", input: { id: "shape:x", text: "ok" } }).success).toBe(true);
+  });
+});
