@@ -25,6 +25,15 @@ const raw: Raw & Record<string, unknown> = {};
 const log = (s: string) => process.stderr.write(`${s}\n`);
 
 const server = await startServer();
+async function isolated<T>(run: (base: string) => Promise<T>): Promise<T> {
+  if (!process.env.EVAL_URL) return run(server.base);
+  const own = await startServer(Number(process.env.EVAL_PORT ?? 5191) + 1, true);
+  try {
+    return await run(own.base);
+  } finally {
+    own.stop();
+  }
+}
 const browser = await launch();
 try {
   // Warm up: on a fresh server Vite may optimise dependencies and reload the page once.
@@ -33,7 +42,9 @@ try {
   await warm?.context.close();
   for (const [name, run] of [
     ["acceptance", () => acceptance(browser, server.base)],
-    ["askLoop", () => askLoop(browser, server.base)],
+    // The Ask loop always gets a fresh server of its own: on a reused EVAL_URL server a
+    // resident agent could take the fixture's asks and spend a real model on them.
+    ["askLoop", () => isolated((base) => askLoop(browser, base))],
     ["safety", () => safety(browser, server.base)],
     ["persistence", () => persistence(browser, server.base)],
     ["performance", () => performanceMeasure(browser, server.base)],
