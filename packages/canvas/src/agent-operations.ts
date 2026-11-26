@@ -693,7 +693,9 @@ export async function executeCommand(
       // The person's words stay theirs; checked before anything is written.
       const target = z.object({ id: z.string(), text: z.unknown().optional() }).safeParse(command.input);
       const shape = target.success ? editor.getShape(target.data.id as TLShapeId) : undefined;
-      const refusal = shape && rewriteRefusal(authorOf(shape), target.success ? target.data : {});
+      // A copy an agent made of the person's card is still their words in their hand.
+      const inTheirHand = shape?.type === "card" && (shape.props as { tone?: unknown }).tone === "human";
+      const refusal = shape && rewriteRefusal(inTheirHand ? HUMAN : authorOf(shape), target.success ? target.data : {});
       if (refusal) throw new Error(refusal);
       return patchObject(editor, command.input);
     }
