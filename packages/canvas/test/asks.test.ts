@@ -151,3 +151,30 @@ describe("resident agent prompt", () => {
     expect(() => parseReply("  ")).toThrow();
   });
 });
+
+import { startersFor, starters as defaultStarters } from "../src/ask-rules";
+describe("starters that fit the selection", () => {
+  const card = (text: string) => ({ type: "card", text });
+  it("keeps the usual three for one thought", () => {
+    expect(startersFor([card("Charge per seat")])).toEqual(defaultStarters);
+    expect(startersFor([])).toEqual(defaultStarters);
+  });
+  it("offers to answer a question", () => {
+    expect(startersFor([card("Should we charge per seat?")])[0]).toBe("Answer this");
+  });
+  it("offers comparison, on named dimensions, for several objects", () => {
+    expect(startersFor([card("Option A"), card("Option B")])).toEqual([
+      "Compare these",
+      "What dimensions do these differ on?",
+      "What do they have in common?",
+    ]);
+  });
+  it("speaks to a group or a chart", () => {
+    expect(startersFor([{ type: "frame", text: "" }])[0]).toBe("Sum up this group");
+    expect(startersFor([{ type: "chart", text: "" }])[0]).toBe("What does this show?");
+  });
+  it("never offers more than three", () => {
+    for (const sel of [[card("a")], [card("a?")], [card("a"), card("b")], [{ type: "frame", text: "" }], [{ type: "chart", text: "" }]])
+      expect(startersFor(sel).length).toBeLessThanOrEqual(3);
+  });
+});

@@ -29,6 +29,20 @@ export function suggestQuestion(selectedText: string) {
 
 export const starters = ["What's missing?", "Give me alternatives", "Poke holes in this"];
 
+/**
+ * Starters chosen from what is selected, so the person recognises a next step rather than
+ * recalling one. Several objects invite comparison on stated dimensions, not a verdict.
+ */
+export function startersFor(selection: readonly { type: string; text: string }[]): string[] {
+  if (selection.length > 1) return ["Compare these", "What dimensions do these differ on?", "What do they have in common?"];
+  const [only] = selection;
+  if (!only) return starters;
+  if (only.type === "frame") return ["Sum up this group", "What's missing here?", "Poke holes in this"];
+  if (only.type === "chart" || only.type === "dataset") return ["What does this show?", "What stands out?", "What would you check next?"];
+  if (/\?\s*$/.test(only.text.trim())) return ["Answer this", "What would change the answer?", "Give me alternatives"];
+  return starters;
+}
+
 /** What an ask shows under itself, for each state. */
 export function askStatusLine(
   ask: { state: string; agent?: string; note?: string; error?: string; read?: string; askedAt: number; startedAt?: number; answeredAt?: number },

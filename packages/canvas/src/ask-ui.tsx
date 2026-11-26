@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentListeners, agentLink, announceAsk } from "./agent-client";
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
-import { askStatusLine, starters, suggestQuestion } from "./ask-rules";
+import { askStatusLine, startersFor, suggestQuestion } from "./ask-rules";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
 
@@ -119,6 +119,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
         text: only ? textOf(only) : "",
+        starters: startersFor(shapes.map((s) => ({ type: s.type, text: textOf(s) }))).join("\n"),
         blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
       };
     },
@@ -201,7 +202,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
           </button>
         </div>
         <div className="ask-starters">
-          {starters.map((s) => (
+          {(state?.starters.split("\n") ?? []).map((s) => (
             <button key={s} type="button" onClick={() => submit(s)}>
               {s}
             </button>
