@@ -292,6 +292,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     Done when each is fixed or documented in AGENT_API.md, with a test for each fix.
 
 ## Claims
+43. Agent friction from the 24-task attempt | claude/sprint-agent-friction | 2026-11-26T11:41Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
