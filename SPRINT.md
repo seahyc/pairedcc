@@ -493,7 +493,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 79. (PR #103 open, awaiting review.) **`read`'s text filter: the two findings left open on #78.** (Decisions needed, build-B item 58.) (a) `ß` does not fold to `ss`, so `STRASSE` misses `Straße`; (b) a match may end inside a grapheme, so `कल` matches `कला` and `かく` matches `かぐ` once normalised. Done when each has a failing-first unit test and is fixed, with Latin, Greek and accented matching unchanged.
 
+80. **An ask about something in a frame is hidden by the frame.** "The agent must visibly respond" and "Text never leaves its container". Selecting a card inside a frame and asking places the ask just right of the card; the canvas parents it into the frame under that spot, and the frame clips it, so the person sees an empty pink strip instead of their question (seen at 1440 px while checking item 67). Comments, replies and answers placed near objects in a frame can be clipped the same way. Done when asks, comments, replies and answers are never clipped by a frame (they sit on the page above it and still follow what they are about when it or its frame moves), checked in a real page that fails before and passes after, with before/after screenshots.
+
 ## Claims
+80. Ask about something in a frame is hidden by the frame | claude/sprint-ask-unclipped | 2026-11-26T13:23Z
 7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
