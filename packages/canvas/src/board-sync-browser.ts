@@ -112,8 +112,13 @@ export const boardHistory = {
   },
 };
 
-/** Start keeping this editor's board saved to the account. Returns a stop function. */
-export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
+/**
+ * Start keeping this editor's board saved to the account. Returns a stop function.
+ * `afterFirstLoad` runs once, just after the account's board first replaces this tab's copy,
+ * outside the load itself, so what it changes counts as an edit here and is saved.
+ */
+export function startBoardSync(editor: Editor, hadLocalWork: boolean, afterFirstLoad?: () => void) {
+  let firstLoad = afterFirstLoad;
   const sync = createBoardSync({
     api: boardApi,
     memo,
@@ -128,6 +133,9 @@ export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
         editor.run(() => loadSnapshot(editor.store, { document: snapshot as never }), { history: "ignore" });
         if (editor.getPage(page)) editor.setCurrentPage(page);
         bringContentIntoView(editor);
+        const after = firstLoad;
+        firstLoad = undefined;
+        if (after) setTimeout(after, 0);
       },
       reset: () => editor.clearHistory(),
       listen: (fn) => editor.store.listen(fn, { scope: "document", source: "user" }),
@@ -136,7 +144,8 @@ export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
   // Development only, like window.__pairedEditor: lets headless checks drive history.
   if (import.meta.env.DEV) (window as unknown as { __pairedBoardSync?: typeof sync }).__pairedBoardSync = sync;
   active = sync;
-  void sync.start();
+  // Only the load that starts the sync counts: a later restore or merge never lays out again.
+  void sync.start().finally(() => (firstLoad = undefined));
   return () => {
     if (active === sync) active = null;
     sync.stop();

@@ -1650,7 +1650,13 @@ function App() {
       // A board laid out on a wider screen can open with nothing in view here.
       bringContentIntoView(editor);
       // Then keep the board saved to the account; a brand-new board holds no work of its own.
-      if (!disposed) stopSync = startBoardSync(editor, !fresh);
+      // A board saved before the calm canvas, loaded from the account, gets the calm board too:
+      // the load replaces what prepare() laid out on this tab's copy.
+      if (!disposed) stopSync = startBoardSync(editor, !fresh, () => {
+        if (disposed) return;
+        prepare();
+        bringContentIntoView(editor);
+      });
     });
     setReady(true);
     return () => {
