@@ -607,7 +607,7 @@ function Shell() {
       const target = event.target;
       if (
         target instanceof HTMLElement &&
-        target.closest("input,textarea,select,[contenteditable=true]")
+        target.closest("input,textarea,select,[contenteditable=true],[role=dialog]")
       )
         return;
       if (event.altKey) return;
@@ -666,6 +666,16 @@ function Shell() {
     // P and X judge the selection. Capture first so tldraw's own X (pen) shortcut doesn't fire.
     function judge(event: KeyboardEvent) {
       const target = event.target;
+      // Keys meant for the board do nothing behind an open dialog; ? still closes the shortcuts.
+      const dialog = target instanceof HTMLElement ? target.closest("[role=dialog]") : null;
+      if (dialog) {
+        if (event.key === "?" && dialog.getAttribute("aria-label") === "Keyboard shortcuts") {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          setHelpOpen(false);
+        }
+        return;
+      }
       const typingOnBoard = target instanceof HTMLElement && Boolean(target.closest(".tl-container [contenteditable=true]"));
       const asksNow = (event.metaKey || event.ctrlKey) && event.key === "Enter" && typingOnBoard;
       if (
