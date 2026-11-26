@@ -1,12 +1,23 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-26T10:45Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-26T11:00Z by the review lane. Branch: `claude/sprint-int`.
 
 ## Read first
-- **Playtest 1 rejected the build** (`docs/canvas/feedback/2026-11-26-playtest-1.md`): hard to use,
-  noisy, too open-ended, text overflows, no visible way to make the agent respond. Nothing merged so
-  far answers it; the rework is on `yc/calm-canvas`, which has no PR yet. Everything below is
-  plumbing (scorecard, storage, docs), not the experience.
+- **The calm-canvas rework (#21) is merged, combined by the review lane with 16 sprint PRs.** It
+  conflicted in 15 files (21 places in `packages/canvas/src/App.tsx`). Where the two disagreed the
+  calm layout won; board sync, the prototypes, per-run undo and the reload fixes were fitted into
+  it. `App.tsx` and its `mount` function are the first thing to read, and the first screen is the
+  first thing to look at. What the review could and could not show:
+  - Checked by script: the first board holds three things, panels are behind the menu, text wraps
+    in cards, plain text, comments and a 300-word paste, an ask shows working then answered, pick
+    and cross out work, reload keeps everything (33 of 33 checks; the four no-agent checks need
+    the macOS service and were skipped).
+  - **No real model answered an ask.** The resident agent calls the local Claude Code CLI; the
+    sprint does not spend on models, so a stand-in returned a fixed reply.
+  - With `?prototype=data` or `?prototype=learning`, the prototype page button is now under Menu,
+    then Show layers and pages.
+  - Whether it is calm and usable is for the second playtest. Items 3, 5 and 6 of playtest 1 are
+    ticked as mechanically addressed; 1, 2, 4 and 7 are left open for that judgment.
 - **#15 changes how every signed-in board is saved, and is the merge most worth reading**
   (`packages/canvas/src/board-sync.ts`). The board is uploaded to the account 1.2 s after each
   change and a clean browser opens the account's board. Review found and fixed two defects before
@@ -33,41 +44,49 @@ Last updated 2026-11-26T10:45Z by the review lane. Branch: `claude/sprint-int`.
   limit on boards per account (10 MB per board, 50 revisions each).
 - **The Persistence row passes against the development board store, with no sign-in involved.** It
   shows the canvas side works; it does not show boards saved on the real server from a browser.
-- **A page may now hold 20,000 objects (#14), and 10k is slow**: 25 to 38 s to open and 40 to 100 ms
-  a frame while panning, across four runs. #16 (open, not yet reviewed) addresses it.
-- **Root `pnpm test` is still not green**: the e2e suite signs in with tokens the server never
-  issues (backlog 10, claimed). Every other package passes.
+- **A page may now hold 20,000 objects (#14).** With #16 a 10k board opens in about 9 s (was 25 to
+  38 s). Panning with all 10k on screen is still 40 to 90 ms a frame; that time is in tldraw's own
+  rendering.
+- **Root `pnpm build && pnpm test` is green when Postgres, Redis and `JWT_SECRET` are provided**
+  (#19; verified against Postgres 16 and Redis). Without them the e2e suite stops with a message
+  naming the missing variable, so the scorecard's "Existing product" row reads fail in the sprint
+  environment.
+- **#17 changes how every card sizes itself**: a card waits for the board's fonts before measuring.
+  The review typed a long note into a new card and it grew to fit with no overflow, but this is
+  the area the playtest complained about, so it is worth a look by eye.
+- **An agent can no longer place prototype objects on a default board (#20).** The tools are still
+  listed to every agent (`hostedPrototypeTools`, #13) and refuse with a message naming the flag.
 - Earlier points that still hold: #7 changes every board and was not from a sprint lane; per-run
   agent undo (#5) writes store records directly and its known gaps are backlog 11; agent operations
   of the data and learning prototypes are proven by headless scripts, not `pnpm test` (backlog 9).
 
 ## Status
-`pnpm build` passes. `pnpm -r --no-bail test` on `8708875`:
+`pnpm build` passes. `pnpm -r --no-bail test` on `16ce025`:
 
 | Package | Result |
 |---|---|
-| canvas | 114 passed |
+| canvas | 150 passed |
 | server | 129 passed, 7 skipped (the Postgres board suite; 19 of 19 pass with `TEST_DATABASE_URL` set) |
 | sdk | 12 passed |
 | mcp-server | 4 passed |
 | cli, web | no test files |
-| e2e | fails, as before the sprint |
+| e2e | needs Postgres and Redis; 1 passed when they are provided, otherwise stops at start |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T10:37Z on `8708875`:
+Scorecard from `pnpm eval:canvas` at 2026-11-26T11:00Z on `16ce025`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
-| Acceptance scenario | every step passes | 8/10 steps | fail |
+| Acceptance scenario | every step passes | 10/10 steps | pass |
 | Agent usability | ≥90% of ≥20 tasks | 0 tasks, no recorded attempt | not run |
 | Safety of shared edits | 0 human edits lost | 0 lost; 3/3 races pass | pass |
 | Persistence | identical in a clean profile | identical | pass |
-| Performance | reported, not worse | 1k: load 2745 ms, pan 16.7 ms/frame; 10k: load 33584 ms, pan 80.6 ms/frame | reported |
+| Performance | reported, not worse | 1k: load 1358 ms, pan 16.7 ms/frame; 10k: load 7135 ms, pan 40 ms/frame | reported |
 | Existing product | green | build passes; tests: e2e failing | fail |
 <!-- scorecard:end -->
 
-Acceptance is 8 of 10. The two failing steps are a person dropping a CSV (#18, open) and reload
-changing card heights (#17, open). Agent usability has no tasks yet (backlog 17, claimed).
+The acceptance scenario passes all ten steps, driven by a person in the page and an agent over
+MCP. Agent usability has no tasks yet (backlog 18, claimed).
 
 ## Merged
 - [#2](https://github.com/seahyc/pairedcc/pull/2) Dataset and chart state model (9f19690).
@@ -84,6 +103,12 @@ changing card heights (#17, open). Agent usability has no tasks yet (backlog 17,
 - [#13](https://github.com/seahyc/pairedcc/pull/13) `hostedPrototypeTools` switch; default unchanged, manifest byte-identical (054ab83).
 - [#14](https://github.com/seahyc/pairedcc/pull/14) Per-page limit raised from 4,000 to 20,000 so 10k can be measured (3a4a85f).
 - [#15](https://github.com/seahyc/pairedcc/pull/15) The canvas keeps its board saved to the account and merges by object on a stale save (8708875). Review fixed the two defects described above.
+- [#16](https://github.com/seahyc/pairedcc/pull/16) The layers panel and rich-text reading no longer scale quadratically; a 10k board opens in about 9 s (af63474). The claimed pan improvement did not reproduce; pan time varies run to run.
+- [#17](https://github.com/seahyc/pairedcc/pull/17) Reload leaves saved objects unchanged: no height re-estimate, and a card's auto-sized height does not bump its revision (c6b5849).
+- [#18](https://github.com/seahyc/pairedcc/pull/18) Dropping a CSV on the data prototype creates a typed dataset, or nothing with a message naming the row and column (f104315).
+- [#19](https://github.com/seahyc/pairedcc/pull/19) The document collaboration e2e test signs in for real and passes; services documented in `e2e/README.md` (a4b927e).
+- [#20](https://github.com/seahyc/pairedcc/pull/20) Prototype agent operations are refused in a tab without the prototype flag (be3dce9).
+- [#21](https://github.com/seahyc/pairedcc/pull/21) Calm canvas from `yc/calm-canvas`: one Ask loop, a resident agent, text that wraps, panels behind one menu (16ce025, squashed locally with the conflicts resolved; shows as closed, not merged). Review made board sync check the board list before fetching, so a first open no longer logs a 404.
 - Review lane: `packages/cli` and `packages/web` test scripts pass with no test files (a712b50).
 
 How each was checked: the branch was merged with the integration branch, built and tested; every
@@ -104,7 +129,8 @@ None.
    the 10 MB.
 4. **Development server stores boards on disk** and shares them between local browsers. Alternative:
    only when `PAIRED_BOARDS_DIR` is set.
-5. **20,000 objects per page.** Alternative: keep 4,000 until large boards are fast.
+5. **20,000 objects per page.** Alternative: keep 4,000 until large boards are fast. Related: cull or
+   simplify when zoomed far out, and summarise the layers panel instead of one row per object.
 6. **Prototype tools on the hosted endpoint.** Now one constant, `hostedPrototypeTools`, left on.
    The new brief says prototypes that add noise belong behind flags; turning this off is the
    matching choice for agents.
@@ -113,9 +139,14 @@ None.
 8. **Agent undo semantics.** Per run, all-or-nothing, shares the person's undo history.
 9. **Who may hide what in learning mode.** An agent can hide the person's own objects behind a prompt.
 10. **Workspace test gate.** Whether `pnpm test` includes e2e, which needs Postgres, Redis and `JWT_SECRET`.
+11. **CSV number columns.** Any all-numeric column becomes numbers, so codes like `007` lose their
+    zeros. Alternative: stricter rule, or let the person set the type.
+12. **Document sharing wording** (found by #19, outside canvas scope): a new document says "anyone
+    with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-Open and not yet reviewed: #16 (10k speed), #17 (reload stability), #18 (CSV drop). Not started:
-foundational primitives (3), converge (5), board picker (19). Claimed without a PR: robustness (7),
-agent-usability tasks (17), e2e repair (10). PR descriptions #9 to #15 carry a tool footer written
-before the brief ruled it out; commits do not.
+Open and not yet reviewed: #22 (shared-edit gaps), #23 (primitives), #24 (agent-usability tasks),
+#25 (data agent tests) and later ones. They were written against the old layout and need re-checking
+on the calm canvas. Not started: converge (5), board picker (19). Claimed without a PR: foundational primitives
+(3), robustness (7), data agent tests (9), agent-usability tasks (18). PR descriptions #9 to #20
+carry a tool footer written before the brief ruled it out; commits do not.
