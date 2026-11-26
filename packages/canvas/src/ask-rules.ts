@@ -29,6 +29,19 @@ export function suggestQuestion(selectedText: string) {
 
 export const starters = ["What's missing?", "Give me alternatives", "Poke holes in this"];
 
+/**
+ * Starters chosen from what is selected, so the person recognises a next step rather than
+ * recalling one. Several objects invite comparison on stated dimensions, not a verdict.
+ */
+export function startersFor(selection: readonly { type: string; text: string }[]): string[] {
+  if (selection.length > 1) return ["Compare these", "What dimensions do these differ on?", "What do they have in common?"];
+  const [only] = selection;
+  if (!only) return starters;
+  // No group or chart starters yet: an ask about a frame does not send its children, and one
+  // about a chart does not send its data, so those starters would promise what the agent lacks.
+  if (/\?\s*$/.test(only.text.trim())) return ["Answer this", "What would change the answer?", "Give me alternatives"];
+  return starters;
+}
 /** How long an agent that acted on the tab counts as still connected. */
 export const RECENT_MS = 10 * 60_000;
 
