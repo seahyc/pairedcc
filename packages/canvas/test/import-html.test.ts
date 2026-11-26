@@ -77,3 +77,33 @@ describe("awkward markup stays quick (item 71)", () => {
     expect(ms).toBeLessThan(1000);
   });
 });
+
+describe("review of #93", () => {
+  it("repeated byline paragraphs with one distant close stay quick", () => {
+    const html = `<h1>News</h1>${'<p class="byline">x '.repeat(30000)}</p><p>The real story.</p>`;
+    const started = performance.now();
+    const md = htmlToMarkdown(html);
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(md).toContain("The real story.");
+  });
+  it("an <article> in a head comment, or an <article-card>, is not the content region", () => {
+    const html = '<html><head><!-- Example: <article> --></head><body><article-card>Card</article-card><main><h1>Report</h1><p>Results</p></main><p>Unrelated links</p></body></html>';
+    const md = htmlToMarkdown(html);
+    expect(md).toContain("# Report");
+    expect(md).toContain("Results");
+    expect(md).not.toContain("Unrelated links");
+    expect(md).not.toContain("-->");
+  });
+  it("text that changes length when lowercased does not shift what is read", () => {
+    const md = htmlToMarkdown("<article><h1>İstanbul</h1><p>See here</p><pre>a\nb</pre><script>x</script><p>After</p></article>");
+    expect(md).toBe("# İstanbul\n\nSee here\n\n```\na\nb\n```\n\nAfter\n");
+  });
+});
+
+describe("unclosed comments stay quick", () => {
+  it("2 MB of unclosed <!-- is read in under a second", () => {
+    const started = performance.now();
+    htmlToMarkdown(`<h1>Notes</h1><p>Kept.</p>${"<!--x ".repeat(330000)}`);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+});

@@ -17,25 +17,46 @@ const BLOCK = new Set(["p", "div", "section", "blockquote", "ul", "ol", "table",
 const VOID = new Set(["br", "hr", "img", "input", "meta", "link", "area", "base", "col", "embed", "source", "track", "wbr"]);
 const AD_CLASS = /\bclass\s*=\s*["'][^"']*\b(ad|ads|advert|advertisement|byline|share|cookie)\b/i;
 
+/** Comments removed in one pass; an unclosed comment runs to the end, as in a browser. */
+function stripComments(text: string) {
+  let out = "", at = 0;
+  for (;;) {
+    const open = text.indexOf("<!--", at);
+    if (open < 0) return out + text.slice(at);
+    out += text.slice(at, open);
+    const close = text.indexOf("-->", open + 4);
+    if (close < 0) return out;
+    at = close + 3;
+  }
+}
+
+/** Lowercase A to Z only, so every index matches the original text (Unicode lowercasing can change length, as İ does). */
+const asciiLower = (text: string) => text.replace(/[A-Z]+/g, (m) => m.toLowerCase());
+
 const clean = (text: string) => decodeEntities(text).replace(/[\s ]+/g, " ").trim();
 
 /** The content of a page or fragment as markdown. */
 export function htmlToMarkdown(html: string): string {
   const titleAt = html.search(/<title\b/i);
   const pageTitle = titleAt >= 0 ? /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html.slice(titleAt, titleAt + 2000))?.[1] : undefined;
+  // Comments and the head never hold the content, so they go before the content region is looked
+  // for (an "<article>" written in a comment is not one).
+  const source = stripComments(html).replace(/<head\b[\s\S]*?<\/head\s*>/i, "");
+  const lowerSource = asciiLower(source);
   // The region that holds the content: the first <article> to the last </article>, else <main>.
+  // A whole tag name only (not <article-card>), and only when it is closed.
   const region = (tag: string) => {
-    const open = html.search(new RegExp(`<${tag}\\b`, "i"));
-    if (open < 0) return undefined;
-    const start = html.indexOf(">", open) + 1;
-    const end = html.toLowerCase().lastIndexOf(`</${tag}>`);
-    return start > 0 ? html.slice(start, end > start ? end : html.length) : undefined;
+    const open = lowerSource.search(new RegExp(`<${tag}(?=[\\s>/])`));
+    const end = lowerSource.lastIndexOf(`</${tag}>`);
+    if (open < 0 || end < 0) return undefined;
+    const start = lowerSource.indexOf(">", open) + 1;
+    return start > 0 && end > start ? source.slice(start, end) : undefined;
   };
   const scoped = region("article") ?? region("main");
   let body = scoped;
   if (body === undefined) {
-    const lower = html.toLowerCase(), b = lower.search(/<body\b/), headEnd = lower.indexOf("</head>");
-    body = b >= 0 ? html.slice(html.indexOf(">", b) + 1) : headEnd >= 0 ? html.slice(headEnd + 7) : html;
+    const b = lowerSource.search(/<body(?=[\s>])/);
+    body = b >= 0 ? source.slice(lowerSource.indexOf(">", b) + 1) : source;
   }
   const dropChrome = scoped === undefined;
 
@@ -54,7 +75,7 @@ export function htmlToMarkdown(html: string): string {
     para = [];
   };
 
-  const lower = body.toLowerCase();
+  const lower = asciiLower(body);
   const tag = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)\b([^>]*)>|<!--[\s\S]*?-->/g;
   let at = 0, skip = 0, skipTag = "", adDivs = 0;
   let match: RegExpExecArray | null;
@@ -91,8 +112,10 @@ export function htmlToMarkdown(html: string): string {
     }
     if (!closing && /^(p|span)$/.test(name) && AD_CLASS.test(attrs)) {
       // A byline or share line: left out up to its end, when it has one close by.
-      const end = lower.indexOf(`</${name}>`, at);
-      if (end >= 0 && end - at < 5000) {
+      // Searched only within a short window, so many unclosed bylines cannot each scan to the end.
+      const near = lower.slice(at, at + 5000).indexOf(`</${name}>`);
+      const end = near < 0 ? -1 : at + near;
+      if (end >= 0) {
         at = end + name.length + 3;
         tag.lastIndex = at;
       }
