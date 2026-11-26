@@ -56,6 +56,8 @@ export function seed(editor: Editor) {
       type: "text",
       x,
       y,
+      // A width the board's own layout chose: not clamped to the reading width.
+      ...(opts.w ? { meta: { fixedWidth: true } } : {}),
       props: {
         richText: toRichText(value),
         font: opts.font ?? "sans",

@@ -1445,7 +1445,7 @@ function App() {
     const fresh = editor.getCurrentPageShapes().length === 0 && editor.getPages().length === 1 && !page.meta.seeded;
     // Plain text wraps at a reading width and grows downward instead of running off the board.
     const wrapText = (shape: TLShape) => {
-      if (shape.type !== "text" || !("autoSize" in shape.props) || !shape.props.autoSize) return;
+      if (shape.type !== "text" || !("autoSize" in shape.props) || !shape.props.autoSize || shape.meta.fixedWidth) return;
       const scale = "scale" in shape.props && typeof shape.props.scale === "number" ? shape.props.scale : 1;
       if (editor.getShapeGeometry(shape).bounds.w <= TEXT_WRAP * scale) return;
       editor.updateShape({ id: shape.id, type: "text", props: { autoSize: false, w: TEXT_WRAP } });
@@ -1453,7 +1453,7 @@ function App() {
     editor.sideEffects.registerAfterCreateHandler("shape", (shape) => {
       wrapText(shape);
       // Pasted text arrives at a fixed width close to the whole screen; bring it to a reading width.
-      if (shape.type === "text" && "w" in shape.props && !shape.props.autoSize && shape.props.w > TEXT_WRAP)
+      if (shape.type === "text" && "w" in shape.props && !shape.props.autoSize && shape.props.w > TEXT_WRAP && !shape.meta.fixedWidth)
         editor.updateShape({ id: shape.id, type: "text", props: { w: TEXT_WRAP } });
     });
     editor.sideEffects.registerAfterChangeHandler("shape", (_previous, next) => wrapText(next));
