@@ -59,9 +59,12 @@ function beside(editor: Editor, host: TLShape, skip: Set<string>) {
   if (!box) return [];
   const gap = (b: { x: number; y: number; maxX: number; maxY: number }) =>
     Math.max(0, b.x - box.maxX, box.x - b.maxX) + Math.max(0, b.y - box.maxY, box.y - b.maxY);
-  const near = editor
-    .getCurrentPageShapes()
-    .filter((s) => !skip.has(s.id) && s.parentId === host.parentId && s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s))
+  const page = editor.getCurrentPageShapes();
+  // What is said about a left-out object (its comments, replies and notes) is as private as it is.
+  const leftOut = page.filter((s) => isLeftOut(s.meta)).map((s) => s.id as string);
+  const aboutLeftOut = new Set(leftOut.length ? followers(leftOut, page, new Set()) : []);
+  const near = page
+    .filter((s) => !skip.has(s.id) && !aboutLeftOut.has(s.id) && s.parentId === host.parentId && s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s))
     .flatMap((s) => {
       const b = editor.getShapePageBounds(s);
       return b && gap(b) <= NEAR ? [{ s, d: gap(b) }] : [];

@@ -49,12 +49,12 @@ const revs = await p.evaluate((ids) => ids.map((id) => ({ id, expectedRevision: 
 const frame = (await command('group', { objects: revs, name: 'Pricing', padding: 160 })).frame.id;
 
 // The person asks about one card and comments on the other. The card is the question: the
-// person writes the question on a card of their own under the card it is about and sends it
-// with Ctrl/⌘+Enter, the card it is about selected with it (there is no question box).
+// person writes the question on a card of their own right under the card it is about and sends
+// it with Ctrl/⌘+Enter; the ask is about what sits beside it (there is no question box).
 async function writeAndSend(question, about) {
   const at = await p.evaluate((ids) => { const e = window.__pairedEditor, bs = ids.map((id) => e.getShapePageBounds(id)); return { x: Math.min(...bs.map((b) => b.x)), y: Math.max(...bs.map((b) => b.maxY)) + 30 }; }, about);
   const q = await p.evaluate(([x, y, text]) => window.paired.create({ kind: 'note', x, y, width: 240, text }), [at.x, at.y, question]).then((r) => (typeof r === 'string' ? r : r.id));
-  await select([q, ...about]);
+  await select([q]);
   await p.keyboard.press('ControlOrMeta+Enter');
   await p.waitForTimeout(600);
   return q;
