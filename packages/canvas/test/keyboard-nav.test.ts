@@ -47,9 +47,6 @@ describe("first tab stop", () => {
   it("is the first object in reading order that is wholly on screen", () => {
     expect(firstTabStop([at("off", -500, 0), at("half", -50, 0), at("a", 10, 10), at("b", 200, 10)], view)).toBe("a");
   });
-  it("is the last wholly on screen for Shift+Tab", () => {
-    expect(firstTabStop([at("a", 10, 10), at("b", 200, 10), at("off", 2000, 0)], view, true)).toBe("b");
-  });
   it("is one partly on screen when none is wholly", () => {
     expect(firstTabStop([at("off", -500, 0), at("half", -50, 0)], view)).toBe("half");
   });

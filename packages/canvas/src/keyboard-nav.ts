@@ -44,11 +44,9 @@ export function keyboardCardSpot(view: Box, others: Box[], size: { w: number; h:
 
 /**
  * The first Tab stop when nothing is selected: the first object in reading order that is
- * wholly on screen, else the first partly on screen, else the first of all. Reverse for
- * Shift+Tab.
+ * wholly on screen, else the first partly on screen, else the first of all.
  */
-export function firstTabStop<T extends { id: string; box: Box }>(ordered: T[], view: Box, backwards = false): string | undefined {
-  const list = backwards ? [...ordered].reverse() : ordered;
+export function firstTabStop<T extends { id: string; box: Box }>(list: T[], view: Box): string | undefined {
   const touches = (b: Box) => !clear(b, view, 0);
   return (list.find((o) => inside(o.box, view)) ?? list.find((o) => touches(o.box)) ?? list[0])?.id;
 }
