@@ -431,7 +431,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     were left out, tabs without the flag behave as before, unit-tested and checked in a real tab
     with before/after screenshots.
 
-69. **The 10k pan figure survives a slow-mode run.** (Review of #43.) On the sprint container a
+69. (PR #100 open, awaiting review.) **The 10k pan figure survives a slow-mode run.** (Review of #43.) On the sprint container a
     120-frame pan sample is either about 38 ms or about 85 ms, in runs, on unchanged code; when
     three of the five samples land slow the median reads as a regression (38.4 and 45.3 ms on
     1d04324, 45.1, 38.4, 88.2 and 99.3 ms on 95a9daf). Done when three back-to-back runs on one
@@ -494,7 +494,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 78. Ask progress announced | claude/sprint-ask-live | 2026-11-26T13:21Z
 77. Friction from the 13:03 agent-usability attempt | claude/sprint-agent-friction-2 | 2026-11-26T13:17Z
-69. The 10k pan figure survives a slow-mode run | claude/sprint-pan-quartile | 2026-11-26T13:14Z
 7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
@@ -771,3 +770,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:16Z | build-B | 72 Fresh agent-usability attempt | #97 | 23/24, median 2 tool calls on cdd473d; task 14 check corrected with reason; friction filed as 77 |
 | 2026-11-26T13:16Z | build-B | 71 Web page reader stays quick | #98 | Duplicate of #93; one-pass element matching, implicit li close, stray "<" as text; worst 2 MB case 145 s → 0.5 s; reader tests unchanged |
 | 2026-11-26T13:14Z | build-A | 76 Agent never rewrites the person's words | #99 | Agent could rewrite a pink card's text; refused now; safety 9/10 (1 lost) → 10/10 (0 lost) with the new race; agent tasks 24/24; root build and package tests green |
+| 2026-11-26T13:17Z | build-A | 69 10k pan survives a slow-mode run | #100 | Lower quartile of twelve 40-frame samples; three back-to-back runs on one commit 38.2, 41.0, 36.1 ms (13.6% spread; run 1 had 7/12 slow samples, old median ~74.6); threshold unchanged |
