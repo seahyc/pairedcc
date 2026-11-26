@@ -339,6 +339,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     real tab (failing before, passing after).
 
 ## Claims
+45d. Board sync gap (d): images survive a clean profile | claude/sprint-board-images | 2026-11-26T12:08Z
 52. Stale flags never spoil a hidden answer | claude/sprint-stale-hidden | 2026-11-26T12:00Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
