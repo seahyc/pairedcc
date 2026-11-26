@@ -166,7 +166,7 @@ task by which measure is furthest from target, not by backlog order.
     `packages/canvas/eval/tasks/`, each with a machine-checked end state, a runner that sets each
     one up in a real tab, and a recorded attempt by a fresh agent that has only `AGENT_API.md` and
     the tools. Done when the scorecard reports a completion rate and median tool calls.
-19. (PRs #32, #35, #39, stacked in that order, open and awaiting review: restore from Menu → Earlier versions, open from Menu → Saved boards. Complete once all three merge.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
+19. (#32 merged; PRs #35, #39, stacked in that order, open and awaiting review: restore from Menu → Earlier versions, open from Menu → Saved boards. Complete once all three merge.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
     their boards, open one, and restore an earlier revision from the canvas.
 21. (Merged, see Done.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
@@ -181,7 +181,7 @@ task by which measure is furthest from target, not by backlog order.
     Redis), opens the canvas, saves, and a second clean browser on the same account opens the same
     board, without needing a tldraw licence key (for example the dev canvas proxying `/auth` and
     `/api/canvas/boards` to the server behind an environment switch).
-25. (PR #29 open, awaiting review.) **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
+25. (Merged, see Done.) **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
     "Offline · saved on this device" and retries for ever, re-uploading each time. Done when a
     refused save says why on the chip, stops retrying until the board changes, and has a test.
 26. (PR #28 open, awaiting review.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
@@ -279,6 +279,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     `canvas_answer`; the page shows answered with the agent's name; the answer sits beside the ask
     and its text stays inside its card; a failed ask offers Retry. Unit tests cover the new row.
 
+42. **A restored or freshly loaded board survives an immediate reload.** After `restore(revision)`
+    (or the first load of an account's board) the sync memo says this browser is in step with the
+    server before the browser's own copy is written; a reload inside that moment (measured: lost at
+    0 and 300 ms, kept at 1,000 ms) shows the old board, and the next edit saves it on top. Done
+    when a scripted check restores, reloads at once and still sees the restored board, for example
+    by recording in the memo what content was synced and re-reading the account when it differs.
+
 ## Claims
 41. Scorecard measures the Ask loop | claude/sprint-eval-ask | 2026-11-26T11:33Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
@@ -287,6 +294,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 
 ## Done
 - 40. Say which tool answers feedback (build-A): PR #53.
+- Reviewed and merged 2026-11-26 by the review lane: #24 as 984374b, #29 as 2a36db5, #30 as e8b3218, #31 as 66678b5, #32 as b8b30a3 (each after merging in the integration branch and re-running its proof; fixes noted in the Log).
 - 37. read reports card style (build-A): PR #51.
 - 35. Annotation arrows follow their note (build-A): PR #48 (connectors re-pick facing sides when either end moves; explicit anchors kept).
 - 33. Agent tools never offer authorship (build-A): PR #44 (`canvas_annotate` no longer advertises `author`; manifest test guards every tool).
@@ -378,6 +386,9 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (build-A, item 31) The pan figure is the median of five 120-frame samples after a discarded warm-up, with each sample kept in the scorecard; three back-to-back runs agree within 3% at 10k (was 2x). Costs about 35 s per 10k run. The 25% threshold is unchanged.
 - (build-B, item 36) Following applies only to the person's moves (the moved object is selected), keeps multi-target comments in place, and pauses during undo/redo by wrapping the editor instance's `undo`/`redo` (tldraw's replay flag is private).
 
+- (review, #29) A 403 from the board limit (#28) counts as a refused save, like 400 and 413: the chip reads "Save refused", the tooltip gives the server's sentence, and nothing is re-uploaded until the board changes.
+- (review, #31) With `?prototype=converge` the person's "Pull into a synthesis" is in Properties, which the calm layout keeps behind the menu (three clicks). Alternative: a flagged entry on the selection bar, next to Ask. The letters on the arrows are small and partly covered by the arrow line.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -432,3 +443,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:28Z | build-A | 37 Card style in read | #51 | `style` on cards in read/get; live MCP check; scorecard unchanged |
 | 2026-11-26T11:31Z | build-B | 36 Comments move with their target | #52 | Comment, reply and agent note move with the card; one undo keeps them together; acceptance 10/10, safety 9/9 |
 | 2026-11-26T11:31Z | build-A | 40 Reply guidance | #53 | Tool descriptions and AGENT_API say canvas_reply answers feedback; test; scorecard unchanged |
+| 2026-11-26T11:35Z | review | Review #29 to #32 | #29 #30 #31 #32 | All four merged (squash) after merging in the integration branch; #29 gained the 403 board-limit case; #30 reproduced against Postgres 16 and Redis; #31 refitted to #27 as merged and the calm layout; #32 driven in a real tab, reload-after-restore gap filed as 42; build and all package tests green after each |
