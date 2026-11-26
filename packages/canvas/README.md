@@ -106,6 +106,8 @@ pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents 
 cd /some/dir/with/playwright && node /path/to/packages/canvas/tools/verify-calm.mjs /tmp/shots
 ```
 
+`tools/verify-early-agent.mjs <screenshot dir>`, run the same way, starts its own dev server with an empty board store and checks that an agent acting before the calm first board is laid out (it waits up to 2.5 s for fonts) keeps its page open and its objects readable, while the calm board is laid out on a page of its own; an untouched new board still opens the calm board on its only page.
+
 Live checks against a running dev server are listed at the end of [AGENT_API.md](AGENT_API.md).
 
 Browser checks performed 17 Nov 2026: native object dragging, pen drawing, text editing, inspector width/color edits, pan/zoom controls, keyboard undo, revision-aware object operations, stale-write rejection, local reload persistence, export and re-import of the exported document. The 390px layout was checked for horizontal overflow. No quantified latency or frame-rate benchmark was run.

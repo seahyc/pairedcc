@@ -1581,9 +1581,19 @@ function App() {
       const untouched = editor.getPages().length === 1 && editor.getCurrentPageShapes().length === 0;
       if (untouched) editor.updatePage({ id: editor.getCurrentPageId(), name: "Board 1", meta: { seeded: 3 } });
       else {
-        const id = PageRecordType.createId();
+        const id = PageRecordType.createId(), working = editor.getCurrentPageId();
         editor.createPage({ id, name: "Thinking", meta: { seeded: 3 } });
         editor.setCurrentPage(id);
+        // A board that was empty when this tab opened and has been worked on since (an agent
+        // acted before the fonts arrived, or the person started writing) keeps that work in
+        // view: the calm board is laid out on its own page without moving there.
+        if (fresh) {
+          calmSeed(editor);
+          editor.setCurrentPage(working);
+          editor.updateDocumentSettings({ meta: { ...settings.meta, calm: 3 } });
+          editor.clearHistory();
+          return;
+        }
       }
       calmSeed(editor);
       editor.updateDocumentSettings({ meta: { ...settings.meta, calm: 3 } });
