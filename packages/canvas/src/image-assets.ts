@@ -85,3 +85,23 @@ export async function moveLocalImagesIntoBoard(editor: Editor) {
   }
   return moved;
 }
+
+type Records = Record<string, unknown>;
+/**
+ * A board's records without images that no object shows any more. tldraw keeps an image's
+ * asset after its last shape is deleted (so undo can bring it back); with the bytes inside
+ * the board, saving those would mean a board that grew too large could never be made small
+ * again. The browser keeps them for undo; the saved board does not.
+ */
+export function withoutUnusedImages<T extends { store: Records }>(snapshot: T): T {
+  const used = new Set<unknown>();
+  for (const r of Object.values(snapshot.store) as { typeName?: string; props?: { assetId?: unknown } }[])
+    if (r?.typeName === "shape" && r.props?.assetId) used.add(r.props.assetId);
+  const store: Records = {};
+  for (const [id, r] of Object.entries(snapshot.store)) {
+    const a = r as { typeName?: string; props?: { src?: unknown } };
+    const unused = a?.typeName === "asset" && !used.has(id) && typeof a.props?.src === "string" && a.props.src.startsWith("data:");
+    if (!unused) store[id] = r;
+  }
+  return { ...snapshot, store };
+}

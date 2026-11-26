@@ -22,6 +22,8 @@ export type AskForPrompt = {
   targets: Given[];
   history?: { who: string; said: string; id?: string; mark?: Mark }[];
   frame?: { name: string; objects: Given[] };
+  /** How many nearby objects the person chose to keep out of this ask. */
+  leftOut?: number;
 };
 
 // Imported material is neither the person's writing nor an agent's: it is the source being judged.
@@ -55,6 +57,8 @@ export function buildPrompt(ask: AskForPrompt) {
     lines.push("", `They sit in the frame "${ask.frame.name}"${ask.frame.objects.length ? ", which also holds:" : "."}`);
     for (const o of ask.frame.objects) lines.push(`- ${o.type} by ${who(o.author)}${judged(o.mark)}: """${o.text}"""`);
   }
+  if (ask.leftOut)
+    lines.push("", `The person kept ${ask.leftOut === 1 ? "1 other object" : `${ask.leftOut} other objects`} on the board out of what you were given, on purpose. Do not guess at ${ask.leftOut === 1 ? "it" : "them"} or ask for ${ask.leftOut === 1 ? "it" : "them"}.`);
   lines.push("", `The ask: """${ask.question}"""`);
   return lines.join("\n");
 }
