@@ -107,6 +107,7 @@ pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents 
 cd /some/dir/with/playwright && node /path/to/packages/canvas/tools/verify-calm.mjs /tmp/shots
 ```
 
+`tools/verify-early-agent.mjs <screenshot dir>`, run the same way, starts its own dev server with an empty board store and checks that an agent acting before the calm first board is laid out (it waits up to 2.5 s for fonts) keeps its page open and its objects readable, while the calm board is laid out on a page of its own; an untouched new board still opens the calm board on its only page.
 `tools/verify-contain.mjs <screenshot dir>` is run the same way and needs no agent. At 1440 and 390 px it checks that a long URL, a long unbroken word, a code note and plain text stay inside their shapes, that the selection bar and the Ask box (send button included) sit inside the window wherever the selection is, and that an ask's state line wraps under its card rather than running off screen.
 
 Key hints are written with Apple's symbols and shown in the person's own keys (`src/keys.ts`): Ctrl, Shift and Backspace on Windows, Linux and Android, ⌘ ⇧ ⌫ on Apple devices. `tools/verify-keys.mjs <screenshot dir>`, run the same way, starts its own dev server with an empty board store and checks the first board, the selection bar, the typing hint, the Ask tooltips and the shortcut sheet as a Windows and as a Mac browser.
