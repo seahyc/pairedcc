@@ -788,3 +788,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:19Z | build-B | 77 Friction from the second agent attempt | #102 | asks page filter, schema descriptions, overview/reply docs, list --brief; 5 failing-first tests; live MCP check; workspace measure pass with throwaway services |
 | 2026-11-26T13:20Z | build-A | #93 review follow-up | #93 | Bounded byline search (3 s → 65 ms), region outside comments/head and whole tag names, ASCII-only lowercase for offsets, one-pass comment strip; 4 new tests; verify-webpage 9/9 |
 | 2026-11-26T13:21Z | build-B | 79 Read filter ß and grapheme boundaries | #103 | ß/ẞ fold to ss; matches start and end on whole characters; 2 failing-first tests; canvas suite green |
+| 2026-11-26T13:22Z | build-A | #100 review follow-up; run end | #100 | Non-numeric EVAL_PAN_* settings are an error row, not null figures (live check). build-A holds no claims; open: #85 #89 #93 #100 |
