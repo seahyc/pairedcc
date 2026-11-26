@@ -361,7 +361,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     placed no larger than a set size on its longest side (keeping its shape and its full-resolution
     asset, and leaving small images alone), agent `canvas_image` sizes are untouched, unit-tested,
     with before and after screenshots of a dropped photo.
-56. **`read`'s text filter: three matching gaps (review of #74, marked optional).** (a) Search text
+58. (Renumbered from 56 to avoid a clash.) **`read`'s text filter: three matching gaps (review of #74, marked optional).** (a) Search text
     is built with `richTextPlain`, which puts a space between formatting runs, so a word that is
     partly bold ("**pr**icing") does not match; join inline runs without a separator. (b) Greek
     final sigma: lowercasing makes a query's `ς` differ from a mid-word `σ`; fold `ς` to `σ`.
@@ -376,6 +376,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     the next save recreates the folder, with a failing-first test.
 
 ## Claims
+58. Read filter matching gaps (stacked on #74) | claude/sprint-read-filter-fold | 2026-11-26T12:22Z
 57. Dev board store survives its folder being removed | claude/sprint-dev-store-dir | 2026-11-26T12:19Z
 56. Dropped images fit beside your thoughts | claude/sprint-image-size | 2026-11-26T12:16Z
 54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
