@@ -697,12 +697,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     branch. Done when each walks the new flow (write a question card, finish or Ctrl/⌘+Enter) and
     passes, with each original intent kept (keyboard-only loop, what is heard, nothing off screen).
 
+107. **Browser checks that still open the question box.** Since 7cc29ef there is no question box, but seventeen `tools/verify-*` checks still open it (`.selection-bar.asking` or `getByLabel('Your question')`): annotate-clear, answer-page, answer-show, answer-view, ask-chart, ask-frame, ask-image, ask-live, ask-marks, ask-unclipped, calm, contain, keyboard, keys, leave-out, retry-key, touch. Their ask steps now time out, so they no longer prove what they were written for. Done when each asks the new way (the person's card sent with ⌘↵ or by finishing a question; Ask on someone else's object opens a pink card to write in) and passes on the integration branch, with any real regression it then finds filed. (The Ask loop measure and agent task 22 are fixed in #132.)
+
 ## Claims
 P3. Settled mark (part 1 of P3; overview later) | claude/sprint-p3-settled | 2026-11-26T15:08Z
-P2. Arrangement carries meaning to the agent | claude/sprint-p2-cluster | 2026-11-26T15:01Z
 P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 
 ## Done
+- P2 (part 1). Arrangement carries meaning to the agent (build-B): PR #135 (an ask gives the group its card sits in, each with its relation in words; resident prompt uses it; soft outline while answered; verify-p2-cluster 4/9 → 9/9; first screen byte-identical). Left for part 2: relations on targets, named regions.
 - 106. Keyboard, heard and contain checks follow the new Ask (build-A): PR #134 (verify-keyboard 10/16 → 16/16, verify-heard 6/13 → 13/13, verify-contain crash → 20/20; tools only).
 - 102. Review follow-ups to #115 and #118 (build-A): PR #133 (board keys stay out of dialogs; newer attempt replaces a queued one; bar notices a quiet ask; (b) moot after 7cc29ef).
 - 104. The Ask loop measure follows the card-is-the-question loop (build-B): PR #132 (0/5 → 5/5 on the integration branch; two mutations each fail their step).
@@ -1079,3 +1081,5 @@ P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 | 2026-11-26T14:53Z | build-A | 102 Review follow-ups to #115 #118 | #133 | Backspace in the agent dialog deleted the card behind it (reproduced); verify-menu-keys 16/19 → 19/19, verify-retry-key 10/11 → 11/11 (clock-driven quiet check), 2 failing-first desk tests; ask loop 0/5 on claude/sprint-int since 7cc29ef (build-B's #132) |
 | 2026-11-26T14:57Z | build-A | 106 Checks follow Ask without a box | #134 | verify-keyboard 10/16 → 16/16, verify-heard 6/13 → 13/13, verify-contain crash → 20/20 on the new flow; intent of each kept |
 | 2026-11-26T15:06Z | build-A | Review fixes on #133 and #127 | #133 #127 | #133: a restored board's older attempt was refused for good after Send again (red, failing-first test); desk keeps no watermark, lookalike ids pinned; #127: the 'n of m' heard froze when answers landed (failing-first browser check, 13/14 → 14/14), drag still 94 ms; #127 now stacked on #134 |
+| 2026-11-26T15:09Z | build-B | P2 part 1: group and relations in an ask | #135 | src/arrangement.ts (10 failing-first tests on fixed layouts); describeAsk `cluster`; prompt section and rule; group outline while answered; verify-p2-cluster 4/9 → 9/9; first screen unchanged |
+| 2026-11-26T15:09Z | build-B | 104 follow-up: agent task 22 after 7cc29ef | #132 | Setup typed into the removed box; now writes on the pink card Ask opens; self-test 24/24; filed item 107 (17 browser checks still open the box) |
