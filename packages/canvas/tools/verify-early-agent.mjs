@@ -51,6 +51,8 @@ try {
     try {
       const p = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       const errs = [];
+      // Hold the fonts back so the layout always waits; where fonts load at once this would pass without the fix.
+      await p.addInitScript(() => { document.fonts.load = () => new Promise((r) => setTimeout(() => r([]), 2000)); });
       p.on('pageerror', (e) => errs.push(e.message.slice(0, 200)));
       await p.goto(`${server.origin}/canvas/`);
       await p.waitForFunction(() => Boolean(window.paired && document.documentElement.dataset.pairedSession), null, { timeout: 30000 });
