@@ -287,7 +287,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `resolve` | Mark `id` (feedback note, picked/rejected object or ink stroke), `expectedRevision`, `status` (open or resolved); works on any page |
 | `feedback` | Optional `status`, `allPages`, `format`; returns the board-wide feedback queue with replies |
 | `reply` | Feedback item `id`, `text`; places an agent answer under the item |
-| `asks` | Optional `state`; lists the human's asks with their context |
+| `asks` | Optional `state`, and `page` ("all", the default, or "current" for the open page only); lists the human's asks with their context |
 | `ask_status` | Ask `id`, `state` (working, failed, waiting), optional `note`, `error` |
 | `answer` | Ask `id` and either `text` or 2 to 4 `alternatives`; optional `read`, `question` |
 | `import` | `content`, optional `format`, `name`, `as`, `focus`; lays a table or document out as source material |
