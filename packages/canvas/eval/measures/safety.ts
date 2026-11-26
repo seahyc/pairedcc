@@ -57,6 +57,25 @@ export async function safety(browser: Browser, base: string) {
       return aNow.x === humanA && text(bNow) === humanB ? true : "a human edit was undone with the agent's run";
     });
 
+    await race("Agent rewrite of the person's own words", async (lost) => {
+      // The person writes a note; an agent holding its current revision tries to change the words.
+      const id = await human("(p) => p.create({ kind: 'note', x: 1600, y: 0, text: 'My own words' })");
+      const mine = await get(id as string);
+      let rejected = false;
+      try {
+        await agent.call("canvas_update", { id, expectedRevision: mine.revision, text: "Words the person never wrote" });
+      } catch {
+        rejected = true;
+      }
+      const now = text(await get(id as string));
+      if (now !== text(mine)) lost(1);
+      if (!rejected) return "the agent's rewrite of the person's words was accepted";
+      // The person can still change their own words.
+      const fresh = await get(id as string);
+      await human("(p, a) => p.update({ id: a.id, expectedRevision: a.revision, text: 'My own words, revised' })", { id, revision: fresh.revision });
+      return text(await get(id as string)).includes("My own words, revised") ? true : "the person could not edit their own note";
+    });
+
     await race("Agent write to a locked object", async (lost) => {
       const note = await agent.call("canvas_create", { kind: "note", x: 1200, y: 0, text: "Locked by the person" });
       await human("(p, id) => p.select([id])", note.id);

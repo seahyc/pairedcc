@@ -277,7 +277,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `read` | Optional `ids`; returns page, selection, objects (with `author`, `style` on cards, and `dataset`, `widget` or `stale` where they apply), annotations, open/resolved human `marks` and arrow bindings |
 | `get` | `id`, optional `includeAsset`; cards report `style` (note, heading, quote, code, handwriting for the person, caption); a dataset's `dataset` includes its `rows`; prototype `relationships`, `source` and `transformation` (see below) |
 | `create` | `kind` (frame, rectangle, ellipse, text, note), `x`, `y`, optional dimensions, text, color, name, note `style` (note, heading, quote, code), `inputs` (IDs it was derived from) |
-| `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name |
+| `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name. Changing the `text` of something the person wrote (`author: "Human"`) is refused, because their words stay theirs: comment on it with `annotate`, or answer beside it |
 | `image` | `src` (base64 image data URL), `x`, `y`, `width`, `height`, optional name, sourceUrl, isAnimated, caption |
 | `connect` | `fromId`, `toId`, optional relation (reference, alternative, derived-from, feedback), label |
 | `annotate` | `targetId`, `text`, optional position; creates a targeted note and bound connector |

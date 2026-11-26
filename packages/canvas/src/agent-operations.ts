@@ -36,6 +36,7 @@ import { convergeInput, placeBeside, synthesisText } from "./converge/model";
 import { overview } from "./overview";
 import { matchesText, richTextSearch } from "./read-filter";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
+import { rewriteRefusal } from "./authorship";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
@@ -689,8 +690,14 @@ export async function executeCommand(
       });
       return describeObject(editor, id);
     }
-    case "update":
+    case "update": {
+      // The person's words stay theirs; checked before anything is written.
+      const target = z.object({ id: z.string(), text: z.unknown().optional() }).safeParse(command.input);
+      const shape = target.success ? editor.getShape(target.data.id as TLShapeId) : undefined;
+      const refusal = shape && rewriteRefusal(authorOf(shape), target.success ? target.data : {});
+      if (refusal) throw new Error(refusal);
       return patchObject(editor, command.input);
+    }
     case "learn":
       return createPrompt(editor, command.input, actor);
     case "converge":
