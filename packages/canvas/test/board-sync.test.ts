@@ -43,6 +43,9 @@ function server(signedIn: string | null = "alice", keep = 50) {
       }
       return { ok: true, revision: b.revision };
     },
+    async list() {
+      return [...boards].map(([id, b]) => ({ id, name: "Untitled exploration", revision: b.revision, sizeBytes: 1, updatedAt: "" }));
+    },
     async revisions(id) {
       const b = boards.get(id);
       return b ? b.history.map((_, i) => ({ revision: b.first + i, sizeBytes: 1, savedAt: "" })).reverse() : null;
@@ -57,12 +60,13 @@ function server(signedIn: string | null = "alice", keep = 50) {
   return { api, boards, hooks, uploads, setDown: (v: boolean) => (down = v) };
 }
 
-function browser(initial: Snapshot, memo: SyncMemo | null = null, opts: { lateNotify?: boolean } = {}) {
+function browser(initial: Snapshot, memo: SyncMemo | null = null, shared?: { memo: SyncMemo | null }, opts: { lateNotify?: boolean } = {}) {
   let doc = structuredClone(initial);
+  let resets = 0;
   const listeners = new Set<() => void>();
   // tldraw reports store changes a frame later; with lateNotify, a load's report waits for deliver().
   const pending: (() => void)[] = [];
-  const stored = { memo };
+  const stored = shared ?? { memo };
   const timers: (() => void)[] = [];
   return {
     get doc() {
@@ -72,12 +76,22 @@ function browser(initial: Snapshot, memo: SyncMemo | null = null, opts: { lateNo
       doc = snap(t);
       for (const l of listeners) l();
     },
+    /** A change from another tab of this browser (tldraw's broadcast): no listener fires. */
+    remote(s: Snapshot) {
+      doc = structuredClone(s);
+    },
+    get resets() {
+      return resets;
+    },
     local: {
       snapshot: () => structuredClone(doc),
       load(s: Snapshot) {
         doc = structuredClone(s);
         if (opts.lateNotify) pending.push(() => listeners.forEach((l) => l()));
         else for (const l of listeners) l();
+      },
+      reset() {
+        resets++;
       },
       listen(fn: () => void) {
         listeners.add(fn);
@@ -439,6 +453,53 @@ describe("withNewRecords", () => {
     expect(await out.s.revisions()).toBeNull();
   });
 
+  it("opens another saved board, saving this one first, and keeps saving to the opened one", async () => {
+    const srv = server();
+    await srv.api.put("main-browser-202611260900", 0, snap("kept from an old browser"));
+    const b = browser(snap("main work"));
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    expect(s.boardId()).toBe("main");
+    expect((await s.boards())?.map((x) => x.id).sort()).toEqual(["main", "main-browser-202611260900"]);
+    b.edit("main, edited"); // not saved yet
+    expect(await s.open("main-browser-202611260900")).toEqual({ boardId: "main-browser-202611260900", previous: "main" });
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main, edited"); // saved before leaving
+    expect(text(b.doc)).toBe("kept from an old browser");
+    expect(last()).toMatchObject({ state: "saved", revision: 1, note: expect.stringContaining('"main" is saved') });
+    expect(b.stored.memo).toEqual({ account: "alice", boardId: "main-browser-202611260900", revision: 1, dirty: false, hash: contentHash(snap("kept from an old browser")) });
+    b.edit("old work, continued");
+    await b.flush();
+    expect(text(srv.boards.get("main-browser-202611260900")!.snapshot)).toBe("old work, continued");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main, edited");
+  });
+
+  it("reopens the board this browser last had open after a reload", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("main"));
+    await srv.api.put("other", 0, snap("other board"));
+    // tldraw kept the opened board in this browser, so that is what reopens locally.
+    const b = browser(snap("other board"), { account: "alice", boardId: "other", revision: 1, dirty: false });
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    expect(s.boardId()).toBe("other");
+    expect(text(b.doc)).toBe("other board");
+    expect(last()).toMatchObject({ state: "saved", revision: 1 });
+    expect([...srv.boards.keys()].sort()).toEqual(["main", "other"]); // nothing set aside
+    b.edit("other, edited");
+    await b.flush();
+    expect(text(srv.boards.get("other")!.snapshot)).toBe("other, edited");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main");
+  });
+
+  it("refuses to open a board that does not exist, leaving this one open", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    await expect(s.open("nope")).rejects.toThrow(/not found/);
+    expect(s.boardId()).toBe("main");
+    expect(text(b.doc)).toBe("v1");
+  });
+
   it("does not claim a restore when another tab or device saved since this tab last did", async () => {
     const srv = server(), b = browser(snap("v1"));
     const { s } = sync(srv, b, true);
@@ -485,6 +546,68 @@ describe("withNewRecords", () => {
     await restoring;
     expect(text(b.doc)).toBe("v1");
     expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "v2", "typed during the download", "v1"]);
+  });
+
+  it("forgets undo history when another board is opened", async () => {
+    const srv = server();
+    await srv.api.put("other", 0, snap("other board"));
+    const b = browser(snap("main work"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    await s.open("other");
+    expect(b.resets).toBe(1);
+  });
+
+  it("keeps an edit made while the other board is loading", async () => {
+    const srv = server();
+    await srv.api.put("other", 0, snap("other board"));
+    const b = browser(snap("main work"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    let release!: () => void;
+    srv.hooks.beforeGet = () => new Promise<void>((done) => (release = done));
+    const opening = s.open("other");
+    await Promise.resolve();
+    b.edit("typed while opening");
+    release();
+    srv.hooks.beforeGet = undefined;
+    await opening;
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("typed while opening");
+    expect(text(b.doc)).toBe("other board");
+  });
+
+  it("saves to the board another tab of this browser opened, never over the one this tab started on", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("main"));
+    await srv.api.put("other", 0, snap("other board"));
+    const shared = { memo: { account: "alice", boardId: "main", revision: 1, dirty: false } as SyncMemo | null };
+    const a = browser(snap("main"), null, shared), b = browser(snap("main"), null, shared);
+    const tabA = sync(srv, a, true), tabB = sync(srv, b, true);
+    await tabA.s.start();
+    await tabB.s.start();
+    await tabA.s.open("other");
+    b.remote(a.doc); // tldraw broadcasts the switch to tab B's store
+    b.edit("edited in tab B");
+    await b.flush();
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main");
+    expect(text(srv.boards.get("other")!.snapshot)).toBe("edited in tab B");
+    expect(tabB.s.boardId()).toBe("other");
+  });
+
+  it("keeps the open board when edited offline after a reload, and saves to it on reconnect", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("main"));
+    await srv.api.put("other", 0, snap("other board"));
+    const b = browser(snap("other board"), { account: "alice", boardId: "other", revision: 1, dirty: false });
+    const { s } = sync(srv, b, true);
+    srv.setDown(true);
+    await s.start();
+    b.edit("other, edited offline");
+    expect(b.stored.memo).toMatchObject({ boardId: "other", revision: 1, dirty: true });
+    srv.setDown(false);
+    await b.flush();
+    expect(text(srv.boards.get("other")!.snapshot)).toBe("other, edited offline");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main");
   });
   it("says why a refused save failed, and stops retrying until the board changes", async () => {
     const srv = server(), b = browser(snap("v1"));
@@ -565,7 +688,7 @@ describe("withNewRecords", () => {
     await b.flush();
     await s.restore(1);
     // First reload: the browser still holds v2, so the account's v1 is loaded; tldraw reports it later.
-    const first = browser(snap("v2"), b.stored.memo, { lateNotify: true });
+    const first = browser(snap("v2"), b.stored.memo, undefined, { lateNotify: true });
     await sync(srv, first, true).s.start();
     first.deliver(); // the load's own report must not count as an edit
     expect(first.stored.memo).toMatchObject({ dirty: false });
