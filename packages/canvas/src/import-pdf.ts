@@ -88,9 +88,12 @@ function subDict(dict: Dict, key: string, objs: Map<number, Obj>): Dict | undefi
 function pages(objs: Map<number, Obj>, trailer: string): number[] {
   const out: number[] = [];
   const root = objs.get(ref(trailer, "Root")) ?? [...objs.values()].find((o) => /\/Type\s*\/Catalog/.test(o.dict));
+  // Each node is visited once: a damaged tree whose nodes list each other must not loop.
+  const visited = new Set<number>();
   const visit = (id: number, depth: number) => {
     const node = objs.get(id);
-    if (!node || depth > 50 || out.length > 2000) return;
+    if (!node || depth > 50 || out.length > 2000 || visited.has(id)) return;
+    visited.add(id);
     if (/\/Type\s*\/Page\b(?!s)/.test(node.dict)) return void out.push(id);
     const kids = /\/Kids\s*\[([^\]]*)\]/.exec(node.dict)?.[1] ?? "";
     for (const k of kids.matchAll(/(\d+)\s+\d+\s+R/g)) visit(Number(k[1]), depth + 1);

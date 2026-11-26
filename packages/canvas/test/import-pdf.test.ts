@@ -47,6 +47,20 @@ describe("readPdf refusals", () => {
   });
 });
 
+describe("readPdf on a damaged page tree", () => {
+  it("refuses quickly when page-tree nodes list each other, instead of walking them for ever", async () => {
+    // Two Pages nodes that each list both, and no page: without a visited set this is 2^50 visits.
+    const pdf =
+      "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
+      "2 0 obj\n<< /Type /Pages /Kids [2 0 R 3 0 R] >>\nendobj\n" +
+      "3 0 obj\n<< /Type /Pages /Kids [2 0 R 3 0 R] >>\nendobj\n" +
+      "trailer\n<< /Root 1 0 R >>\n%%EOF\n";
+    const started = Date.now();
+    await expect(readPdf(new TextEncoder().encode(pdf))).rejects.toBeInstanceOf(ImportError);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+});
+
 describe("readPdf on a plain hand-written PDF", () => {
   // Standard fonts with no ToUnicode map, literal strings with escapes, word spaces made by TJ
   // kerning, lines advanced with T*, and a heading set in bold at body size.
