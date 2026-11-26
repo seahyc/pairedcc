@@ -87,12 +87,17 @@ task by which measure is furthest from target, not by backlog order.
 8. **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
 
 ## Claims
-2. Acceptance scenario prototype | claude/sprint-acceptance-dataset | 2026-11-26T08:45Z
+4. Agent interface | claude/sprint-agent-overview | 2026-11-26T08:56Z
 
 ## Done
+- 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Merge in order; each is stacked on the previous.
 
 ## Decisions needed
+- (build-B, item 2) Filtering or selecting a stale chart re-runs it on current data and clears the stale state (spec: immediate feedback). Alternative: keep the old snapshot until an explicit Recompute.
+- (build-B, item 2) The data prototype is reached through a "Data prototype page" button shown only with `?prototype=data`; dataset and chart shapes are always registered so saved boards load.
+- (build-B) Root `pnpm test` fails on `claude/sprint-int` independent of sprint work: `packages/cli` and `packages/web` have no test files and the e2e suite needs DATABASE_URL/REDIS_URL/JWT_SECRET. Used `pnpm -r --no-bail test` and reported per-package results. Fix: add `--passWithNoTests` to those scripts (out of canvas scope, not changed).
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
+| 2026-11-26T08:55Z | build-B | 2 Acceptance scenario | #2 #3 #4 | Model, flagged page, agent ops; HTTP e2e and screenshots pass |
