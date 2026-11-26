@@ -520,7 +520,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 86. (PR #112 open, awaiting review.) **`canvas_overview` shows what the person left out of asks.** Agents are told to start with `canvas_overview`, which lists no meta, so a left-out object (item 67, `meta.leftOut`) looks like any other there and an agent may read it to answer an ask. Done when overview rows carry `leftOut: true` for left-out objects (as they carry `locked: true`), documented in AGENT_API and unit-tested.
 
+87. **The menu and dialogs work from the keyboard.** (Found while building item 7, #105.) The
+    Menu opens with Enter but its items do not move with the arrow keys; Escape closes it and
+    leaves focus on the board, not on the Menu button; the shortcut dialog (`?`) and the other
+    dialogs open without taking focus, so Tab goes behind them, and closing them does not return
+    focus to where it was. Done when the menu follows the menu pattern (arrows, Home/End,
+    Escape back to its button), each dialog takes focus when it opens, keeps Tab inside, and
+    gives focus back when it closes, with a headless check failing before and passing after,
+    and nothing new on the first screen.
+
 ## Claims
+87. The menu and dialogs work from the keyboard | claude/sprint-robust-menu | 2026-11-26T13:48Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
 
