@@ -42,27 +42,40 @@ defensible option, record the choice and the reason under Decisions needed, and 
 6. If time remains, take another task. When the backlog runs low, add tasks that follow from the
    working spec, each with a testable definition of done.
 
-## What the canvas is for (added 26 Nov by the maintainer's direction; this outranks the scorecard)
-The user experience is the product. Two anchors, both written up in
-`docs/canvas/usability-heuristics.md` (arrives with PR #7; read it before any UI work):
-1. **Jakob Nielsen's ten usability heuristics**, as applied there to a canvas shared with agents.
-   Every UI PR names the heuristics it serves and shows before/after screenshots.
-2. **Michael Nielsen's augmentation principle** (Carter and Nielsen, "Using Artificial Intelligence to
-   Augment Human Intelligence", Distill 2017; Matuschak and Nielsen on tools for thought): the aim is
-   to improve the person's own mental representation, not to hand over an answer. Agent output should
-   be something the person can manipulate and internalise: alternatives with the dimensions they vary
-   along, groupings the person can accept or redraw, predict-before-reveal.
+## What the canvas is for (the maintainer's direction, corrected 26 Nov; this outranks the scorecard)
+The user experience is the product. The maintainer playtested the 26 Nov build and rejected it:
+"it's hard to use, and not built on the principles; it's too noisy, and too flexible, my text just
+flows out of the canvas, and I don't know how to trigger the agent to respond. It's too open ended."
+
+**The anchor is this project's own list**, "How humans think intuitively" in
+`docs/canvas/working-spec.md` (working memory holds about four things; moving things is thinking;
+spatial thinking comes first; we think with our eyes; concrete before abstract; comparing beats
+describing; recognising beats recalling; rough means unfinished; understanding needs effort and
+repetition), with "What produces understanding" beside it. `docs/canvas/principles.md` (arriving on
+branch `yc/calm-canvas`) applies them. Jakob Nielsen's usability heuristics
+(`docs/canvas/usability-heuristics.md`) are only a secondary checklist.
+
+**Solveit's principles apply to every agent interaction** (sources in the spec's Solveit section):
+small steps, each one checked; the person thinks and writes first; agent replies are short and one
+step at a time; everything the agent made is editable and becomes shared context; the context the
+agent sees is visible and chosen by the person.
+
+What this means for every PR:
+- **Calm and opinionated beats flexible.** One obvious next step on screen. No new panels, modes,
+  toolbar items or object types in the default view; a new capability must fit the loop (write a
+  thought, select, Ask, compare short answers, pick or cross out or comment, ask again) or stay
+  behind a flag. Removing things is welcome work.
+- **The agent must visibly respond.** Any ask shows waiting, working, answered or failed. Never silence.
+- **Text never leaves its container.**
+- Every UI PR names the principles it serves and shows before and after screenshots of the default
+  first screen. The review lane rejects work that makes the first two minutes noisier or more
+  open-ended, whatever the scorecard says. Prototypes already merged that add noise to the default
+  view (data objects, learning prompts, run tools) must be behind flags; fix that before new features.
 
 **The maintainer's playtest feedback is the top of the backlog.** It is filed under
-`docs/canvas/feedback/` as it arrives. Before choosing any task, read the newest file there; an
-unaddressed item in it comes before every numbered backlog item. Address items one PR each where
-possible, quote the feedback item in `## Why`, and mark it addressed in the file with the PR link.
-Feedback is a native primitive of the canvas (comments, picks, rejects, one queue, readable by
-agents through `canvas_feedback`): keep improving it, and use it in your own verification scripts.
-
-After feedback, prefer work from the "what remains" list in the heuristics document over new
-features. The review lane rejects UI work that makes a first two minutes of use more confusing,
-whatever the scorecard says.
+`docs/canvas/feedback/`. Before choosing any task, read the newest file there; an unaddressed item
+comes before every numbered backlog item. Quote the item in `## Why` and mark it addressed in the
+file with the PR link.
 
 ## Goal and eval (added 26 Nov; read before choosing a task)
 **Goal for the sprint:** the working spec's first end-to-end acceptance scenario runs for real on
