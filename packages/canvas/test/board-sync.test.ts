@@ -5,9 +5,11 @@ const snap = (text: string): Snapshot => ({ store: { "shape:a": { id: "shape:a",
 const text = (s: Snapshot) => (s.store["shape:a"] as { text: string }).text;
 
 /** A fake server with the real contract: revisions, stale rejection, create at 0. */
-function server(signedIn: string | null = "alice") {
-  const boards = new Map<string, { revision: number; snapshot: Snapshot; history: Snapshot[] }>();
+function server(signedIn: string | null = "alice", keep = 50) {
+  // history[i] is revision first + i; the oldest are pruned beyond `keep`, as on the server.
+  const boards = new Map<string, { revision: number; snapshot: Snapshot; history: Snapshot[]; first: number }>();
   let down = false;
+  const hooks: { beforeRevision?: () => Promise<void> } = {};
   const api: BoardApi = {
     async account() {
       if (down) throw new Error("offline");
@@ -23,13 +25,17 @@ function server(signedIn: string | null = "alice") {
       const b = boards.get(id);
       if (!b) {
         if (expectedRevision !== 0) return { ok: false, stale: false, error: "Board not found" };
-        boards.set(id, { revision: 1, snapshot: structuredClone(snapshot), history: [structuredClone(snapshot)] });
+        boards.set(id, { revision: 1, snapshot: structuredClone(snapshot), history: [structuredClone(snapshot)], first: 1 });
         return { ok: true, revision: 1 };
       }
       if (b.revision !== expectedRevision) return { ok: false, stale: true, revision: b.revision };
       b.revision++;
       b.snapshot = structuredClone(snapshot);
       b.history.push(structuredClone(snapshot));
+      while (b.history.length > keep) {
+        b.history.shift();
+        b.first++;
+      }
       return { ok: true, revision: b.revision };
     },
     async list() {
@@ -37,14 +43,16 @@ function server(signedIn: string | null = "alice") {
     },
     async revisions(id) {
       const b = boards.get(id);
-      return b ? b.history.map((_, i) => ({ revision: i + 1, sizeBytes: 1, savedAt: "" })).reverse() : null;
+      return b ? b.history.map((_, i) => ({ revision: b.first + i, sizeBytes: 1, savedAt: "" })).reverse() : null;
     },
     async revision(id, rev) {
-      const h = boards.get(id)?.history[rev - 1];
+      await hooks.beforeRevision?.();
+      const b = boards.get(id);
+      const h = b && rev >= b.first ? b.history[rev - b.first] : undefined;
       return h ? { revision: rev, snapshot: structuredClone(h) } : null;
     },
   };
-  return { api, boards, setDown: (v: boolean) => (down = v) };
+  return { api, boards, hooks, setDown: (v: boolean) => (down = v) };
 }
 
 function browser(initial: Snapshot, memo: SyncMemo | null = null) {
@@ -468,6 +476,54 @@ describe("withNewRecords", () => {
     await expect(s.open("nope")).rejects.toThrow(/not found/);
     expect(s.boardId()).toBe("main");
     expect(text(b.doc)).toBe("v1");
+  });
+
+  it("does not claim a restore when another tab or device saved since this tab last did", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("v2");
+    await b.flush(); // this tab is clean at revision 2
+    await srv.api.put("main", 2, snap("from another device")); // revision 3
+    await expect(s.restore(2)).rejects.toThrow(/changed on another tab or device/);
+    await expect(s.restore(1)).rejects.toThrow(/changed on another tab or device/);
+    // Nothing was written and no hybrid was saved; this tab's board is as it was.
+    expect(srv.boards.get("main")!.revision).toBe(3);
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("from another device");
+    expect(text(b.doc)).toBe("v2");
+  });
+
+  it("restores the oldest kept revision even when saving pending edits prunes it", async () => {
+    const srv = server("alice", 3), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    for (const t of ["v2", "v3"]) {
+      b.edit(t);
+      await b.flush();
+    }
+    expect((await s.revisions())?.map((r) => r.revision)).toEqual([3, 2, 1]);
+    b.edit("pending"); // saving this prunes revision 1
+    await s.restore(1);
+    expect(text(b.doc)).toBe("v1");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("v1");
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v3", "pending", "v1"]);
+  });
+
+  it("keeps an edit made while the earlier version is downloading", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("v2");
+    await b.flush();
+    let release!: () => void;
+    srv.hooks.beforeRevision = () => new Promise<void>((done) => (release = done));
+    const restoring = s.restore(1);
+    await Promise.resolve();
+    b.edit("typed during the download");
+    release();
+    await restoring;
+    expect(text(b.doc)).toBe("v1");
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "v2", "typed during the download", "v1"]);
   });
 });
 
