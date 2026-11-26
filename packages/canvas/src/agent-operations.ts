@@ -501,8 +501,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         meta: s.meta,
         asset,
       };
-    })
-    .filter((o) => !input.text || matchesText(input.text, o.text, o.name as string | undefined));
+    });
   const annotations = editor
     .getCurrentPageShapes()
     .filter((s) => s.meta.role === "annotation")
