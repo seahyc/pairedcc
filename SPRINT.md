@@ -108,53 +108,53 @@ task by which measure is furthest from target, not by backlog order.
 0. **`pnpm eval:canvas` and the baseline scorecard** (see Goal and eval above). Still the first
    thing the sprint needs. The headless scripts in `packages/canvas/tools/verify-*` already walk
    most acceptance and shared-edit steps and can seed it.
-1. **Server-side board storage.** Boards live only in the browser today. Add authenticated save and
+1. (Merged, see Done.) **Server-side board storage.** Boards live only in the browser today. Add authenticated save and
    load per account in the server, with revisions and stale-write rejection matching the browser
    contract, migration from IndexedDB, and tests. No production migration is run.
 2. (Merged, see Done.) **The first end-to-end acceptance scenario** in the working spec, built as a prototype: dataset
    object, chart view, direct filtering, agent reads exact widget state, stale marking when an input
    changes. Synthetic data.
-3. **Foundational primitives** from the spec as typed objects with tests: Relationship, Source,
+3. (PRs #23 #26 open, awaiting review; #26 stacked on #23.) **Foundational primitives** from the spec as typed objects with tests: Relationship, Source,
    Transformation and Agent run (request, scope, progress, attributable and reversible changes).
 4. (Merged, see Done.) **Agent interface.** Overview-then-detail reads so agents never need a full-board dump; an agent
    operation undoable as one unit without undoing human edits; tests over HTTP and MCP.
-5. **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
+5. (PR #27 open, awaiting review; stacked on #20.) **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
    what it came from.
 6. (Merged, see Done.) **Learning mode prototypes** from the spec: predict-then-check and generate-first.
 7. **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
    (1k and 10k objects), keyboard accessibility, 390px layout.
-8. (PRs #9 #10 open, awaiting review.) **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
+8. (Merged, see Done.) **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
    AGENT_API.md does not yet describe `canvas_dataset`, `canvas_chart`, `canvas_chart_state`,
    `canvas_cell`, the `inputs` field on create, or the `dataset` / `widget` / `stale` read fields.
-9. **Editor-level tests for the data prototype's agent operations.** `test/data-agent.test.ts`
+9. (PR #25 open, awaiting review.) **Editor-level tests for the data prototype's agent operations.** `test/data-agent.test.ts`
    checks schemas only; stale-write rejection, locked-object rejection, partial chart state and
    `read` omitting rows are proven only by `tools/verify-data-agent.cjs`, which `pnpm test` does not
    run. Done when breaking any of those behaviours fails `pnpm test:canvas` (or the eval).
-10. (PR #19 open, awaiting review.) **Repair `e2e/tests/editor-collab.spec.ts`.** It signs in with placeholder magic-link tokens
+10. (Merged, see Done.) **Repair `e2e/tests/editor-collab.spec.ts`.** It signs in with placeholder magic-link tokens
     (`test-token-1`) that the server never issues, so it fails at the first step even with Postgres,
     Redis and `JWT_SECRET` available. Done when it passes against a local server with a real
     sign-in path and its required services are documented. Do not delete or skip it.
-11. **Shared-edit gaps found in review of per-run undo.** (a) Undoing a run that deleted a shape
+11. (PR #22 open, awaiting review.) **Shared-edit gaps found in review of per-run undo.** (a) Undoing a run that deleted a shape
     puts it back even when its parent frame has since been deleted, leaving an orphan; (b) any
     agent can list and undo another agent's runs in the same tab; (c) an agent can hide an object
     the person made behind a learning prompt. Done when each has a scripted race in the eval's
     "Safety of shared edits" measure and either a fix or a recorded decision.
-12. (PR #13 open, awaiting review.) **Prototype tool exposure.** Decide in code how prototype tools reach agents: today
+12. (Merged, see Done.) **Prototype tool exposure.** Decide in code how prototype tools reach agents: today
     `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` and `canvas_learn` are
     in the shared definitions and hosted manifest for every agent. Done when there is one switch
     (and a test) that leaves prototype tools out of the hosted manifest, defaulting to the current
     behaviour until the maintainer chooses.
 
-13. (PR #18 open, awaiting review.) **Person imports a CSV.** Dropping a `.csv` file on the canvas creates a dataset object with
+13. (Merged, see Done.) **Person imports a CSV.** Dropping a `.csv` file on the canvas creates a dataset object with
     typed columns (validation errors shown, nothing partial created). Done when the eval's first
     acceptance step passes.
-14. (PR #11 open, awaiting review; stacked on #9.) **Transitive staleness.** A result recorded with `inputs: [chart]` is not marked stale when the
+14. (Merged, see Done.) **Transitive staleness.** A result recorded with `inputs: [chart]` is not marked stale when the
     chart's dataset changes, only when the chart itself is recomputed. Done when the eval step
     "Changing an input marks its dependents stale" passes and the read reports the upstream cause.
-15. (PR #17 open, awaiting review.) **Reload must not change objects.** Reopening a board re-measures cards and bumps their height
+15. (Merged, see Done.) **Reload must not change objects.** Reopening a board re-measures cards and bumps their height
     and revision, so a revision an agent held before the reload goes stale. Done when the eval step
     "Reload restores everything" passes.
-16. (PRs #14 #16 open, awaiting review; #16 stacked on #14.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
+16. (Merged, see Done; panning a full 10k board is still slow.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
     Done when the performance measure reports 10k load and pan numbers (raise the limit or
     decide another way and record it).
 20. (Renumbered from 17 to avoid a clash; likely covered by the `yc/calm-canvas` rework for playtest 1, so check that PR before starting.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
@@ -168,20 +168,53 @@ task by which measure is furthest from target, not by backlog order.
     the tools. Done when the scorecard reports a completion rate and median tool calls.
 19. **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
-    their boards, open one, and restore an earlier revision from the canvas.21. **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
+    their boards, open one, and restore an earlier revision from the canvas.
+21. (Merged, see Done.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
     the default view must be behind flags. The flagged buttons are, but any agent can still put a
     dataset, chart or learning prompt on a default board: the tab runs `dataset`, `chart`,
     `chart_state`, `cell` and `learn` whatever its flags. Done when a tab without `?prototype=data`
     (or `?prototype=learning`) refuses those operations with an error that says how to turn them
     on, flagged tabs and saved boards behave as before, and a test fails if the gate is removed.
 
+24. **Board sync against the real server, in a browser.** Sync has only run in a browser against
+    the development board store. Done when a scripted check signs in to a local server (Postgres,
+    Redis), opens the canvas, saves, and a second clean browser on the same account opens the same
+    board, without needing a tldraw licence key (for example the dev canvas proxying `/auth` and
+    `/api/canvas/boards` to the server behind an environment switch).
+25. (PR #29 open, awaiting review.) **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
+    "Offline · saved on this device" and retries for ever, re-uploading each time. Done when a
+    refused save says why on the chip, stops retrying until the board changes, and has a test.
+26. (PR #28 open, awaiting review.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
+    Done when the server enforces a per-account limit with a test and the choice is recorded.
+
+27. **Group objects through a structured operation.** The spec's agent interface asks for
+    "create, update, connect, group, arrange and annotate" as structured operations; there is no
+    group operation. Done when `canvas_group` wraps revision-guarded objects in a named frame that
+    keeps their page positions, rejects the whole call on a stale or locked object, is one undoable
+    run, and is tested at editor level and live over HTTP and MCP.
+
+Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
+
 ## Claims
-21. Prototype operations behind flags | claude/sprint-proto-gate | 2026-11-26T10:42Z
-18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
+19. Board picker and history (part 1: restore and revisions API, no UI) | claude/sprint-board-history | 2026-11-26T11:04Z
+24. Board sync against the real server | claude/sprint-sync-real-server | 2026-11-26T10:55Z
+5. Converge | claude/sprint-converge | 2026-11-26T10:50Z (build-B note: PR #27 already implements this and was pushed to `claude/sprint-converge`; build-B started it without claiming first, which was a procedure miss. Review or extend #27 rather than redo it, or pick another task.)
+27. Group operation | claude/sprint-group | 2026-11-26T11:00Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
-11. Shared-edit gaps | claude/sprint-shared-edit | 2026-11-26T10:37Z
 
 ## Done
+- Calm canvas (maintainer branch `yc/calm-canvas`, playtest 1 rework): PR #21, merged 2026-11-26 as a local squash combined with the sprint work (15 conflicted files resolved on a copy; the branch itself was not touched). **Build on this layout from now on.**
+- 18. Agent-usability tasks: PR #24 (21 tasks, self-test proves every check fails before and passes after a reference solution; first attempt by a fresh agent 20/21, median 3 tool calls).
+- Reviewed and merged 2026-11-26 by the review lane: #16 as af63474, #17 as c6b5849, #18 as f104315, #19 as a4b927e, #20 as be3dce9.
+- 10. e2e repair: PR #19 (real magic-link sign-in; root `pnpm build && pnpm test` is green when Postgres, Redis and `JWT_SECRET` are provided).
+- 13. CSV import: PR #18 (behind `?prototype=data`; acceptance 10/10 together with #17).
+- 15. Reload stability: PR #17.
+- 16. 10k objects: PRs #14 and #16 (10k opens in about 9 s; panning with all 10k on screen is 40 to 90 ms a frame).
+- 21. Prototype operations behind flags: PR #20.
+- Reviewed and merged 2026-11-26 by the review lane, each re-run against the combined branch: #8 as 6f4f3fb, #9 as e357f71, #10 as f7483a9, #11 as 4e4c9b7, #12 as 204980a, #13 as 054ab83, #14 as 3a4a85f, #15 as 8708875 (with two fixes, see Decisions needed).
+- 8. Docs: PRs #9 (data prototype documented, docs checked by test) and #10 (Agent access fills in the checkout's paths).
+- 12. Prototype tool exposure: PR #13 (`hostedPrototypeTools`, default on).
+- 14. Transitive staleness: PR #11 (acceptance 7/10 to 8/10).
 - 1. Server-side boards: PRs #12 (server API, Postgres store, revisions, stale-write 409) and #15 (canvas sync, merge by object, move from IndexedDB, dev board store). Persistence passes on #15.
 - 0. Eval harness: PR #8 (`pnpm eval:canvas`, baseline scorecard: acceptance 7/10, safety pass, persistence fail, 10k perf impossible, e2e failing). Gaps filed as items 13 to 16.
 - 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Reviewed and merged 2026-11-26 as f47a23f, with a fix so undo never writes to an object locked since the run.
@@ -190,6 +223,15 @@ task by which measure is furthest from target, not by backlog order.
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (review, #21) How the calm canvas was combined with the sprint work: the calm layout, menu and first board win wherever the two disagreed; the legacy welcome-board swap is dropped (an older board is kept as its own page, as #21 does); board sync starts after the calm first board is laid out; the prototype page buttons stay in the pages list, which is now behind Menu → Show layers and pages, so with a prototype flag on they are two clicks away. Alternative: a flagged entry in the menu itself.
+- (review, #21) The resident agent calls the local Claude Code CLI, which the sprint may not spend on, so the Ask loop was verified with a stand-in program that returns a fixed reply. A real model has not answered an ask on this branch.
+- (build-A, item 18) The agent under test reaches the tools through a counting command-line MCP client (`eval/mcp-call.ts`) rather than native MCP tools in its harness, so calls can be counted and the session pinned. Task 14 failed with no board evidence kept; the check was left strict and the runner now records evidence. The agent's friction list (annotate `author` default, annotation arrow anchors, 39 KB tool list) is in PR #24.
+- (review, item 13) CSV typing: a column whose values all parse as numbers becomes numeric, so codes such as `007` lose their leading zeros and `0x10` reads as 16. Alternative: only plain decimal notation without leading zeros counts as a number.
+- (review, item 10) The scorecard's "Existing product" row stays red wherever Postgres and Redis are absent, because the e2e suite now needs them (it stops with a message naming the missing variable). With them it is green.
+- (review, item 1) Changed in #15 before merging: when this browser has unsaved edits and the account's board has moved on, or two browsers create the board at once, the two cannot be merged (no shared version is known), so the browser's board is saved as a separate board and the account's is opened. Before, the browser's board replaced the account's and the newer work survived only in the 50-revision history. This supersedes "this browser's edits on top" in the build-A note below.
+- (review, item 1) Board sync was not exercised in a browser against the real server: a production canvas build needs `VITE_TLDRAW_LICENSE_KEY`. The real API was checked with a session cookie and a real board. The scorecard's Persistence pass is against the development board store.
+- (review, item 1) Migration 007 runs on server start, so it reaches production with the first deploy of this branch. No cap on boards per account.
+- (review) From #8 on, PRs are squash-merged through GitHub (the branches carry the owner's identity), after the review lane merges the integration branch into the PR branch, resolves conflicts and re-runs every check.
 - (build-A, item 1) Board sync merges a stale save by object: different objects both survive, an edit beats a deletion, and where both changed one object the saving tab wins while the other version stays in server revision history (no history UI yet, item 19). Alternative: show both and ask.
 - (build-A, item 1) One board per account (`main`). A browser's own earlier work found at first sync is kept as a separate server board, never overwritten. Another account's unsaved local work is never uploaded.
 - (build-A, item 1) The dev server serves the board API for one local person from `.local/boards` (`PAIRED_BOARDS_DIR`), so `pnpm eval:canvas` can measure persistence without Postgres; this includes the maintainer's local LaunchAgent server.
@@ -215,6 +257,17 @@ task by which measure is furthest from target, not by backlog order.
 - (build-B, item 15) A card's auto-sized `props.h` no longer bumps the revision (one definition of derived fields in `src/revision.ts`, shared with run-undo), and reload no longer re-estimates card heights; cards on screen re-measure once fonts load.
 - (build-B, item 13) Dropping a CSV creates a dataset only with `?prototype=data`, since the scenario is still proposed; without the flag a CSV drop does what it did before. The dataset's top-left corner lands at the drop point; a column is numeric only if every value is.
 - (build-B, item 10) The e2e spec signs in by reading the real magic link from the server log (email sending is not built) and invites the second user through Share, because a signed-in user's document is private. Mismatch found, not changed: the editor tells the owner "anyone with this link can edit", but the API returns 404 to signed-in non-collaborators and the page stays on "Loading document...". Product choice needed: make link access real, or change the banner.
+- (build-A, item 21) A tab without `?prototype=data` refuses `dataset`, `chart`, `chart_state` and `cell`, and one without `?prototype=learning` refuses `learn`, before touching the board. Prototype objects already on a saved board still show everywhere. Agents still see the tools (hosted manifest under `hostedPrototypeTools`, still on; local stdio lists all); alternative: turn `hostedPrototypeTools` off too.
+- (build-A) Two build-A runs overlapped on 26 Nov: this run duplicated the eval board-store fix on #15 and the agent-usability tasks (item 18) before seeing the other run's pushes, and withdrew both without pushing. Lanes should re-read Claims after every pull, not only at the start.
+- (build-B, item 11) (a) Undo of a deletion is refused when the restored object's parent frame or page, or an arrow's other end, was deleted since (consistent with all-or-nothing undo), rather than re-parenting it. (b) Runs belong to their actor label: an agent lists and undoes only its own. Labels are not authenticated, and local MCP agents share "MCP agent" unless `PAIRED_ACTOR` is set, so this prevents mistakes, not misuse. (c) `canvas_learn` hides only objects an agent made.
+
+- (build-B, item 9) A real tldraw `Editor` needs a DOM, and adding a DOM library (jsdom) as a dev dependency was refused in the build environment, so the editor-path checks for item 9 are eval checks (three data races in Safety, two strengthened acceptance steps) and the rules themselves are pure functions with unit tests. A lock bypass in the editor path fails only the eval. Alternative: add jsdom and test `executeCommand` against a real editor in `pnpm test`.
+- (build-A, item 3) The proposed primitives are derived views over what the board already records (arrow meta and bindings, `meta.inputs`, a chart's dataset, a dataset's source, an image's `sourceUrl`, the run ledger), not new stored records; no migration. Exposed read-only on `canvas_get` only, scoped to the object's page; a hand-drawn arrow is `decorative`. Alternative: stored Relationship/Transformation records, revisit with server-side boards.
+- (build-B, item 5) Converge is a prototype behind `?prototype=converge` (the spec lists it as a gap, not confirmed): `canvas_converge` makes one agent synthesis card with a derived-from arrow from each source, records the sources as inputs so it goes stale when one changes, and never touches the sources. No person-side control yet; it belongs in the Ask loop of #21 once that merges.
+- (build-B) 10k pan frame time varies from 39 to 84 ms between runs of the same code on the sprint container; profiles show the time is tldraw's own rendering of every visible shape, not app code, so read that row's changes with that spread in mind.
+- (build-B, item 26) 50 boards per account (`MAX_BOARDS_PER_ACCOUNT`); creating one more returns 403 with the limit, saving an existing board is never limited, and Postgres enforces it under a per-account advisory lock. Revisions stay at 50 per board, so the worst case per account is about 50 x (10 MB + 50 x 10 MB); a total-bytes budget per account would be tighter and is the maintainer's call. The development file store has no limit.
+
+- (build-B, item 25) A save refused with 400 or 413 gets its own sync state, `refused`. The chip reads "Too large to save · kept on this device" (413) or "Save refused · kept on this device" (400), with the server's reason in the tooltip. No retry is scheduled, and the same board is not uploaded again. Any change to the board tries once more. 401 and 5xx still count as offline and retry. Alternative: a visible prompt that offers to export the board.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -234,3 +287,14 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T10:23Z | build-A | 1 Server-side boards | #12 #15 | Server API with Postgres tests and live check; canvas sync; scorecard Persistence fail→pass |
 | 2026-11-26T10:29Z | build-B | 13 CSV import | #18 | CSV drop creates a typed dataset or reports row/column errors; eval CSV step passes; with #17 the acceptance scenario is 10/10 |
 | 2026-11-26T10:37Z | build-B | 10 Repair e2e spec | #19 | Real magic-link sign-in and Share invite; passes 3/3 against local Postgres and Redis; root `pnpm build && pnpm test` green with services |
+| 2026-11-26T10:45Z | review | Review #8 to #15 | #8 #9 #10 #11 #12 #13 #14 #15 | All eight merged (squash) after re-running each proof on the combined branch; two defects fixed in #15 (whole-board overwrite, stray welcome cards); scorecard on 8708875: acceptance 8/10, safety pass, persistence pass (dev store), 10k reported |
+| 2026-11-26T10:43Z | build-A | 21 Prototype ops behind flags | #20 | Unflagged tabs refuse the five prototype ops and change nothing; test fails without the gate; live HTTP check; scorecard unchanged |
+| 2026-11-26T10:44Z | build-B | 11 Shared-edit gaps | #22 | Three races added; safety measure 3/6 (1 human edit lost) on the old code to 6/6 (0 lost) |
+| 2026-11-26T10:50Z | build-A | 18 Agent-usability tasks | #24 | 21 tasks, self-test 21/21, attempt 20/21 (95%), median 3 calls; scorecard agent usability not run→pass |
+| 2026-11-26T10:50Z | build-B | 9 Editor-level data agent tests | #25 | Pure write rules unit-tested; safety 3/3 to 6/6 races with data races; four mutations each fail a check |
+| 2026-11-26T10:50Z | review | Review #16 to #20 | #16 #17 #18 #19 #20 | All five merged (squash); proofs re-run on the combined branch, e2e against real Postgres and Redis; scorecard on 816edb9: acceptance 10/10, safety pass, persistence pass (dev store), 10k load 9.4 s |
+| 2026-11-26T10:52Z | build-A | 3 Foundational primitives | #23 #26 | Relationship, Source, Transformation, Agent run typed and tested; canvas_get shows them, live MCP check incl. a hand-drawn arrow; scorecard unchanged |
+| 2026-11-26T10:53Z | build-B | 5 Converge | #27 | Prototype synthesis card with derived-from links and stale marking; gated on ?prototype=converge; live HTTP check and screenshots |
+| 2026-11-26T10:57Z | build-B | 26 Board limits | #28 | Per-account cap with memory and Postgres contract tests (incl. concurrent creates); root build and test green with services |
+| 2026-11-26T11:01Z | build-B | 25 Refused save is not Offline | #29 | Refused save gets its own state and chip text; no retry storm (3 uploads in 12 s to 1); sync tests 26 pass |
+| 2026-11-26T11:00Z | review | Review #21 | #21 | Merged as a local squash with the sprint work; 150 canvas tests, scorecard 10/10 acceptance, calm check 33/33 with a stand-in model, data, learning, run-undo and board-sync live checks pass; board sync no longer logs a 404 on first open |

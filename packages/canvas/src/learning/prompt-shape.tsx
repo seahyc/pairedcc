@@ -1,3 +1,4 @@
+import { prototypeEnabled } from "../prototype-flags";
 import { useState } from "react";
 import {
   BaseBoxShapeUtil,
@@ -28,7 +29,7 @@ declare module "tldraw" {
 export type PromptShape = TLShape<"prompt">;
 
 export function learningPrototypeEnabled(search = typeof location === "undefined" ? "" : location.search) {
-  return new URLSearchParams(search).getAll("prototype").includes("learning");
+  return prototypeEnabled("learning", search);
 }
 
 function statusOf(editor: Editor) {

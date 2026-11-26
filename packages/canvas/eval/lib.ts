@@ -102,7 +102,7 @@ export async function ready(page: Page) {
   // A new board lays out the welcome page after fonts load (up to 2.5 s); wait for it so it
   // does not land in the middle of a check. Existing boards are already seeded.
   await page
-    .waitForFunction(() => (window as any).__pairedEditor.getPages().some((p: any) => p.meta.seeded === 2), null, { timeout: 10000 })
+    .waitForFunction(() => (window as any).__pairedEditor.getPages().some((p: any) => p.meta.seeded >= 2), null, { timeout: 10000 })
     .catch(() => undefined);
 }
 
