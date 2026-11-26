@@ -207,6 +207,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 28. Existing product row runs e2e for real | claude/sprint-eval-services | 2026-11-26T11:06Z
+20. Welcome board header overlaps | claude/sprint-welcome-check | 2026-11-26T11:07Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
