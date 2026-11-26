@@ -9,6 +9,7 @@ function server(signedIn: string | null = "alice") {
   const boards = new Map<string, { revision: number; snapshot: Snapshot; history: Snapshot[] }>();
   let down = false;
   const uploads: string[] = [];
+  const hooks: { beforePut?: () => Promise<void> } = {};
   const api: BoardApi = {
     async account() {
       if (down) throw new Error("offline");
@@ -22,6 +23,7 @@ function server(signedIn: string | null = "alice") {
     async put(id, expectedRevision, snapshot) {
       if (down) throw new Error("offline");
       uploads.push(id);
+      await hooks.beforePut?.();
       if (JSON.stringify(snapshot).includes("HUGE")) return { ok: false, stale: false, refused: 413, error: "Boards are limited to 10 MB" };
       const b = boards.get(id);
       if (!b) {
@@ -36,14 +38,16 @@ function server(signedIn: string | null = "alice") {
       return { ok: true, revision: b.revision };
     },
   };
-  return { api, boards, uploads, setDown: (v: boolean) => (down = v) };
+  return { api, boards, uploads, hooks, setDown: (v: boolean) => (down = v) };
 }
 
 function browser(initial: Snapshot, memo: SyncMemo | null = null) {
   let doc = structuredClone(initial);
   const listeners = new Set<() => void>();
   const stored = { memo };
-  const timers: (() => void)[] = [];
+  // Pending timers in firing order; clearTimer really cancels, as in a browser.
+  const timers: ((() => void) & { id?: number })[] = [];
+  let nextId = 0;
   return {
     get doc() {
       return doc;
@@ -66,8 +70,15 @@ function browser(initial: Snapshot, memo: SyncMemo | null = null) {
     memo: { get: () => stored.memo, set: (m: SyncMemo | null) => (stored.memo = m) },
     stored,
     timers,
-    setTimer: (fn: () => void) => timers.push(fn),
-    clearTimer: () => undefined,
+    setTimer: (fn: () => void) => {
+      const t = Object.assign(() => fn(), { id: ++nextId });
+      timers.push(t);
+      return t.id;
+    },
+    clearTimer: (id: unknown) => {
+      const i = timers.findIndex((t) => t.id === id);
+      if (i >= 0) timers.splice(i, 1);
+    },
     async flush() {
       while (timers.length) await timers.shift()!();
     },
@@ -404,5 +415,24 @@ describe("withNewRecords", () => {
     expect(b.timers).toHaveLength(0);
   });
 
+
+  it("saves an edit made while a refused upload was in flight", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    b.edit("HUGE board");
+    let release!: () => void;
+    srv.hooks.beforePut = () => new Promise<void>((done) => (release = done));
+    const uploading = b.timers.shift()!(); // the debounced save starts and waits on the server
+    await Promise.resolve();
+    b.edit("trimmed to fit"); // schedules its own save while the upload is in flight
+    srv.hooks.beforePut = undefined;
+    release();
+    await uploading;
+    expect(last()).toMatchObject({ state: "refused" });
+    await b.flush();
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("trimmed to fit");
+    expect(last()).toMatchObject({ state: "saved" });
+  });
 });
 
