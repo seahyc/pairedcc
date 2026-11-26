@@ -168,15 +168,15 @@ task by which measure is furthest from target, not by backlog order.
     the tools. Done when the scorecard reports a completion rate and median tool calls.
 19. **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
-    their boards, open one, and restore an earlier revision from the canvas.
-17. **Agent-usability tasks and a recorded attempt.** The scorecard's Agent usability row reports
-    0 tasks. Add at least 20 board tasks in `packages/canvas/eval/tasks/` with machine-checked end
-    states, a harness that gives a fresh agent only `AGENT_API.md` and the MCP tools, and a recorded
-    attempt in `eval/agent-runs/latest.json`. Tasks avoid board sync (build-A's own feature). Done
-    when the row reports a real completion rate and median tool calls.
+    their boards, open one, and restore an earlier revision from the canvas.21. **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
+    the default view must be behind flags. The flagged buttons are, but any agent can still put a
+    dataset, chart or learning prompt on a default board: the tab runs `dataset`, `chart`,
+    `chart_state`, `cell` and `learn` whatever its flags. Done when a tab without `?prototype=data`
+    (or `?prototype=learning`) refuses those operations with an error that says how to turn them
+    on, flagged tabs and saved boards behave as before, and a test fails if the gate is removed.
 
 ## Claims
-17. Agent-usability tasks | claude/sprint-agent-tasks | 2026-11-26T10:27Z
+21. Prototype operations behind flags | claude/sprint-proto-gate | 2026-11-26T10:42Z
 18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 10. Repair e2e editor-collab spec | claude/sprint-e2e-collab | 2026-11-26T10:30Z
