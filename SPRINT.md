@@ -536,7 +536,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     scaled to 2048 px — natural width 0"). Item 45 (d), #76, passed when merged; #77 (image size)
     merged since. Done when `verify-board-images.mjs fresh` passes 5/5, with the cause named.
 
+89. **The two log-only browser checks give a verdict.** `verify-converge.ts` and
+    `verify-data-prototype.cjs` print what they see and exit 0 unless they crash, so `verify-all`
+    (#113) can only say they "ran". Done when each checks every state it prints, prints PASS or
+    FAIL per step, exits non-zero on a failure, and a deliberate break of the behaviour fails it.
+
 ## Claims
+89. Log-only checks give a verdict | claude/sprint-check-verdicts | 2026-11-26T13:53Z
 87. The menu and dialogs work from the keyboard | claude/sprint-robust-menu | 2026-11-26T13:48Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 
