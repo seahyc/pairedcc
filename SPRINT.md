@@ -581,7 +581,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 96. (PR #122 open, awaiting review; (a) was fixed when #104 merged.) **Comments placed on the page by #104 move and are read as they did inside a frame.** (Review of #104, now merged.) Asks, comments and replies about objects in a frame now sit on the page, and three things were lost: (a) an ask or comment about several cards in one frame stays behind when the frame is dragged (`followers` skips multi-target cards); (b) asking about a frame no longer gives the comments placed on what it holds; (c) an agent's `canvas_arrange` moving an unselected frame leaves those comments behind. Done when each has a failing-first test or real-page check and is fixed, and moving a frame (person or agent) brings every comment, reply and answer about what it holds, in one undo step.
 
-97. **The first board keeps a margin on a phone.** On a 390 px screen the calm first board is
+99. (Renumbered from 97 to avoid a clash.) **The first board keeps a margin on a phone.** On a 390 px screen the calm first board is
     wider than the window, so `bringContentIntoView` fits it (about 78%) with a 32 px inset, and the
     ✦ marks drawn just outside the cards sit clipped against the left edge (seen by build-A in
     headless Chromium, 26 Nov). Done when nothing on the first board touches either edge at 390 px,
@@ -597,6 +597,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 97. **verify-answer-page's frame step after #104.** On `claude/sprint-int` at 8cea125, `tools/verify-answer-page.mjs` fails "an answer that lands inside a frame on the open page belongs to the frame" (10/11); #104 made answers land clear of frames so they are never clipped. Done when the product choice (answer inside the frame, unclipped, or beside it) is recorded and the check asserts that choice, passing on the branch.
 
 ## Claims
+99. The first board keeps a margin on a phone | claude/sprint-phone-margin | 2026-11-26T14:29Z
 97. verify-answer-page's frame step after #104 | claude/sprint-answer-page-frame | 2026-11-26T14:27Z
 98. Follow-ups to bot review of #99 and #88 | claude/sprint-review-followups-a | 2026-11-26T14:23Z
 94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
