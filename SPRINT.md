@@ -516,7 +516,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 84. (PR #109 open, awaiting review.) **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
 
+85. **An answer on another page is one step away.** `docs/canvas/principles.md`, "Not done": "they are told who answered and on which page, but the board does not take them there." The toast (#69) names the page, disappears after 3.5 s and offers nothing to press, so the person has to find the page in a hidden menu and then find the answer on it (finding 7, recognising beats recalling; "the agent must visibly respond"). Done when that notice carries a **Show** button (reachable by keyboard, with a key) that opens the ask's page, selects the answer (or the failed ask) and brings it into view, the notice stays long enough to press it, the view never moves unless the person presses it, from a tested pure function, checked in a real page (failing before, passing after), with before/after screenshots.
+
+86. **`canvas_overview` shows what the person left out of asks.** Agents are told to start with `canvas_overview`, which lists no meta, so a left-out object (item 67, `meta.leftOut`) looks like any other there and an agent may read it to answer an ask. Done when overview rows carry `leftOut: true` for left-out objects (as they carry `locked: true`), documented in AGENT_API and unit-tested.
+
 ## Claims
+86. canvas_overview shows what was left out of asks | claude/sprint-overview-leftout | 2026-11-26T13:44Z
+85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
 
 ## Done
@@ -825,3 +831,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:36Z | build-B | 67 follow-up: merged the integration branch into #90 | #90 | Conflicts with #64/#67/#69/#86/#88 resolved; selected frame contents and history honour left-out marks; Leave out key cap hidden on touch; verify-leave-out 19/19 incl. frame ask and 390 px phone |
 | 2026-11-26T13:37Z | build-A | 82 A Tab stop is heard | #108 | hideUi had dropped tldraw's announcer, so nothing was said on select; verify-heard 2/13 → 13/13; 8 unit tests (one failing-first for answers said as notes); first screen unchanged; scorecard unchanged |
 | 2026-11-26T13:41Z | build-B | 84 Ask about an image says what it is | #109 | File name, size, caption and alt text for image targets, frame contents and history; describeImage unit-tested; real tab 5/5 |
+| 2026-11-26T13:43Z | build-B | Kept open PRs mergeable | #104 #106 #109 | Merged the integration branch into each (asks.ts conflicts after #90 and the answer-row change merged); re-ran build, tests and each real-page check: 16/16, 4/4, 5/5 |
