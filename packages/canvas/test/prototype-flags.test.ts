@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Editor } from "tldraw";
 import { executeCommand } from "../src/agent-operations";
-import { PROTOTYPE_OPS, prototypeEnabled, prototypeRefusal } from "../src/prototype-flags";
+import { PROTOTYPE_OPS, canvasReturnTo, prototypeEnabled, prototypeRefusal } from "../src/prototype-flags";
 import { commandSchema } from "../src/protocol";
 
 // An editor that fails the test if a refused operation reaches it.
@@ -13,6 +13,13 @@ const untouchable = new Proxy({} as Editor, {
 
 describe("prototype flags", () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it("keeps a tab's prototype flags, and only those, through sign-in", () => {
+    expect(canvasReturnTo("")).toBe("/canvas/");
+    expect(canvasReturnTo("?prototype=data")).toBe("/canvas/?prototype=data");
+    expect(canvasReturnTo("?prototype=data&prototype=converge&x=1")).toBe("/canvas/?prototype=data&prototype=converge");
+    expect(canvasReturnTo("?next=//evil.example")).toBe("/canvas/");
+  });
 
   it("reads each flag from the tab's query string", () => {
     expect(prototypeEnabled("data", "?prototype=data")).toBe(true);
