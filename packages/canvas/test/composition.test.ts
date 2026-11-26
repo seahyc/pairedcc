@@ -22,3 +22,17 @@ describe("scene composition", () => {
     ]);
   });
 });
+
+import { frameAround, groupInput } from "../src/composition";
+describe("group", () => {
+  it("needs guarded objects and a name, with sensible padding", () => {
+    const g = groupInput.parse({ objects: [{ id: "shape:a", expectedRevision: 0 }], name: "Evidence" });
+    expect(g.padding).toBe(40);
+    expect(groupInput.safeParse({ objects: [], name: "Evidence" }).success).toBe(false);
+    expect(groupInput.safeParse({ objects: [{ id: "shape:a", expectedRevision: 0 }], name: "" }).success).toBe(false);
+    expect(groupInput.safeParse({ objects: [{ id: "shape:a" }], name: "x" }).success).toBe(false);
+  });
+  it("frames the combined bounds with padding on every side", () => {
+    expect(frameAround([{ x: 100, y: 50, w: 200, h: 100 }, { x: 400, y: 120, w: 50, h: 300 }], 40)).toEqual({ x: 60, y: 10, w: 430, h: 450 });
+  });
+});

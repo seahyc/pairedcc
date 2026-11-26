@@ -56,6 +56,8 @@ export function seed(editor: Editor) {
       type: "text",
       x,
       y,
+      // A width the board's own layout chose: not clamped to the reading width.
+      ...(opts.w ? { meta: { fixedWidth: true } } : {}),
       props: {
         richText: toRichText(value),
         font: opts.font ?? "sans",
@@ -80,8 +82,10 @@ export function seed(editor: Editor) {
 
   // Title, in the human's hand.
   text(0, 0, "welcome to paired", { font: "draw", size: "xl", scale: 2.2 });
-  text(6, 128, "this board is yours. think out loud, with an agent beside you.", { size: "l", color: "grey" });
-  text(8, 186, "space + drag to pan   ·   scroll to move   ·   pinch to zoom   ·   shift + 1 to see everything", { size: "s", color: "grey" });
+  // Fixed widths keep each header line on one line (long plain text otherwise wraps at 460 px),
+  // and the hint sits below the subtitle's real height, so the two never overlap.
+  const subtitle = text(6, 128, "this board is yours. think out loud, with an agent beside you.", { size: "l", color: "grey", w: 1100 });
+  text(8, 128 + heightOf(subtitle) + 10, "space + drag to pan   ·   scroll to move   ·   pinch to zoom   ·   shift + 1 to see everything", { size: "s", color: "grey", w: 1100 });
 
   const columns: Column[] = [];
   const column = (i: number, letter: string, heading: string, sub: string): Column => {

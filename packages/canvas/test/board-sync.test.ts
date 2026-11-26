@@ -5,10 +5,12 @@ const snap = (text: string): Snapshot => ({ store: { "shape:a": { id: "shape:a",
 const text = (s: Snapshot) => (s.store["shape:a"] as { text: string }).text;
 
 /** A fake server with the real contract: revisions, stale rejection, create at 0. */
-function server(signedIn: string | null = "alice") {
-  const boards = new Map<string, { revision: number; snapshot: Snapshot; history: Snapshot[] }>();
+function server(signedIn: string | null = "alice", keep = 50) {
+  // history[i] is revision first + i; the oldest are pruned beyond `keep`, as on the server.
+  const boards = new Map<string, { revision: number; snapshot: Snapshot; history: Snapshot[]; first: number }>();
   let down = false;
   const uploads: string[] = [];
+  const hooks: { beforeRevision?: () => Promise<void>; beforeGet?: () => Promise<void>; beforePut?: () => Promise<void> } = {};
   const api: BoardApi = {
     async account() {
       if (down) throw new Error("offline");
@@ -16,34 +18,56 @@ function server(signedIn: string | null = "alice") {
     },
     async get(id) {
       if (down) throw new Error("offline");
+      await hooks.beforeGet?.();
       const b = boards.get(id);
       return b ? { revision: b.revision, snapshot: structuredClone(b.snapshot) } : null;
     },
     async put(id, expectedRevision, snapshot) {
       if (down) throw new Error("offline");
       uploads.push(id);
+      await hooks.beforePut?.();
       if (JSON.stringify(snapshot).includes("HUGE")) return { ok: false, stale: false, refused: 413, error: "Boards are limited to 10 MB" };
       const b = boards.get(id);
       if (!b) {
         if (expectedRevision !== 0) return { ok: false, stale: false, error: "Board not found" };
-        boards.set(id, { revision: 1, snapshot: structuredClone(snapshot), history: [structuredClone(snapshot)] });
+        boards.set(id, { revision: 1, snapshot: structuredClone(snapshot), history: [structuredClone(snapshot)], first: 1 });
         return { ok: true, revision: 1 };
       }
       if (b.revision !== expectedRevision) return { ok: false, stale: true, revision: b.revision };
       b.revision++;
       b.snapshot = structuredClone(snapshot);
       b.history.push(structuredClone(snapshot));
+      while (b.history.length > keep) {
+        b.history.shift();
+        b.first++;
+      }
       return { ok: true, revision: b.revision };
     },
+    async list() {
+      return [...boards].map(([id, b]) => ({ id, name: "Untitled exploration", revision: b.revision, sizeBytes: 1, updatedAt: "" }));
+    },
+    async revisions(id) {
+      const b = boards.get(id);
+      return b ? b.history.map((_, i) => ({ revision: b.first + i, sizeBytes: 1, savedAt: "" })).reverse() : null;
+    },
+    async revision(id, rev) {
+      await hooks.beforeRevision?.();
+      const b = boards.get(id);
+      const h = b && rev >= b.first ? b.history[rev - b.first] : undefined;
+      return h ? { revision: rev, snapshot: structuredClone(h) } : null;
+    },
   };
-  return { api, boards, uploads, setDown: (v: boolean) => (down = v) };
+  return { api, boards, hooks, uploads, setDown: (v: boolean) => (down = v) };
 }
 
-function browser(initial: Snapshot, memo: SyncMemo | null = null) {
+function browser(initial: Snapshot, memo: SyncMemo | null = null, shared?: { memo: SyncMemo | null }) {
   let doc = structuredClone(initial);
+  let resets = 0;
   const listeners = new Set<() => void>();
-  const stored = { memo };
-  const timers: (() => void)[] = [];
+  const stored = shared ?? { memo };
+  // Pending timers in firing order; clearTimer really cancels, as in a browser.
+  const timers: ((() => void) & { id?: number })[] = [];
+  let nextId = 0;
   return {
     get doc() {
       return doc;
@@ -52,11 +76,21 @@ function browser(initial: Snapshot, memo: SyncMemo | null = null) {
       doc = snap(t);
       for (const l of listeners) l();
     },
+    /** A change from another tab of this browser (tldraw's broadcast): no listener fires. */
+    remote(s: Snapshot) {
+      doc = structuredClone(s);
+    },
+    get resets() {
+      return resets;
+    },
     local: {
       snapshot: () => structuredClone(doc),
       load(s: Snapshot) {
         doc = structuredClone(s);
         for (const l of listeners) l();
+      },
+      reset() {
+        resets++;
       },
       listen(fn: () => void) {
         listeners.add(fn);
@@ -66,8 +100,15 @@ function browser(initial: Snapshot, memo: SyncMemo | null = null) {
     memo: { get: () => stored.memo, set: (m: SyncMemo | null) => (stored.memo = m) },
     stored,
     timers,
-    setTimer: (fn: () => void) => timers.push(fn),
-    clearTimer: () => undefined,
+    setTimer: (fn: () => void) => {
+      const t = Object.assign(() => fn(), { id: ++nextId });
+      timers.push(t);
+      return t.id;
+    },
+    clearTimer: (id: unknown) => {
+      const i = timers.findIndex((t) => t.id === id);
+      if (i >= 0) timers.splice(i, 1);
+    },
     async flush() {
       while (timers.length) await timers.shift()!();
     },
@@ -371,6 +412,206 @@ describe("withNewRecords", () => {
     expect(kept).toBe(2);
   });
 
+  it("restores an earlier revision as the newest one, keeping the board before it in history", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    b.edit("v2");
+    await b.flush();
+    b.edit("v3");
+    await b.flush();
+    expect(srv.boards.get("main")!.revision).toBe(3);
+    expect((await s.revisions())?.map((r) => r.revision)).toEqual([3, 2, 1]);
+    expect(await s.restore(1)).toEqual({ revision: 4, restoredFrom: 1 });
+    expect(text(b.doc)).toBe("v1");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("v1");
+    expect(text(srv.boards.get("main")!.history[2])).toBe("v3"); // nothing lost
+    expect(last()).toMatchObject({ state: "saved", revision: 4, note: expect.stringContaining("revision 3") });
+    expect(b.stored.memo).toMatchObject({ revision: 4, dirty: false });
+    // The restore is undone by restoring the revision it replaced.
+    await s.restore(3);
+    expect(text(b.doc)).toBe("v3");
+  });
+
+  it("saves edits made in this tab before restoring, so they stay in history", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("unsaved thought"); // debounce timer not run yet
+    await s.restore(1);
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "unsaved thought", "v1"]);
+    expect(text(b.doc)).toBe("v1");
+  });
+
+  it("refuses a pruned revision without touching the board, and needs an account", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    await expect(s.restore(9)).rejects.toThrow(/no longer kept/);
+    expect(text(b.doc)).toBe("v1");
+    expect(srv.boards.get("main")!.revision).toBe(1);
+    const out = sync(server(null), browser(snap("x")), false);
+    await out.s.start();
+    await expect(out.s.restore(1)).rejects.toThrow(/account/);
+    expect(await out.s.revisions()).toBeNull();
+  });
+
+  it("opens another saved board, saving this one first, and keeps saving to the opened one", async () => {
+    const srv = server();
+    await srv.api.put("main-browser-202611260900", 0, snap("kept from an old browser"));
+    const b = browser(snap("main work"));
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    expect(s.boardId()).toBe("main");
+    expect((await s.boards())?.map((x) => x.id).sort()).toEqual(["main", "main-browser-202611260900"]);
+    b.edit("main, edited"); // not saved yet
+    expect(await s.open("main-browser-202611260900")).toEqual({ boardId: "main-browser-202611260900", previous: "main" });
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main, edited"); // saved before leaving
+    expect(text(b.doc)).toBe("kept from an old browser");
+    expect(last()).toMatchObject({ state: "saved", revision: 1, note: expect.stringContaining('"main" is saved') });
+    expect(b.stored.memo).toEqual({ account: "alice", boardId: "main-browser-202611260900", revision: 1, dirty: false });
+    b.edit("old work, continued");
+    await b.flush();
+    expect(text(srv.boards.get("main-browser-202611260900")!.snapshot)).toBe("old work, continued");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main, edited");
+  });
+
+  it("reopens the board this browser last had open after a reload", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("main"));
+    await srv.api.put("other", 0, snap("other board"));
+    // tldraw kept the opened board in this browser, so that is what reopens locally.
+    const b = browser(snap("other board"), { account: "alice", boardId: "other", revision: 1, dirty: false });
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    expect(s.boardId()).toBe("other");
+    expect(text(b.doc)).toBe("other board");
+    expect(last()).toMatchObject({ state: "saved", revision: 1 });
+    expect([...srv.boards.keys()].sort()).toEqual(["main", "other"]); // nothing set aside
+    b.edit("other, edited");
+    await b.flush();
+    expect(text(srv.boards.get("other")!.snapshot)).toBe("other, edited");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main");
+  });
+
+  it("refuses to open a board that does not exist, leaving this one open", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    await expect(s.open("nope")).rejects.toThrow(/not found/);
+    expect(s.boardId()).toBe("main");
+    expect(text(b.doc)).toBe("v1");
+  });
+
+  it("does not claim a restore when another tab or device saved since this tab last did", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("v2");
+    await b.flush(); // this tab is clean at revision 2
+    await srv.api.put("main", 2, snap("from another device")); // revision 3
+    await expect(s.restore(2)).rejects.toThrow(/changed on another tab or device/);
+    await expect(s.restore(1)).rejects.toThrow(/changed on another tab or device/);
+    // Nothing was written and no hybrid was saved; this tab's board is as it was.
+    expect(srv.boards.get("main")!.revision).toBe(3);
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("from another device");
+    expect(text(b.doc)).toBe("v2");
+  });
+
+  it("restores the oldest kept revision even when saving pending edits prunes it", async () => {
+    const srv = server("alice", 3), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    for (const t of ["v2", "v3"]) {
+      b.edit(t);
+      await b.flush();
+    }
+    expect((await s.revisions())?.map((r) => r.revision)).toEqual([3, 2, 1]);
+    b.edit("pending"); // saving this prunes revision 1
+    await s.restore(1);
+    expect(text(b.doc)).toBe("v1");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("v1");
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v3", "pending", "v1"]);
+  });
+
+  it("keeps an edit made while the earlier version is downloading", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("v2");
+    await b.flush();
+    let release!: () => void;
+    srv.hooks.beforeRevision = () => new Promise<void>((done) => (release = done));
+    const restoring = s.restore(1);
+    await Promise.resolve();
+    b.edit("typed during the download");
+    release();
+    await restoring;
+    expect(text(b.doc)).toBe("v1");
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "v2", "typed during the download", "v1"]);
+  });
+
+  it("forgets undo history when another board is opened", async () => {
+    const srv = server();
+    await srv.api.put("other", 0, snap("other board"));
+    const b = browser(snap("main work"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    await s.open("other");
+    expect(b.resets).toBe(1);
+  });
+
+  it("keeps an edit made while the other board is loading", async () => {
+    const srv = server();
+    await srv.api.put("other", 0, snap("other board"));
+    const b = browser(snap("main work"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    let release!: () => void;
+    srv.hooks.beforeGet = () => new Promise<void>((done) => (release = done));
+    const opening = s.open("other");
+    await Promise.resolve();
+    b.edit("typed while opening");
+    release();
+    srv.hooks.beforeGet = undefined;
+    await opening;
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("typed while opening");
+    expect(text(b.doc)).toBe("other board");
+  });
+
+  it("saves to the board another tab of this browser opened, never over the one this tab started on", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("main"));
+    await srv.api.put("other", 0, snap("other board"));
+    const shared = { memo: { account: "alice", boardId: "main", revision: 1, dirty: false } as SyncMemo | null };
+    const a = browser(snap("main"), null, shared), b = browser(snap("main"), null, shared);
+    const tabA = sync(srv, a, true), tabB = sync(srv, b, true);
+    await tabA.s.start();
+    await tabB.s.start();
+    await tabA.s.open("other");
+    b.remote(a.doc); // tldraw broadcasts the switch to tab B's store
+    b.edit("edited in tab B");
+    await b.flush();
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main");
+    expect(text(srv.boards.get("other")!.snapshot)).toBe("edited in tab B");
+    expect(tabB.s.boardId()).toBe("other");
+  });
+
+  it("keeps the open board when edited offline after a reload, and saves to it on reconnect", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("main"));
+    await srv.api.put("other", 0, snap("other board"));
+    const b = browser(snap("other board"), { account: "alice", boardId: "other", revision: 1, dirty: false });
+    const { s } = sync(srv, b, true);
+    srv.setDown(true);
+    await s.start();
+    b.edit("other, edited offline");
+    expect(b.stored.memo).toMatchObject({ boardId: "other", revision: 1, dirty: true });
+    srv.setDown(false);
+    await b.flush();
+    expect(text(srv.boards.get("other")!.snapshot)).toBe("other, edited offline");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main");
+  });
   it("says why a refused save failed, and stops retrying until the board changes", async () => {
     const srv = server(), b = browser(snap("v1"));
     const { s, last } = sync(srv, b, true);
@@ -404,5 +645,24 @@ describe("withNewRecords", () => {
     expect(b.timers).toHaveLength(0);
   });
 
+
+  it("saves an edit made while a refused upload was in flight", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    b.edit("HUGE board");
+    let release!: () => void;
+    srv.hooks.beforePut = () => new Promise<void>((done) => (release = done));
+    const uploading = b.timers.shift()!(); // the debounced save starts and waits on the server
+    await Promise.resolve();
+    b.edit("trimmed to fit"); // schedules its own save while the upload is in flight
+    srv.hooks.beforePut = undefined;
+    release();
+    await uploading;
+    expect(last()).toMatchObject({ state: "refused" });
+    await b.flush();
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("trimmed to fit");
+    expect(last()).toMatchObject({ state: "saved" });
+  });
 });
 
