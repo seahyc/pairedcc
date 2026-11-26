@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
-import { agentListeners, agentLink, announceAsk } from "./agent-client";
+import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
 import { askStatusLine, startersFor, suggestQuestion } from "./ask-rules";
 import { richTextPlain, shapeName } from "./operations";
@@ -27,6 +27,7 @@ export function AskLayer() {
   const editor = useEditor();
   const listeners = useValue("ask listeners", () => agentListeners.get(), []);
   const hosted = useValue("ask link mode", () => agentLink.get().mode === "hosted", []);
+  const recent = useValue("ask recent agent", () => chatAgentActivity(agentActivity.get()), []);
   const asks = useValue(
     "asks on page",
     () => {
@@ -57,7 +58,7 @@ export function AskLayer() {
   return (
     <div className="scratch-layer ask-layer">
       {asks.map((a) => {
-        const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given });
+        const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given, recent });
         return (
           <div key={a.id}>
             {a.outlines.map((o) => (
