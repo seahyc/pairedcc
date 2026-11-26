@@ -497,7 +497,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 81. (PR #106 open, awaiting review; stacked on #104.) **An agent's note never lands on top of something.** `canvas_annotate` places its note under the target without looking for free space, so it can cover an ask or another note (seen in PR #104's screenshot; also point 10 of the fresh agent in PR #97). Done when an annotation without `x`/`y` is placed clear of other objects (as answers and comments already are, via `freeSpot`), with a test and a before/after screenshot.
 
-82. **A Tab stop is heard: whose it is, what it says, and its mark.** (Found while building item 7's
+82. (PR #108 open, awaiting review; stacked on #105.) **A Tab stop is heard: whose it is, what it says, and its mark.** (Found while building item 7's
     keyboard loop, #105.) The canvas runs with tldraw's UI hidden, which also removes its screen
     reader announcer, so when Tab or a click selects a card nothing is said: a screen-reader user
     cannot tell their own thought from an agent's answer, hear an option's text, or know it was
@@ -514,14 +514,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     pass/fail table, writes it as JSON, exits non-zero on any failure, and is documented for the
     review lane.
 
-84. **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
+84. (PR #109 open, awaiting review.) **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
+
+85. **An answer on another page is one step away.** `docs/canvas/principles.md`, "Not done": "they are told who answered and on which page, but the board does not take them there." The toast (#69) names the page, disappears after 3.5 s and offers nothing to press, so the person has to find the page in a hidden menu and then find the answer on it (finding 7, recognising beats recalling; "the agent must visibly respond"). Done when that notice carries a **Show** button (reachable by keyboard, with a key) that opens the ask's page, selects the answer (or the failed ask) and brings it into view, the notice stays long enough to press it, the view never moves unless the person presses it, from a tested pure function, checked in a real page (failing before, passing after), with before/after screenshots.
 
 ## Claims
-84. Ask about an image says what the image is | claude/sprint-ask-image | 2026-11-26T13:37Z
+85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
-82. A Tab stop is heard | claude/sprint-robust-heard | 2026-11-26T13:40Z
 
 ## Done
+- 84. Ask about an image says what it is (build-B): PR #109 (real tab 2/5 → 5/5 with the tightened frame check).
+- 82. A Tab stop is heard (build-A): PR #108, stacked on #105 (polite unseen live region says who made the selection, its text, kind, mark and order; verify-heard 2/13 → 13/13).
 - 81. Agent note never lands on top of something (build-B): PR #106, stacked on #104 (verify-annotate-clear 3/4 → 4/4).
 - 7. Robustness, keyboard-only loop (build-A): PR #105 (N then Enter writes a card in view; Tab/Shift+Tab move through the board, skipping connectors and hidden objects; verify-keyboard 6/14 → 14/14).
 - 80. Asks and notes never clipped by a frame (build-B): PR #104 (verify-ask-unclipped 6/16 → 16/16).
@@ -823,3 +826,5 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:31Z | build-A | 7 Keyboard-only loop | #105 | N then Enter was a dead end and Tab never reached the board or moved on from a selection; verify-keyboard 6/14 → 14/14; 10 unit tests; regression sweep green (calm 32/33 = known #91 case); first screen unchanged; scorecard unchanged |
 | 2026-11-26T13:31Z | build-B | 81 Agent note never lands on top of something | #106 | annotate without x/y uses freeSpot down the target column; real page 3/4 → 4/4; annotate tasks self-test 4/4 |
 | 2026-11-26T13:36Z | build-B | 67 follow-up: merged the integration branch into #90 | #90 | Conflicts with #64/#67/#69/#86/#88 resolved; selected frame contents and history honour left-out marks; Leave out key cap hidden on touch; verify-leave-out 19/19 incl. frame ask and 390 px phone |
+| 2026-11-26T13:37Z | build-A | 82 A Tab stop is heard | #108 | hideUi had dropped tldraw's announcer, so nothing was said on select; verify-heard 2/13 → 13/13; 8 unit tests (one failing-first for answers said as notes); first screen unchanged; scorecard unchanged |
+| 2026-11-26T13:41Z | build-B | 84 Ask about an image says what it is | #109 | File name, size, caption and alt text for image targets, frame contents and history; describeImage unit-tested; real tab 5/5 |

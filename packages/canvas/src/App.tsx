@@ -69,6 +69,7 @@ import {
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { convergeForPerson, createComment } from "./agent-operations";
 import { prototypeEnabled, canvasReturnTo } from "./prototype-flags";
+import { toggleLeftOut } from "./leave-out";
 import { followConnectors } from "./connector-follow";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
@@ -276,6 +277,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
+      ...(prototypeEnabled("context") ? [["Leave the selection out of asks (again to bring it back)", "L"] as [string, string]] : []),
       ["Open or close the feedback queue", "Shift C"],
       ["Bring in a table or document as cards", keys("⌘ V, or drop a file")],
       ["Next / previous imported record", "J / K"],
@@ -486,6 +488,15 @@ function Shell() {
         return;
       }
       if (event.shiftKey) return;
+      // L leaves the selection out of asks (the context prototype). Capture first so tldraw's own L (line) doesn't fire.
+      if (key === "l" && prototypeEnabled("context")) {
+        const chosen = editor.getSelectedShapes();
+        if (!chosen.length) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) toggleLeftOut(editor, chosen);
+        return;
+      }
       if (key !== "p" && key !== "x") return;
       const picked = editor.getSelectedShapes();
       if (!picked.length) return;

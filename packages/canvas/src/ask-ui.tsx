@@ -7,6 +7,8 @@ import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
+import { isLeftOut, leftOutLabel, toggleLeftOut } from "./leave-out";
+import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
 
 /** A key cap, left out on a touch screen where it names a key nobody has. */
@@ -38,6 +40,8 @@ export function AskLayer() {
     "asks on page",
     () => {
       const selected = new Set<string>(editor.getSelectedShapeIds());
+      // Counting what was kept back reads each ask's whole context, so only on a page that has a left-out object.
+      const anyLeftOut = editor.getCurrentPageShapes().some((s) => isLeftOut(s.meta));
       return editor.getCurrentPageShapes().flatMap((s) => {
         const ask = askOf(s), b = editor.getShapePageBounds(s);
         if (!ask || !b) return [];
@@ -49,7 +53,9 @@ export function AskLayer() {
               return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
             })
           : [];
-        return [{ id: s.id, ask, x: b.x, y: b.maxY, w: b.w, given: givenLabel(editor, ask.contextIds), outlines }];
+        // What the person kept back from this ask, as an agent reading it now would be given it.
+        const kept = anyLeftOut ? leftOutLabel(describeAsk(editor, s).leftOut ?? 0) : "";
+        return [{ id: s.id, ask, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds)}${kept ? ` · ${kept}` : ""}`, outlines }];
       });
     },
     [editor],
@@ -125,6 +131,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         editing: Boolean(editor.getEditingShapeId()),
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
+        leftOut: shapes.every((s) => isLeftOut(s.meta)),
         text: only ? textOf(only) : "",
         blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
         // An imported record keeps its own starters; anything else gets ones that fit the selection.
@@ -222,6 +229,15 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     if (!result.ok) onNotice(result.reason);
     editor.focus();
   };
+  const askAboutWriting = () => {
+    const id = editor.getEditingShapeId();
+    if (id) {
+      editor.complete();
+      editor.setCurrentTool("select");
+      editor.select(id);
+    }
+    setAsking(true);
+  };
   if (state.editing) {
     if (state.blank) return null;
     // On a touch screen the hint is the way to ask: no keyboard shortcut can be pressed.
@@ -235,14 +251,10 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
             // Act on the press, before the text editor loses focus and the bar changes under the finger.
             e.preventDefault();
             e.stopPropagation();
-            const id = editor.getEditingShapeId();
-            if (id) {
-              editor.complete();
-              editor.setCurrentTool("select");
-              editor.select(id);
-            }
-            setAsking(true);
+            askAboutWriting();
           }}
+          // A screen reader or switch activates a button with a click and no pointer press.
+          onClick={askAboutWriting}
         >
           ✦ Ask about this
         </button>
@@ -308,6 +320,18 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       <button onClick={onComment} title="Comment on it (C)">
         Comment <Kbd>C</Kbd>
       </button>
+      {prototypeEnabled("context") && (
+        <button
+          className={state.leftOut ? "on" : ""}
+          onClick={() => {
+            toggleLeftOut(editor, editor.getSelectedShapes());
+            editor.focus();
+          }}
+          title={state.leftOut ? "Bring back: asks about things nearby may give this to the agent again (L)" : "Leave out: asks about things nearby will not give this to the agent (L)"}
+        >
+          {state.leftOut ? "Bring back" : "Leave out"} <Kbd>L</Kbd>
+        </button>
+      )}
       {state.cites && (
         <button onClick={bringSources} title={`Bring the sections this record cites (${state.cites.split(" ").join(", ")}) beside it, linked by arrows (one undo)`}>
           Show {state.cites.split(" ").join(", ")}
