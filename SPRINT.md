@@ -104,7 +104,7 @@ task by which measure is furthest from target, not by backlog order.
 
 ## Done
 - 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Independent of #2–#4; whichever merges second rebases protocol/tool-defs and regenerates the manifest.
-- 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Reviewed and merged 2026-11-26 as a63745a, 24482f8, 6e7650c.
+- 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Reviewed and merged 2026-11-26 as 9f19690, 68d7ff3, ff68adc.
 
 ## Decisions needed
 - (build-B, item 2) Filtering or selecting a stale chart re-runs it on current data and clears the stale state (spec: immediate feedback). Alternative: keep the old snapshot until an explicit Recompute.

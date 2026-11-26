@@ -30,10 +30,10 @@ Last updated 2026-11-26T09:30Z by the review lane. Branch: `claude/sprint-int`.
 Scorecard (`pnpm eval:canvas`): not available yet.
 
 ## Merged
-- [#2](https://github.com/seahyc/pairedcc/pull/2) Dataset and chart state model: pure functions, synthetic café orders, 10 tests (a63745a).
-- [#3](https://github.com/seahyc/pairedcc/pull/3) Dataset and chart objects on a page behind `?prototype=data`, with click-to-filter, cell edits and stale marking (24482f8).
-- [#4](https://github.com/seahyc/pairedcc/pull/4) Prototype agent tools for datasets and charts; `read` reports exact chart state and staleness (6e7650c).
-- Review lane: `packages/cli` and `packages/web` test scripts pass when there are no test files (fa4d986).
+- [#2](https://github.com/seahyc/pairedcc/pull/2) Dataset and chart state model: pure functions, synthetic café orders, 10 tests (9f19690).
+- [#3](https://github.com/seahyc/pairedcc/pull/3) Dataset and chart objects on a page behind `?prototype=data`, with click-to-filter, cell edits and stale marking (68d7ff3).
+- [#4](https://github.com/seahyc/pairedcc/pull/4) Prototype agent tools for datasets and charts; `read` reports exact chart state and staleness (ff68adc).
+- Review lane: `packages/cli` and `packages/web` test scripts pass when there are no test files (a712b50).
 
 For #3 and #4 the review re-ran `tools/verify-data-prototype.cjs` and `tools/verify-data-agent.cjs`
 in headless Chromium against the dev server; the output matched the PRs' Proof sections line for
