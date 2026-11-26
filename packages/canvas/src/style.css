@@ -1462,6 +1462,9 @@ kbd {
   box-shadow: 0 6px 20px #1517281f;
   pointer-events: auto;
   white-space: nowrap;
+  /* On a narrow window the buttons wrap to a second row rather than leave the screen. */
+  flex-wrap: wrap;
+  box-sizing: border-box;
 }
 .selection-bar > button {
   display: flex;
@@ -1506,8 +1509,7 @@ kbd {
   align-items: stretch;
   gap: 6px;
   padding: 8px;
-  width: 430px;
-  box-sizing: border-box;
+  flex-wrap: nowrap;
 }
 .ask-row {
   display: flex;
@@ -1563,9 +1565,11 @@ kbd {
   top: 0;
   width: max-content;
   max-width: 640px;
-  white-space: nowrap;
+  /* Wraps within its card's width (set inline) so its button never ends up off screen. */
+  white-space: normal;
+  overflow-wrap: anywhere;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 7px;
   font: 400 12.5px/1.35 "Shantell Sans", Inter, sans-serif;
   color: #5d5a78;
