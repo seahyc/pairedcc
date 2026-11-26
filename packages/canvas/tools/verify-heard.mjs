@@ -78,15 +78,16 @@ const thoughtId = await selectedId();
 await press(`${mod}+Enter`, 800);
 const ask = (await command('asks', {})).asks.find((a) => a.id === thoughtId);
 check('the ask was sent', Boolean(ask));
-// The thought stays selected while the answer lands: what is said counts the new stops.
-await p.evaluate((id) => { window.paired.select([id]); window.__pairedEditor.focus(); }, thoughtId);
+// Something else stays selected while the answer lands: what is said counts the new stops.
+const other = await p.evaluate((ask) => window.paired.read().objects.find((o) => o.type === 'card' && o.id !== ask)?.id, thoughtId);
+await p.evaluate((id) => { window.paired.select([id]); window.__pairedEditor.focus(); }, other);
 await p.waitForTimeout(400);
 const totalOf = (text) => Number(/ of (\d+)\.$/.exec(text ?? '')?.[1] ?? NaN);
 const totalBefore = totalOf((await heard())?.text);
 const options = ask ? (await command('answer', { id: ask.id, alternatives: ['Per seat, so cost tracks team size', 'Per post, so cost tracks use', 'One flat price for any team'] })).answers.map((o) => o.id) : [];
 await p.waitForTimeout(800);
 const totalAfter = totalOf((await heard())?.text);
-check('an answer landing while a thought is selected updates the count said', totalAfter === totalBefore + 3, `${totalBefore} → ${totalAfter}`);
+check('an answer landing while another card is selected updates the count said', totalAfter === totalBefore + 3, `${totalBefore} → ${totalAfter}`);
 await p.evaluate(() => { window.__pairedEditor.selectNone(); });
 
 // Tab to the ask, then to option A.
