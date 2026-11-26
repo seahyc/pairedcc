@@ -18,7 +18,7 @@ Set `PAIRED_SESSION` to target a particular tab. Its ID persists across reloads 
 
 Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_asks`, `canvas_ask_status`, `canvas_answer`, `canvas_feedback`, `canvas_reply`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
 
-Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
+Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`, `canvas_group`.
 
 ### Learning prompts (prototype)
 
@@ -33,7 +33,9 @@ Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
 
 Data prototype tools: `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` (see [Data prototype](#data-prototype)).
 
-Prototype tools (`canvas_learn` and the data tools) are flagged `prototype` in `tools/tool-defs.ts`. The local stdio server always offers them. The hosted endpoint offers them while `hostedPrototypeTools` is true (the default); set it to false and run `pnpm --filter @pairedcc/canvas manifest` to leave them, and their guidance in the instructions, out of the hosted manifest.
+Converge prototype tool: `canvas_converge` (see [Converge](#converge-prototype)).
+
+Prototype tools (`canvas_learn`, `canvas_converge` and the data tools) are flagged `prototype` in `tools/tool-defs.ts`. The local stdio server always offers them. The hosted endpoint offers them while `hostedPrototypeTools` is true (the default); set it to false and run `pnpm --filter @pairedcc/canvas manifest` to leave them, and their guidance in the instructions, out of the hosted manifest.
 
 ### Overview, then detail
 
@@ -60,6 +62,14 @@ A prototype of the working spec's first acceptance scenario: a dataset, a bar ch
 When a chart is stale, `widget` still describes what the person sees: the older `bars` and `selected`, without `summary`, `rowsInView` or selected rows, plus a `note` saying so. Set its state (even unchanged) to recompute it on current data. The person sees a dashed chart with a Recompute button, and a "stale" flag on each derived object. A filter or selection on a stale chart, by the person or an agent, also recomputes it.
 
 Suggested loop: read the chart's `widget`, cite `summary` and the selected values in your explanation, create it with `inputs: [chartId]`, and re-read when the person changes something. If your note is stale, revise it rather than repeating it.
+
+### Converge (prototype)
+
+`canvas_converge` pulls several alternatives, branches or hypotheses into one synthesis. It runs only in a tab opened with `?prototype=converge`. Pass `sourceIds` (2 to 20 objects on the open page, each once, none hidden) and `text` (what they add up to and where they still disagree). Optionally pass `points`, claims that each cite the `sourceIds` they rest on, a `name`, and an `x`, `y` position. By default the card goes 80 px right of a column of sources (top-aligned) or 80 px below a row of them (left-aligned), so no arrow crosses a source.
+
+It creates one agent card with `meta.role: "synthesis"`, `meta.convergedFrom` (the source IDs) and `meta.inputs` (each source's version at that moment), plus a derived-from arrow from each source labelled A, B, C… The card lists each point with the letters of the sources it cites, and keeps `meta.points`. The result is `{ synthesis, sources, labels, connections }`, where `labels` maps each source ID to its letter. Because the sources are recorded as inputs, `read` reports the synthesis as `stale` once any source changes, and the board flags it. Revise it then. The sources are never moved or deleted, and the whole operation is one run, so `canvas_undo_run` removes the card and arrows together.
+
+The person can converge too: open the canvas with `?prototype=converge`, select two or more objects and press **Pull into a synthesis** in Properties. That makes the same linked card, in their handwriting and empty, ready for them to write their own conclusion.
 
 ### Relationships, sources and transformations (prototype)
 
@@ -192,6 +202,8 @@ Primitive creation and updates accept `font` (draw/sans/serif/mono), `size` (s/m
 
 `canvas_duplicate` accepts the same guarded `objects` list plus optional `offsetX` (default 320) and `offsetY` (default 0). Frames bring their descendants. Include arrows in the duplicated set to preserve bindings between copies. The result contains copied objects and the new selection; originals remain intact.
 
+`canvas_group` wraps objects in a named frame without moving them, to show they belong together. Pass the same guarded `objects` list, a `name` for the frame, and optional `padding` (default 40) around their combined bounds. The objects must share a parent: all on the page, or all in one frame, in which case the new frame nests inside it. A stale revision or a locked object rejects the whole call. The result has the `frame` and the `objects`, now inside it, with their new revisions. It is one run, so `canvas_undo_run` takes it back.
+
 A useful first request:
 
 > Read the current canvas. Create three visual alternatives beside the reference. Preserve all originals. Read the annotations attached to those alternatives before making revisions, and use a screenshot to inspect your results.
@@ -261,10 +273,12 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `scene` | `nodes` with unique keys, optional frame parentKey; optional connections between keys |
 | `arrange` | Guarded objects, `layout` (row/column/grid), page-space x/y, optional gap/columns |
 | `duplicate` | Guarded objects, optional offsetX/offsetY |
+| `group` | Guarded objects, `name`, optional `padding`; wraps them in a frame in place |
 | `learn` | Prototype: `mode` (predict/generate), `question`, `x`, `y`, optional `width`, `hideIds` |
 | `overview` | Optional `parentId`, `limit`, `cursor`; compact listing of one level |
 | `runs` | Optional `limit`; recent agent runs in this tab |
 | `undo_run` | `runId`; reverses that run only, or fails listing conflicts |
+| `converge` | Prototype: `sourceIds`, `text`, optional `points` (each `text` and its `sourceIds`), `name`, `x`, `y`; synthesis card with lettered derived-from arrows |
 | `dataset` | Prototype: `x`, `y`, optional size; `synthetic: "orders"` or `columns`, `rows`, `title`, `source` |
 | `chart` | Prototype: `x`, `y`, optional size, `datasetId`, `state` (x, y, aggregate, filter, selected) |
 | `chart_state` | Prototype: `id`, `expectedRevision`, partial `state`; recomputes on current data |
