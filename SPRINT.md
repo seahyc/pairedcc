@@ -379,7 +379,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     browser A restores an earlier revision after browser B saved a newer edit; the restore is
     refused and B's edit is still on the server and in A after reload (0 human edits lost).
 
+59. **Key hints name the person's own keys.** `docs/canvas/principles.md`, finding 7 (recognising
+    beats recalling) and playtest item 6 ("I don't know how to trigger the agent"). Every hint on
+    screen says ⌘↵ (selection bar, typing hint, tooltips, shortcut sheet, the first board's card),
+    but on Windows and Linux the key is Ctrl, so the one way to ask is named in a key those people
+    do not have. Done when hints show Ctrl on non-Apple platforms and ⌘ on Apple ones, from one
+    tested function, with a headless check under a Windows platform finding no ⌘ on the first
+    screen or the selection bar, and screenshots.
+
 ## Claims
+59. Key hints name the person's own keys | claude/sprint-mod-keys | 2026-11-26T12:30Z
 59. Safety race for restore | claude/sprint-eval-restore | 2026-11-26T12:27Z
 57. Dev board store survives its folder being removed | claude/sprint-dev-store-dir | 2026-11-26T12:19Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
