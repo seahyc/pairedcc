@@ -377,6 +377,10 @@ None.
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
+#110 (review follow-ups) and #111 (bounds on the PDF reader) were merged at about 13:45Z by another
+session while this run was finishing; this review did not check them and its scorecard does not
+include them.
+
 Open and not yet reviewed: #91 to #108 except #96 (older boards and the calm board, comments
 following imports, two versions of the faster web page reader, stale flags at the edge, a fresh
 agent attempt, the person's words protected from agent edits, the pan measure, screen-reader
