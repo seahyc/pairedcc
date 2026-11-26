@@ -11,6 +11,9 @@
 // 4. A save the server refuses (too large, invalid) is not offline: retrying the same board
 //    cannot succeed, so the controller says why and waits until the board changes.
 
+import { changedPaths } from "./run-undo";
+import { hasLoneSurrogate, wellFormed } from "./text";
+
 export type Snapshot = { store: Record<string, unknown>; schema: Record<string, unknown> };
 export type ServerBoard = { revision: number; snapshot: Snapshot };
 export type PutResult =
@@ -95,11 +98,33 @@ export function mergeSnapshots(base: Snapshot, mine: Snapshot, theirs: Snapshot)
   return { snapshot: { store, schema: mine.schema }, conflicts };
 }
 
+type Rec = Record<string, unknown>;
+const PLACEMENT = new Set(["parentId", "x", "y", "rotation"]);
+const revisionOf = (r: Rec) => ((r.meta as { revision?: unknown } | undefined)?.revision as number | undefined) ?? 0;
+function setPath(rec: Rec, path: string, value: unknown) {
+  const [head, tail] = path.split(/\.(.*)/s);
+  if (tail === undefined) {
+    if (value === undefined) delete rec[head];
+    else rec[head] = value;
+    return;
+  }
+  const inner = { ...((rec[head] as Rec | undefined) ?? {}) };
+  if (value === undefined) delete inner[tail];
+  else inner[tail] = value;
+  rec[head] = inner;
+}
+function getPath(rec: Rec, path: string) {
+  const [head, tail] = path.split(/\.(.*)/s);
+  return tail === undefined ? rec[head] : (rec[head] as Rec | undefined)?.[tail];
+}
+
 /**
- * The account's board plus the records created in this tab since `initial` (objects made
- * while the board was loading). Changes to records that already existed are not carried
- * over: on a new browser those are the welcome board settling (cards re-measuring), which
- * the account's board replaces. A new record whose parent is missing is left out.
+ * The account's board plus what the person did in this tab while it was loading (since
+ * `initial`): records they created (whose parents exist), and their edits to records the
+ * account's board also has, applied field by field onto the account's version, so its own
+ * newer fields survive. Fields the canvas derives on its own (a card re-measuring its
+ * height) are not edits. Records the account's board lacks (a new browser's welcome
+ * board settling) are never carried over.
  */
 export function withNewRecords(initial: Snapshot, current: Snapshot, server: Snapshot) {
   const store: Record<string, unknown> = { ...server.store };
@@ -115,6 +140,31 @@ export function withNewRecords(initial: Snapshot, current: Snapshot, server: Sna
       kept++;
       pass = true;
     }
+  }
+  for (const [id, now] of Object.entries(current.store) as [string, Rec][]) {
+    const before = initial.store[id] as Rec | undefined, theirs = server.store[id] as Rec | undefined;
+    if (!before || !theirs || now.typeName === "user") continue;
+    let edited = changedPaths(before as never, now as never);
+    if (!edited.length) continue;
+    // Position is relative to the parent, so parent and position move as one: the person's
+    // placement is carried whole, and only if its parent is still on the merged board;
+    // otherwise the account's placement stands (no orphan, no coordinates in the wrong frame).
+    if (edited.some((p) => PLACEMENT.has(p))) {
+      const parent = now.parentId as string | undefined;
+      const placeable = !parent || parent in store;
+      edited = edited.filter((p) => !PLACEMENT.has(p));
+      if (placeable) edited.push(...PLACEMENT);
+    }
+    if (!edited.length) continue;
+    const merged = structuredClone(theirs);
+    for (const path of edited) setPath(merged, path, structuredClone(getPath(now, path)));
+    // The object moved on in this tab; if the account's copy moved on too (even back to the
+    // same content), past both, so no revision is issued twice for different content.
+    const theirsChanged = revisionOf(theirs) !== revisionOf(before) || changedPaths(before as never, theirs as never).length > 0;
+    const revision = theirsChanged ? Math.max(revisionOf(theirs), revisionOf(now)) + 1 : revisionOf(now);
+    merged.meta = { ...((merged.meta as Rec | undefined) ?? {}), revision };
+    store[id] = merged;
+    kept++;
   }
   return { snapshot: { store, schema: server.schema }, kept };
 }
@@ -221,7 +271,14 @@ export function createBoardSync(o: SyncOptions) {
   /** Put this browser's board on top of whatever revision the server has now. */
   async function push(note?: string, attempt = 0): Promise<void> {
     followOtherTab();
-    const snapshot = o.local.snapshot(), json = JSON.stringify(snapshot);
+    let snapshot = o.local.snapshot(), json = JSON.stringify(snapshot);
+    if (hasLoneSurrogate(json)) {
+      // Half a character (an emoji cut in two) is stored by the server as U+FFFD. Make the
+      // same repair here first, so what this tab holds and merges from is what is stored.
+      apply(wellFormed(snapshot));
+      snapshot = o.local.snapshot();
+      json = JSON.stringify(snapshot);
+    }
     if (json === synced && attempt === 0 && !note) {
       remember(false);
       return emit({ state: "saved", account: account!, revision, at: now().getTime() });
@@ -431,6 +488,7 @@ export function createBoardSync(o: SyncOptions) {
       }
       revision = result.revision;
       base = old.snapshot;
+      o.local.reset?.(); // redo must not bring a newer object back over the restored one
       markSynced(o.local.snapshot());
       remember(false);
       retry = 1000;
