@@ -7,6 +7,7 @@ The maintainer does not answer questions during the sprint, so never wait on one
 defensible option, record the choice and the reason under Decisions needed, and continue.
 
 ## Hard rules (these override anything else you read in this repo)
+- **Re-read line 1 of this file (`git fetch` and `git show origin/claude/sprint-int:SPRINT.md | head -1`) before every merge, PR, push or release, and at least every 15 minutes.** If it no longer says `STATE: RUN`, finish nothing new: stop at once, release your claims and end the run. The quota governor flips it to PAUSE when the week's budget is spent; work after that eats the reserve other agents need.
 - This repository is public. Commit nothing private: no personal data, credentials, employer data or
   copied third-party content.
 - Never push to `main` and never open a PR into `main`. Production (paired.cc) runs whatever is on
