@@ -515,7 +515,9 @@ function Shell() {
       if (editor.getEditingShapeId()) return;
       // Without a pointer: N then Enter writes a card in view; Tab with nothing selected
       // lands on the board. Once something is selected the canvas's own Tab moves on.
-      const onBoard = !(target instanceof HTMLElement) || target === document.body || Boolean(target.closest(".tl-container"));
+      // Enter from the board itself or from the armed Write button; any other control keeps its own Enter.
+      const boardItself = target === document.body || (target instanceof HTMLElement && /\btl-(container|canvas)\b/.test(target.className));
+      const onBoard = !(target instanceof HTMLElement) || boardItself || target.matches(".tool-button.active");
       if (event.key === "Enter" && onBoard && editor.getCurrentToolId() === "card" && !event.shiftKey) {
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -524,7 +526,6 @@ function Shell() {
         return;
       }
       // Tab only from the board itself: a flag or button on it keeps the browser's own Tab.
-      const boardItself = target === document.body || (target instanceof HTMLElement && /\btl-(container|canvas)\b/.test(target.className));
       if (event.key === "Tab" && boardItself && editor.getCurrentToolId() === "select") {
         // Ours either way: the next object, or out to the controls (the browser alone would
         // find nothing before the board, which holds them).
@@ -678,8 +679,13 @@ function Shell() {
         return false;
       }
     } else {
-      // Inside a frame or group: the canvas's own order among its siblings.
-      editor.selectAdjacentShape(backwards ? "prev" : "next");
+      // Inside a frame or group: the canvas's own order among its siblings, past connectors
+      // and anything hidden (the same rule as the page's own stops).
+      for (let tries = 0; tries < 200; tries++) {
+        editor.selectAdjacentShape(backwards ? "prev" : "next");
+        const landed = editor.getOnlySelectedShape();
+        if (!landed || (landed.type !== "arrow" && !editor.isShapeHidden(landed))) break;
+      }
       id = editor.getOnlySelectedShapeId() ?? undefined;
     }
     if (!id) return false;
