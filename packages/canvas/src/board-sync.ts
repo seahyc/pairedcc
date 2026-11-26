@@ -293,24 +293,61 @@ export function createBoardSync(o: SyncOptions) {
    * saved first, so the board as it was before the restore stays in the history and the
    * restore itself can be undone by restoring that revision.
    */
-  async function restore(target: number): Promise<{ revision: number; restoredFrom: number }> {
+  async function restore(target: number, attempt = 0): Promise<{ revision: number; restoredFrom: number }> {
     if (!account || !o.api.revision) throw new Error("Revisions are only kept for boards saved to an account.");
-    await save();
-    while (saving) await saving;
-    if (status.state !== "saved") throw new Error("Save the board before restoring an earlier version.");
-    const before = revision;
-    if (target === before) return { revision, restoredFrom: target };
+    const elsewhere = "This board changed on another tab or device since this tab last saved. Nothing was restored; reload to see the newest version, then choose again.";
+    // Fetch first: saving this tab's edits adds a revision, which can prune the oldest one.
     const old = await o.api.revision(boardId, target);
     if (!old) throw new Error(`Revision ${target} is no longer kept.`);
-    apply(old.snapshot);
-    remember(true);
-    try {
-      await push(`Restored revision ${target}. The board as it was before is revision ${before} in the history.`);
-    } catch (error) {
-      failed(error);
-      throw error;
+    // Save every edit made so far, including any made during the download, so it stays in history.
+    await settle();
+    if (target === revision) {
+      const head = (await o.api.revisions?.(boardId))?.[0]?.revision;
+      if (head === revision) return { revision, restoredFrom: target };
+      throw new Error(elsewhere);
     }
+    const before = revision;
+    let result: PutResult | undefined;
+    // One exclusive step: autosaves wait for it, and the old version is written exactly,
+    // only on top of the revision this tab saved (never merged into a newer one).
+    const step = (async () => {
+      const current = o.local.snapshot();
+      if (JSON.stringify(current) !== synced) return; // edited again just now: caller retries
+      apply(old.snapshot);
+      result = await o.api.put(boardId, before, old.snapshot);
+      if (!result.ok) {
+        apply(current);
+        return;
+      }
+      revision = result.revision;
+      base = old.snapshot;
+      synced = JSON.stringify(o.local.snapshot());
+      remember(false);
+      retry = 1000;
+      emit({ state: "saved", account: account!, revision, at: now().getTime(), note: `Restored revision ${target}. The board as it was before is revision ${before} in the history.` });
+    })();
+    saving = step.finally(() => {
+      saving = null;
+      if (again) void save();
+    });
+    await saving;
+    if (!result) {
+      if (attempt >= 3) throw new Error("The board keeps changing; try again in a moment.");
+      return restore(target, attempt + 1);
+    }
+    if (!result.ok) throw new Error(result.stale ? elsewhere : result.error);
     return { revision, restoredFrom: target };
+  }
+
+  /** Save until nothing in this tab is unsaved; fails if the board cannot be saved now. */
+  async function settle() {
+    for (let i = 0; i < 5; i++) {
+      await save();
+      while (saving) await saving;
+      if (status.state !== "saved") throw new Error("Save the board before restoring an earlier version.");
+      if (JSON.stringify(o.local.snapshot()) === synced) return;
+    }
+    throw new Error("The board keeps changing; try again in a moment.");
   }
 
   return {
