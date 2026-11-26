@@ -221,6 +221,21 @@ task by which measure is furthest from target, not by backlog order.
     and replies attached to it by the same amount (not those also being moved, not ones about
     several objects), as one undo step, tested, with before/after screenshots.
 
+50. **Stale checks on shared inputs stay linear.** (From an automated review of #11, verified by
+    reading `staleChain`.) A shared upstream input is walked once per path: notes built on notes in
+    rounds make the board's stale badges and `read` grow exponentially (millions of visits after
+    20 rounds). Done when staleness is computed once per object per pass, `read` reports repeated
+    causes by reference or bounded, and a test with 20 rounds of shared inputs runs fast.
+51. **CSV import keeps what the file says.** (From an automated review of #18, verified.) (a) A
+    numeric column with integers beyond 2^53 (long IDs) is rounded, merging distinct IDs: keep it
+    as text. (b) A one-column file drops rows whose value is a quoted empty string. (c) A
+    Windows-1252 file imports with replacement characters: decode strictly and say to re-export as
+    UTF-8. Done when each has a failing-first test and is fixed.
+52. **Stale flags never spoil a hidden answer, and are readable by keyboard.** (From an automated
+    review of #34.) The stale reason quotes an input's name even when that input is hidden behind
+    a learning prompt; and the full reason is only in a hover tooltip. Done when hidden inputs are
+    unnamed in the flag and the full reason is reachable without a pointer.
+
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 28. (Merged, see Done.) **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
     fails only because `pnpm eval:canvas` runs the e2e suite without Postgres, Redis or a matching
@@ -425,6 +440,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (build-B, item 41) The scorecard gains an "Ask loop" row next to the maintainer's measures (target: every step passes). It runs with no resident agent, so step 1 accepts any line that gives a way to an answer ("pnpm …", "chat", "Connect an agent" or "Waiting for …"). Answer cards may sit up to 400 px from their ask.
 
 - (review, #33) `canvas_group` was let in as an ordinary tool although it comes from the spec's proposed agent interface list, because the list's other verbs already are ordinary tools. Alternative: a flagged prototype (`?prototype=group`).
+- (build-B) Security note for the maintainer (from an automated review of #19, not changed): `e2e/serve.mjs` writes the test server's output, including live magic links, to a log in the system temp directory with default file permissions, so another local user could read and redeem a link while the test runs. It is test-only and the accounts are synthetic; restricting the file mode (0600) is a one-line change if you want it.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -488,3 +504,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:45Z | build-B | 42 Restored board survives an immediate reload | #59 | Memo records a content hash; restore + reload at 0 ms keeps the restored board (lost before); acceptance, persistence, safety unchanged |
 | 2026-11-26T11:55Z | review | Review #38 #39 | #38 #39 | Both merged (squash) after merging in the integration branch; #38 reproduced at 390 px after a 1440 px save; #39 driven with one tab and two; scorecard on e53322f: five rows pass, 10k pan flagged at 77.9 ms and re-measured at 35 ms on the same commit |
 | 2026-11-26T11:52Z | build-B | 44 Asks carry picks and cross-outs | #64 | Targets, frame objects and history report `mark`; sibling options given; real tab 5/8 before, 8/8 after; scorecard unchanged (10k pan noise seen on the old code too) |
+| 2026-11-26T11:52Z | build-B | Review fixes on merged PRs | #61 #62, #52 | Board-limit overwrite of the account's board fixed (#61); learning prompts no longer hide human comments or frames holding human work (#62); frame moves in #52; items 50 to 52 filed from the remaining findings |
