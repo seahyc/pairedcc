@@ -7,7 +7,7 @@ import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
-import { isLeftOut, leftOutLabel, toggleLeftOut } from "./leave-out";
+import { isLeftOut, isPinned, leftOutLabel, pinnedLabel, toggleLeftOut, togglePinned } from "./leave-out";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
 
@@ -42,20 +42,25 @@ export function AskLayer() {
       const selected = new Set<string>(editor.getSelectedShapeIds());
       // Counting what was kept back reads each ask's whole context, so only on a page that has a left-out object.
       const anyLeftOut = editor.getCurrentPageShapes().some((s) => isLeftOut(s.meta));
+      // Likewise pins: an ask gives what is pinned now, so its outline and label follow the pins.
+      const anyPinned = editor.getCurrentPageShapes().some((s) => isPinned(s.meta));
       return editor.getCurrentPageShapes().flatMap((s) => {
         const ask = askOf(s), b = editor.getShapePageBounds(s);
         if (!ask || !b) return [];
         const answers = editor.getCurrentPageShapes().filter((r) => r.meta.replyTo === s.id);
         const focused = selected.has(s.id) || answers.some((r) => selected.has(r.id)) || ask.state === "working";
+        const view = anyLeftOut || anyPinned ? describeAsk(editor, s) : undefined;
+        const pinnedIds = view?.pinned?.map((p) => p.id) ?? [];
         const outlines = focused
-          ? ask.contextIds.flatMap((id) => {
+          ? [...ask.contextIds, ...pinnedIds].flatMap((id) => {
               const box = editor.getShapePageBounds(id as TLShapeId);
               return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
             })
           : [];
         // What the person kept back from this ask, as an agent reading it now would be given it.
-        const kept = anyLeftOut ? leftOutLabel(describeAsk(editor, s).leftOut ?? 0) : "";
-        return [{ id: s.id, ask, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds)}${kept ? ` · ${kept}` : ""}`, outlines }];
+        const kept = view ? leftOutLabel(view.leftOut ?? 0) : "";
+        const pins = view ? pinnedLabel(pinnedIds.length + (view.pinnedMore ?? 0)) : "";
+        return [{ id: s.id, ask, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds)}${pins ? ` + ${pins}` : ""}${kept ? ` · ${kept}` : ""}`, outlines }];
       });
     },
     [editor],
@@ -132,6 +137,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
         leftOut: shapes.every((s) => isLeftOut(s.meta)),
+        pinned: shapes.every((s) => isPinned(s.meta)),
         text: only ? textOf(only) : "",
         blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
         // An imported record keeps its own starters; anything else gets ones that fit the selection.
@@ -330,6 +336,18 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
           title={state.leftOut ? "Bring back: asks about things nearby may give this to the agent again (L)" : "Leave out: asks about things nearby will not give this to the agent (L)"}
         >
           {state.leftOut ? "Bring back" : "Leave out"} <Kbd>L</Kbd>
+        </button>
+      )}
+      {prototypeEnabled("context") && (
+        <button
+          className={state.pinned ? "on" : ""}
+          onClick={() => {
+            togglePinned(editor, editor.getSelectedShapes());
+            editor.focus();
+          }}
+          title={state.pinned ? "Unpin: asks give this only when it is selected or nearby (I)" : "Pin: every ask on this page gives this to the agent, selected or not (I)"}
+        >
+          {state.pinned ? "Unpin" : "Pin"} <Kbd>I</Kbd>
         </button>
       )}
       {state.cites && (
