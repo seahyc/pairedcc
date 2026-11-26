@@ -165,7 +165,7 @@ export function createBoardSync(o: SyncOptions) {
   };
   const failed = (error: unknown) => {
     if (error instanceof SaveRefused && account) {
-      clearTimer(timer);
+      // No retry is scheduled. A pending timer here is a newer edit's save; leave it to run.
       return emit({ state: "refused", account, code: error.code, error: error.message });
     }
     emit({ state: "offline", ...(account ? { account } : {}), error: error instanceof Error ? error.message : String(error) });
