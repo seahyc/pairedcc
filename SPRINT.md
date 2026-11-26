@@ -343,7 +343,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     against an object's text and name) that combines with `ids`, the tool definition and AGENT_API
     document it, unit tests cover matching, and a live MCP call shows the smaller result.
 
-54. **Text never leaves its container, even without spaces.** The brief's rule ("Text never leaves
+54. (PR #80 open, awaiting review.) **Text never leaves its container, even without spaces.** The brief's rule ("Text never leaves
     its container") is checked only with ordinary prose (`verify-calm.mjs`). Done when a long URL,
     a long unbroken word, a code card and a long frame name each stay inside their card, comment,
     answer or frame in a real page at 1440 and 390 px, checked by a script that fails before the fix,
@@ -377,12 +377,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 57. Dev board store survives its folder being removed | claude/sprint-dev-store-dir | 2026-11-26T12:19Z
-54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 54. Text and the next step stay inside the window (build-A): PR #80 (unbroken text already wrapped; the selection bar, Ask box and ask state line ran off a 390 px phone and the bar off a desktop's right edge; fixed, 11/20 to 20/20).
 - 56. Dropped images fit beside your thoughts (build-B): PR #77.
 - 45 (d). Images survive a clean profile (build-B): PR #76.
 - 52. Stale flags readable without a pointer (build-B): PR #72 ((a) was already true as #34 merged; now pinned by tests).
@@ -418,6 +418,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 54) On a window too narrow for the selection bar or Ask box beside the tool strip (phones), they cover the strip while open rather than leave the screen. An ask's state line now wraps within its card's width (260 to 640 px) instead of running on in one line. Alternative: hide the tool strip while asking on phones.
 - (build-B, item 56) An image the person drops, pastes or imports first lands at most 600 on its longest side (about two card widths, whole on a laptop screen at 100%). The asset keeps full resolution and small images keep their size. Agent images with an explicit size are untouched. Alternative: fit to a share of the current view.
 - (build-B, item 45 d) Images the person adds are kept inside the board snapshot as data URLs, with photos over 1.5 MB scaled to 2048 px WebP, rather than in a server asset store. This needs no new storage or secret, and images count toward the 10 MB board limit (a refused save says so). Images added before this move into the board once sync is listening. Alternative: a server asset store with per-account quotas when boards outgrow this.
 - (build-B, item 52) A stale flag opens its whole reason when its object is selected (under the object, clear of the selection bar) or when the flag is focused with Tab (growing upward). Unselected, it stays one line. Part (a), never naming a hidden input, was already in #34 as merged; it is now pinned by unit tests rather than changed.
@@ -589,3 +590,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:23Z | build-B | 56 Dropped images fit beside your thoughts | #77 | New images land at most 600 on the longest side, asset kept full size; real tab 5/6 before, 6/6 after; first screen unchanged; scorecard unchanged |
 | 2026-11-26T12:23Z | build-B | 58 Read filter matching gaps | #78 | Partly formatted words, Greek final sigma and Devanagari vowel signs match correctly; failing-first tests; live MCP check |
 | 2026-11-26T12:26Z | build-B | 8 Docs: board history on the menu | #79 | README and working spec no longer say no screen lists boards; #75's README line describes the new retention |
+| 2026-11-26T12:27Z | build-A | 54 Text and next step inside the window | #80 | verify-contain 11/20 → 20/20 at 1440 and 390 px (Ask box send button was off a phone screen, Send again too); 8 failing-first unit tests; first screen unchanged; scorecard unchanged |
