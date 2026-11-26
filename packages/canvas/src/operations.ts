@@ -57,7 +57,7 @@ function styleProps(input: z.infer<typeof patchInput> | z.infer<typeof createInp
   };
 }
 
-export function revision(shape: TLShape) {
+export function revision(shape: Pick<TLShape, "meta">) {
   return typeof shape.meta.revision === "number" ? shape.meta.revision : 0;
 }
 
@@ -254,7 +254,12 @@ export function createBridge(editor: Editor) {
       selection: editor.getSelectedShapeIds(),
       objects: editor
         .getCurrentPageShapesSorted()
-        .map((s) => describeObject(editor, s.id)),
+        .map((s) => ({
+          ...describeObject(editor, s.id),
+          text: "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
+          meta: s.meta,
+        })),
+      pages: editor.getPages().map((p) => ({ id: p.id, name: p.name })),
     }),
     create: (input: unknown) => createObject(editor, input),
     update: (input: unknown) => patchObject(editor, input),

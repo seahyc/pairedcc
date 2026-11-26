@@ -1,12 +1,42 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-26T10:50Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-26T11:15Z by the review lane. Branch: `claude/sprint-int`.
 
 ## Read first
-- **Playtest 1 rejected the build** (`docs/canvas/feedback/2026-11-26-playtest-1.md`): hard to use,
-  noisy, too open-ended, text overflows, no visible way to make the agent respond. Nothing merged so
-  far answers it; the rework is on `yc/calm-canvas`, which has no PR yet. Everything below is
-  plumbing (scorecard, storage, docs), not the experience.
+- **The calm-canvas rework (#21) is merged, combined by the review lane with 16 sprint PRs.** It
+  conflicted in 15 files (21 places in `packages/canvas/src/App.tsx`). Where the two disagreed the
+  calm layout won; board sync, the prototypes, per-run undo and the reload fixes were fitted into
+  it. `App.tsx` and its `mount` function are the first thing to read, and the first screen is the
+  first thing to look at. What the review could and could not show:
+  - Checked by script: the first board holds three things, panels are behind the menu, text wraps
+    in cards, plain text, comments and a 300-word paste, an ask shows working then answered, pick
+    and cross out work, reload keeps everything (33 of 33 checks; the four no-agent checks need
+    the macOS service and were skipped).
+  - **No real model answered an ask.** The resident agent calls the local Claude Code CLI; the
+    sprint does not spend on models, so a stand-in returned a fixed reply.
+  - With `?prototype=data` or `?prototype=learning`, the prototype page button is now under Menu,
+    then Show layers and pages.
+  - Whether it is calm and usable is for the second playtest. Items 3, 5 and 6 of playtest 1 are
+    ticked as mechanically addressed; 1, 2, 4 and 7 are left open for that judgment.
+- **The server now has a resident-agent channel (from #21's last commit, `packages/server/src/canvas/relay.ts`
+  and `resident.ts`).** The first combination of #21 was made from the branch one commit short, so
+  this part arrived separately (ed4fda1). It is server code outside the canvas: an agent holding
+  `CANVAS_RESIDENT_SECRET` long-polls for asks from accounts in `CANVAS_RESIDENT_ALLOW` and may only
+  set an ask's status or answer it. With no secret, or one under 32 characters, both paths answer 404
+  (tested). Review changed one thing: the secret check guarded all of `/api/canvas/*` and would have
+  answered 404 or 401 for the board API had the routes been registered in the other order; it now
+  guards only its own two paths, with a test. The answers spend the model subscription of whoever
+  runs the agent, which is why the allowlist exists; the sprint never ran it against a real model.
+- **Two review runs overlapped from 10:55Z to 11:15Z.** Both combined #21; the second copy was
+  discarded unpushed and only the missing commit was added. No PR was merged twice.
+- **The agent-usability attempt was recorded again on the calm canvas: 21 of 21, median 2 tool
+  calls.** A fresh agent was given only `AGENT_API.md` and the counting client, on the branch with
+  #21, the prototype gate and run ownership in place. It replaces the 20/21 recorded before them
+  (backlog 32 is done). Task 14, the earlier failure, passed. What the agent found confusing is
+  under Decisions needed, item 13.
+- **The scorecard flags Performance as regressed** (10k pan 40 to 76.6 ms a frame). The same code
+  measured 39 to 84 ms across runs on this container, so this is the known spread, not a change;
+  backlog 31 (stable performance numbers) is claimed.
 - **#15 changes how every signed-in board is saved, and is the merge most worth reading**
   (`packages/canvas/src/board-sync.ts`). The board is uploaded to the account 1.2 s after each
   change and a clean browser opens the account's board. Review found and fixed two defects before
@@ -50,11 +80,11 @@ Last updated 2026-11-26T10:50Z by the review lane. Branch: `claude/sprint-int`.
   of the data and learning prototypes are proven by headless scripts, not `pnpm test` (backlog 9).
 
 ## Status
-`pnpm build` passes. `pnpm -r --no-bail test` on `816edb9`:
+`pnpm build` passes. `pnpm -r --no-bail test` on `16ce025`:
 
 | Package | Result |
 |---|---|
-| canvas | 134 passed |
+| canvas | 150 passed |
 | server | 129 passed, 7 skipped (the Postgres board suite; 19 of 19 pass with `TEST_DATABASE_URL` set) |
 | sdk | 12 passed |
 | mcp-server | 4 passed |
@@ -62,20 +92,22 @@ Last updated 2026-11-26T10:50Z by the review lane. Branch: `claude/sprint-int`.
 | e2e | needs Postgres and Redis; 1 passed when they are provided, otherwise stops at start |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T11:01Z on `b57b2e6`:
+Scorecard from `pnpm eval:canvas` at 2026-11-26T11:15Z on `a3beb52 with uncommitted changes`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
 | Acceptance scenario | every step passes | 10/10 steps | pass |
-| Agent usability | ≥90% of ≥20 tasks | 0 tasks, no recorded attempt | not run |
-| Safety of shared edits | 0 human edits lost | 0 lost; 3/3 races pass | pass |
+| Agent usability | ≥90% of ≥20 tasks | 21/21 (100%), median 2 tool calls | pass |
+| Safety of shared edits | 0 human edits lost | 0 lost; 9/9 races pass | pass |
 | Persistence | identical in a clean profile | identical | pass |
-| Performance | reported, not worse | 1k: load 1183 ms, pan 16.7 ms/frame; 10k: load 8167 ms, pan 64.7 ms/frame | reported |
-| Existing product | green | build passes; tests: e2e failing | fail |
+| Performance | reported, not worse | 1k: load 1529 ms, pan 16.7 ms/frame; 10k: load 7620 ms, pan 76.6 ms/frame | reported |
+| Existing product | green | build passes; tests: all packages pass | pass |
+
+Carried over from the previous run, not re-measured: acceptance, safety, persistence, performance, workspace.
 <!-- scorecard:end -->
 
 The acceptance scenario passes all ten steps, driven by a person in the page and an agent over
-MCP. Agent usability has no tasks yet (backlog 18, claimed).
+MCP. Agent usability reports the attempt recorded with #24.
 
 ## Merged
 - [#2](https://github.com/seahyc/pairedcc/pull/2) Dataset and chart state model (9f19690).
@@ -97,6 +129,14 @@ MCP. Agent usability has no tasks yet (backlog 18, claimed).
 - [#18](https://github.com/seahyc/pairedcc/pull/18) Dropping a CSV on the data prototype creates a typed dataset, or nothing with a message naming the row and column (f104315).
 - [#19](https://github.com/seahyc/pairedcc/pull/19) The document collaboration e2e test signs in for real and passes; services documented in `e2e/README.md` (a4b927e).
 - [#20](https://github.com/seahyc/pairedcc/pull/20) Prototype agent operations are refused in a tab without the prototype flag (be3dce9).
+- [#21](https://github.com/seahyc/pairedcc/pull/21) Calm canvas from `yc/calm-canvas`: one Ask loop, a resident agent, text that wraps, panels behind one menu (16ce025, squashed locally with the conflicts resolved; shows as closed, not merged). Review made board sync check the board list before fetching, so a first open no longer logs a 404.
+- #21, remainder: the hosted resident-agent channel, with the secret check narrowed to its own paths (ed4fda1, committed by the review lane).
+- [#24](https://github.com/seahyc/pairedcc/pull/24) 21 agent-usability tasks with machine checks, a self-test, a runner and a first recorded attempt, 20 of 21 (984374b). Review opened the task tab with the data prototype on, because tasks 13 to 16 are refused without it since #20.
+- [#22](https://github.com/seahyc/pairedcc/pull/22) Undo refuses to restore a shape whose parent was deleted since; agents list and undo only their own runs; a learning prompt can hide only an agent's output (2b33d8c). Safety races 3 to 6.
+- [#23](https://github.com/seahyc/pairedcc/pull/23) and [#26](https://github.com/seahyc/pairedcc/pull/26) Prototype: Relationship, Source, Transformation and Agent run derived from what the board records, shown read-only by `canvas_get` (8daf8d3, 5f9f355).
+- [#25](https://github.com/seahyc/pairedcc/pull/25) Data agent write rules unit-tested; three data races and stricter acceptance checks in the eval (a7c8505). Safety races 6 to 9.
+- [#27](https://github.com/seahyc/pairedcc/pull/27) Converge prototype behind `?prototype=converge`: a synthesis card with an arrow from each source that goes stale when one changes; checked live (12abf62).
+- [#28](https://github.com/seahyc/pairedcc/pull/28) At most 50 boards per account; creating one more is refused with 403; 25 of 25 board tests pass on Postgres 16 (eb63f9b).
 - Review lane: `packages/cli` and `packages/web` test scripts pass with no test files (a712b50).
 
 How each was checked: the branch was merged with the integration branch, built and tested; every
@@ -129,11 +169,16 @@ None.
 10. **Workspace test gate.** Whether `pnpm test` includes e2e, which needs Postgres, Redis and `JWT_SECRET`.
 11. **CSV number columns.** Any all-numeric column becomes numbers, so codes like `007` lose their
     zeros. Alternative: stricter rule, or let the person set the type.
+13. **Agent tool rough edges**, from the fresh agent's own report: `canvas_annotate` has an `author`
+    parameter defaulting to "Human"; no tool obviously matches "attach a comment"; changing a
+    shape's text leaves its name stale; `canvas_connect` relations are unexplained; `canvas_read`
+    is large and has no text filter; an agent cannot tell whether a tab has a prototype flag on.
+14. **Prototype fields in `canvas_get`** (#26) are returned in every tab, not behind a flag, since
+    they are read-only and put nothing on the board. Alternative: `?prototype=primitives`.
 12. **Document sharing wording** (found by #19, outside canvas scope): a new document says "anyone
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-Open and not yet merged: #21 (the calm-canvas rework that answers playtest 1) and #22 (shared-edit
-gaps). Not started: converge (5), board picker (19). Claimed without a PR: foundational primitives
-(3), robustness (7), data agent tests (9), agent-usability tasks (18). PR descriptions #9 to #20
-carry a tool footer written before the brief ruled it out; commits do not.
+Open and not yet reviewed: #29 (refused save is not "Offline") and later PRs (board history,
+board picker, group operation, stale reason, eval services, saved boards). PR descriptions #9 to
+#20 carry a tool footer written before the brief ruled it out; commits do not.

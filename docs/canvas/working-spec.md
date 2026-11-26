@@ -275,3 +275,10 @@ Built on the sprint integration branch, not deployed. Details are in `packages/c
 - **Learning mode, as a prototype** (`?prototype=learning`, `canvas_learn`). Predict-then-check and generate-first prompt cards hide a result until the person answers or skips in one click; agents read the response but cannot answer. Not built: a per-frame learning switch, spaced resurfacing.
 
 Verified with unit tests and headless-browser scripts over the HTTP relay and MCP stdio (`tools/verify-data-agent.cjs`, `verify-data-prototype.cjs`, `verify-runs.ts`, `verify-learning.cjs`). The scripted checks are not yet part of `pnpm test`.
+## Calm canvas and the Ask loop: 2026-11-26
+
+YC tried the heuristics build and rejected it: hard to use, noisy, too flexible and open-ended, text ran off the board, and nothing showed how to get the agent to respond. The anchor moved from Jakob Nielsen's heuristics to the nine findings above plus Solveit; `principles.md` records what each demands, what is built and what is missing.
+
+Built: a first board of three things with panels behind one menu; a five-tool strip; double-click to write; an action bar on the selection (Ask, Pick, Cross out, Comment); asks as board objects that show waiting, working, answered or failed and what the agent was given; a resident agent that answers asks with the local Claude Code CLI in about three seconds, with one short card or two to four alternatives; plain and pasted text wrapping at a reading width. An existing saved board is kept as its own page and the calm board opens beside it.
+
+Verified in headless Chromium on a fresh profile with `packages/canvas/tools/verify-calm.mjs` (36 checks). Not built: learning mode, context pinning or hiding, streaming answers, images in context, listener presence on the hosted relay.

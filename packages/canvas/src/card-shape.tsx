@@ -54,7 +54,7 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
     return true;
   }
   override getDefaultProps(): CardShape["props"] {
-    return { w: 240, h: 72, richText: toRichText(""), tone: "human" };
+    return { w: 300, h: 72, richText: toRichText(""), tone: "human" };
   }
   /** Grow height to fit the text, like a sticky note, so cards never clip. */
   fit(shape: CardShape): CardShape {

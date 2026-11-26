@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isLocalRequest } from "../server/relay";
+import { isLocalRequest, isRelayPath } from "../server/relay";
 import { envelopeSchema, imageInput } from "../src/protocol";
 const local = {
   socket: { remoteAddress: "127.0.0.1" },
@@ -68,5 +68,14 @@ describe("local agent transport boundary", () => {
         src: "https://example.com/image.png",
       }).success,
     ).toBe(false);
+  });
+
+  it("leaves the boards API to the board store or the proxied server", () => {
+    expect(isRelayPath("/api/canvas/sessions")).toBe(true);
+    expect(isRelayPath("/api/canvas/command")).toBe(true);
+    expect(isRelayPath("/api/canvas/boards")).toBe(false);
+    expect(isRelayPath("/api/canvas/boards/main")).toBe(false);
+    expect(isRelayPath("/api/canvas/boardsx")).toBe(true);
+    expect(isRelayPath("/canvas/")).toBe(false);
   });
 });

@@ -49,6 +49,9 @@ try {
   const h2 = await agent.call("canvas_create", { kind: "note", x: 300, y: 700, text: "Option: daily alert" });
   await page.evaluate((ids: string[]) => (window as any).paired.select(ids), [h1.id, h2.id]);
   await sleep(300);
+  // On the calm canvas Properties is behind the menu.
+  await page.locator(".menu-button").click();
+  await page.locator(".menu button", { hasText: "Properties" }).click();
   await page.getByRole("button", { name: "Pull into a synthesis" }).click();
   await sleep(300);
   await page.keyboard.type("Digest by default, alerts only for spikes");

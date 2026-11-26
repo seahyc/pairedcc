@@ -10,10 +10,19 @@ import {
   envelopeSchema,
   clientHelloSchema,
   responseSchema,
+  askAnnounceSchema,
+  askWaitSchema,
   type CommandResponse,
 } from "../src/protocol";
 
+import { AskDesk } from "./asks";
+
 const API = "/api/canvas";
+
+/** Paths this relay answers. Boards are a separate API (server/boards-dev.ts, or the real server via PAIRED_SERVER_URL). */
+export function isRelayPath(pathname: string) {
+  return pathname.startsWith(API) && pathname !== `${API}/boards` && !pathname.startsWith(`${API}/boards/`);
+}
 const localHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
 export function isLocalRequest(req: {
   headers: Pick<IncomingHttpHeaders, "host" | "origin">;
@@ -69,6 +78,14 @@ export function canvasRelay(): Plugin {
         string,
         { body: string; result: Promise<CommandResponse> }
       >();
+      const desk = new AskDesk((agents) => {
+        for (const session of sessions.values()) session.client.send("paired:listeners", { agents });
+      });
+      server.ws.on("paired:ask", (raw, client) => {
+        const parsed = askAnnounceSchema.safeParse(raw);
+        if (!parsed.success || sessions.get(parsed.data.sessionId)?.client.socket !== client.socket) return;
+        desk.announce(parsed.data.sessionId, parsed.data.ask);
+      });
       server.ws.on("paired:hello", (raw, client) => {
         const parsed = clientHelloSchema.safeParse(raw);
         if (!parsed.success) return;
@@ -78,6 +95,7 @@ export function canvasRelay(): Plugin {
             sessions.delete(id);
         sessions.set(sessionId, { client, title });
         client.send("paired:connected", { sessionId });
+        client.send("paired:listeners", { agents: desk.listeners() });
       });
       server.ws.on("paired:bye", (raw, client) => {
         const parsed = clientHelloSchema
@@ -105,7 +123,10 @@ export function canvasRelay(): Plugin {
         }
         socket.on("close", () => {
           for (const [id, s] of sessions)
-            if (s.client.socket === socket) sessions.delete(id);
+            if (s.client.socket === socket) {
+              sessions.delete(id);
+              desk.dropSession(id);
+            }
           for (const [id, p] of pending)
             if (p.client.socket === socket) {
               clearTimeout(p.timer);
@@ -121,7 +142,7 @@ export function canvasRelay(): Plugin {
       });
       server.middlewares.use((req, res, next) => {
         const url = new URL(req.url ?? "/", "http://localhost");
-        if (!url.pathname.startsWith(API)) return next();
+        if (!isRelayPath(url.pathname)) return next();
         if (!isLocalRequest(req))
           return reply(res, 403, {
             error: "Canvas API accepts same-origin loopback requests only",
@@ -129,12 +150,31 @@ export function canvasRelay(): Plugin {
         if (req.method === "GET" && url.pathname === `${API}/sessions`) {
           return reply(res, 200, {
             sessions: [...sessions].map(([id, s]) => ({ id, title: s.title })),
+            listeners: desk.listeners(),
             apiVersion: 1,
           });
         }
+        // Long poll: an agent waits here for the next ask a human makes on any open canvas.
+        if (req.method === "POST" && url.pathname === `${API}/asks/wait`) {
+          void (async () => {
+            try {
+              const parsed = askWaitSchema.safeParse(await readBody(req));
+              if (!parsed.success) return reply(res, 400, { error: parsed.error.message });
+              const waiting = desk.wait(parsed.data.agent, parsed.data.waitMs);
+              res.on("close", () => {
+                if (!res.writableEnded) waiting.cancel();
+              });
+              const delivery = await waiting.promise;
+              reply(res, 200, delivery ?? { ask: null });
+            } catch (error) {
+              reply(res, 400, { error: error instanceof Error ? error.message : "Invalid request" });
+            }
+          })();
+          return;
+        }
         if (req.method !== "POST" || url.pathname !== `${API}/command`)
           return reply(res, 404, {
-            error: "Use GET /api/canvas/sessions or POST /api/canvas/command",
+            error: "Use GET /api/canvas/sessions, POST /api/canvas/command or POST /api/canvas/asks/wait",
           });
         if (!req.headers["content-type"]?.startsWith("application/json"))
           return reply(res, 415, {
@@ -166,11 +206,8 @@ export function canvasRelay(): Plugin {
                 error: "requestId was already used with different content",
               });
             if (!request) {
-              if (recent.size >= 1000)
-                return reply(res, 429, {
-                  error:
-                    "Local request ledger is full; restart the development server to begin a new API session",
-                });
+              // Keep the newest 1,000 requests; an agent that waits all day must not fill the ledger.
+              if (recent.size >= 1000) recent.delete(recent.keys().next().value!);
               const id = randomUUID();
               const result = new Promise<CommandResponse>((resolve) => {
                 const timer = setTimeout(() => {
