@@ -41,20 +41,19 @@ async function command(op, input) {
   if (!body.ok) throw new Error(`${op}: ${JSON.stringify(body)}`);
   return body.result;
 }
-async function ask(x, text, question) {
+async function ask(x, text) {
   const card = await p.evaluate(([x, text]) => window.paired.create({ kind: 'note', x, y: 560, width: 220, text }), [x, text]).then((r) => (typeof r === 'string' ? r : r.id));
   await p.evaluate((id) => window.paired.select([id]), card);
   await p.waitForTimeout(200);
-  await p.locator('.selection-bar button.primary').click();
-  await p.locator('.selection-bar.asking input').fill(question);
-  await p.keyboard.press('Enter');
+  // The card is the question: the person's card is sent as it stands with ⌘↵.
+  await p.keyboard.press('ControlOrMeta+Enter');
   await p.waitForTimeout(500);
-  return (await command('asks', {})).asks.find((a) => a.question === question).id;
+  return (await command('asks', {})).asks.find((a) => a.question === text).id;
 }
 
 // (a)
-const a1 = await ask(100, 'Charge per seat', 'Is this fair?');
-const a2 = await ask(500, 'Usage based', 'Is this fair too?');
+const a1 = await ask(100, 'Charge per seat: is this fair');
+const a2 = await ask(500, 'Usage based: is this fair too');
 await p.evaluate(() => void window.__pairedEditor.selectNone());
 await p.waitForTimeout(300);
 let before = (await said()).length;
@@ -66,7 +65,7 @@ const answeredSays = (await said()).slice(before).filter((t) => /Verifier answer
 check('(a) two answers in a row with the same words are both put in the live region', answeredSays.length >= 2 && answeredSays[0] !== answeredSays[1], JSON.stringify(answeredSays));
 
 // (b)
-const a3 = await ask(900, 'Flat price', 'What breaks first?');
+const a3 = await ask(900, 'Flat price: what breaks first');
 await command('ask_status', { id: a3, state: 'working', note: 'reading' });
 await p.waitForTimeout(600);
 before = (await said()).length;
@@ -79,7 +78,7 @@ const quiet = (await said()).slice(before);
 check('(b) an agent going quiet past the timeout is announced, with Retry', quiet.some((t) => /went quiet\. Retry is under the ask/.test(t)), JSON.stringify(quiet));
 
 // (c)
-const a4 = await ask(1300, 'Annual plan', 'Which discount?');
+const a4 = await ask(1300, 'Annual plan: which discount');
 await command('answer', { id: a4, text: 'For which team size?', question: true });
 await p.waitForTimeout(800);
 // The person replies by asking again on the same ask (a retry hands it back as waiting).
