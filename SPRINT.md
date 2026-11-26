@@ -263,8 +263,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 37. **`read` reports a card's style.** Agents create notes with `style` (note, heading, quote,
     code) but `read` shows it only as `props.tone`, so checking it took a `canvas_get` (PR #24
     attempt). Done when `read` and `get` report `style` on cards, documented and tested.
+39. **Agent-usability tasks for features merged after #24.** The 21 tasks predate the Ask loop
+    (#21), comment replies in the queue, and converge (#27). Done when tasks for those exist with
+    a passing self-test (check fails on setup, passes after the reference solution), written by a
+    lane that did not build them, and the scorecard's task count reflects them.
 
 ## Claims
+39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 37. read reports card style | claude/sprint-card-style | 2026-11-26T11:27Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 36. Comments move with their target | claude/sprint-follow | 2026-11-26T11:24Z
