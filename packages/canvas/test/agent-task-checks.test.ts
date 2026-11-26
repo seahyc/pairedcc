@@ -19,5 +19,8 @@ describe("task 14's answer check", () => {
     expect(answersTop("West is highest, then East.", "East", others)).toBe(false);
     expect(answersTop("West is highest.", "East", others)).toBe(false);
     expect(answersTop("Northeast leads", "East", others)).toBe(false);
+    expect(answersTop("East is not the highest; West is.", "East", others)).toBe(false);
+    expect(answersTop("Bars: East, North, South, West. Not sure which is highest.", "East", others)).toBe(false);
+    expect(answersTop("East is lowest. West is the highest.", "East", others)).toBe(false);
   });
 });

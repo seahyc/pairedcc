@@ -46,5 +46,7 @@ export function answersTop(text: string, top: string, others: readonly string[])
   if (first < 0) return false;
   const rest = others.map(at).filter((i) => i >= 0);
   if (!rest.length) return true;
-  return rest.every((i) => i > first) && /\b(highest|most|top|largest|biggest|leads?|greatest|max(imum)?)\b/i.test(text);
+  // The pick has to be made before any other key is mentioned, and not be denied or hedged.
+  const lead = text.slice(0, Math.min(...rest));
+  return first < lead.length && /\b(highest|most|top|largest|biggest|leads?|greatest|max(imum)?)\b/i.test(lead) && !/\b(not|isn't|unsure|lowest|least|smallest|fewest)\b/i.test(lead);
 }
