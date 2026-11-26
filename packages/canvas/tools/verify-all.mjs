@@ -15,7 +15,7 @@
 // Redis) and the two-step legacy image modes. Two checks only log what they see and exit 0
 // unless they crash; the table marks them "ran" rather than "pass".
 import { createRequire } from 'node:module';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync, createWriteStream } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, renameSync, mkdtempSync, readdirSync, rmSync, writeFileSync, createWriteStream } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -147,6 +147,7 @@ try {
         await new Promise((r) => setTimeout(r, 4000));
       }
       const ts = c.file.endsWith('.ts');
+      const imagesBefore = new Set(readdirSync(pkg).filter((f) => f.endsWith('.png')));
       const code = await run(
         process.execPath,
         [...(ts ? ['--import', 'tsx'] : []), join(tools, c.file), ...c.args(dir)],
@@ -156,6 +157,8 @@ try {
         join(out, `${c.name}.log`),
         c.name === 'calm' ? 420000 : 300000,
       );
+      // Some checks write screenshots to their working folder; keep them with the check's output.
+      for (const f of readdirSync(pkg)) if (f.endsWith('.png') && !imagesBefore.has(f)) renameSync(join(pkg, f), join(dir, f));
       const status = code === 0 ? (c.log ? 'ran' : 'pass') : code === 'timeout' ? 'timeout' : 'fail';
       results.push({ name: c.name, file: c.file, status, seconds: Math.round((Date.now() - started) / 1000) });
     } catch (error) {
