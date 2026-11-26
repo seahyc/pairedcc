@@ -298,7 +298,8 @@ export function DataLayer() {
         if (!b) return [];
         const nameOf = (id: string) => {
           const shape = editor.getShape(id as TLShapeId);
-          return shape ? shapeName(shape) : undefined;
+          // A result still hidden behind a learning prompt is not named before the person answers.
+          return shape && !editor.isShapeHidden(shape) ? shapeName(shape) : undefined;
         };
         return [{ id: s.id, x: b.x, y: b.y, w: b.w, name: shapeName(s), reason: staleReason(stale, nameOf) }];
       }),

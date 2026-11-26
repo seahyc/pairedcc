@@ -32,7 +32,7 @@ export const starters = ["What's missing?", "Give me alternatives", "Poke holes 
 /** What an ask shows under itself, for each state. */
 export function askStatusLine(
   ask: { state: string; agent?: string; note?: string; error?: string; read?: string; askedAt: number; startedAt?: number; answeredAt?: number },
-  opts: { listeners: string[] | null; now: number; given: string },
+  opts: { listeners: string[] | null; hosted?: boolean; now: number; given: string },
 ) {
   const secs = (from: number, to: number) => `${Math.max(1, Math.round((to - from) / 1000))}s`;
   if (ask.state === "answered")
@@ -43,7 +43,9 @@ export function askStatusLine(
     if (opts.now - (ask.startedAt ?? ask.askedAt) > 120_000) return { tone: "failed", text: `${ask.agent ?? "The agent"} went quiet.`, retry: true };
     return { tone: "working", text: `${ask.agent ?? "Agent"}: ${ask.note ?? "thinking"} · ${secs(ask.startedAt ?? ask.askedAt, opts.now)}` };
   }
-  if (opts.listeners === null) return { tone: "waiting", text: "Waiting for your agent to read the queue. Menu → Connect an agent." };
+  if (opts.listeners === null) return { tone: "waiting", text: "No agent is listening for this account. Connect yours to get an answer: Menu → Connect an agent." };
+  if (!opts.listeners.length && opts.hosted)
+    return { tone: "nobody", text: "No agent is listening right now. This ask is answered when one is back; or Menu → Connect an agent.", retry: true };
   if (!opts.listeners.length)
     return { tone: "nobody", text: "No agent is listening. Start one: pnpm --filter @pairedcc/canvas agent", retry: true };
   return { tone: "waiting", text: `Waiting for ${opts.listeners[0]} · ${secs(ask.askedAt, opts.now)}` };
