@@ -8,7 +8,8 @@
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-leave-out.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 (`pnpm dev:canvas`). Playwright is not a dependency of this
+// Needs the dev server on :5183 (`pnpm dev:canvas`), with an empty board store (for example
+// PAIRED_BOARDS_DIR set to a new folder), so earlier runs' cards are not where the frame goes. Playwright is not a dependency of this
 // repository; it is loaded from the directory you run this in.
 import { createRequire } from 'node:module';
 import { mkdtempSync } from 'node:fs';
