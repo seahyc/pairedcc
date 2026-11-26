@@ -24,7 +24,8 @@ export type AskForPrompt = {
   frame?: { name: string; objects: Given[] };
 };
 
-const who = (author: string) => (author === "Human" ? "the person" : `${author} (an agent)`);
+// Imported material is neither the person's writing nor an agent's: it is the source being judged.
+const who = (author: string) => (author === "Human" ? "the person" : author.startsWith("Imported source") ? `the imported source material ${author.slice("Imported source".length).trim()}` : `${author} (an agent)`);
 const judged = (mark?: Mark) => (mark === "picked" ? ", which the person picked" : mark === "rejected" ? ", which the person crossed out" : "");
 const judgedAfter = (mark?: Mark) => (mark === "picked" ? " (the person picked this)" : mark === "rejected" ? " (the person crossed this out)" : "");
 

@@ -98,6 +98,24 @@ describe("ask rules", () => {
     expect(askStatusLine({ ...base, state: "answered", agent: "Claude", answeredAt: 3500 }, opts).text).toContain("answered in 4s · given “a card”");
     expect(askStatusLine({ ...base, state: "waiting" }, { ...opts, listeners: null }).text).toContain("Connect an agent");
   });
+  it("names a connected agent that acted on the board recently instead of saying there is none", () => {
+    const base = { attempt: 0, askedAt: 0, state: "waiting" };
+    const recent = { actor: "Claude Code", at: 0 };
+    // paired.cc, an account the resident agent does not serve
+    const hosted = askStatusLine(base, { listeners: null, hosted: true, now: 40_000, given: "", recent });
+    expect(hosted).toMatchObject({ tone: "waiting" });
+    expect(hosted.text).toBe("Claude Code was here 40s ago. In your chat, ask it to answer this.");
+    expect(hosted.text).not.toContain("Connect an agent");
+    // locally, with no resident agent running
+    const local = askStatusLine(base, { listeners: [], now: 3 * 60_000, given: "", recent });
+    expect(local).toMatchObject({ tone: "nobody", retry: true });
+    expect(local.text).toBe("Claude Code was here 3 min ago. In your chat, ask it to answer this.");
+    // an agent seen long ago does not count
+    const stale = askStatusLine(base, { listeners: null, hosted: true, now: 11 * 60_000, given: "", recent });
+    expect(stale.text).toContain("Connect an agent");
+    // a listening agent still wins
+    expect(askStatusLine(base, { listeners: ["Resident"], now: 4000, given: "", recent }).text).toContain("Waiting for Resident");
+  });
 });
 
 describe("answer contract", () => {
@@ -185,5 +203,33 @@ describe("asks carry the person's picks and cross-outs", () => {
     expect(prompt).toContain("- Claude: C · Flat\n");
     expect(systemPrompt).toContain("Build on what the person picked");
     expect(systemPrompt).toContain("Do not offer again what they crossed out");
+  });
+});
+
+import { startersFor, starters as defaultStarters } from "../src/ask-rules";
+describe("starters that fit the selection", () => {
+  const card = (text: string) => ({ type: "card", text });
+  it("keeps the usual three for one thought", () => {
+    expect(startersFor([card("Charge per seat")])).toEqual(defaultStarters);
+    expect(startersFor([])).toEqual(defaultStarters);
+  });
+  it("offers to answer a question", () => {
+    expect(startersFor([card("Should we charge per seat?")])[0]).toBe("Answer this");
+  });
+  it("offers comparison, on named dimensions, for several objects", () => {
+    expect(startersFor([card("Option A"), card("Option B")])).toEqual([
+      "Compare these",
+      "What dimensions do these differ on?",
+      "What do they have in common?",
+    ]);
+  });
+  it("does not promise group or chart answers the ask cannot back", () => {
+    // describeAsk sends a frame without its children and a chart without its data.
+    expect(startersFor([{ type: "frame", text: "" }])).toEqual(defaultStarters);
+    expect(startersFor([{ type: "chart", text: "" }])).toEqual(defaultStarters);
+  });
+  it("never offers more than three", () => {
+    for (const sel of [[card("a")], [card("a?")], [card("a"), card("b")], [{ type: "frame", text: "" }], [{ type: "chart", text: "" }]])
+      expect(startersFor(sel).length).toBeLessThanOrEqual(3);
   });
 });

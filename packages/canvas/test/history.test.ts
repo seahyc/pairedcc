@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { historyRows, sizeLabel, whenLabel } from "../src/history";
+import { boardLabel, historyRows, sizeLabel, whenLabel } from "../src/history";
 
 const now = new Date(2026, 10, 26, 12, 0);
 const at = (d: number, h: number, m = 0) => new Date(2026, 10, d, h, m).toISOString();
@@ -31,5 +31,16 @@ describe("earlier versions list", () => {
       { revision: 2, label: "today 09:00", detail: "Revision 2 · 1000 B", current: false },
       { revision: 1, label: "yesterday 10:00", detail: "Revision 1 · 900 B", current: false },
     ]);
+  });
+});
+
+describe("saved board names", () => {
+  it("names the main board and copies kept from a browser", () => {
+    expect(boardLabel("main")).toBe("Your board");
+    const at = new Date(Date.UTC(2026, 10, 26, 10, 3));
+    const when = `${at.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} ${at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+    expect(boardLabel("main-browser-202611261003", "en-GB")).toBe(`Kept from a browser · ${when}`);
+    expect(boardLabel("notes-browser-202611261003", "en-GB")).toBe(`Kept from a browser (notes) · ${when}`);
+    expect(boardLabel("research")).toBe("research");
   });
 });
