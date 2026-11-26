@@ -348,8 +348,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     a long unbroken word, a code card and a long frame name each stay inside their card, comment,
     answer or frame in a real page at 1440 and 390 px, checked by a script that fails before the fix,
     with before/after screenshots.
+55. **Board history reaches back more than a few minutes.** Sync saves after every pause, so the
+    50 kept revisions cover a few minutes of work and "Earlier versions" cannot reach yesterday.
+    Done when the server keeps the newest 20 revisions and thins older ones to about one per 15
+    minutes (still at most 50 per board), by one tested pure rule used by both stores, checked
+    against real Postgres, with the choice recorded.
 
 ## Claims
+55. Board history thinning | claude/sprint-history-thin | 2026-11-26T12:16Z
 54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
 45d. Board sync gap (d): images survive a clean profile | claude/sprint-board-images | 2026-11-26T12:08Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
