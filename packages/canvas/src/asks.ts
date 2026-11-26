@@ -4,9 +4,10 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isPinned, keepForAgent, pinnedFor } from "./leave-out";
+import { clusterAround } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -269,6 +270,27 @@ export function pinnedOnPage(editor: Editor, pageId: TLPageId, given: Iterable<s
   return { pinned: found.pinned.map((p) => p.shape), more: found.more };
 }
 
+/**
+ * The rest of the group the ask's card sits in (objects chained within CLUSTER_GAP at its own
+ * level), each with where it sits relative to the card, minus what the ask already gives.
+ * Answers to this ask, the first board's seeded cards, hidden and left-out objects are not part of it.
+ */
+function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep: Keep) {
+  const placed = editor
+    .getSortedChildIdsForParent(host.parentId)
+    .flatMap((id) => editor.getShape(id) ?? [])
+    .filter((s) => s.id === host.id || (s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s)))
+    .flatMap((s) => {
+      const b = editor.getShapePageBounds(s);
+      return b ? [{ id: s.id as string, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
+    });
+  const found = clusterAround(placed, host.id, skip);
+  // A left-out member is withheld (and counted as such), like anything else around the ask.
+  const kept = new Set<string>(keep(found.members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? [])).map((s) => s.id));
+  const members = found.members.filter((m) => kept.has(m.id)).map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
+  return { members, more: found.more };
+}
+
 /** Everything an agent is given for one ask: exactly what the board shows as its context. */
 export function describeAsk(editor: Editor, shape: TLShape) {
   const ask = askOf(shape);
@@ -299,8 +321,13 @@ export function describeAsk(editor: Editor, shape: TLShape) {
           .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset")),
       ).slice(0, 12)
     : [];
+  // Where things sit carries meaning: the group the card is in, said with relations. What the
+  // ask already gives (targets, and the frame's objects when the card is in a frame) is not repeated.
+  const group = editor.getShapePageBounds(shape)
+    ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : [])]), keep)
+    : { members: [], more: 0 };
   // Pinned for every ask on this page, unless this ask already gives it.
-  const alreadyGiven = [...skip, ...(frame ? [frame.id] : []), ...frameObjects.map((s) => s.id), ...givenTargets.flatMap((t) => t.inside?.map((i) => i.id) ?? [])];
+  const alreadyGiven = [...skip, ...group.members.map((m) => m.id), ...(frame ? [frame.id] : []), ...frameObjects.map((s) => s.id), ...givenTargets.flatMap((t) => t.inside?.map((i) => i.id) ?? [])];
   const pins = page ? pinnedOnPage(editor, page.id, alreadyGiven) : { pinned: [], more: 0 };
   return {
     id: shape.id,
@@ -325,6 +352,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
           },
         }
       : {}),
+    ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
     ...(withheld.size ? { leftOut: withheld.size } : {}),
     ...(pins.pinned.length ? { pinned: pins.pinned.map((s) => given(editor, s, 400)), ...(pins.more ? { pinnedMore: pins.more } : {}) } : {}),
@@ -390,7 +418,12 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   // The room the person's window has beside the canvas chrome, so no answer lands off screen.
   const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
   const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
-  const spot = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
+  // Under the ask, or beside it when the space under it is taken (later asks stacked below),
+  // so the answer never ends up under someone else's question.
+  const under = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
+  const besideBox = { ...layout.box, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
+  const beside = freeSpot(editor, besideBox, new Set([shape.id]), pageId);
+  const spot = pickAnswerSpot(under.y - layout.box.y, beside.y - besideBox.y) === "under" ? under : beside;
   // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
   // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
   // work here must not silently remove an answer they cannot see (canvas_undo_run still can).

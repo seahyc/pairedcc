@@ -1680,6 +1680,16 @@ kbd {
   background: #3a2fd0;
   animation: save-pulse 0.9s ease-in-out infinite;
 }
+/* The group an ask's card sits in, given to the agent with it: softer than what was selected. */
+.ask-group {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 1.5px dotted #b7b0ee;
+  border-radius: 22px;
+  background: rgba(143, 134, 227, 0.04);
+  box-sizing: border-box;
+}
 .ask-given {
   position: absolute;
   left: 0;

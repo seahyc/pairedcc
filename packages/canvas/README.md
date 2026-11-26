@@ -111,6 +111,8 @@ pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents 
 cd /some/dir/with/playwright && node /path/to/packages/canvas/tools/verify-calm.mjs /tmp/shots
 ```
 
+`tools/verify-answer-beside.mjs <screenshot dir>`, run the same way, starts its own dev server and checks that three asks about one card, answered out of order, each keep their answer next to them (under, or beside when the space under is taken by the next ask) with nothing overlapping, and that a lone ask still gets its answer underneath.
+
 `tools/verify-early-agent.mjs <screenshot dir>`, run the same way, starts its own dev server with an empty board store and checks that an agent acting before the calm first board is laid out (it waits up to 2.5 s for fonts) keeps its page open and its objects readable, while the calm board is laid out on a page of its own; an untouched new board still opens the calm board on its only page.
 
 Each change of an ask's state (sent, taken by an agent with its note, answered with how many options, failed with Retry) is said once in a polite live region for screen readers; the state lines themselves tick each second and are not live. `tools/verify-ask-live.mjs <screenshot dir>`, run the same way, starts its own dev server and checks it with an agent over HTTP.

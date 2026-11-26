@@ -77,7 +77,7 @@ export function AskLayer() {
         if (!ask || !b) return [];
         const answers = editor.getCurrentPageShapes().filter((r) => r.meta.replyTo === s.id);
         const focused = selected.has(s.id) || answers.some((r) => selected.has(r.id)) || ask.state === "working";
-        const view = anyLeftOut || anyPinned ? describeAsk(editor, s) : undefined;
+        const view = focused || anyLeftOut || anyPinned ? describeAsk(editor, s) : undefined;
         const pinnedIds = view?.pinned?.map((p) => p.id) ?? [];
         const outlines = focused
           ? [...ask.contextIds, ...pinnedIds].flatMap((id) => {
@@ -85,10 +85,22 @@ export function AskLayer() {
               return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
             })
           : [];
+        // While the ask is in view of the person (selected or being answered), the group its card
+        // sits in is drawn as one soft outline: the agent is given it, so the person sees it.
+        const groupIds = focused ? (view?.cluster ?? []).map((m) => m.id) : [];
+        const groupBoxes = groupIds.length ? [s.id, ...groupIds].flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []) : [];
+        const group = groupBoxes.length
+          ? (() => {
+              const x = Math.min(...groupBoxes.map((g) => g.x)), y = Math.min(...groupBoxes.map((g) => g.y));
+              return { x, y, w: Math.max(...groupBoxes.map((g) => g.maxX)) - x, h: Math.max(...groupBoxes.map((g) => g.maxY)) - y, count: groupIds.length + (view?.clusterMore ?? 0) };
+            })()
+          : undefined;
         // What the person kept back from this ask, as an agent reading it now would be given it.
-        const kept = view ? leftOutLabel(view.leftOut ?? 0) : "";
-        const pins = view ? pinnedLabel(pinnedIds.length + (view.pinnedMore ?? 0)) : "";
-        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given: givenWith(givenLabel(editor, ask.contextIds.filter((id) => id !== s.id)), pins, kept), outlines }];
+        const kept = anyLeftOut && view ? leftOutLabel(view.leftOut ?? 0) : "";
+        const pins = anyPinned && view ? pinnedLabel(pinnedIds.length + (view.pinnedMore ?? 0)) : "";
+        const groupSaid = group ? `${group.count} more in its group` : "";
+        const base = [givenLabel(editor, ask.contextIds.filter((id) => id !== s.id)), groupSaid].filter(Boolean).join(" + ");
+        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given: givenWith(base, pins, kept), outlines, group }];
       });
     },
     [editor],
@@ -128,6 +140,9 @@ export function AskLayer() {
         const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given, recent });
         return (
           <div key={a.id}>
+            {a.group && (
+              <div className="ask-group" data-ask-group={a.id} style={{ transform: `translate(${a.group.x - 18}px, ${a.group.y - 18}px)`, width: a.group.w + 36, height: a.group.h + 36 }} />
+            )}
             {a.outlines.map((o) => (
               <div key={o.id} className="ask-given" style={{ transform: `translate(${o.x - 6}px, ${o.y - 6}px)`, width: o.w + 12, height: o.h + 12 }} />
             ))}
