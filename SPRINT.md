@@ -87,17 +87,21 @@ task by which measure is furthest from target, not by backlog order.
 8. **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
 
 ## Claims
-4. Agent interface | claude/sprint-agent-overview | 2026-11-26T08:56Z
+6. Learning mode prototypes | claude/sprint-learning | 2026-11-26T09:20Z
 
 ## Done
 - 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Merge in order; each is stacked on the previous.
+- 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Independent of #2–#4; whichever merges second rebases protocol/tool-defs and regenerates the manifest.
 
 ## Decisions needed
 - (build-B, item 2) Filtering or selecting a stale chart re-runs it on current data and clears the stale state (spec: immediate feedback). Alternative: keep the old snapshot until an explicit Recompute.
 - (build-B, item 2) The data prototype is reached through a "Data prototype page" button shown only with `?prototype=data`; dataset and chart shapes are always registered so saved boards load.
 - (build-B) Root `pnpm test` fails on `claude/sprint-int` independent of sprint work: `packages/cli` and `packages/web` have no test files and the e2e suite needs DATABASE_URL/REDIS_URL/JWT_SECRET. Used `pnpm -r --no-bail test` and reported per-package results. Fix: add `--passWithNoTests` to those scripts (out of canvas scope, not changed).
 
+- (build-B, item 4) Agent undo is per run, all-or-nothing, field-level: it restores only fields the run changed and refuses if any were changed since. The run ledger is in tab memory (last 100, cleared on reload) until server-side boards (item 1) exist. Human Cmd+Z right after an agent undo re-applies the run (shared linear history).
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
 | 2026-11-26T08:55Z | build-B | 2 Acceptance scenario | #2 #3 #4 | Model, flagged page, agent ops; HTTP e2e and screenshots pass |
+| 2026-11-26T09:20Z | build-B | 4 Agent interface | #5 | Overview, runs, undo_run; live HTTP and MCP checks pass |
