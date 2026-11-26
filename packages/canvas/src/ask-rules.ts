@@ -45,6 +45,9 @@ export function answerLayout(anchor: { x: number; y: number }, texts: string[], 
   return { box: { x: anchor.x, y: anchor.y + STATUS_ROOM, w: across * w + (across - 1) * OPTION_GAP, h }, cards };
 }
 
+/** A card that ends in a question mark is a question, and is sent as soon as it is written. */
+export const isQuestion = (text: string) => /[?？]\s*$/.test(text.trim());
+
 /** A sensible first question for what is selected: a question is answered, a thought is probed. */
 export function suggestQuestion(selectedText: string) {
   return /\?\s*$/.test(selectedText.trim()) ? "Answer this" : "";
@@ -88,7 +91,7 @@ export function askStatusLine(
 ) {
   const secs = (from: number, to: number) => `${Math.max(1, Math.round((to - from) / 1000))}s`;
   if (ask.state === "answered")
-    return { tone: "done", text: `${ask.agent ?? "Agent"} answered in ${secs(ask.askedAt, ask.answeredAt ?? opts.now)} · given ${opts.given}` };
+    return { tone: "done", text: `${ask.agent ?? "Agent"} answered in ${secs(ask.askedAt, ask.answeredAt ?? opts.now)}${opts.given ? ` · also read ${opts.given}` : ""}` };
   if (ask.state === "failed") return { tone: "failed", text: `No answer: ${ask.error ?? "something went wrong"}`, retry: true };
   if (ask.state === "working") {
     // An agent that says nothing for two minutes has stopped; offer the way out.
@@ -218,6 +221,21 @@ export function placeBar(sel: { x: number; y: number; bottom: number }, barWidth
 /** An ask's state line wraps within its card's width (page units): readable, never a long strip. */
 export function statusWidth(cardWidth: number) {
   return Math.min(640, Math.max(260, Math.round(cardWidth)));
+}
+
+/** Gap between an ask and an answer placed beside it. */
+export const BESIDE_GAP = 40;
+/** How far an answer may slide down from under its ask before beside is tried. */
+export const ANSWER_SLIDE = 28;
+
+/**
+ * Under the ask, or beside it: an answer belongs next to its own ask. Under is the default; when
+ * the space under the ask is taken (later asks stacked below it), the answer would slide down
+ * past them and sit under someone else's question, so it goes beside its ask instead, unless
+ * beside would slide further.
+ */
+export function pickAnswerSpot(underSlide: number, besideSlide: number): "under" | "beside" {
+  return underSlide <= ANSWER_SLIDE || underSlide <= besideSlide ? "under" : "beside";
 }
 
 /**

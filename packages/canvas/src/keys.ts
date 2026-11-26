@@ -38,11 +38,11 @@ export function firstBoardLines(touch: boolean, apple: boolean) {
   return touch
     ? {
         write: "Double-tap anywhere, or tap Write. Pink handwriting is you.",
-        ask: "Then tap it and tap ✦ Ask. I answer beside it in a few lines; lavender is me. After that you pick, cross out or comment, and ask again.",
+        ask: "End it with a question mark and I answer under it when you finish writing. For anything else, tap it and tap ✦ Ask. Lavender is me. Then pick, cross out, or write the next thing.",
       }
     : {
         write: "Double-click anywhere, or press N. Pink handwriting is you.",
-        ask: keyHint("Then select it and press ⌘↵ to ask. I answer beside it in a few lines; lavender is me. After that you pick (P), cross out (X) or comment (C), and ask again.", apple),
+        ask: keyHint("End it with a question mark and I answer under it when you finish writing. For anything else, press ⌘↵. Lavender is me. Then pick (P), cross out (X), or write the next thing.", apple),
       };
 }
 

@@ -48,12 +48,18 @@ const usage = await make(400, 'Usage based');
 const revs = await p.evaluate((ids) => ids.map((id) => ({ id, expectedRevision: window.paired.read().objects.find((o) => o.id === id).revision })), [seat, usage]);
 const frame = (await command('group', { objects: revs, name: 'Pricing', padding: 160 })).frame.id;
 
-// The person asks about one card and comments on the other.
-await select([seat]);
-await p.locator('.selection-bar button.primary').click();
-await p.locator('.selection-bar.asking input').fill('What is missing here?');
-await p.keyboard.press('Enter');
-await p.waitForTimeout(500);
+// The person asks about one card and comments on the other. The card is the question: the
+// person writes the question on a card of their own under the card it is about and sends it
+// with Ctrl/⌘+Enter, the card it is about selected with it (there is no question box).
+async function writeAndSend(question, about) {
+  const at = await p.evaluate((ids) => { const e = window.__pairedEditor, bs = ids.map((id) => e.getShapePageBounds(id)); return { x: Math.min(...bs.map((b) => b.x)), y: Math.max(...bs.map((b) => b.maxY)) + 30 }; }, about);
+  const q = await p.evaluate(([x, y, text]) => window.paired.create({ kind: 'note', x, y, width: 240, text }), [at.x, at.y, question]).then((r) => (typeof r === 'string' ? r : r.id));
+  await select([q, ...about]);
+  await p.keyboard.press('ControlOrMeta+Enter');
+  await p.waitForTimeout(600);
+  return q;
+}
+await writeAndSend('What is missing here?', [seat]);
 await select([usage]);
 await p.keyboard.press('c');
 await p.waitForTimeout(300);
@@ -91,24 +97,24 @@ for (const [name, id] of Object.entries(all)) {
   const s = await state(id), b = before[name];
   check(`the ${name} moves with the frame`, Math.abs(s.x - b.x - 60) < 1 && Math.abs(s.y - b.y - 40) < 1, `${Math.round(s.x - b.x)},${Math.round(s.y - b.y)}`);
 }
-// Item 96 (follow-ups to #104). (b) An ask about the frame gives the comment and reply about what it holds.
-const aboutFrame = await (async () => {
-  await select([frame]);
+// Item 96 (follow-ups to #104). Asking about something the person did not write (the frame)
+// opens a pink card beside it in typing mode; a question ending in "?" is sent when the person
+// finishes writing it.
+async function askAbout(ids, question) {
+  await select(ids);
   await p.locator('.selection-bar button.primary').click();
-  await p.locator('.selection-bar.asking input').fill('What does this frame add up to?');
-  await p.keyboard.press('Enter');
-  await p.waitForTimeout(500);
-  return (await command('asks', { state: 'all' })).asks.find((a) => a.question === 'What does this frame add up to?');
-})();
+  await p.waitForTimeout(400);
+  await p.keyboard.type(question, { delay: 0 });
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(600);
+  return (await command('asks', { state: 'all' })).asks.find((a) => a.question === question);
+}
+// (b) An ask about the frame gives the comment and reply about what it holds.
+const aboutFrame = await askAbout([frame], 'What does this frame add up to?');
 const held = (aboutFrame?.targets?.[0]?.inside ?? []).map((o) => o.text).join(' | ');
 check('an ask about the frame gives the comment and the reply on its cards', held.includes('Too vague') && held.includes('Say per what'), held);
 // (a) An ask about both cards follows the frame.
-await select([seat, usage]);
-await p.locator('.selection-bar button.primary').click();
-await p.locator('.selection-bar.asking input').fill('Compare these two');
-await p.keyboard.press('Enter');
-await p.waitForTimeout(500);
-const both = (await objects()).find((o) => o.text === 'Compare these two').id;
+const both = await writeAndSend('How do these two compare?', [seat, usage]);
 // (c) An agent arranges the frame while nothing is selected: everything about its cards comes along.
 const tracked = { ...all, 'ask about both cards': both };
 await select([]);
@@ -151,12 +157,7 @@ await select([]);
 // Leave out (item 67) also covers what is said about a left-out object: with the commented card
 // left out, an ask about the frame gives neither the comment on it nor the reply.
 await p.evaluate((id) => { const e = window.__pairedEditor, s = e.getShape(id); e.updateShape({ id, type: s.type, meta: { ...s.meta, leftOut: true } }); }, usage);
-await select([frame]);
-await p.locator('.selection-bar button.primary').click();
-await p.locator('.selection-bar.asking input').fill('Summarise this frame');
-await p.keyboard.press('Enter');
-await p.waitForTimeout(500);
-const privateAsk = (await command('asks', { state: 'all' })).asks.find((a) => a.question === 'Summarise this frame');
+const privateAsk = await askAbout([frame], 'What does this frame say?');
 const shared = JSON.stringify(privateAsk?.targets ?? []);
 check('a comment about a left-out card is not given with its frame', !shared.includes('Too vague') && !shared.includes('Say per what'), (privateAsk?.targets?.[0]?.inside ?? []).map((o) => o.text).join(' | '));
 check('no page errors', errors.length === 0, errors.join(' | '));

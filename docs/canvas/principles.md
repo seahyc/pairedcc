@@ -6,7 +6,7 @@ Status as of 26 Nov 2026, after the calm-canvas pass; the table was brought up t
 
 ## The loop
 
-Write a thought (pink, handwritten, yours) → select what you mean → Ask → the agent answers beside it on a short lavender card, or with two to four alternatives side by side → pick (P), cross out (X) or comment (C) → ask again. Each next step appears on the selection at the moment it is possible.
+Write on the board (pink, handwritten, yours). The card is the question: end it with a question mark and it goes to the agent when you finish writing; any other card is sent as it stands with ⌘↵. There is no question box. The agent answers under the card on a short lavender card, reading what sits right beside the card too → pick (P), cross out (X) or write the next thing. To ask about something you did not write (an answer, imported material), Ask opens a pink card beside it and what you write there is sent. (Changed 26 Nov after YC's second playtest: the box made a written question into background and the chip became the ask.)
 
 ## The nine findings
 
@@ -44,9 +44,9 @@ Sources: [the Solveit method](https://www.answer.ai/posts/2025-10-01-solveit-ful
 | AI output is editable and is part of the context | "you can even edit past AI responses"; "The AI always sees the current state of your dialog, not the edit history" | An answer is an ordinary card. Edit it and ask about it: the agent is sent its current text and the exchange that led to it. |
 | The context is visible and curated by the person | "the AI should be able to see everything exactly as the human does"; hidden messages "are excluded from AI context" | The agent is given exactly the selection, the frame it sits in and the thread behind it. The ask says what was given and outlines it. The agent runs with no tools, files or memory. |
 
-Hiding objects from context is a prototype (`?prototype=context`, item 67): **Leave out** (L) on the selection bar keeps an object out of what asks give the agent, the board marks it "left out of asks", and the ask says how many were withheld; an object the person selects is still given.
+Hiding objects from context is a prototype (`?prototype=context`, item 67): **Leave out** (L) on the selection bar keeps an object out of what asks give the agent, the board marks it "left out of asks", and the ask says how many were withheld; an object the person selects is still given. **Pin** (I) is its opposite (item 90): every ask on that page gives a pinned object, selected or not, the board fences it as "pinned · given to every ask", and the ask outlines it and says how many were pinned.
 
-Not borrowed yet: pinning objects into context, token counts, learning/concise/standard modes, ghost text, running code beside notes, undo per message.
+Not borrowed yet: token counts, learning/concise/standard modes, ghost text, running code beside notes, undo per message.
 
 ## Not done in this pass
 

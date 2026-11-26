@@ -72,14 +72,14 @@ import {
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { convergeForPerson, createComment } from "./agent-operations";
 import { prototypeEnabled, canvasReturnTo } from "./prototype-flags";
-import { toggleLeftOut } from "./leave-out";
+import { toggleLeftOut, togglePinned } from "./leave-out";
 import { followConnectors } from "./connector-follow";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
-import { AskLayer, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
+import { AskLayer, AutoAsk, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
 import { elsewhereNotice, elsewhereShow, markOf, noticeMs } from "./ask-rules";
@@ -278,11 +278,16 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
     title: "Think",
     rows: [
       ["Write a thought", "N, then click or Enter; or double-click the board"],
-      ["Ask your agent about the selection, or send a failed ask again", keys("⌘ ↵")],
+      ["Ask: write a question and finish, or send any card; also resends a failed ask", keys("end with ?, or ⌘ ↵")],
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
-      ...(prototypeEnabled("context") ? [["Leave the selection out of asks (again to bring it back)", "L"] as [string, string]] : []),
+      ...(prototypeEnabled("context")
+        ? [
+            ["Leave the selection out of asks (again to bring it back)", "L"] as [string, string],
+            ["Pin the selection into every ask on this page (again to unpin)", "I"] as [string, string],
+          ]
+        : []),
       ["Open or close the feedback queue", "Shift C"],
       ["Bring in a table or document as cards", keys("⌘ V, or drop a file")],
       ["Next / previous imported record", "J / K"],
@@ -399,7 +404,7 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
           </IconButton>
         </div>
         <p>
-          Pink handwriting is you, lavender with ✦ is your agent. Write a thought, select it and ask. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
+          Pink handwriting is you, lavender with ✦ is your agent. Write a question and it is asked when you finish; any other card is asked with ⌘↵. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
         </p>
         <div className="shortcut-grid">
           {shortcutGroups.map((group) => (
@@ -621,6 +626,15 @@ function Shell() {
         event.preventDefault();
         event.stopImmediatePropagation();
         if (!event.repeat) toggleLeftOut(editor, chosen);
+        return;
+      }
+      // I pins the selection into every ask on its page (the context prototype).
+      if (key === "i" && prototypeEnabled("context")) {
+        const chosen = editor.getSelectedShapes();
+        if (!chosen.length) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) togglePinned(editor, chosen);
         return;
       }
       if (key !== "p" && key !== "x") return;
@@ -1236,7 +1250,7 @@ function Shell() {
             <span>{t.name}</span>
           </button>
         ))}
-        <button type="button" className="tool-button ask" title={keys("Ask your agent about the selection (⌘↵)")} onClick={askAboutSelection}>
+        <button type="button" className="tool-button ask" title={keys("Send what you wrote to your agent (⌘↵)")} onClick={askAboutSelection}>
           <Sparkles size={18} strokeWidth={1.6} />
           <span>Ask</span>
         </button>
@@ -1275,6 +1289,7 @@ function Shell() {
       <ImportLayer onNotice={setNotice} />
       <StopAnnouncer />
       <SelectionBar asking={asking} setAsking={setAsking} onComment={addComment} onNotice={setNotice} keepInView={keepInView} />
+      <AutoAsk keepInView={keepInView} />
       <aside className="right-panel">
         <div className="panel-tabs right-tabs" role="tablist">
           <button role="tab" aria-selected={rightTab === "properties"} className={rightTab === "properties" ? "tab-current" : "tab-other"} onClick={() => setRightTab("properties")}>

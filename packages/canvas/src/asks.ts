@@ -1,13 +1,14 @@
-import { type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { type Editor, type TLPageId, type TLShape, type TLShapeId } from "tldraw";
 import { z } from "zod";
 import { answerInput, askStates, askStatusInput, asksInput, type AskState } from "./protocol";
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
-import { isLeftOut, keepForAgent } from "./leave-out";
+import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
+import { clusterAround } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -26,6 +27,8 @@ const askMeta = z.object({
   note: z.string().optional(),
   error: z.string().optional(),
   read: z.string().optional(),
+  /** The words sent, when the ask is the person's own card: an edit after that is a new ask. */
+  sent: z.string().optional(),
 });
 export type AskMeta = z.infer<typeof askMeta>;
 
@@ -47,22 +50,82 @@ function setAsk(editor: Editor, shape: TLShape, ask: AskMeta) {
   editor.run(() => editor.updateShape({ id: shape.id, type: shape.type, meta: { ...shape.meta, ask: clean } }), { history: "ignore" });
 }
 
-/** Ask an agent about the given objects. The context is the selection plus the frame it sits in. */
-export function createAsk(editor: Editor, value: { targetIds: string[]; question: string }) {
-  const targets = value.targetIds.flatMap((id) => editor.getShape(id as TLShapeId) ?? []).filter((s) => s.type !== "arrow");
-  if (!targets.length) throw new Error("Select what you mean first, then ask");
-  const question = value.question.trim();
-  if (!question) throw new Error("Type a question first");
-  // A frame the person left out is not part of the context (unless it is itself selected).
-  const around = frameOf(editor, targets[0]);
+/** How close another object must be to count as "beside" what was written. */
+const NEAR = 48;
+
+/** What sits right beside a card: position carries meaning, so the agent is given it too. */
+function beside(editor: Editor, host: TLShape, skip: Set<string>) {
+  const box = editor.getShapePageBounds(host);
+  if (!box) return [];
+  const gap = (b: { x: number; y: number; maxX: number; maxY: number }) =>
+    Math.max(0, b.x - box.maxX, box.x - b.maxX) + Math.max(0, b.y - box.maxY, box.y - b.maxY);
+  const near = editor
+    .getCurrentPageShapes()
+    .filter((s) => !skip.has(s.id) && s.parentId === host.parentId && s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s))
+    .flatMap((s) => {
+      const b = editor.getShapePageBounds(s);
+      return b && gap(b) <= NEAR ? [{ s, d: gap(b) }] : [];
+    })
+    .sort((x, y) => x.d - y.d)
+    .map((n) => n.s);
+  return keepForAgent(near).kept.slice(0, 4);
+}
+
+/**
+ * The card is the question. What the person wrote is sent as it stands, with the other
+ * selected objects and what sits right beside it as context. No second card, no box.
+ */
+export function askDirect(editor: Editor, hostId: string, otherIds: string[] = []) {
+  const host = editor.getShape(hostId as TLShapeId);
+  const question = host ? textOf(host) : "";
+  if (!host || !question) throw new Error("Write something first, then ask");
+  const earlier = askOf(host);
+  if (earlier && earlier.sent === question && (earlier.state === "waiting" || earlier.state === "working")) return host.id;
+  const others = otherIds.flatMap((id) => editor.getShape(id as TLShapeId) ?? []).filter((s) => s.id !== host.id && s.type !== "arrow");
+  // A card that already points at something (an ask written beside an answer) keeps its targets.
+  const kept = targetsOf(host).flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
+  const skip = new Set<string>([host.id, ...others.map((s) => s.id), ...kept.map((s) => s.id)]);
+  const targets = [...new Map([...kept, ...others, ...beside(editor, host, skip)].map((t) => [t.id, t])).values()];
+  const around = frameOf(editor, host);
   const frame = around && keepForAgent([around], targets.map((t) => t.id)).kept.length ? around : undefined;
   const ask: AskMeta = {
     state: "waiting",
-    attempt: 0,
+    attempt: earlier ? earlier.attempt + 1 : 0,
     contextIds: [...targets.map((t) => t.id), ...(frame ? [frame.id] : [])],
     askedAt: Date.now(),
+    sent: question,
   };
-  return createComment(editor, { targetIds: targets.map((t) => t.id), text: question }, { name: "Ask", ask }) as TLShapeId;
+  editor.run(
+    () => editor.updateShape({ id: host.id, type: host.type, meta: { ...host.meta, targetIds: targets.map((t) => t.id), ask } }),
+    { history: "ignore" },
+  );
+  return host.id;
+}
+
+/** The person's writing: their own cards, and a first-board card they wrote over. */
+export const writtenByPerson = (s: TLShape) => authorOf(s) === HUMAN || (s.meta.seed === true && typeof s.meta.updatedAt === "number");
+
+/** True when a card the person just finished writing should go to the agent by itself. */
+export function shouldSend(shape: TLShape | undefined) {
+  if (!shape || !writtenByPerson(shape)) return false;
+  const text = textOf(shape), ask = askOf(shape);
+  if (!text) return false;
+  if (ask) return ask.sent !== undefined && ask.sent !== text;
+  return shape.meta.askWhenWritten === true || isQuestion(text);
+}
+
+/**
+ * Asking about something the person did not write (an agent's answer, imported material):
+ * a pink card opens beside it, already pointing at it, and what is written there is sent
+ * when the person finishes. With a question (agents, tests) it is sent at once.
+ */
+export function createAsk(editor: Editor, value: { targetIds: string[]; question?: string }) {
+  const targets = value.targetIds.flatMap((id) => editor.getShape(id as TLShapeId) ?? []).filter((s) => s.type !== "arrow");
+  if (!targets.length) throw new Error("Select what you mean first, then ask");
+  const question = value.question?.trim() ?? "";
+  const id = createComment(editor, { targetIds: targets.map((t) => t.id), text: question }, { name: "Ask", askWhenWritten: true }) as TLShapeId;
+  if (question) askDirect(editor, id);
+  return id;
 }
 
 /** Send a failed or stuck ask again. */
@@ -70,7 +133,7 @@ export function retryAsk(editor: Editor, id: string) {
   const shape = editor.getShape(id as TLShapeId), ask = askOf(shape);
   if (!shape || !ask) throw new Error("Not an ask");
   setAsk(editor, shape, { ...ask, state: "waiting", attempt: ask.attempt + 1, askedAt: Date.now(), startedAt: undefined, error: undefined, note: undefined });
-  if (shape.meta.status === "resolved") resolveMark(editor, editor.getShape(shape.id)!, "open", HUMAN);
+  if (shape.meta.role === "annotation" && shape.meta.status === "resolved") resolveMark(editor, editor.getShape(shape.id)!, "open", HUMAN);
 }
 
 type Given = { id: string; type: string; author: string; text: string; mark?: AskMark; inside?: Given[]; insideMore?: number };
@@ -215,6 +278,41 @@ function thread(editor: Editor, shape: TLShape, keep: Keep, depth = 0, seen = ne
   ];
 }
 
+/** What the person pinned on a page for every ask there (see leave-out.ts), minus what is already given. */
+export function pinnedOnPage(editor: Editor, pageId: TLPageId, given: Iterable<string>) {
+  const marked = [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []).filter((s) => s.type !== "arrow" && isPinned(s.meta));
+  if (!marked.length) return { pinned: [] as TLShape[], more: 0 };
+  const found = pinnedFor(
+    marked.map((shape) => {
+      const b = editor.getShapePageBounds(shape);
+      return { id: shape.id, x: b?.x ?? 0, y: b?.y ?? 0, meta: shape.meta, hidden: editor.isShapeHidden(shape), shape };
+    }),
+    given,
+  );
+  return { pinned: found.pinned.map((p) => p.shape), more: found.more };
+}
+
+/**
+ * The rest of the group the ask's card sits in (objects chained within CLUSTER_GAP at its own
+ * level), each with where it sits relative to the card, minus what the ask already gives.
+ * Answers to this ask, the first board's seeded cards, hidden and left-out objects are not part of it.
+ */
+function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep: Keep) {
+  const placed = editor
+    .getSortedChildIdsForParent(host.parentId)
+    .flatMap((id) => editor.getShape(id) ?? [])
+    .filter((s) => s.id === host.id || (s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s)))
+    .flatMap((s) => {
+      const b = editor.getShapePageBounds(s);
+      return b ? [{ id: s.id as string, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
+    });
+  const found = clusterAround(placed, host.id, skip);
+  // A left-out member is withheld (and counted as such), like anything else around the ask.
+  const kept = new Set<string>(keep(found.members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? [])).map((s) => s.id));
+  const members = found.members.filter((m) => kept.has(m.id)).map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
+  return { members, more: found.more };
+}
+
 /** Everything an agent is given for one ask: exactly what the board shows as its context. */
 export function describeAsk(editor: Editor, shape: TLShape) {
   const ask = askOf(shape);
@@ -229,9 +327,31 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     return result.kept;
   };
   const targets = selected.flatMap((s) => parts(editor, s, keep));
-  const around = selected[0] ? frameOf(editor, selected[0]) : undefined;
+  const around = frameOf(editor, selected[0] ?? shape);
   const frame = around && keep([around]).length ? around : undefined;
   const skip = new Set<string>([shape.id, ...targets.map((t) => t.id)]);
+  const givenTargets = targets.map((t) => {
+    if (t.type !== "frame") return given(editor, t, 2000, keep);
+    const held = inside(editor, t, skip, keep);
+    return { ...given(editor, t, 2000, keep), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
+  });
+  const frameObjects = frame
+    ? keep(
+        editor
+          .getSortedChildIdsForParent(frame.id)
+          .flatMap((id) => editor.getShape(id) ?? [])
+          .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset"))
+          .concat(attachedTo(editor, frame).filter((a) => !skip.has(a.id))),
+      ).slice(0, 12)
+    : [];
+  // Where things sit carries meaning: the group the card is in, said with relations. What the
+  // ask already gives (targets, and the frame's objects when the card is in a frame) is not repeated.
+  const group = editor.getShapePageBounds(shape)
+    ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : []), ...frameObjects.map((s) => s.id)]), keep)
+    : { members: [], more: 0 };
+  // Pinned for every ask on this page, unless this ask already gives it.
+  const alreadyGiven = [...skip, ...group.members.map((m) => m.id), ...(frame ? [frame.id] : []), ...frameObjects.map((s) => s.id), ...givenTargets.flatMap((t) => t.inside?.map((i) => i.id) ?? [])];
+  const pins = page ? pinnedOnPage(editor, page.id, alreadyGiven) : { pinned: [], more: 0 };
   return {
     id: shape.id,
     revision: revision(shape),
@@ -244,31 +364,21 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     ...(ask.error ? { error: ask.error } : {}),
     pageId: page?.id,
     pageName: page?.name,
-    targets: targets.map((t) => {
-      if (t.type !== "frame") return given(editor, t, 2000, keep);
-      const held = inside(editor, t, skip, keep);
-      return { ...given(editor, t, 2000, keep), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
-    }),
+    targets: givenTargets,
     history: mergeHistory(targets.flatMap((t) => thread(editor, t, keep)), targets.map((t) => t.id)),
     ...(frame
       ? {
           frame: {
             id: frame.id,
             name: shapeName(frame),
-            objects: keep(
-              editor
-                .getSortedChildIdsForParent(frame.id)
-                .flatMap((id) => editor.getShape(id) ?? [])
-                .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset"))
-                .concat(attachedTo(editor, frame).filter((a) => !skip.has(a.id))),
-            )
-              .slice(0, 12)
-              .map((s) => given(editor, s, 400, keep)),
+            objects: frameObjects.map((s) => given(editor, s, 400, keep)),
           },
         }
       : {}),
+    ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
     ...(withheld.size ? { leftOut: withheld.size } : {}),
+    ...(pins.pinned.length ? { pinned: pins.pinned.map((s) => given(editor, s, 400)), ...(pins.more ? { pinnedMore: pins.more } : {}) } : {}),
   };
 }
 export type AskView = ReturnType<typeof describeAsk>;
@@ -331,7 +441,12 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   // The room the person's window has beside the canvas chrome, so no answer lands off screen.
   const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
   const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
-  const spot = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
+  // Under the ask, or beside it when the space under it is taken (later asks stacked below),
+  // so the answer never ends up under someone else's question.
+  const under = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
+  const besideBox = { ...layout.box, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
+  const beside = freeSpot(editor, besideBox, new Set([shape.id]), pageId);
+  const spot = pickAnswerSpot(under.y - layout.box.y, beside.y - besideBox.y) === "under" ? under : beside;
   // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
   // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
   // work here must not silently remove an answer they cannot see (canvas_undo_run still can).
@@ -364,7 +479,7 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     });
     setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt: Date.now(), read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.
-    if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
+    if (!input.question && shape.meta.role === "annotation" && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
     return made;
   });
   return { ask: describeAsk(editor, editor.getShape(shape.id)!), answers: ids.map((id) => describeObject(editor, id, true)) };
