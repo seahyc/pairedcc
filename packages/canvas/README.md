@@ -106,7 +106,7 @@ Browser checks performed 17 Nov 2026: native object dragging, pen drawing, text 
 - **Persistence**: a board saved in one browser profile, compared through `read` in a clean profile.
 - **Performance**: load time and median pan frame time at 1k and 10k objects, compared with the previous scorecard (more than 25% slower is flagged). Boards are built with the editor directly through `window.__pairedEditor`, which only development builds expose.
 - **Agent usability**: tasks in `eval/tasks/` with machine-checked end states; the script reports the latest recorded attempt (`eval/agent-runs/latest.json`) and never calls a model.
-- **Existing product**: `pnpm build` and `pnpm -r --no-bail test`, per package.
+- **Existing product**: `pnpm build` and `pnpm -r --no-bail test`, per package. The e2e suite gets `DATABASE_URL` and `REDIS_URL` from the environment when both are set; otherwise the eval starts throwaway Postgres and Redis when `initdb`, `pg_ctl`, `createdb` and `redis-server` are installed (as `nobody` when run as root), and deletes them afterwards. Without either, the row says the suite had no database (`eval/services.ts`).
 
 `--only=acceptance,safety,…` runs a subset and carries the other measures over from the previous scorecard, labelled as such. `--no-write` prints without writing. `EVAL_URL` reuses a running dev server; `CHROMIUM_PATH` points at a browser if Playwright has none installed.
 
