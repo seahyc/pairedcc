@@ -197,6 +197,7 @@ function CopyBlock({ text, onCopied }: { text: string; onCopied: (notice: string
 /** Agent setup on paired.cc: one sentence for the agent, or one command per client. */
 function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void }) {
   const link = useValue("agent link", () => agentLink.get(), []);
+  const listeners = useValue("agent listeners", () => agentListeners.get(), []);
   const origin = location.origin;
   if (link.mode !== "hosted") return null;
   if (link.state === "signed-out")
@@ -220,6 +221,12 @@ function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void })
         <span className={`status-dot ${link.state}`} />
         {link.state === "connected" ? `This tab is ready for your agent${link.email ? ` (${link.email})` : ""}.` : "Connecting this tab…"}
       </p>
+      {listeners !== null && (
+        <p className="agent-status">
+          <span className={`status-dot ${listeners.length ? "connected" : "connecting"}`} />
+          {listeners.length ? `${listeners.join(", ")} is listening and answers your asks.` : "The resident agent is offline, so asks wait until it is back or you connect your own."}
+        </p>
+      )}
       <p>Paste this into your agent:</p>
       <CopyBlock text={`Read ${origin}/agent-setup.md and connect me to Paired.`} onCopied={onCopied} />
       <p>Or add it yourself:</p>

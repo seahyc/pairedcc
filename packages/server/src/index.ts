@@ -17,6 +17,7 @@ import { createFrontendRoutes } from './routes/frontend.js'
 import { oauthRoutes } from './oauth/routes.js'
 import { createMcpRoutes } from './canvas/mcp.js'
 import { CanvasRelay } from './canvas/relay.js'
+import { createResidentRoutes } from './canvas/resident.js'
 import { DocManager } from './yjs/doc-manager.js'
 import { attachYjsWebSocket } from './yjs/ws-handler.js'
 import { PostgresSnapshotStore } from './yjs/snapshot-store.js'
@@ -39,7 +40,10 @@ const docManager = new DocManager()
 const presenceTracker = new PresenceTracker()
 const snapshotStore = new PostgresSnapshotStore()
 // Agents reach the user's open canvas tab: /mcp (OAuth) → relay → tab (WebSocket).
-const canvasRelay = new CanvasRelay([new URL(config.BASE_URL).origin])
+const canvasRelay = new CanvasRelay([new URL(config.BASE_URL).origin], {
+  secret: config.CANVAS_RESIDENT_SECRET,
+  allow: (config.CANVAS_RESIDENT_ALLOW ?? '').split(','),
+})
 
 // WebSocket is attached after server starts (see main())
 
@@ -102,6 +106,8 @@ async function cleanupAnonymousDocs() {
 // Hosted canvas agent access: OAuth for MCP clients, then the MCP endpoint.
 app.route('/', oauthRoutes)
 app.route('/', createMcpRoutes(canvasRelay))
+// The resident agent answers asks for allowlisted accounts (off unless configured).
+app.route('/', createResidentRoutes(canvasRelay))
 
 // Serve frontend in production: / → canvas, document editor under /docs,
 // legacy URLs (/d/:id, /login, ...) 301-redirect to their /docs equivalents.

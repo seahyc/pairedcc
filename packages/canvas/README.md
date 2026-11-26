@@ -40,6 +40,21 @@ launchctl bootout gui/$(id -u)/com.paired.canvas.agent                          
 
 Its log is `.local/resident-agent.log`.
 
+### On paired.cc
+
+The hosted site has no model of its own. The same script can answer asks there for the accounts the server allows, using the Claude Code login of the computer it runs on:
+
+```sh
+PAIRED_URL=https://paired.cc PAIRED_RESIDENT_SECRET_FILE=~/.config/paired/resident-secret pnpm --filter @pairedcc/canvas agent
+```
+
+The server side is in `packages/server/src/canvas` (`relay.ts`, `resident.ts`) and is off unless two environment variables are set:
+
+- `CANVAS_RESIDENT_SECRET`: at least 32 characters (`openssl rand -hex 32`). The agent sends it as a bearer token; without it the endpoints answer 404.
+- `CANVAS_RESIDENT_ALLOW`: account ids or sign-in emails, comma separated. Only asks from signed-in tabs of these accounts reach the agent, 30 per account per 10 minutes. The answers spend the agent owner's model subscription, which is why the list exists.
+
+The agent may only report on and answer asks (`ask_status`, `answer`) in the tab an ask came from. An allowlisted account sees "Claude is listening" while the agent is polling and "No agent is listening right now" when it is not; an ask made meanwhile is picked up when the agent returns, as long as the tab stays open. Any other account is told to connect its own agent. Answers stop when the computer running the agent is off or asleep.
+
 ## Local service
 
 The dev server is managed by user LaunchAgent `com.paired.canvas.dev` (plist in `~/Library/LaunchAgents/`). It starts at login and restarts if it exits, listening on loopback port 5183. Logs are in `.local/dev-server.log` and `.local/dev-server.error.log`. Do not start a second `npm run dev` while this service owns the port. Keep the browser tab open for agent commands.
@@ -59,7 +74,7 @@ The dev server is managed by user LaunchAgent `com.paired.canvas.dev` (plist in 
 - Live save state, an agent status chip (last action, failures, lost link) and a shortcut sheet on `?`. The audit behind these is `docs/canvas/usability-heuristics.md`.
 - Browser object interface: `window.paired.read()`, `create(input)`, `update(input)`, `select(ids)`, `undo()` and `redo()`.
 
-Local HTTP and MCP access are implemented; see [AGENT_API.md](AGENT_API.md). The resident agent above is the built-in assistant for local use; there is none on paired.cc yet. Updates require `expectedRevision`; stale updates and updates to locked objects are rejected. Agents and humans use the same tldraw store and history.
+Local HTTP and MCP access are implemented; see [AGENT_API.md](AGENT_API.md). The resident agent above is the built-in assistant for local use; on paired.cc it answers only for allowlisted accounts. Updates require `expectedRevision`; stale updates and updates to locked objects are rejected. Agents and humans use the same tldraw store and history.
 
 ## Checks
 

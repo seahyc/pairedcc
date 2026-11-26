@@ -18,8 +18,8 @@ export const agentLink = atom<AgentLink>("agent link", { mode: "hosted", state: 
 export const agentActivity = atom<{ actor: string; op: string; at: number; ok: boolean; error?: string } | null>("agent activity", null);
 
 /**
- * Agents waiting for asks right now. null where presence cannot be known (the hosted
- * relay), an empty list when nobody is listening.
+ * Agents waiting for asks right now. null where presence cannot be known (on paired.cc,
+ * an account the resident agent does not serve), an empty list when nobody is listening.
  */
 export const agentListeners = atom<string[] | null>("agent listeners", null);
 
@@ -140,12 +140,22 @@ export function connectAgentAccess(editor: Editor, onChange: (link: AgentLink) =
       if (message.type === "connected") {
         attempts = 0;
         onChange({ mode: "hosted", state: "connected", email });
+        // Asks still waiting are announced again whenever the link comes up, so none is lost to a restart.
+        sendAsk = (ask) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: "ask", ask }));
+        for (const ask of listAsks(editor, { state: "waiting" }).asks) announceAsk(ask);
+      } else if (message.type === "listeners") {
+        // Only sent to accounts the resident agent serves; everyone else brings their own agent.
+        if (Array.isArray(message.agents)) agentListeners.set(message.agents.filter((a): a is string => typeof a === "string"));
       } else if (message.type === "request") {
         run(message, (reply) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: "response", ...reply })));
       }
     };
     ws.onclose = () => {
-      if (socket === ws) socket = undefined;
+      if (socket === ws) {
+        socket = undefined;
+        sendAsk = undefined;
+        agentListeners.set(null);
+      }
       if (closed) return;
       onChange({ mode: "hosted", state: "connecting", email });
       attempts += 1;
