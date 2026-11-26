@@ -33,6 +33,8 @@ Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
 
 Data prototype tools: `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` (see [Data prototype](#data-prototype)).
 
+Prototype tools (`canvas_learn` and the data tools) are flagged `prototype` in `tools/tool-defs.ts`. The local stdio server always offers them. The hosted endpoint offers them while `hostedPrototypeTools` is true (the default); set it to false and run `pnpm --filter @pairedcc/canvas manifest` to leave them, and their guidance in the instructions, out of the hosted manifest.
+
 ### Overview, then detail
 
 `canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects.
