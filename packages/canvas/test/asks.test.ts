@@ -258,7 +258,7 @@ describe("an ask answered on a page the person has left", () => {
   });
 });
 
-import { elsewhereShow, noticeMs } from "../src/ask-rules";
+import { elsewhereShow, noticeDelay, noticeMs } from "../src/ask-rules";
 describe("showing an ask answered on another page", () => {
   const replies = [
     { id: "shape:a", replyTo: "shape:ask" },
@@ -283,6 +283,12 @@ describe("showing an ask answered on another page", () => {
   it("keeps a notice with something to press long enough to press it", () => {
     expect(noticeMs(false)).toBe(3500);
     expect(noticeMs(true)).toBeGreaterThanOrEqual(10000);
+  });
+  it("holds a notice while the person is on it, and gives it its full time again after", () => {
+    expect(noticeDelay(false, true)).toBeNull();
+    expect(noticeDelay(true, true)).toBeNull();
+    expect(noticeDelay(false, false)).toBe(noticeMs(false));
+    expect(noticeDelay(true, false)).toBe(noticeMs(true));
   });
 });
 

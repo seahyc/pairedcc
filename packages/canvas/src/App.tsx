@@ -82,7 +82,7 @@ import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
-import { elsewhereNotice, elsewhereShow, markOf, noticeMs } from "./ask-rules";
+import { elsewhereNotice, elsewhereShow, markOf, noticeDelay } from "./ask-rules";
 import { askOf } from "./asks";
 import { landedAnswers } from "./ask-rules";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
@@ -826,11 +826,18 @@ function Shell() {
       ),
     [editor],
   );
+  // The pointer over the notice, or focus in it, holds it up (timing adjustable).
+  const [noticeHeld, setNoticeHeld] = useState(false);
   useEffect(() => {
     if (!notice) return;
-    const t = setTimeout(() => setNotice(""), noticeMs(Boolean(noticeShow)));
+    const delay = noticeDelay(Boolean(noticeShow), noticeHeld);
+    if (delay === null) return;
+    const t = setTimeout(() => setNotice(""), delay);
     return () => clearTimeout(t);
-  }, [notice, noticeShow]);
+  }, [notice, noticeShow, noticeHeld]);
+  useEffect(() => {
+    if (!notice) setNoticeHeld(false);
+  }, [notice]);
   /** Show: open the ask's page, select its answer (or the failed ask) and bring it into view. */
   function showElsewhere(askId: string) {
     setNotice("");
@@ -1621,7 +1628,16 @@ function Shell() {
         </IconButton>
       </div>
       {notice && (
-        <div className="toast" role="status">
+        <div
+          className="toast"
+          role="status"
+          onPointerEnter={() => setNoticeHeld(true)}
+          onPointerLeave={() => setNoticeHeld(false)}
+          onFocus={() => setNoticeHeld(true)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setNoticeHeld(false);
+          }}
+        >
           {notice}
           {noticeShow && (
             <button type="button" className="toast-action" onClick={() => showRef.current()}>
