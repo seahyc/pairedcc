@@ -1540,6 +1540,7 @@ kbd {
 }
 .ask-starters {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding-left: 23px;
 }
@@ -1763,4 +1764,194 @@ kbd {
   .app .canvas-stage {
     right: 0;
   }
+}
+
+/* Imported source material: plain print on paper, neither pink (you) nor lavender (agent). */
+.scrap--source {
+  background: #fcfbf8;
+  border: 1px solid #d3d0c6;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(40, 38, 30, 0.07);
+}
+.scrap--sourceTitle,
+.scrap--sourceNote {
+  background: transparent;
+  border: none;
+}
+/* The column name on a field card's first line. */
+.scrap--source .tl-rich-text p:first-child strong {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #77736a;
+}
+/* How much a record matters, as the weight and colour of its cards' left edge. */
+.scrap--source.sev {
+  border-left-style: solid;
+}
+.scrap--source.sev-0 { border-left: 6px solid #b4471c; }
+.scrap--source.sev-1 { border-left: 4px solid #d99a2b; }
+.scrap--source.sev-2 { border-left: 3px solid #b9b39f; }
+.scrap--source.sev-3,
+.scrap--source.sev-4 { border-left: 2px solid #d3d0c6; }
+.source-chips {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 0;
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.source-chip {
+  font: 600 12px/1 Inter, system-ui, sans-serif;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e6e3da;
+  color: #4a473f;
+  border: 1px solid #d3d0c6;
+}
+.source-chip.sev-0 { background: #b4471c; border-color: #b4471c; color: #fff; }
+.source-chip.sev-1 { background: #f6e3b8; border-color: #d99a2b; color: #6b4a05; }
+.source-chip.sev-2 { background: #eceade; border-color: #b9b39f; color: #55524a; }
+.source-chip.sev-3,
+.source-chip.sev-4 { background: #f5f4ee; border-color: #d3d0c6; color: #77736a; }
+.source-table-wrap {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #fcfbf8;
+  border: 1px solid #d3d0c6;
+  border-radius: 8px;
+  box-sizing: border-box;
+  pointer-events: all;
+}
+.source-table {
+  font: 400 13px/18px Inter, system-ui, sans-serif;
+  color: #2c2d30;
+}
+.source-table-title {
+  font-weight: 600;
+  font-size: 14px;
+  padding: 9px 11px;
+  border-bottom: 1px solid #d3d0c6;
+}
+.source-table table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+.source-table th,
+.source-table td {
+  padding: 4px 11px 5px;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #ebe8df;
+}
+.source-table th {
+  font-weight: 600;
+  color: #55524a;
+  background: #f3f1ea;
+  border-bottom: 1px solid #d3d0c6;
+}
+.source-table tr:last-child td {
+  border-bottom: none;
+}
+.source-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.source-table .more {
+  color: #77736a;
+}
+.import-summary,
+.import-stepper {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.import-summary {
+  bottom: 112px;
+  padding: 7px 8px 7px 14px;
+  background: #292a2e;
+  color: #fff;
+  border-radius: 9px;
+  box-shadow: 0 3px 15px #0002;
+  max-width: calc(100vw - 32px);
+}
+.import-summary > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 6px;
+}
+.import-summary button {
+  background: #45464c;
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 5px 9px;
+  font: inherit;
+  cursor: pointer;
+}
+.import-summary button:hover {
+  background: #5a5b62;
+}
+.import-summary .import-dismiss {
+  background: transparent;
+  padding: 4px;
+  display: flex;
+}
+.import-stepper {
+  bottom: 16px;
+  padding: 4px 10px 4px 4px;
+  background: #fff;
+  border: 1px solid #dedfe4;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px #1517281f;
+  color: #2c2d30;
+}
+.import-stepper button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.import-stepper button:hover:not(:disabled) {
+  background: #f0f0f3;
+}
+.import-stepper button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.import-count {
+  min-width: 74px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.import-keys kbd {
+  font: 500 11px/1 Inter, system-ui, sans-serif;
+  padding: 3px 5px;
+  border: 1px solid #dedfe4;
+  border-radius: 4px;
+  color: #77736a;
+}
+.import-judged {
+  color: #77736a;
+  padding-left: 6px;
+  border-left: 1px solid #dedfe4;
 }
