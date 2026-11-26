@@ -23,6 +23,7 @@ import {
   richTextPlain,
   revision,
 } from "./operations";
+import { overview } from "./overview";
 import { agentStyle, collectMarks, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 
 const cardInput = z.object({
@@ -390,6 +391,11 @@ export async function executeCommand(
         return { objects: created.map(shape => describeObject(editor, shape.id)), selection: editor.getSelectedShapeIds() };
       });
     }
+    case "overview":
+      return overview(editor, command.input ?? {});
+    case "runs":
+    case "undo_run":
+      throw new Error("Agent runs are handled by the command runner");
     case "read":
       return readCanvas(editor, command.input ?? {});
     case "get": {

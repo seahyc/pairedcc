@@ -59,6 +59,9 @@ export const commandSchema = z.object({
     "scene",
     "arrange",
     "duplicate",
+    "overview",
+    "runs",
+    "undo_run",
   ]),
   input: z.record(z.string(), z.unknown()).optional(),
 });
