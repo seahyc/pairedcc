@@ -54,12 +54,16 @@ const labelOf = (r: PrimitiveRecord) => {
 /** Every relationship on a set of records. Arrow ends come from `ends` when given, else from arrow meta. */
 export function relationships(records: readonly PrimitiveRecord[], ends: readonly ArrowEnd[] = []): Relationship[] {
   const out: Relationship[] = [];
+  // An annotation is drawn with a feedback arrow to its target; the annotation itself is the
+  // relationship, so that arrow is not listed a second time.
+  const annotations = new Set(records.filter((r) => r.meta?.role === "annotation").map((r) => r.id));
   for (const r of records) {
     if (r.type === "arrow") {
       const start = ends.find((e) => e.arrowId === r.id && e.terminal === "start")?.toId ?? str(r.meta?.fromId);
       const end = ends.find((e) => e.arrowId === r.id && e.terminal === "end")?.toId ?? str(r.meta?.toId);
       if (!start || !end) continue; // an unbound arrow connects nothing
       const relation = str(r.meta?.relation) as RelationshipKind | undefined;
+      if (relation === "feedback" && annotations.has(start)) continue;
       const label = labelOf(r);
       out.push({
         kind: relation && KINDS.has(relation) ? relation : "decorative",

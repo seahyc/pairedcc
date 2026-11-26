@@ -13,6 +13,8 @@ const board: PrimitiveRecord[] = [
   { id: "shape:hand", type: "arrow", meta: {}, props: text("") },
   { id: "shape:loose", type: "arrow", meta: {} },
   { id: "shape:comment", type: "card", meta: { role: "annotation", author: "Human", targetId: "shape:a", targetIds: ["shape:a", "shape:b"] } },
+  { id: "shape:pin", type: "arrow", meta: { fromId: "shape:comment", toId: "shape:a", relation: "feedback" } },
+  { id: "shape:fb", type: "arrow", meta: { fromId: "shape:b", toId: "shape:a", relation: "feedback" } },
 ];
 
 describe("Relationship", () => {
@@ -28,6 +30,11 @@ describe("Relationship", () => {
     expect(all.filter((r) => r.kind === "annotates").map((r) => r.to)).toEqual(["shape:a", "shape:b"]);
   });
 
+  it("lists an annotation once, not again as its connector arrow, but keeps other feedback arrows", () => {
+    expect(all.some((r) => r.arrowId === "shape:pin")).toBe(false);
+    expect(all).toContainEqual({ kind: "feedback", from: "shape:b", to: "shape:a", via: "arrow", arrowId: "shape:fb" });
+  });
+
   it("keeps a hand-drawn arrow as decorative and ignores an arrow bound to nothing", () => {
     expect(all).toContainEqual({ kind: "decorative", from: "shape:b", to: "shape:note", via: "arrow", arrowId: "shape:hand" });
     expect(all.some((r) => r.arrowId === "shape:loose")).toBe(false);
@@ -36,7 +43,7 @@ describe("Relationship", () => {
   it("splits one object's relationships by direction", () => {
     const b = relationshipsOf("shape:b", all);
     expect(b.incoming.map((r) => r.kind).sort()).toEqual(["alternative", "annotates"]);
-    expect(b.outgoing.map((r) => r.kind)).toEqual(["decorative"]);
+    expect(b.outgoing.map((r) => r.kind).sort()).toEqual(["decorative", "feedback"]);
   });
 });
 
