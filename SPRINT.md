@@ -551,9 +551,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 86. (PR #117 open, awaiting review.) **The principles status table says what the build does now.** `docs/canvas/principles.md`'s "What the build does" and "Still missing" columns date from the calm-canvas pass; since then #42 (starters fit the selection), #47 (overview clusters), #55 (side by side), #64 (picks carried), #67 (frame contents), #83/#88 (keys, tap) and #86 (chart asks) closed gaps it still lists as missing, so a playtester or agent reading it is misled. Done when every row is checked against the code and the merged PRs, each change cites its PR, and nothing unmerged is claimed.
 
-90. **The person pins what every ask should see (prototype, `?prototype=context`).** Solveit, in `docs/canvas/principles.md`: "Not borrowed yet: pinning objects into context." Leave out (#90's item 67) lets the person withhold; nothing lets them include a brief, a constraint or a goal card without selecting it every time. Done when, in the context prototype, **Pin** (I) on the selection bar marks the selection "given to every ask" on the board (pin and leave out exclude each other), every ask on that page gives the pinned objects as their own section (hidden objects never), outlines them with the rest of its context, says how many were pinned, the resident agent's prompt names them as pinned by the person, a pin already on a board is always honoured and drawn, the logic is in tested pure functions, a real page check fails before and passes after, and the first screen is unchanged.
+90. (PR #121 open, awaiting review.) **The person pins what every ask should see (prototype, `?prototype=context`).** Solveit, in `docs/canvas/principles.md`: "Not borrowed yet: pinning objects into context." Leave out (#90's item 67) lets the person withhold; nothing lets them include a brief, a constraint or a goal card without selecting it every time. Done when, in the context prototype, **Pin** (I) on the selection bar marks the selection "given to every ask" on the board (pin and leave out exclude each other), every ask on that page gives the pinned objects as their own section (hidden objects never), outlines them with the rest of its context, says how many were pinned, the resident agent's prompt names them as pinned by the person, a pin already on a board is always honoured and drawn, the logic is in tested pure functions, a real page check fails before and passes after, and the first screen is unchanged.
 
-92. **Each answer stays with its own ask.** `docs/canvas/principles.md`, finding 3 ("Its answer sits
+92. (PR #120 open, awaiting review.) **Each answer stays with its own ask.** `docs/canvas/principles.md`, finding 3 ("Its answer sits
     under it"). Three asks about one card stack under each other; their answers (three options
     each) then all land in rows below the last ask, so nothing on the board says which row answers
     which question (found by build-A at 14:05Z: 16 cards, no overlaps, but the rows for "Which is
@@ -570,11 +570,23 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first
     line. Done when each has a failing-first case in `tools/verify-stale-edges.mjs` and is fixed.
 
+94. **Moving one object on a big board stays quick.** (Item 7, large boards.) On a 10k-object board,
+    moving one object takes about half a second a step (median 494 to 583 ms over 60 steps, headless
+    1440 px), so dragging is unusable. A load profile shows the layers panel building a row for every
+    object although it is hidden by default, and the shell re-rendering on every shape change. Done
+    when a scripted one-object move on a 10k board is measured before and after, the hidden layers
+    panel costs nothing, the panel still works when opened, and the scorecard is not worse.
+
+95. **Before sending, the person sees what an ask will give.** Solveit (brief): "the context the agent sees is visible and chosen by the person." Today what an ask gives is shown only after it is sent (the ask's line and outline), so the person learns that the frame, a pinned card or a withheld card went along, or did not, too late to change it. Done when, while the Ask box is open, the board outlines exactly what the ask would give and the box says it in one muted line ("Gives “Charge per seat” + frame “Pricing”", with "+ N pinned" and "· N left out" where they apply), computed by the same code that builds the ask so the preview cannot differ from what is sent (unit-tested against the sent ask), checked in a real page (failing before, passing after), with before/after screenshots of the Ask box; the first screen is unchanged.
+
 ## Claims
-92. Each answer stays with its own ask | claude/sprint-answer-beside | 2026-11-26T14:08Z
-90. The person pins what every ask should see | claude/sprint-pin-context | 2026-11-26T14:05Z
+95. Before sending, the person sees what an ask will give | claude/sprint-ask-preview | 2026-11-26T14:16Z
+93. Stale flag placement follows the drawn flag | claude/sprint-stale-drawn | 2026-11-26T14:20Z
+94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
 
 ## Done
+- 90. The person pins what every ask should see (build-B): PR #121 (`?prototype=context`: Pin (I) gives an object to every ask on its page, fenced on the board, outlined and counted on the ask, named in the resident prompt; verify-pin-context 7/18 → 18/18; first screen byte-identical).
+- 92. Each answer stays with its own ask (build-A): PR #120 (beside the ask when the space under it is taken; verify-answer-beside 3/6 → 6/6).
 - 86. Principles status table says what the build does now (build-B): PR #117 (rows 2, 3, 5, 6, 7 and 9 checked against the code and merged PRs; docs only).
 - 85. An answer on another page is one step away (build-B): PR #119 (Show (G) on the notice opens the page with the answer selected beside its ask; verify-answer-show 5/15 → 17/17; first screen byte-identical).
 - 91. A failed ask is retried from the keyboard (build-A): PR #118 (bar's first button is Retry / Send again with its key; Ctrl/⌘+Enter resends; verify-retry-key 2/9 → 9/9).
@@ -646,7 +658,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
-- (build-A) Keyboard PRs #105, #108 (stacked on #105), #115 and #118 were combined on `claude/sprint-keyboard-combined` at 14:12Z. #115 and #118 conflict with #105 only in adjacent added lines (an import, the shortcut sheet's first two rows, README lines), and the resolution is to keep both. On the combination: verify-keyboard 16/16, verify-heard 13/13, verify-menu-keys 16/16, verify-retry-key 9/9, verify-keys 16/16, verify-contain 20/20, and 467 unit tests.
+- (build-B, item 90) Pinning is a prototype under `?prototype=context` beside Leave out, not a default feature: page-scoped, up to six per ask in reading order (the rest counted as `pinnedMore`), Leave out wins over Pin, and setting either clears the other. Key I ("in", opposite L). Product choice for the maintainer: whether pins belong in the default loop, and whether they should be per page or per board.
+- (build-A, item 92) An answer whose space under its ask is taken (later asks stacked below) sits beside its ask, to the right and level with it; no arrow joins a displaced row, to keep ink off the board. Alternative: an arrow from ask to its row.
+- (build-A) `tools/verify-all.mjs` (#113) on `claude/sprint-int` at 14:00Z: 29/32 pass or ran; calm (#91, since merged), runs (#95) and board-images (the check, #114) failing; verify-ask-record and verify-leave-out added to its list.
+- (build-A) Keyboard PRs #105, #108 (stacked on #105), #115 and #118 were combined on `claude/sprint-keyboard-combined` at 14:07Z. #115 and #118 conflict with #105 only in adjacent added lines (an import, the shortcut sheet's first two rows, README lines), and the resolution is to keep both. On the combination: verify-keyboard 16/16, verify-heard 13/13, verify-menu-keys 16/16, verify-retry-key 9/9, verify-keys 16/16, verify-contain 20/20, and 467 unit tests.
 - (build-B, item 85) G goes to an answer on another page only while its notice is up; otherwise the key stays with the canvas. A notice with a button stays 12 s (3.5 s otherwise) and does not pause on hover. The board still never moves without the person pressing Show.
 - (build-B, item 85) The 10k pan median measured 93.9 ms (committed 49 ms) on a run that shared the container with a dev server and headless browsers; the change touches only the notice. Read that row with the known spread in mind; scorecard not committed.
 - (review, #80 and #87) #80 placed a wrapped selection bar over the selected card on a phone; fixed in #87 by lifting the bar by its measured height. Browser checks for the bar should include "the bar does not cover the selection".
@@ -910,3 +925,5 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:02Z | build-A | 91 (filed as 88) Retry a failed ask from the keyboard | #118 | ⌘↵ on a failed ask opened a new ask about it; now resends; verify-retry-key 2/9 → 9/9; 4 unit tests; ask loop's Retry step still passes; first screen unchanged; scorecard unchanged |
 | 2026-11-26T14:03Z | build-B | 85 An answer on another page is one step away | #119 | Notice carries Show (G), stays 12 s, opens the page and centres the answer with its ask; failed ask selects the ask; verify-answer-show 5/15 → 17/17; 440 unit tests; verify-answer-page/keys/touch green; first screen unchanged; scorecard unchanged except 10k pan noise |
 | 2026-11-26T14:03Z | build-B | 86 Principles status table | #117 | Six rows brought up to date with merged PRs (#6 #42 #47 #55 #64 #67 #83 #86 #88); nothing unmerged claimed |
+| 2026-11-26T14:11Z | build-A | 92 Each answer stays with its own ask | #120 | Three asks on one card: answers piled under the last ask; now beside their own; verify-answer-beside 3/6 → 6/6; answer-view 14/14, answer-page 11/11, calm 33/33; scorecard unchanged |
+| 2026-11-26T14:13Z | build-B | 90 Pin into every ask (context prototype) | #121 | Pin (I) on the selection bar; asks give `pinned`; fence, outline and "+ N pinned"; resident prompt names it; 8 failing-first unit tests; verify-pin-context 7/18 → 18/18; leave-out 19/19, ask-frame/marks/chart 8/8, ask-record 7/7, answer-page 11/11; first screen unchanged |
