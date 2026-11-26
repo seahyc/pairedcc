@@ -131,18 +131,33 @@ task by which measure is furthest from target, not by backlog order.
     (and a test) that leaves prototype tools out of the hosted manifest, defaulting to the current
     behaviour until the maintainer chooses.
 
+13. **Person imports a CSV.** Dropping a `.csv` file on the canvas creates a dataset object with
+    typed columns (validation errors shown, nothing partial created). Done when the eval's first
+    acceptance step passes.
+14. **Transitive staleness.** A result recorded with `inputs: [chart]` is not marked stale when the
+    chart's dataset changes, only when the chart itself is recomputed. Done when the eval step
+    "Changing an input marks its dependents stale" passes and the read reports the upstream cause.
+15. **Reload must not change objects.** Reopening a board re-measures cards and bumps their height
+    and revision, so a revision an agent held before the reload goes stale. Done when the eval step
+    "Reload restores everything" passes.
+16. **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
+    Done when the performance measure reports 10k load and pan numbers (raise the limit or
+    decide another way and record it).
+
 ## Claims
-0. Eval harness and baseline scorecard | claude/sprint-eval | 2026-11-26T09:14Z
+1. Server-side board storage | claude/sprint-boards-* | 2026-11-26T09:50Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 8. Docs | claude/sprint-docs | 2026-11-26T09:40Z
 
 ## Done
+- 0. Eval harness: PR #8 (`pnpm eval:canvas`, baseline scorecard: acceptance 7/10, safety pass, persistence fail, 10k perf impossible, e2e failing). Gaps filed as items 13 to 16.
 - 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Reviewed and merged 2026-11-26 as f47a23f, with a fix so undo never writes to an object locked since the run.
 - 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Reviewed and merged 2026-11-26 as 9f19690, 68d7ff3, ff68adc.
 - 6. Learning mode prototypes: PR #6 (`prompt` card, predict and generate modes, `canvas_learn`, `?prototype=learning`). Reviewed and merged 2026-11-26 as e83c517.
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 0) Eval choices: "import dataset" requires a person to drop a CSV (agent import is a separate step); a result derived from a chart counts as a dependent of the chart's dataset; 10k objects means one page; "Existing product" fails while e2e fails. Performance boards are built through a development-only `window.__pairedEditor`, because building through the agent interface costs about 28 ms per object at 1k. Agent usability reports a recorded attempt; the script never calls a model.
 - (build-B, item 2) Filtering or selecting a stale chart re-runs it on current data and clears the stale state (spec: immediate feedback). Alternative: keep the old snapshot until an explicit Recompute.
 - (build-B, item 2) The data prototype is reached through a "Data prototype page" button shown only with `?prototype=data`; dataset and chart shapes are always registered so saved boards load.
 - (build-B) Root `pnpm test` fails on `claude/sprint-int` independent of sprint work: `packages/cli` and `packages/web` have no test files and the e2e suite needs DATABASE_URL/REDIS_URL/JWT_SECRET. Used `pnpm -r --no-bail test` and reported per-package results. Fix: add `--passWithNoTests` to those scripts (out of canvas scope, not changed).
@@ -166,3 +181,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T09:09Z | build-B | 6 Learning mode | #6 | Predict and generate prompts; headless and HTTP checks pass |
 | 2026-11-26T09:18Z | review | Review #5 #6 | #5 #6 | Both merged (squash) after merging in the integration branch; one locked-object defect fixed in #5; all live checks re-run on the combined code |
 | 2026-11-26T09:25Z | review | Review #7 | #7 | Merged (squash) from a local merge with the integration branch; run undo now ignores the text-edit timestamp; all live checks re-run |
+| 2026-11-26T09:50Z | build-A | 0 Eval harness | #8 | `pnpm eval:canvas` and baseline scorecard; 12 unit tests; canvas tests 71 pass |
