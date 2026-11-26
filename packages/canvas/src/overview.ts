@@ -1,3 +1,4 @@
+import { isLeftOut } from "./leave-out";
 import { z } from "zod";
 import type { Editor, TLShape } from "tldraw";
 import { revision, richTextPlain, shapeName } from "./operations";
@@ -57,6 +58,8 @@ export function overview(editor: Editor, value: unknown = {}) {
         ...(childCount.get(s.id) ? { children: childCount.get(s.id) } : {}),
         // A child of a locked frame is locked too: agents cannot change it.
         ...(editor.isShapeOrAncestorLocked(s) ? { locked: true } : {}),
+        // The person chose to keep it out of asks (the context prototype): do not use it to answer one.
+        ...(isLeftOut(s.meta) ? { leftOut: true } : {}),
         ...(snippet(s) ? { text: snippet(s) } : {}),
       };
     }),
