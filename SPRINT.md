@@ -270,12 +270,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
-37. read reports card style | claude/sprint-card-style | 2026-11-26T11:27Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 36. Comments move with their target | claude/sprint-follow | 2026-11-26T11:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 37. read reports card style (build-A): PR #51.
 - 35. Annotation arrows follow their note (build-A): PR #48 (connectors re-pick facing sides when either end moves; explicit anchors kept).
 - 33. Agent tools never offer authorship (build-A): PR #44 (`canvas_annotate` no longer advertises `author`; manifest test guards every tool).
 - Reviewed and merged 2026-11-26 by the review lane: #22 as 2b33d8c, #23 as 8daf8d3, #25 as a7c8505, #26 as 5f9f355, #27 as 12abf62, #28 as eb63f9b. Agent-usability attempt re-recorded on the calm canvas (21/21).
@@ -416,3 +416,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:25Z | build-A | 35 Annotation arrows follow | #48 | Side effect re-picks connector sides; before/after anchors and screenshots; scorecard unchanged |
 | 2026-11-26T11:26Z | build-A | 38 Working spec implemented sections | #49 | #11 to #30 recorded with PR numbers; stale "not built" claims (server storage, file import, transformations, hosted presence) corrected |
 | 2026-11-26T11:33Z | build-B | 19 review fixes, 25 follow-up | #32 #35 #39 #50 | Seven verified review findings fixed with failing-first tests: restore against stale tabs, pruning and in-flight edits; board switch across tabs (reproduced in two real tabs), undo after a switch, offline edits; a refusal no longer cancels a newer edit's save (#50) |
+| 2026-11-26T11:28Z | build-A | 37 Card style in read | #51 | `style` on cards in read/get; live MCP check; scorecard unchanged |
