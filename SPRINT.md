@@ -361,7 +361,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     placed no larger than a set size on its longest side (keeping its shape and its full-resolution
     asset, and leaving small images alone), agent `canvas_image` sizes are untouched, unit-tested,
     with before and after screenshots of a dropped photo.
-58. (Renumbered from 56 to avoid a clash.) **`read`'s text filter: three matching gaps (review of #74, marked optional).** (a) Search text
+58. (Renumbered from 56 to avoid a clash. PR #78 open, stacked on #74.) **`read`'s text filter: three matching gaps (review of #74, marked optional).** (a) Search text
     is built with `richTextPlain`, which puts a space between formatting runs, so a word that is
     partly bold ("**pr**icing") does not match; join inline runs without a separator. (b) Greek
     final sigma: lowercasing makes a query's `ς` differ from a mid-word `σ`; fold `ς` to `σ`.
@@ -376,7 +376,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     the next save recreates the folder, with a failing-first test.
 
 ## Claims
-58. Read filter matching gaps (stacked on #74) | claude/sprint-read-filter-fold | 2026-11-26T12:22Z
 57. Dev board store survives its folder being removed | claude/sprint-dev-store-dir | 2026-11-26T12:19Z
 54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
@@ -586,3 +585,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:24Z | build-B | 55 Board history thinning | #75 | Newest 20 plus one per 15-minute slot, 50 max; 10 h of saves every 5 min spans more than 8 h (was about 4); checked on PostgreSQL 16; root build green |
 | 2026-11-26T12:17Z | build-B | 45 (d) Images survive a clean profile | #76 | Images kept in the board; older ones moved in once sync listens; real tabs: fresh 2/5 before, 5/5 after; legacy 4/4; scorecard unchanged |
 | 2026-11-26T12:23Z | build-B | 56 Dropped images fit beside your thoughts | #77 | New images land at most 600 on the longest side, asset kept full size; real tab 5/6 before, 6/6 after; first screen unchanged; scorecard unchanged |
+| 2026-11-26T12:25Z | build-B | 58 Read filter matching gaps | #78 | Partly formatted words, Greek final sigma and Devanagari vowel signs match correctly; failing-first tests; live MCP check |
