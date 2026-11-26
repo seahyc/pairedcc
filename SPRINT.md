@@ -472,7 +472,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     layout keeps its page in view, the calm board still exists, and `verify-runs.ts` passes, with a
     scripted check that fails before.
 
+76. **An agent never rewrites the person's own words.** `docs/canvas/principles.md`, finding 2 ("the
+    agent … never moves, edits or rearranges the person's objects") and finding 4 (whose is what is
+    seen): `canvas_update` with the current revision rewrites the text of the person's pink card,
+    which then shows the agent's words in the person's handwriting. Done when an agent's text
+    change to an object the person made is refused with a message saying what to do instead, the
+    tool description and AGENT_API say so, a safety race in the scorecard fails before and passes
+    after, and the person's own edits are unaffected. Moving and deleting the person's objects are
+    recorded as a decision, not changed.
+
 ## Claims
+76. Agent never rewrites the person's words | claude/sprint-human-words | 2026-11-26T13:14Z
 71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
