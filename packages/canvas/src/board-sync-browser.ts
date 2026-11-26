@@ -59,7 +59,10 @@ export const boardApi: BoardApi = {
     const body = (await r.json().catch(() => ({}))) as { board?: { revision: number }; current?: { revision: number }; error?: string };
     if (r.ok && body.board) return { ok: true, revision: body.board.revision };
     if (r.status === 409 && body.current) return { ok: false, stale: true, revision: body.current.revision };
-    return { ok: false, stale: false, error: body.error ?? `Saving the board failed (${r.status})` };
+    const error = body.error ?? `Saving the board failed (${r.status})`;
+    // The server refused this board itself (too large, or not a valid board): not offline.
+    if (r.status === 400 || r.status === 413) return { ok: false, stale: false, refused: r.status, error };
+    return { ok: false, stale: false, error };
   },
 };
 
