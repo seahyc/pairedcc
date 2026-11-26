@@ -457,7 +457,15 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     of #21 recorded. Done when an older board gets the calm board once, after the first load from
     the account, without repeating it after a restore, and `verify-calm.mjs` passes 33/33.
 
+74. **Stale flags stay readable at the canvas edge and skip offscreen Tab stops.** (Review of #72,
+    confirmed, merged before the fix.) A stale card at the bottom of the view opens its reason
+    below the visible canvas; a focused flag near the top grows above it; and a flag panned out of
+    view is still a Tab stop with no visible focus. Done when an opened reason stays inside the
+    view (flipping above or below as there is room), only flags in view are in the Tab order,
+    with a headless check of each case.
+
 ## Claims
+74. Stale flags at the canvas edge | claude/sprint-stale-edges | 2026-11-26T12:58Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
