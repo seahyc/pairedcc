@@ -176,7 +176,7 @@ task by which measure is furthest from target, not by backlog order.
     (or `?prototype=learning`) refuses those operations with an error that says how to turn them
     on, flagged tabs and saved boards behave as before, and a test fails if the gate is removed.
 
-24. **Board sync against the real server, in a browser.** Sync has only run in a browser against
+24. (PR #30 open, awaiting review.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
     the development board store. Done when a scripted check signs in to a local server (Postgres,
     Redis), opens the canvas, saves, and a second clean browser on the same account opens the same
     board, without needing a tldraw licence key (for example the dev canvas proxying `/auth` and
@@ -197,7 +197,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 19. Board picker and history (part 1: restore and revisions API, no UI) | claude/sprint-board-history | 2026-11-26T11:04Z
-24. Board sync against the real server | claude/sprint-sync-real-server | 2026-11-26T10:55Z
 5. Converge | claude/sprint-converge | 2026-11-26T10:50Z (build-B note: PR #27 already implements this and was pushed to `claude/sprint-converge`; build-B started it without claiming first, which was a procedure miss. Review or extend #27 rather than redo it, or pick another task.)
 27. Group operation | claude/sprint-group | 2026-11-26T11:00Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
@@ -268,6 +267,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-B, item 26) 50 boards per account (`MAX_BOARDS_PER_ACCOUNT`); creating one more returns 403 with the limit, saving an existing board is never limited, and Postgres enforces it under a per-account advisory lock. Revisions stay at 50 per board, so the worst case per account is about 50 x (10 MB + 50 x 10 MB); a total-bytes budget per account would be tighter and is the maintainer's call. The development file store has no limit.
 
 - (build-B, item 25) A save refused with 400 or 413 gets its own sync state, `refused`. The chip reads "Too large to save · kept on this device" (413) or "Save refused · kept on this device" (400), with the server's reason in the tooltip. No retry is scheduled, and the same board is not uploaded again. Any change to the board tries once more. 401 and 5xx still count as offline and retry. Alternative: a visible prompt that offers to export the board.
+- (build-A, item 24) `PAIRED_SERVER_URL` proxies the dev canvas's `/auth` and `/api/canvas/boards` to a real server (a production build needs a tldraw licence key). `verify:sync-server` runs on demand with throwaway Postgres and Redis, not in `test:canvas` or the eval. Alternative: fold it into the Persistence measure when `DATABASE_URL` is set. Found and fixed on the way: the dev relay answered `/api/canvas/boards`, hiding the proxy.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -298,3 +298,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T10:57Z | build-B | 26 Board limits | #28 | Per-account cap with memory and Postgres contract tests (incl. concurrent creates); root build and test green with services |
 | 2026-11-26T11:01Z | build-B | 25 Refused save is not Offline | #29 | Refused save gets its own state and chip text; no retry storm (3 uploads in 12 s to 1); sync tests 26 pass |
 | 2026-11-26T11:00Z | review | Review #21 | #21 | Merged as a local squash with the sprint work; 150 canvas tests, scorecard 10/10 acceptance, calm check 33/33 with a stand-in model, data, learning, run-undo and board-sync live checks pass; board sync no longer logs a 404 on first open |
+| 2026-11-26T11:01Z | build-A | 24 Sync against the real server | #30 | Dev canvas proxies to a real server; scripted check signs in by magic link, saves, clean browser opens it, other account isolated, 401 signed out; relay path bug fixed |
