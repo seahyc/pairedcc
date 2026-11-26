@@ -7,6 +7,7 @@ export type PerfRow = { objects: number; loadMs?: number; panMedianFrameMs?: num
 
 export type Raw = {
   acceptance?: { steps: { name: string; pass: boolean; detail: string }[] };
+  askLoop?: { steps: { name: string; pass: boolean; detail: string }[] };
   agentUsability?: { tasks: number; attempted: number; completed: number; medianToolCalls: number | null };
   safety?: { races: { name: string; pass: boolean; detail: string; humanEditsLost: number }[]; humanEditsLost: number };
   persistence?: { cleanProfile: boolean; sameProfileReload: boolean; detail: string; objects: number };
@@ -38,6 +39,12 @@ export function rows(raw: Raw, previous?: Raw): Row[] {
     const passed = a.steps.filter((s) => s.pass).length;
     out.push({ measure: "Acceptance scenario", target: "every step passes", result: `${passed}/${a.steps.length} steps`, status: passed === a.steps.length && a.steps.length > 0 ? "pass" : "fail" });
   } else out.push({ measure: "Acceptance scenario", target: "every step passes", result: "not run", status: "not run" });
+
+  const k = raw.askLoop;
+  if (k) {
+    const passed = k.steps.filter((s) => s.pass).length;
+    out.push({ measure: "Ask loop", target: "every step passes", result: `${passed}/${k.steps.length} steps`, status: passed === k.steps.length && k.steps.length > 0 ? "pass" : "fail" });
+  } else out.push({ measure: "Ask loop", target: "every step passes", result: "not run", status: "not run" });
 
   const u = raw.agentUsability;
   if (!u || u.attempted === 0)
