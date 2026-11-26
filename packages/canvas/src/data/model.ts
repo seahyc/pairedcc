@@ -151,6 +151,23 @@ export function staleInputs(inputs: readonly InputRef[], versions: ReadonlyMap<s
     .filter((i) => i.current !== i.recorded);
 }
 
+/**
+ * Why an object is stale, for the person: the root cause first (the input that actually
+ * changed), then the path it came through. `nameOf` gives an object's display name.
+ */
+export function staleReason(stale: readonly StaleInput[], nameOf: (id: string) => string | undefined): string {
+  if (!stale.length) return "";
+  const quote = (id: string) => (nameOf(id) ? `“${nameOf(id)}”` : undefined);
+  const describe = (s: StaleInput, via: string[]): string => {
+    if (s.upstream?.length) return describe(s.upstream[0], [...via, s.id]);
+    const what = s.current === null ? (quote(s.id) ? `${quote(s.id)} was deleted` : "an input was deleted") : `${quote(s.id) ?? "an input"} changed`;
+    const path = via.map(quote).filter(Boolean);
+    return path.length ? `${what} (via ${path.join(", ")})` : what;
+  };
+  const first = describe(stale[0], []);
+  return stale.length > 1 ? `${first}, and ${stale.length - 1} more input${stale.length > 2 ? "s" : ""}` : first;
+}
+
 /** What staleChain needs to know about an object: its content version and recorded inputs. */
 export type Derivation = { version: number; inputs: readonly InputRef[] };
 

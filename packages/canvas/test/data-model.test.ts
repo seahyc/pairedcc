@@ -142,3 +142,26 @@ describe("transitive staleness", () => {
     expect(staleChain([{ id: "a", version: 0 }], graph(nodes))).toEqual([]);
   });
 });
+
+import { staleReason } from "../src/data/model";
+describe("why something is stale, in words", () => {
+  const names: Record<string, string> = { "shape:data": "Café orders", "shape:chart": "sum of orders by region", "shape:note": "My summary" };
+  const nameOf = (id: string) => names[id];
+  it("names a changed or deleted input", () => {
+    expect(staleReason([{ id: "shape:data", recorded: 1, current: 2 }], nameOf)).toBe("“Café orders” changed");
+    expect(staleReason([{ id: "shape:gone", recorded: 1, current: null }], nameOf)).toBe("an input was deleted");
+    expect(staleReason([{ id: "shape:chart", recorded: 1, current: null }], nameOf)).toBe("“sum of orders by region” was deleted");
+  });
+  it("names the root cause first for transitive staleness, then the path", () => {
+    const stale = [{ id: "shape:chart", recorded: 4, current: 4, upstream: [{ id: "shape:data", recorded: 0, current: 1 }] }];
+    expect(staleReason(stale, nameOf)).toBe("“Café orders” changed (via “sum of orders by region”)");
+  });
+  it("counts the rest when several inputs changed", () => {
+    const stale = [
+      { id: "shape:data", recorded: 1, current: 2 },
+      { id: "shape:note", recorded: 0, current: 3 },
+      { id: "shape:chart", recorded: 0, current: 1 },
+    ];
+    expect(staleReason(stale, nameOf)).toBe("“Café orders” changed, and 2 more inputs");
+  });
+});
