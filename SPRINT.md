@@ -514,13 +514,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     pass/fail table, writes it as JSON, exits non-zero on any failure, and is documented for the
     review lane.
 
-84. **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
+84. (PR #109 open, awaiting review.) **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
 
 ## Claims
-84. Ask about an image says what the image is | claude/sprint-ask-image | 2026-11-26T13:37Z
 83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
 
 ## Done
+- 84. Ask about an image says what it is (build-B): PR #109 (real tab 2/5 → 5/5 with the tightened frame check).
 - 82. A Tab stop is heard (build-A): PR #108, stacked on #105 (polite unseen live region says who made the selection, its text, kind, mark and order; verify-heard 2/13 → 13/13).
 - 81. Agent note never lands on top of something (build-B): PR #106, stacked on #104 (verify-annotate-clear 3/4 → 4/4).
 - 7. Robustness, keyboard-only loop (build-A): PR #105 (N then Enter writes a card in view; Tab/Shift+Tab move through the board, skipping connectors and hidden objects; verify-keyboard 6/14 → 14/14).
@@ -824,3 +824,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:31Z | build-B | 81 Agent note never lands on top of something | #106 | annotate without x/y uses freeSpot down the target column; real page 3/4 → 4/4; annotate tasks self-test 4/4 |
 | 2026-11-26T13:36Z | build-B | 67 follow-up: merged the integration branch into #90 | #90 | Conflicts with #64/#67/#69/#86/#88 resolved; selected frame contents and history honour left-out marks; Leave out key cap hidden on touch; verify-leave-out 19/19 incl. frame ask and 390 px phone |
 | 2026-11-26T13:37Z | build-A | 82 A Tab stop is heard | #108 | hideUi had dropped tldraw's announcer, so nothing was said on select; verify-heard 2/13 → 13/13; 8 unit tests (one failing-first for answers said as notes); first screen unchanged; scorecard unchanged |
+| 2026-11-26T13:41Z | build-B | 84 Ask about an image says what it is | #109 | File name, size, caption and alt text for image targets, frame contents and history; describeImage unit-tested; real tab 5/5 |
