@@ -50,6 +50,29 @@ function contract(name: string, make: () => Promise<Made>) {
       expect(await limited.list(erin)).toHaveLength(2)
     })
 
+    it('saves a board holding half of an emoji (text clipped mid-character), replacing only that half', async () => {
+      const clipped = 'Café plans \u{1F600}'.slice(0, -1) // ends in an unpaired high surrogate
+      const carol = await made.newUser()
+      const created = await store.save(carol, 'clipped', { expectedRevision: 0, snapshot: snap(`${clipped} and \udc00 alone`, `Name ${clipped}`) })
+      expect(created).toMatchObject({ ok: true, board: { revision: 1, name: 'Name Café plans \ufffd' } })
+      const saved = await store.save(carol, 'clipped', { expectedRevision: 1, snapshot: snap(`kept \u{1F600} whole, ${clipped}`) })
+      expect(saved).toMatchObject({ ok: true, board: { revision: 2 } })
+      const board = await store.get(carol, 'clipped')
+      expect((board!.snapshot.store['shape:a'] as { props: { text: string } }).props.text).toBe('kept \u{1F600} whole, Café plans \ufffd')
+      // A long name is cut to 200 characters without leaving half an emoji behind.
+      const long = await store.save(carol, 'clipped', { expectedRevision: 2, snapshot: snap('x', `${'a'.repeat(199)}\u{1F600}`) })
+      expect(long).toMatchObject({ ok: true, board: { name: `${'a'.repeat(199)}\ufffd` } })
+      const first = await store.revision(carol, 'clipped', 1)
+      expect((first!.snapshot.store['shape:a'] as { props: { text: string } }).props.text).toBe('Café plans \ufffd and \ufffd alone')
+    })
+
+    it('refuses a board whose keys collide once broken characters are repaired, storing nothing', async () => {
+      const carol = await made.newUser()
+      const columns = { ...snap('x'), store: { ...snap('x').store, 'shape:d': { id: 'shape:d', typeName: 'shape', props: { row: { 'x\ud83d': 10, 'x\ufffd': 20 } } } } }
+      await expect(store.save(carol, 'columns', { expectedRevision: 0, snapshot: columns as Snapshot })).rejects.toThrow(/differ only by a broken character/)
+      expect(await store.get(carol, 'columns')).toBeNull()
+    })
+
     it('creates at revision 1 only when the board does not exist', async () => {
       const r = await store.save(alice, 'b1', { expectedRevision: 0, snapshot: snap('one', 'Field notes') })
       expect(r).toMatchObject({ ok: true, board: { id: 'b1', name: 'Field notes', revision: 1 } })
@@ -186,6 +209,13 @@ describe('board routes', () => {
     expect(malformed.status).toBe(400)
     const huge = await put('v', { expectedRevision: 0, snapshot: snap('x'.repeat(MAX_BOARD_BYTES + 100 * 1024)) })
     expect(huge.status).toBe(413)
+  })
+
+  it('answers 400 when names collide once broken characters are repaired', async () => {
+    const body = { expectedRevision: 0, snapshot: { ...snap('x'), store: { ...snap('x').store, 'shape:d': { id: 'shape:d', typeName: 'shape', props: { 'a\ud83d': 1, 'a\ufffd': 2 } } } } }
+    const res = await put('collide', body)
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toMatch(/differ only by a broken character/)
   })
 
   it('lists revisions, serves one, and deletes only on the current revision', async () => {
