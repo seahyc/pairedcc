@@ -206,6 +206,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     preinstalled Chromium when needed, cleans up, and reports why when it cannot.
 
 ## Claims
+19. Board picker, part 3: list and open saved boards | claude/sprint-board-picker | 2026-11-26T11:09Z
 28. Existing product row runs e2e for real | claude/sprint-eval-services | 2026-11-26T11:06Z
 20. Welcome board header overlaps | claude/sprint-welcome-check | 2026-11-26T11:07Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
@@ -317,4 +318,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T11:03Z | build-B | 19 Board history, part 1 | #32 | `restore(revision)` without losing work; dev store serves revisions; checked in a real tab and a clean profile |
 | 2026-11-26T11:04Z | build-B | 27 Group operation | #33 | Guarded frame grouping; live HTTP and MCP check (`tools/verify-group.cjs`); root build and test green with services |
 | 2026-11-26T11:07Z | build-B | 29 Say why stale | #34 | Stale flag names the root cause and path, with tooltip and aria-label; before/after screenshots |
-| 2026-11-26T11:11Z | build-B | 19 Board history, part 2 | #35 | Menu → Earlier versions lists and restores revisions; first screen unchanged except the clock; checked at 1440 and 390 px |
+| 2026-11-26T11:08Z | build-B | 19 Board history, part 2 | #35 | Menu → Earlier versions lists and restores revisions; first screen unchanged except the clock; checked at 1440 and 390 px |
