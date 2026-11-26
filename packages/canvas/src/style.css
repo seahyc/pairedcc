@@ -1691,3 +1691,13 @@ kbd {
 .chart-empty { margin: auto; color: #7a766c; }
 .stale-flag { position: absolute; top: 0; left: 0; padding: 1px 7px; border-radius: 999px; background: #fff1e0; border: 1px dashed #b4540a; color: #8a3f06; font: 600 11px 'JetBrains Mono', monospace; }
 .prototype-row { color: #3a2fd0; }
+
+/* Phones: the zoom bar sits just right of undo instead of leaving room for the desktop
+   panel, which pushed it over the undo button. The licence watermark stays uncovered. */
+@media (max-width: 520px) {
+  .zoom-controls,
+  .right-closed .zoom-controls {
+    left: 72px;
+    right: auto;
+  }
+}
