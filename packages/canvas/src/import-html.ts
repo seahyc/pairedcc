@@ -74,42 +74,57 @@ function closeListItems(html: string) {
   });
 }
 
-/** The inside of the first <tag>…last </tag>, without a search that rescans for every opener. */
-function region(html: string, tag: string) {
-  const close = html.toLowerCase().lastIndexOf(`</${tag}`);
-  if (close < 0) return undefined;
-  const open = new RegExp(`<${tag}\\b[^>]*>`, "i").exec(html);
-  return open && open.index + open[0].length <= close ? html.slice(open.index + open[0].length, close) : undefined;
+/**
+ * The first <tag>, whole name only (<article>, not <article-card>), up to the first close of it
+ * (or the last, for a content region). Found with one opener search and one walk over the closes,
+ * so a page of unclosed openers is not rescanned from each one, and every offset is one into
+ * `html` itself (a lowercased copy can be longer: "İ" becomes two characters).
+ */
+function element(html: string, tag: string, close: "first" | "last") {
+  const open = new RegExp(`<${tag}(?=[\\s>/])[^<>]*>`, "i").exec(html);
+  if (!open) return undefined;
+  const start = open.index + open[0].length, closes = new RegExp(`<\\/${tag}\\s*>`, "gi");
+  closes.lastIndex = start;
+  let found: RegExpExecArray | null = null;
+  for (let m = closes.exec(html); m; m = closes.exec(html)) {
+    found = m;
+    if (close === "first") break;
+  }
+  return found ? { from: open.index, to: found.index + found[0].length, inner: html.slice(start, found.index) } : undefined;
 }
+
+const region = (html: string, tag: string) => element(html, tag, "last")?.inner;
 
 /**
  * A "<" with no ">" before the next "<" is text, not a tag; escaping it first means every tag
  * pattern below stops at the next "<", so none can rescan the rest of the page from each one.
  */
 function escapeStrayAngles(html: string) {
-  const fixes: [number, string][] = [];
+  // Each fix is a position, doubled, plus one for a ">": plain numbers sort quickly even when there are millions.
+  const fixes: number[] = [];
   let pending = -1, quote = 0;
   for (let i = 0; i < html.length; i++) {
     const c = html.charCodeAt(i);
     if (quote) {
       // Inside a quoted attribute value "<" and ">" are text: escape them so no tag pattern stops there.
       if (c === quote) quote = 0;
-      else if (c === 60) fixes.push([i, "&lt;"]);
-      else if (c === 62) fixes.push([i, "&gt;"]);
+      else if (c === 60) fixes.push(i * 2);
+      else if (c === 62) fixes.push(i * 2 + 1);
       continue;
     }
     if (c === 60) {
-      if (pending >= 0) fixes.push([pending, "&lt;"]);
+      if (pending >= 0) fixes.push(pending * 2);
       pending = i;
     } else if (c === 62) pending = -1;
     else if (pending >= 0 && (c === 34 || c === 39) && /=\s*$/.test(html.slice(Math.max(pending, i - 8), i))) quote = c;
   }
-  if (pending >= 0) fixes.push([pending, "&lt;"]);
+  if (pending >= 0) fixes.push(pending * 2);
   if (!fixes.length) return html;
-  fixes.sort((a, b) => a[0] - b[0]);
+  const sorted = Float64Array.from(fixes).sort();
   let out = "", from = 0;
-  for (const [i, text] of fixes) {
-    out += html.slice(from, i) + text;
+  for (const fix of sorted) {
+    const i = Math.floor(fix / 2);
+    out += html.slice(from, i) + (fix % 2 ? "&gt;" : "&lt;");
     from = i + 1;
   }
   return out + html.slice(from);
@@ -123,14 +138,19 @@ const RAW_TEXT = /<!--|<(script|style|textarea|title|template|noscript|xmp)\b/gi
  * inside a script or style (a legacy idiom) is not a comment, so those are stepped over.
  */
 function dropComments(html: string) {
-  const lower = html.toLowerCase();
+  // Closes are looked for in `html` itself: a lowercased copy can be longer ("İ"), which shifts every offset after it.
+  const closes = new Map<string, RegExp>();
   let out = "", from = 0;
   RAW_TEXT.lastIndex = 0;
   for (let m = RAW_TEXT.exec(html); m; m = RAW_TEXT.exec(html)) {
     if (m[1]) {
-      const close = lower.indexOf(`</${m[1].toLowerCase()}`, m.index + m[0].length);
-      if (close < 0) break;
-      RAW_TEXT.lastIndex = close;
+      const name = m[1].toLowerCase();
+      if (!closes.has(name)) closes.set(name, new RegExp(`</${name}`, "gi"));
+      const close = closes.get(name)!;
+      close.lastIndex = m.index + m[0].length;
+      const end = close.exec(html);
+      if (!end) break;
+      RAW_TEXT.lastIndex = end.index;
       continue;
     }
     const end = html.indexOf("-->", m.index + 4);
@@ -151,10 +171,10 @@ const inline = (html: string) =>
 
 /** The content of a page or fragment as markdown. */
 export function htmlToMarkdown(html: string): string {
-  const pageTitle = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1];
   let body = escapeStrayAngles(dropComments(html));
-  const headEnd = body.search(/<\/head\s*>/i);
-  if (headEnd >= 0) body = body.replace(/<head\b[\s\S]*?<\/head\s*>/i, "");
+  const pageTitle = element(body, "title", "first")?.inner;
+  const head = element(body, "head", "first");
+  if (head) body = body.slice(0, head.from) + body.slice(head.to);
   const content = region(body, "article") ?? region(body, "main");
   body = content ?? region(body, "body") ?? body;
   body = dropBlocks(body, content ? ALWAYS_DROP : [...ALWAYS_DROP, ...CHROME]);
