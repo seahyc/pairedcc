@@ -104,6 +104,7 @@ import { onlyDerivedChange } from "./revision";
 import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followers } from "./follow";
+import { firstTabStop, keyboardCardSpot } from "./keyboard-nav";
 import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
@@ -275,7 +276,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
   {
     title: "Think",
     rows: [
-      ["Write a thought", "N, or double-click the board"],
+      ["Write a thought", "N, then click or Enter; or double-click the board"],
       ["Ask your agent about the selection, or send a failed ask again", keys("⌘ ↵")],
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
@@ -292,6 +293,8 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
   {
     title: "Move around",
     rows: [
+      ["Next / previous thing on the board", "Tab / Shift Tab"],
+      ["To the menu and tools", "Esc, then Shift Tab"],
       ["Pan", "Space + drag, or scroll"],
       ["Zoom", keys("Pinch, or ⌘ scroll")],
       ["Fit everything", "Shift 1"],
@@ -390,6 +393,8 @@ function Shell() {
   const listeners = useValue("agent listeners", () => agentListeners.get(), []);
   const editingId = useValue("editing", () => editor.getEditingShapeId(), [editor]);
   const pointer = useRef<{ x: number; y: number } | null>(null);
+  // The object last selected: a card written from the keyboard goes under it.
+  const lastSelected = useRef<TLShapeId | null>(null);
   const shapes = useValue("layers", () => editor.getCurrentPageShapesSorted(), [
     editor,
   ]);
@@ -399,6 +404,10 @@ function Shell() {
   const currentTool = useValue("tool", () => editor.getCurrentToolId(), [
     editor,
   ]);
+  useEffect(() => {
+    const last = [...selected].reverse().find((s) => s.type !== "arrow");
+    if (last) lastSelected.current = last.id;
+  }, [selected]);
   const zoom = useValue("zoom", () => editor.getZoomLevel(), [editor]);
   const pages = useValue("pages", () => editor.getPages(), [editor]);
   const page = useValue("page", () => editor.getCurrentPage(), [editor]);
@@ -504,6 +513,29 @@ function Shell() {
       }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (editor.getEditingShapeId()) return;
+      // Without a pointer: N then Enter writes a card in view; Tab with nothing selected
+      // lands on the board. Once something is selected the canvas's own Tab moves on.
+      // Enter from the board itself or from the armed Write button; any other control keeps its own Enter.
+      const boardItself = target === document.body || (target instanceof HTMLElement && /\btl-(container|canvas)\b/.test(target.className));
+      const onBoard = !(target instanceof HTMLElement) || boardItself || target.matches(".tool-button.active");
+      if (event.key === "Enter" && onBoard && editor.getCurrentToolId() === "card" && !event.shiftKey) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        swallowEnterUp = true;
+        writeFromKeyboard();
+        return;
+      }
+      // Tab only from the board itself: a flag or button on it keeps the browser's own Tab.
+      if (event.key === "Tab" && boardItself && editor.getCurrentToolId() === "select") {
+        // Ours either way: the next object, or out to the controls (the browser alone would
+        // find nothing before the board, which holds them).
+        if (!tabOnBoard(event.shiftKey)) leaveBoard(event.shiftKey);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        // The canvas moves the selection when Tab is released; this Tab is ours.
+        swallowTabUp = true;
+        return;
+      }
       // ? shows the shortcuts, C comments, Shift+C opens the feedback queue.
       if (event.key === "?" || (key === "c" && !event.repeat)) {
         event.preventDefault();
@@ -537,8 +569,13 @@ function Shell() {
       event.stopImmediatePropagation();
       toggleMark(editor, picked, key === "p" ? "picked" : "rejected");
     }
-    let swallowEnterUp = false;
+    let swallowEnterUp = false, swallowTabUp = false;
     const enterUp = (event: KeyboardEvent) => {
+      if (event.key === "Tab" && swallowTabUp) {
+        swallowTabUp = false;
+        event.stopImmediatePropagation();
+        return;
+      }
       if (event.key !== "Enter" || !swallowEnterUp) return;
       swallowEnterUp = false;
       event.stopImmediatePropagation();
@@ -591,6 +628,79 @@ function Shell() {
     const dy = to.y > bottom ? Math.max(bottom - to.y, top - from.y) : from.y < top ? top - from.y : 0;
     const camera = editor.getCamera();
     if (dx || dy) editor.setCamera({ x: camera.x + dx / camera.z, y: camera.y + dy / camera.z, z: camera.z }, { animation: { duration: 160 } });
+  }
+  /** The part of the board the person can see, in page space, clear of the chrome. */
+  function visiblePage() {
+    const left = document.querySelector(".editor-chrome.left-closed") ? 80 : 310;
+    const right = window.innerWidth - (document.querySelector(".editor-chrome.right-closed") ? 24 : 260), top = 104, bottom = window.innerHeight - 90;
+    const from = editor.screenToPage({ x: left, y: top }), to = editor.screenToPage({ x: Math.max(left + 1, right), y: Math.max(top + 1, bottom) });
+    return { x: from.x, y: from.y, w: to.x - from.x, h: to.y - from.y };
+  }
+  /** N then Enter: a pink card in view, clear of everything, under what was last selected. */
+  function writeFromKeyboard() {
+    const view = visiblePage();
+    const boxOf = (id: TLShapeId) => {
+      const b = editor.getShapePageBounds(id);
+      return b ? { x: b.x, y: b.y, w: b.w, h: b.h } : undefined;
+    };
+    const others = editor.getCurrentPageShapes().filter((s) => s.type !== "arrow" && !s.parentId.startsWith("shape:")).flatMap((s) => boxOf(s.id) ?? []);
+    const near = lastSelected.current && editor.getShape(lastSelected.current) ? boxOf(lastSelected.current) : undefined;
+    const spot = keyboardCardSpot(view, others, { w: 300, h: 72 }, near && near.y + near.h < view.y + view.h ? near : undefined);
+    const id = createShapeId();
+    editor.markHistoryStoppingPoint("write a thought");
+    editor.createShape({ id, type: "card", x: spot.x, y: spot.y, props: { tone: "human" } });
+    editor.setCurrentTool("select");
+    editor.select(id);
+    startEditingShapeWithRichText(editor, id, { selectAll: true });
+  }
+  /**
+   * Tab on the board: with nothing selected, select the first thing on screen; otherwise move
+   * to the next object in reading order, brought clear of the chrome. The board does not trap
+   * the keyboard: Shift+Tab with nothing selected, and Tab past either end, return false so
+   * the browser moves on to the menu, agent chip and tools.
+   */
+  function tabOnBoard(backwards: boolean) {
+    // Connectors are not stops: they join thoughts and have no next step of their own.
+    // Nor is anything hidden, such as a result still behind a learning prompt.
+    const ordered = editor.getCurrentPageShapesInReadingOrder().flatMap((s) => {
+      const b = s.type === "arrow" || editor.isShapeHidden(s) ? undefined : editor.getShapePageBounds(s.id);
+      return b ? [{ id: s.id as string, box: { x: b.x, y: b.y, w: b.w, h: b.h } }] : [];
+    });
+    const selectedIds = editor.getSelectedShapeIds() as string[];
+    const at = ordered.findIndex((o) => o.id === selectedIds[selectedIds.length - 1]);
+    let id: string | undefined;
+    if (!selectedIds.length) {
+      if (backwards) return false;
+      id = firstTabStop(ordered, visiblePage());
+    } else if (at >= 0) {
+      id = ordered[at + (backwards ? -1 : 1)]?.id;
+      if (!id) {
+        editor.selectNone();
+        return false;
+      }
+    } else {
+      // Inside a frame or group: the canvas's own order among its siblings, past connectors
+      // and anything hidden (the same rule as the page's own stops).
+      for (let tries = 0; tries < 200; tries++) {
+        editor.selectAdjacentShape(backwards ? "prev" : "next");
+        const landed = editor.getOnlySelectedShape();
+        if (!landed || (landed.type !== "arrow" && !editor.isShapeHidden(landed))) break;
+      }
+      id = editor.getOnlySelectedShapeId() ?? undefined;
+    }
+    if (!id) return false;
+    editor.select(id as TLShapeId);
+    const box = editor.getShapePageBounds(id as TLShapeId);
+    if (box) keepInView(box);
+    editor.focus();
+    return true;
+  }
+  /** Out of the board by keyboard: the first control (Tab) or the last (Shift+Tab). */
+  function leaveBoard(backwards: boolean) {
+    const controls = [...document.querySelectorAll<HTMLElement>("button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])")].filter(
+      (el) => !el.closest(".tl-shape, .tl-html-layer, [contenteditable=true], [class^='tl-watermark']") && !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0,
+    );
+    (backwards ? controls[controls.length - 1] : controls[0])?.focus();
   }
   /** Ask: finish typing if a card is being written, then open the question box on the selection. */
   function askAboutSelection() {
