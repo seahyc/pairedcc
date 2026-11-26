@@ -487,7 +487,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
-7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
+7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
 - Feedback 8, import and paste (build-A): merged #46 (yc/import-paste brought in, CSV drop stays a dataset under the data flag), #55 (side by side, column slots), #58 (cited sections beside a record), #60 (.xlsx), #65 (web pages), #73 (PDF). Open: #85 (item 62), #89 (item 65), #93 (item 71). The feedback item stays open for the second playtest.
