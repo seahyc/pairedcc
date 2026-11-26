@@ -170,14 +170,37 @@ describe("board sync", () => {
     expect(text(b.doc)).toBe("edited offline");
   });
 
-  it("when both moved, keeps the account's version in history and this browser's edits on top", async () => {
+  it("when both moved, never replaces the account's newer board: this browser's edits become a separate board", async () => {
     const srv = server();
     await srv.api.put("main", 0, snap("v1"));
     await srv.api.put("main", 1, snap("phone"));
     const b = browser(snap("laptop offline"), { account: "alice", boardId: "main", revision: 1, dirty: true });
-    const { s } = sync(srv, b, true);
+    const { s, last } = sync(srv, b, true);
     await s.start();
-    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "phone", "laptop offline"]);
+    const id = copyId("main", new Date("2026-11-26T10:00:00Z"));
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "phone"]);
+    expect(text(srv.boards.get(id)!.snapshot)).toBe("laptop offline");
+    expect(text(b.doc)).toBe("phone");
+    expect(b.stored.memo).toMatchObject({ revision: 2, dirty: false });
+    expect(last()).toMatchObject({ state: "saved", revision: 2, note: expect.stringContaining(id) });
+  });
+
+  it("when two browsers create the account's board at once, the loser keeps its board as a separate one", async () => {
+    const srv = server(), b = browser(snap("second browser"));
+    const get = srv.api.get;
+    // The account has no board when this browser looks, and one by the time it saves.
+    srv.api.get = async (id) => {
+      const found = await get(id);
+      if (id === "main" && !found) await srv.api.put("main", 0, snap("first browser"));
+      return found;
+    };
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    const id = copyId("main", new Date("2026-11-26T10:00:00Z"));
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["first browser"]);
+    expect(text(srv.boards.get(id)!.snapshot)).toBe("second browser");
+    expect(text(b.doc)).toBe("first browser");
+    expect(last()).toMatchObject({ state: "saved", revision: 1, note: expect.stringContaining(id) });
   });
 
   it("loads the account's newer board when this browser has nothing unsaved", async () => {
@@ -307,6 +330,19 @@ describe("board sync merges a stale save", () => {
 });
 
 describe("board sync during the first load", () => {
+  it("does not carry this browser's replaced board into the account's when its objects change while loading", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, doc({ a: "from laptop" }));
+    const b = browser(doc({ w: "welcome" }));
+    const { s, last } = sync(srv, b, false);
+    const started = s.start();
+    b.local.load(doc({ w: "welcome, re-measured" })); // the welcome card resizes itself; nobody edited it
+    await started;
+    expect(values(b.doc)).toEqual({ a: "from laptop" });
+    expect(values(srv.boards.get("main")!.snapshot)).toEqual({ a: "from laptop" });
+    expect(last()).toMatchObject({ state: "saved", revision: 1 });
+  });
+
   it("merges edits made while the account's board was loading instead of replacing them", async () => {
     const srv = server();
     await srv.api.put("main", 0, doc({ a: "from laptop" }));

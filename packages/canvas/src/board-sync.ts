@@ -3,8 +3,9 @@
 // the editor and browser storage come in as adapters, so it is unit-tested without a DOM.
 //
 // Rules, in order of priority:
-// 1. Never lose a human edit. When this browser and the account disagree, the version that
-//    would be replaced is kept: as an earlier server revision, or as a separate board.
+// 1. Never lose a human edit. Changes are merged by object when the version both sides
+//    started from is known. When it is not, this browser's board is saved as a separate
+//    board and the account's board is opened; a whole board is never replaced by another.
 // 2. The server rejects a save on a stale revision; the controller then re-reads and decides.
 // 3. Offline is normal: work stays in this browser and is saved when the server is back.
 
@@ -150,7 +151,16 @@ export function createBoardSync(o: SyncOptions) {
     const server = await o.api.get(boardId);
     if (!server) throw new Error("The board was deleted on the server.");
     revision = server.revision;
-    if (!base) return push("Replaced a version saved from another tab or device; it is kept in the board's history.", attempt + 1);
+    if (!base) {
+      // No common version to merge from, so neither side may replace the other: this
+      // browser's board is set aside as its own board and the account's board is opened.
+      const note = await setAside("Another tab or device saved this board first.");
+      apply(server.snapshot);
+      base = server.snapshot;
+      synced = JSON.stringify(o.local.snapshot());
+      remember(false);
+      return emit({ state: "saved", account: account!, revision, at: now().getTime(), note });
+    }
     const merged = mergeSnapshots(base, o.local.snapshot(), server.snapshot);
     apply(merged.snapshot);
     base = server.snapshot;
@@ -160,6 +170,14 @@ export function createBoardSync(o: SyncOptions) {
         : "Merged changes from another tab or device.",
       attempt + 1,
     );
+  }
+
+  /** Save this browser's board to the account as a separate board, which is never pruned. */
+  async function setAside(why: string) {
+    const id = copyId(boardId, now());
+    const copy = await o.api.put(id, 0, o.local.snapshot());
+    if (!copy.ok) throw new Error(copy.stale ? `Board ${id} already exists` : copy.error);
+    return `${why} This browser's board was saved to your account as "${id}".`;
   }
 
   function apply(snapshot: Snapshot) {
@@ -214,21 +232,21 @@ export function createBoardSync(o: SyncOptions) {
         remember(false);
         return emit({ state: "saved", account, revision, at: now().getTime() });
       }
-      if (known && known.dirty) {
-        // Both moved and the common base is unknown: keep the account's version in history,
-        // put this browser's edits on top.
-        revision = server.revision;
-        return await push("This browser had unsaved edits; the account's newer version is kept in the board's history.");
-      }
       let note: string | undefined;
-      if (!known && localWork) {
-        // This browser has its own work and the account already has a board: keep both.
-        const id = copyId(boardId, now());
-        const copy = await o.api.put(id, 0, o.local.snapshot());
-        if (!copy.ok) throw new Error(copy.stale ? `Board ${id} already exists` : copy.error);
-        note = `This browser's earlier board was saved to your account as "${id}".`;
+      if (known ? known.dirty : localWork) {
+        // This browser holds work the account does not, and the account's board has moved on
+        // (or was never this browser's). The version they last shared is not known here, so
+        // they cannot be merged, and replacing either would discard a whole board: keep both.
+        note = await setAside(
+          known ? "The board changed on another device while this browser had unsaved edits." : "Your account already had a board.",
+        );
       }
+      // Whatever this browser showed before the account's board arrived is being replaced (and
+      // was set aside above if it was the person's work). Only what was added or changed on the
+      // account's own objects while loading is carried over; an object of the replaced board that
+      // merely changed in the meantime, such as a welcome card re-measuring itself, is not.
       const current = o.local.snapshot();
+      for (const id of Object.keys(initial.store)) if (id in current.store && !(id in server.snapshot.store)) current.store[id] = initial.store[id];
       const editedWhileLoading = JSON.stringify(current) !== JSON.stringify(initial);
       apply(editedWhileLoading ? mergeSnapshots(initial, current, server.snapshot).snapshot : server.snapshot);
       base = server.snapshot;
