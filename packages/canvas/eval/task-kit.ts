@@ -34,3 +34,19 @@ export function gap(a: any, b: any) {
 }
 export const openMarks = (read: any) => (read.marks ?? []).filter((m: any) => m.status === "open");
 export const task = (t: Task) => t;
+
+/**
+ * Whether a note answers "which one is highest?" with `top`. Naming only `top` answers it. A note
+ * may also report the others (a fuller, comparable answer) when it names `top` first and says it
+ * is the highest; a bare list of every key, or one that leads with another key, does not answer.
+ */
+export function answersTop(text: string, top: string, others: readonly string[]) {
+  const at = (key: string) => text.search(new RegExp(`\\b${key}\\b`, "i"));
+  const first = at(top);
+  if (first < 0) return false;
+  const rest = others.map(at).filter((i) => i >= 0);
+  if (!rest.length) return true;
+  // The pick has to be made before any other key is mentioned, and not be denied or hedged.
+  const lead = text.slice(0, Math.min(...rest));
+  return first < lead.length && /\b(highest|most|top|largest|biggest|leads?|greatest|max(imum)?)\b/i.test(lead) && !/\b(not|isn't|unsure|lowest|least|smallest|fewest)\b/i.test(lead);
+}

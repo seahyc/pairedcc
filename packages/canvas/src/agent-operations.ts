@@ -36,6 +36,7 @@ import { convergeInput, placeBeside, synthesisText } from "./converge/model";
 import { overview } from "./overview";
 import { matchesText, richTextSearch } from "./read-filter";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
+import { rewriteRefusal } from "./authorship";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
@@ -72,7 +73,7 @@ export function createCard(editor: Editor, value: unknown, author: string, meta:
   editor.createShape({
     id,
     type: "card",
-    // A page other than the one on screen (an answer to an ask on another page).
+    // Straight on a page (above any frame there, which would clip it), or on a page other than the one on screen.
     ...(pageId ? { parentId: pageId } : {}),
     x: input.x,
     y: input.y,
@@ -357,12 +358,24 @@ export function annotateObject(editor: Editor, value: unknown) {
     target = find(editor, input.targetId),
     bounds = editor.getShapePageBounds(target);
   if (!bounds) throw new Error("Target must have bounds");
-  const x = input.x ?? bounds.x, y = input.y ?? bounds.maxY + 60;
+  // Under the target, then further down past anything already there, unless the agent chose a spot.
+  const lines = Math.ceil(input.text.length / 48) + (input.text.match(/\n/g)?.length ?? 0);
+  const placed = input.x === undefined && input.y === undefined
+    ? freeSpot(editor, { x: bounds.x, y: bounds.maxY + 60, w: agentWidths.agent, h: 28 + 22 * Math.max(1, lines) }, new Set([target.id]))
+    : undefined;
+  const x = input.x ?? placed?.x ?? bounds.x, y = input.y ?? placed?.y ?? bounds.maxY + 60;
   const meta = { name: input.author === HUMAN ? "Feedback" : "Agent note", role: "annotation", targetId: target.id, status: "open", author: input.author };
   editor.markHistoryStoppingPoint("add feedback");
   let id = createShapeId();
   editor.run(() => {
-    id = createCard(editor, { x, y, text: input.text }, input.author, meta);
+    // On the page, above any frame there: a frame would clip a note that runs past its edge.
+    id = createCard(editor, { x, y, text: input.text }, input.author, meta, editor.getCurrentPageId());
+    // The height above was a guess; the card sizes to its text when made. Check again with its real size.
+    const made = placed && editor.getShapePageBounds(id);
+    if (made) {
+      const clear = freeSpot(editor, { x: made.x, y: made.y, w: made.w, h: made.h }, new Set([target.id, id]));
+      if (clear.y !== made.y) editor.updateShape({ id, type: "card", y: clear.y });
+    }
     connect(
       editor,
       { fromId: id, toId: target.id, relation: "feedback" },
@@ -418,7 +431,10 @@ export function createComment(editor: Editor, value: { targetIds?: string[]; x?:
   };
   let id = createShapeId();
   return atomic(editor, "add comment", () => {
-    id = createCard(editor, { x, y, text: value.text ?? "" }, HUMAN, meta);
+    // A comment about objects sits on the page, above any frame it overlaps, so the frame never
+    // clips it; it still follows its target when that or its frame moves (follow.ts). A comment
+    // pinned to a spot inside a frame stays in that frame, where the person put it.
+    id = createCard(editor, { x, y, text: value.text ?? "" }, HUMAN, meta, targets.length ? editor.getCurrentPageId() : undefined);
     for (const target of targets) connect(editor, { fromId: id, toId: target.id, relation: "feedback" }, HUMAN);
     return id;
   });
@@ -447,7 +463,7 @@ export function replyToFeedback(editor: Editor, value: unknown, actor: string) {
       author: actor,
       targetId: input.id,
       replyTo: input.id,
-    }),
+    }, editor.getCurrentPageId()),
   );
   return { reply: describeObject(editor, id), item: collectFeedback(editor).find((i) => i.id === input.id) };
 }
@@ -688,8 +704,16 @@ export async function executeCommand(
       });
       return describeObject(editor, id);
     }
-    case "update":
+    case "update": {
+      // The person's words stay theirs; checked before anything is written.
+      const target = z.object({ id: z.string(), text: z.unknown().optional() }).safeParse(command.input);
+      const shape = target.success ? editor.getShape(target.data.id as TLShapeId) : undefined;
+      // A copy an agent made of the person's card is still their words in their hand.
+      const inTheirHand = shape?.type === "card" && (shape.props as { tone?: unknown }).tone === "human";
+      const refusal = shape && rewriteRefusal(inTheirHand ? HUMAN : authorOf(shape), target.success ? target.data : {});
+      if (refusal) throw new Error(refusal);
       return patchObject(editor, command.input);
+    }
     case "learn":
       return createPrompt(editor, command.input, actor);
     case "converge":

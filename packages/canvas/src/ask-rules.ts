@@ -219,3 +219,52 @@ export function placeBar(sel: { x: number; y: number; bottom: number }, barWidth
 export function statusWidth(cardWidth: number) {
   return Math.min(640, Math.max(260, Math.round(cardWidth)));
 }
+
+/**
+ * What a screen reader is told when an ask's state changes, once per change: sent and
+ * waiting, taken by an agent, answered (and where), or failed (and that Retry is there).
+ * Undefined when nothing changed, so the ticking clock on the state line is never read out.
+ */
+export function askAnnouncement(
+  previous: string | undefined,
+  ask: { state: string; question?: string; agent?: string; note?: string; error?: string },
+  answers: number,
+): string | undefined {
+  if (previous === ask.state) return undefined;
+  const who = ask.agent ?? "An agent";
+  switch (ask.state) {
+    case "waiting":
+      return `Asked “${ask.question ?? ""}”. Waiting for an agent.`;
+    case "working":
+      return `${ask.agent ?? "An agent"} is working on your ask${ask.note ? `: ${ask.note}` : ""}.`;
+    case "answered":
+      return `${who} answered${answers > 1 ? ` with ${answers} options` : ""}, under your ask.`;
+    case "failed":
+      return `Your ask failed${ask.error ? `: ${ask.error}` : ""}. Retry is under the ask.`;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * What the selection bar's first button does for one selected ask: an ask that failed, went
+ * quiet or was not heard is sent again (its state line offers the same), anything else is asked
+ * about. Undefined: Ask as usual.
+ */
+export function retryLabel(line: { tone: string; retry?: boolean }): "Retry" | "Send again" | undefined {
+  if (!line.retry) return undefined;
+  return line.tone === "nobody" ? "Send again" : "Retry";
+}
+
+/**
+ * An image or video as an ask gives it: the agent answers from text only, so it gets the file
+ * name, size, caption and alt text the board holds, and is told plainly when there is none.
+ */
+export function describeImage(i: { kind: "image" | "video"; name?: string; w?: number; h?: number; caption?: string; alt?: string }) {
+  const label = i.kind === "video" ? "Video" : "Image";
+  const name = i.name?.trim(), caption = i.caption?.trim(), alt = i.alt?.trim();
+  const size = i.w && i.h ? `${Math.round(i.w)}×${Math.round(i.h)} px` : "";
+  if (!name && !caption && !alt) return size ? `${label}, ${size}.` : `${label} with no file name, caption or alt text: you cannot see it.`;
+  const head = [`${label}${name ? ` "${name}"` : ""}`, size].filter(Boolean).join(", ");
+  return [`${head}.`, caption ? `Caption: "${caption}".` : "", alt ? `Alt text: "${alt}".` : ""].filter(Boolean).join(" ");
+}

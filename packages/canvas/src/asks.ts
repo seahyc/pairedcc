@@ -4,7 +4,7 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { keepForAgent } from "./leave-out";
 import { chartText, datasetText, staleReason } from "./data/model";
@@ -97,13 +97,31 @@ function dataText(editor: Editor, s: TLShape): string {
   return chartText(dataset.props.data, chart.props.state, { stale: staleReason(stale, nameOf), bars: chart.props.bars });
 }
 
-const given = (editor: Editor, s: TLShape, max = 2000): Given => {
+/**
+ * An image or video by what the board knows of it (file name, size, caption, alt text). Its
+ * caption is a card of its own: one the person left out of asks, or a learning prompt still
+ * hides, is not given through the image either.
+ */
+function mediaText(editor: Editor, s: TLShape, keep: Keep = (x) => x) {
+  if (s.type !== "image" && s.type !== "video") return "";
+  const props = s.props as { assetId?: string | null; altText?: string };
+  const asset = props.assetId ? (editor.getAsset(props.assetId as never) as { props?: { name?: string; w?: number; h?: number } } | undefined) : undefined;
+  // Its caption is on the image's own page, which need not be the one open.
+  const pageId = editor.getAncestorPageId(s);
+  const found = pageId
+    ? [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []).find((c) => c.meta.role === "caption" && c.meta.captionFor === s.id)
+    : undefined;
+  const caption = found && !editor.isShapeHidden(found) && keep([found]).length ? found : undefined;
+  return describeImage({ kind: s.type, name: asset?.props?.name, w: asset?.props?.w, h: asset?.props?.h, caption: caption ? textOf(caption) : undefined, alt: props.altText });
+}
+
+const given = (editor: Editor, s: TLShape, max = 2000, keep: Keep = (x) => x): Given => {
   const source = sourceOf(s), mark = markOf(s.meta);
   return {
     id: s.id,
     type: s.type,
     author: source ? sourceAuthor(source) : authorOf(s),
-    text: clip(sourceText(s, textOf(s)) || textOf(s) || dataText(editor, s) || `(${shapeName(s)}, no text)`, max),
+    text: clip(sourceText(s, textOf(s)) || textOf(s) || dataText(editor, s) || mediaText(editor, s, keep) || `(${shapeName(s)}, no text)`, max),
     ...(mark ? { mark } : {}),
   };
 };
@@ -114,7 +132,7 @@ const said = (editor: Editor, s: TLShape, max: number, keep: Keep = (x) => x): H
   const text =
     s.type === "frame"
       ? `the frame "${shapeName(s)}", holding: ${inside(editor, s, new Set(), keep).inside.map((o) => o.text).join("; ") || "nothing with text"}`
-      : sourceText(s, textOf(s)) || textOf(s);
+      : sourceText(s, textOf(s)) || textOf(s) || mediaText(editor, s, keep);
   return { id: s.id, who: source ? sourceAuthor(source) : authorOf(s), said: clip(text, max), ...(mark ? { mark } : {}) };
 };
 /** A grouped record is given as its parts: the title line, then each field in column order. */
@@ -148,7 +166,7 @@ function inside(editor: Editor, frame: TLShape, skip: Set<string>, keep: Keep = 
   walk(frame.id);
   const at = (s: TLShape) => editor.getShapePageBounds(s) ?? { x: 0, y: 0 };
   found.sort((a, b) => at(a).y - at(b).y || at(a).x - at(b).x);
-  return { inside: found.slice(0, INSIDE_LIMIT).map((s) => given(editor, s, 400)), more: Math.max(0, found.length - INSIDE_LIMIT) };
+  return { inside: found.slice(0, INSIDE_LIMIT).map((s) => given(editor, s, 400, keep)), more: Math.max(0, found.length - INSIDE_LIMIT) };
 }
 
 /** The exchange that led here, oldest first, when the human asks about an agent's answer. */
@@ -205,9 +223,9 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     pageId: page?.id,
     pageName: page?.name,
     targets: targets.map((t) => {
-      if (t.type !== "frame") return given(editor, t);
+      if (t.type !== "frame") return given(editor, t, 2000, keep);
       const held = inside(editor, t, skip, keep);
-      return { ...given(editor, t), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
+      return { ...given(editor, t, 2000, keep), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
     }),
     history: mergeHistory(targets.flatMap((t) => thread(editor, t, keep)), targets.map((t) => t.id)),
     ...(frame
@@ -222,7 +240,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
                 .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset")),
             )
               .slice(0, 12)
-              .map((s) => given(editor, s, 400)),
+              .map((s) => given(editor, s, 400, keep)),
           },
         }
       : {}),
@@ -240,6 +258,7 @@ export function listAsks(editor: Editor, value: unknown = {}) {
   const input = asksInput.parse(value);
   const asks = allAsks(editor)
     .filter((s) => input.state === "all" || askOf(s)!.state === input.state)
+    .filter((s) => input.page === "all" || editor.getAncestorPageId(s) === editor.getCurrentPageId())
     .sort((a, b) => askOf(a)!.askedAt - askOf(b)!.askedAt)
     .map((s) => describeAsk(editor, s));
   return { asks };
@@ -316,7 +335,7 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         targetId: shape.id,
         replyTo: shape.id,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
-      }, offPage ? pageId : undefined);
+      }, pageId);
       rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
       return id;
     });
