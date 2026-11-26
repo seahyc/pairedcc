@@ -13,6 +13,10 @@ const base = process.env.PAIRED_URL ?? "http://localhost:5183";
 const parsedBase = new URL(base);
 if (!["localhost", "127.0.0.1", "[::1]"].includes(parsedBase.hostname))
   throw new Error("PAIRED_URL must be a local loopback URL");
+// Attribution for this agent's work and ownership of its runs. Set PAIRED_ACTOR to tell
+// several local agents apart; agents sharing a label share runs.
+const actor = process.env.PAIRED_ACTOR?.trim().slice(0, 80) || "MCP agent";
+
 const server = new McpServer({ name: "paired-canvas", version: "0.1.0" }, { instructions });
 
 async function request(command: z.infer<typeof commandSchema>, sessionId?: string) {
@@ -22,7 +26,7 @@ async function request(command: z.infer<typeof commandSchema>, sessionId?: strin
     body: JSON.stringify({
       requestId: randomUUID(),
       sessionId: sessionId ?? process.env.PAIRED_SESSION,
-      actor: "MCP agent",
+      actor,
       command,
     }),
     signal: AbortSignal.timeout(20000),

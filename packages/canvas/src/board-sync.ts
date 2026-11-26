@@ -16,7 +16,7 @@ export type ServerBoard = { revision: number; snapshot: Snapshot };
 export type PutResult =
   | { ok: true; revision: number }
   | { ok: false; stale: true; revision: number }
-  | { ok: false; stale: false; error: string; /** HTTP status when the server refused this board itself (400, 413); retrying it unchanged cannot work. */ refused?: number };
+  | { ok: false; stale: false; error: string; /** HTTP status when the server refused this board itself (400, 403 board limit, 413); retrying it unchanged cannot work. */ refused?: number };
 
 export type BoardApi = {
   /** The signed-in account, or null when signed out. Throws when the server is unreachable. */

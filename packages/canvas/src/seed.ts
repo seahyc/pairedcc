@@ -260,3 +260,39 @@ export function isLegacySeed(editor: Editor) {
   const shapes = editor.getCurrentPageShapes();
   return shapes.length === 7 && shapes.some((s) => s.id === "shape:first-thoughts");
 }
+
+/**
+ * The first board: an invitation to write and a hint for how to ask, and nothing else.
+ * Working memory holds about four things, so the board starts with three.
+ */
+export function calmSeed(editor: Editor) {
+  const view = editor.getViewportPageBounds();
+  const x = Math.round(view.center.x - 230), y = Math.round(view.center.y - 170);
+  const meta = { seed: true };
+  editor.run(
+    () => {
+      const title = createCard(editor, { x, y, width: 460, text: "Write a thought.", style: "heading" }, AGENT, meta);
+      const titleBox = editor.getShapePageBounds(title);
+      const hint = (titleBox?.maxY ?? y + 40) + 6;
+      editor.createShape({
+        type: "card",
+        x,
+        y: hint,
+        meta: { name: "How to write", createdBy: AGENT, revision: 0, role: "caption", ...meta },
+        props: { w: 460, richText: toRichText("Double-click anywhere, or press N. Pink handwriting is you."), tone: "caption" },
+      });
+      createCard(
+        editor,
+        {
+          x,
+          y: hint + 52,
+          width: 400,
+          text: "Then select it and press ⌘↵ to ask. I answer beside it in a few lines; lavender is me. After that you pick (P), cross out (X) or comment (C), and ask again.",
+        },
+        AGENT,
+        { name: "How to ask", ...meta },
+      );
+    },
+    { history: "ignore" },
+  );
+}

@@ -1,3 +1,4 @@
+import { relationships, relationshipsOf, sourceOf, transformationOf, type ArrowEnd, type PrimitiveRecord } from "./primitives";
 import { prototypeRefusal } from "./prototype-flags";
 import {
   AssetRecordType,
@@ -27,9 +28,11 @@ import {
   revision,
 } from "./operations";
 import { createPrompt } from "./learning/prompt-shape";
+import { convergeInput, placeBeside } from "./converge/model";
 import { overview } from "./overview";
-import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell } from "./data/agent";
+import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
+import { answerAsk, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
 
 const cardInput = z.object({
@@ -40,6 +43,8 @@ const cardInput = z.object({
   name: z.string().max(200).optional(),
   style: z.enum(["note", "heading", "quote", "code"]).optional(),
 });
+/** A comfortable line of handwriting: about six words. */
+export const HUMAN_CARD_W = 300;
 const agentWidths = { agent: 420, heading: 440, quote: 380, code: 360 } as const;
 
 /** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
@@ -58,7 +63,7 @@ export function createCard(editor: Editor, value: unknown, author: string, meta:
       ...(human ? {} : { createdBy: author }),
       ...meta,
     },
-    props: { w: input.width ?? (human ? 240 : agentWidths[tone as keyof typeof agentWidths]), richText: toRichText(input.text), tone },
+    props: { w: input.width ?? (human ? HUMAN_CARD_W : agentWidths[tone as keyof typeof agentWidths]), richText: toRichText(input.text), tone },
   });
   return id;
 }
@@ -117,7 +122,7 @@ function checkedObjects(editor: Editor, objects: z.infer<typeof arrangeInput>["o
   return shapes;
 }
 
-function atomic<T>(editor: Editor, name: string, work: () => T): T {
+export function atomic<T>(editor: Editor, name: string, work: () => T): T {
   const mark = editor.markHistoryStoppingPoint(name);
   try {
     const result = work();
@@ -208,7 +213,10 @@ export function image(editor: Editor, value: unknown, actor: string) {
   if (!described) throw new Error("Could not place the image");
   return { ...described, ...(captionId ? { captionId } : {}) };
 }
-export function connect(editor: Editor, value: unknown, actor: string) {
+type Anchor = { x: number; y: number };
+/** Fixed anchors (normalised 0..1 on each shape) instead of choosing sides from the angle. */
+export type ConnectAnchors = { start: Anchor; end: Anchor };
+export function connect(editor: Editor, value: unknown, actor: string, anchors?: ConnectAnchors) {
   const input = connectionInput.parse(value),
     { fromId, toId } = input,
     from = find(editor, fromId),
@@ -222,9 +230,10 @@ export function connect(editor: Editor, value: unknown, actor: string) {
   // side of a card share one anchor point, so several of them fan out from it.
   const dx = b.center.x - a.center.x, dy = b.center.y - a.center.y;
   const vertical = Math.abs(dy) >= Math.abs(dx) * 0.6;
-  const startAnchor = vertical ? { x: 0.5, y: dy > 0 ? 1 : 0 } : { x: dx > 0 ? 1 : 0, y: 0.5 };
-  const endAnchor = vertical ? { x: 0.5, y: dy > 0 ? 0 : 1 } : { x: dx > 0 ? 0 : 1, y: 0.5 };
-  const bend = Math.max(-60, Math.min(60, (vertical ? dx : -dy) * 0.12)) * (vertical ? (dy > 0 ? 1 : -1) : dx > 0 ? 1 : -1);
+  const startAnchor = anchors?.start ?? (vertical ? { x: 0.5, y: dy > 0 ? 1 : 0 } : { x: dx > 0 ? 1 : 0, y: 0.5 });
+  const endAnchor = anchors?.end ?? (vertical ? { x: 0.5, y: dy > 0 ? 0 : 1 } : { x: dx > 0 ? 0 : 1, y: 0.5 });
+  // A fixed edge-to-edge route runs straight; the bend is tuned for the chosen sides only.
+  const bend = anchors ? 0 : Math.max(-60, Math.min(60, (vertical ? dx : -dy) * 0.12)) * (vertical ? (dy > 0 ? 1 : -1) : dx > 0 ? 1 : -1);
   editor.markHistoryStoppingPoint("connect objects");
   editor.run(() => {
     editor.createShape({
@@ -264,6 +273,39 @@ export function connect(editor: Editor, value: unknown, actor: string) {
   });
   return describeObject(editor, id);
 }
+/**
+ * PROTOTYPE: pull alternatives into one synthesis card. The card records each source as an
+ * input (so it shows as stale when a source changes) and gets a derived-from arrow from each.
+ */
+export function converge(editor: Editor, value: unknown, actor: string) {
+  const input = convergeInput.parse(value);
+  const sources = input.sourceIds.map((id) => find(editor, id));
+  for (const s of sources) if (editor.isShapeHidden(s)) throw new Error(`${s.id} is hidden; a synthesis must come from what the person can see`);
+  const boxes = sources.map((s) => editor.getShapePageBounds(s)).filter((b): b is NonNullable<typeof b> => !!b);
+  const at = input.x !== undefined && input.y !== undefined ? { x: input.x, y: input.y } : placeBeside(boxes);
+  const inputs = recordInputs(editor, input.sourceIds);
+  editor.markHistoryStoppingPoint("converge");
+  let id = "";
+  const connections: unknown[] = [];
+  editor.run(() => {
+    id = createCard(editor, { kind: "note", x: at.x, y: at.y, text: input.text, name: input.name ?? "Synthesis" }, actor, {
+      role: "synthesis",
+      convergedFrom: input.sourceIds,
+      inputs,
+    });
+    // Each source's right edge to the synthesis's left edge, when the synthesis sits to the
+    // right (the default), so arrows never cut across the stacked sources.
+    const card = editor.getShapePageBounds(id as never);
+    for (const [i, source] of input.sourceIds.entries()) {
+      const box = boxes[i];
+      const rightward = card && box && card.x >= box.x + box.w;
+      const anchors = rightward ? { start: { x: 1, y: 0.5 }, end: { x: 0, y: (i + 1) / (input.sourceIds.length + 1) } } : undefined;
+      connections.push(connect(editor, { fromId: source, toId: id, relation: "derived-from" }, actor, anchors));
+    }
+  });
+  return { synthesis: describeObject(editor, id), sources: input.sourceIds, connections };
+}
+
 export function annotateObject(editor: Editor, value: unknown) {
   const input = annotationInput.parse(value),
     target = find(editor, input.targetId),
@@ -287,13 +329,15 @@ type Rect = { x: number; y: number; w: number; h: number };
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
 /** Nudge a new card down until it no longer sits on top of something else. */
-function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set()) {
+export function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set()) {
   const others = editor
     .getCurrentPageShapes()
     .filter((s) => s.type !== "frame" && s.type !== "arrow" && !ignore.has(s.id))
     .flatMap((s) => editor.getShapePageBounds(s) ?? []);
   const spot = { ...box };
-  for (let i = 0; i < 12 && others.some((o) => hits(spot, o)); i++) spot.y += 28;
+  // Leave a little air around the new card, and keep going past a tall column of earlier answers.
+  const roomy = () => ({ x: spot.x - 8, y: spot.y - 14, w: spot.w + 16, h: spot.h + 28 });
+  for (let i = 0; i < 60 && others.some((o) => hits(roomy(), o)); i++) spot.y += 28;
   return spot;
 }
 
@@ -301,14 +345,14 @@ function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set()) {
  * The human's comment: a pink handwritten card pinned to the selected objects (with an
  * arrow to each) or to a spot on the board. It joins the feedback queue as an open item.
  */
-export function createComment(editor: Editor, value: { targetIds?: string[]; x?: number; y?: number; text?: string }) {
+export function createComment(editor: Editor, value: { targetIds?: string[]; x?: number; y?: number; text?: string }, extra: Record<string, unknown> = {}) {
   const targets = (value.targetIds ?? []).map((id) => find(editor, id));
   let x = value.x ?? 0, y = value.y ?? 0;
   if (targets.length) {
     const boxes = targets.flatMap((t) => editor.getShapePageBounds(t) ?? []);
     if (!boxes.length) throw new Error("Target must have bounds");
     const right = Math.max(...boxes.map((b) => b.maxX)), top = Math.min(...boxes.map((b) => b.y));
-    const spot = freeSpot(editor, { x: right + 56, y: top, w: 240, h: 72 }, new Set(targets.map((t) => t.id)));
+    const spot = freeSpot(editor, { x: right + 56, y: top, w: HUMAN_CARD_W, h: 72 }, new Set(targets.map((t) => t.id)));
     x = spot.x;
     y = spot.y;
   }
@@ -318,6 +362,7 @@ export function createComment(editor: Editor, value: { targetIds?: string[]; x?:
     status: "open",
     author: HUMAN,
     ...(targets.length ? { targetId: targets[0].id, targetIds: targets.map((t) => t.id) } : {}),
+    ...extra,
   };
   let id = createShapeId();
   return atomic(editor, "add comment", () => {
@@ -391,9 +436,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
           };
       }
       // Data objects are summarised: rows and bars appear in dataset/widget, rows only via get.
-      const props = object && (s.type === "dataset" || s.type === "chart")
-        ? Object.fromEntries(Object.entries(object.props).filter(([k]) => k !== "data" && k !== "bars"))
-        : object?.props;
+      const props = object && summaryProps(s.type, object.props as Record<string, unknown>);
       return {
         ...object,
         props,
@@ -427,6 +470,24 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
       .getCurrentPageShapes()
       .filter((s) => s.type === "arrow")
       .flatMap((s) => editor.getBindingsFromShape(s.id, "arrow")),
+  };
+}
+
+/** PROTOTYPE: the object's relationships on its page, its source and the transformation behind it. */
+function primitiveFields(editor: Editor, s: TLShape) {
+  const page = editor.getAncestorPageId(s.id);
+  const shapes = page ? [...editor.getSortedChildIdsForParent(page)].flatMap(function all(id): TLShape[] {
+    const shape = editor.getShape(id);
+    return shape ? [shape, ...editor.getSortedChildIdsForParent(id).flatMap(all)] : [];
+  }) : [s];
+  const ends: ArrowEnd[] = shapes
+    .filter((a) => a.type === "arrow")
+    .flatMap((a) => editor.getBindingsFromShape(a.id, "arrow").map((b) => ({ arrowId: a.id, terminal: (b.props as { terminal: "start" | "end" }).terminal, toId: b.toId })));
+  const source = sourceOf(s as PrimitiveRecord), transformation = transformationOf(s as PrimitiveRecord);
+  return {
+    relationships: relationshipsOf(s.id, relationships(shapes as PrimitiveRecord[], ends)),
+    ...(source ? { source } : {}),
+    ...(transformation ? { transformation } : {}),
   };
 }
 
@@ -511,6 +572,7 @@ export async function executeCommand(
         ...result,
         meta: s.meta,
         ...dataFields(editor, s, true),
+        ...primitiveFields(editor, s),
         ...(asset && includeAsset ? { asset } : {}),
       };
     }
@@ -530,6 +592,8 @@ export async function executeCommand(
       return patchObject(editor, command.input);
     case "learn":
       return createPrompt(editor, command.input, actor);
+    case "converge":
+      return converge(editor, command.input, actor);
     case "dataset":
       return createDataset(editor, command.input, actor);
     case "chart":
@@ -562,6 +626,12 @@ export async function executeCommand(
       return readFeedback(editor, command.input ?? {});
     case "reply":
       return replyToFeedback(editor, command.input, actor);
+    case "asks":
+      return listAsks(editor, command.input ?? {});
+    case "ask_status":
+      return setAskStatus(editor, command.input, actor);
+    case "answer":
+      return answerAsk(editor, command.input, actor);
     case "remove": {
       const input = z
           .object({
