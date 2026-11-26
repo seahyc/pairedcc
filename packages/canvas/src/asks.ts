@@ -243,7 +243,17 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     : [capWords(input.text ?? "", 90)];
   const layout = answerLayout({ x: anchor.x, y: bottom }, texts);
   const spot = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
-  const ids = atomic(editor, "answer", () => {
+  // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
+  // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
+  // work here must not silently remove an answer they cannot see (canvas_undo_run still can).
+  const offPage = pageId !== editor.getCurrentPageId();
+  const place = <T,>(work: () => T): T => {
+    if (!offPage) return atomic(editor, "answer", work);
+    let result!: T;
+    editor.run(() => void (result = work()), { history: "ignore" });
+    return result;
+  };
+  const ids = place(() => {
     const made = texts.map((text, i) =>
       createCard(editor, { x: spot.x + layout.cards[i].dx, y: spot.y, width: layout.cards[i].w, text }, actor, {
         name: input.alternatives ? `Option ${"ABCD"[i]}` : input.question ? "Question" : "Answer",
@@ -253,12 +263,12 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         targetId: shape.id,
         replyTo: shape.id,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
-      }, pageId),
+      }, offPage ? pageId : undefined),
     );
     setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt: Date.now(), read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.
     if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
     return made;
   });
-  return { ask: describeAsk(editor, editor.getShape(shape.id)!), answers: ids.map((id) => describeObject(editor, id)) };
+  return { ask: describeAsk(editor, editor.getShape(shape.id)!), answers: ids.map((id) => describeObject(editor, id, true)) };
 }
