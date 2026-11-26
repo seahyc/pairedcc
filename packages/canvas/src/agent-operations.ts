@@ -28,6 +28,7 @@ import {
   revision,
 } from "./operations";
 import { createPrompt } from "./learning/prompt-shape";
+import { convergeInput, placeBeside } from "./converge/model";
 import { overview } from "./overview";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
@@ -212,7 +213,10 @@ export function image(editor: Editor, value: unknown, actor: string) {
   if (!described) throw new Error("Could not place the image");
   return { ...described, ...(captionId ? { captionId } : {}) };
 }
-export function connect(editor: Editor, value: unknown, actor: string) {
+type Anchor = { x: number; y: number };
+/** Fixed anchors (normalised 0..1 on each shape) instead of choosing sides from the angle. */
+export type ConnectAnchors = { start: Anchor; end: Anchor };
+export function connect(editor: Editor, value: unknown, actor: string, anchors?: ConnectAnchors) {
   const input = connectionInput.parse(value),
     { fromId, toId } = input,
     from = find(editor, fromId),
@@ -226,9 +230,10 @@ export function connect(editor: Editor, value: unknown, actor: string) {
   // side of a card share one anchor point, so several of them fan out from it.
   const dx = b.center.x - a.center.x, dy = b.center.y - a.center.y;
   const vertical = Math.abs(dy) >= Math.abs(dx) * 0.6;
-  const startAnchor = vertical ? { x: 0.5, y: dy > 0 ? 1 : 0 } : { x: dx > 0 ? 1 : 0, y: 0.5 };
-  const endAnchor = vertical ? { x: 0.5, y: dy > 0 ? 0 : 1 } : { x: dx > 0 ? 0 : 1, y: 0.5 };
-  const bend = Math.max(-60, Math.min(60, (vertical ? dx : -dy) * 0.12)) * (vertical ? (dy > 0 ? 1 : -1) : dx > 0 ? 1 : -1);
+  const startAnchor = anchors?.start ?? (vertical ? { x: 0.5, y: dy > 0 ? 1 : 0 } : { x: dx > 0 ? 1 : 0, y: 0.5 });
+  const endAnchor = anchors?.end ?? (vertical ? { x: 0.5, y: dy > 0 ? 0 : 1 } : { x: dx > 0 ? 0 : 1, y: 0.5 });
+  // A fixed edge-to-edge route runs straight; the bend is tuned for the chosen sides only.
+  const bend = anchors ? 0 : Math.max(-60, Math.min(60, (vertical ? dx : -dy) * 0.12)) * (vertical ? (dy > 0 ? 1 : -1) : dx > 0 ? 1 : -1);
   editor.markHistoryStoppingPoint("connect objects");
   editor.run(() => {
     editor.createShape({
@@ -268,6 +273,39 @@ export function connect(editor: Editor, value: unknown, actor: string) {
   });
   return describeObject(editor, id);
 }
+/**
+ * PROTOTYPE: pull alternatives into one synthesis card. The card records each source as an
+ * input (so it shows as stale when a source changes) and gets a derived-from arrow from each.
+ */
+export function converge(editor: Editor, value: unknown, actor: string) {
+  const input = convergeInput.parse(value);
+  const sources = input.sourceIds.map((id) => find(editor, id));
+  for (const s of sources) if (editor.isShapeHidden(s)) throw new Error(`${s.id} is hidden; a synthesis must come from what the person can see`);
+  const boxes = sources.map((s) => editor.getShapePageBounds(s)).filter((b): b is NonNullable<typeof b> => !!b);
+  const at = input.x !== undefined && input.y !== undefined ? { x: input.x, y: input.y } : placeBeside(boxes);
+  const inputs = recordInputs(editor, input.sourceIds);
+  editor.markHistoryStoppingPoint("converge");
+  let id = "";
+  const connections: unknown[] = [];
+  editor.run(() => {
+    id = createCard(editor, { kind: "note", x: at.x, y: at.y, text: input.text, name: input.name ?? "Synthesis" }, actor, {
+      role: "synthesis",
+      convergedFrom: input.sourceIds,
+      inputs,
+    });
+    // Each source's right edge to the synthesis's left edge, when the synthesis sits to the
+    // right (the default), so arrows never cut across the stacked sources.
+    const card = editor.getShapePageBounds(id as never);
+    for (const [i, source] of input.sourceIds.entries()) {
+      const box = boxes[i];
+      const rightward = card && box && card.x >= box.x + box.w;
+      const anchors = rightward ? { start: { x: 1, y: 0.5 }, end: { x: 0, y: (i + 1) / (input.sourceIds.length + 1) } } : undefined;
+      connections.push(connect(editor, { fromId: source, toId: id, relation: "derived-from" }, actor, anchors));
+    }
+  });
+  return { synthesis: describeObject(editor, id), sources: input.sourceIds, connections };
+}
+
 export function annotateObject(editor: Editor, value: unknown) {
   const input = annotationInput.parse(value),
     target = find(editor, input.targetId),
@@ -554,6 +592,8 @@ export async function executeCommand(
       return patchObject(editor, command.input);
     case "learn":
       return createPrompt(editor, command.input, actor);
+    case "converge":
+      return converge(editor, command.input, actor);
     case "dataset":
       return createDataset(editor, command.input, actor);
     case "chart":

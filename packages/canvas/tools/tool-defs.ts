@@ -3,6 +3,7 @@ import { createInput, patchInput } from "../src/operations";
 import { sceneInput, arrangeInput, duplicateInput } from "../src/composition";
 import { imageInput, annotationInput, connectionInput, resolveInput, feedbackInput, replyInput, asksInput, askStatusInput, answerInput } from "../src/protocol";
 import { learnInput } from "../src/learning/model";
+import { convergeInput } from "../src/converge/model";
 import { overviewInput } from "../src/overview";
 import { runsInput, undoRunInput } from "../src/run-undo";
 import { datasetInput, chartInput, chartStateInput, cellInput } from "../src/data/agent";
@@ -273,6 +274,15 @@ export const toolDefs: ToolDef[] = [
     description:
       "PROTOTYPE. Change one dataset value (zero-based row, column). Bumps the dataset version, so charts and notes derived from it show as stale. Requires the dataset's current revision. Runs only in a tab opened with ?prototype=data; other tabs refuse it and change nothing.",
     input: cellInput.shape,
+    output: "json",
+  },
+  {
+    name: "canvas_converge",
+    op: "converge",
+    prototype: true,
+    description:
+      "PROTOTYPE converge. When several alternatives, branches or hypotheses are on the board and the person wants them pulled together, write one synthesis: what they add up to and where they still disagree, naming the sources. Creates an agent card beside the sources (or at x, y) with a derived-from arrow from each source; read reports convergedFrom in its meta and marks it stale when a source changes, so revise it then. Keep the sources; never delete or move them. Runs only in a tab opened with ?prototype=converge.",
+    input: convergeInput.shape,
     output: "json",
   },
 ];

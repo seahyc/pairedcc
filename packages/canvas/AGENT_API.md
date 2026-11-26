@@ -33,7 +33,9 @@ Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
 
 Data prototype tools: `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` (see [Data prototype](#data-prototype)).
 
-Prototype tools (`canvas_learn` and the data tools) are flagged `prototype` in `tools/tool-defs.ts`. The local stdio server always offers them. The hosted endpoint offers them while `hostedPrototypeTools` is true (the default); set it to false and run `pnpm --filter @pairedcc/canvas manifest` to leave them, and their guidance in the instructions, out of the hosted manifest.
+Converge prototype tool: `canvas_converge` (see [Converge](#converge-prototype)).
+
+Prototype tools (`canvas_learn`, `canvas_converge` and the data tools) are flagged `prototype` in `tools/tool-defs.ts`. The local stdio server always offers them. The hosted endpoint offers them while `hostedPrototypeTools` is true (the default); set it to false and run `pnpm --filter @pairedcc/canvas manifest` to leave them, and their guidance in the instructions, out of the hosted manifest.
 
 ### Overview, then detail
 
@@ -61,6 +63,11 @@ When a chart is stale, `widget` still describes what the person sees: the older 
 
 Suggested loop: read the chart's `widget`, cite `summary` and the selected values in your explanation, create it with `inputs: [chartId]`, and re-read when the person changes something. If your note is stale, revise it rather than repeating it.
 
+### Converge (prototype)
+
+`canvas_converge` pulls several alternatives, branches or hypotheses into one synthesis. It runs only in a tab opened with `?prototype=converge`. Pass `sourceIds` (2 to 20 objects on the open page, each once, none hidden) and `text` (what they add up to and where they still disagree). Optionally pass a `name` and an `x`, `y` position; by default the card goes 80 px right of the sources, aligned with their top.
+
+It creates one agent card with `meta.role: "synthesis"`, `meta.convergedFrom` (the source IDs) and `meta.inputs` (each source's version at that moment), plus a derived-from arrow from each source. The result is `{ synthesis, sources, connections }`. Because the sources are recorded as inputs, `read` reports the synthesis as `stale` once any source changes, and the board flags it. Revise it then. The sources are never moved or deleted, and the whole operation is one run, so `canvas_undo_run` removes the card and arrows together.
 ### Relationships, sources and transformations (prototype)
 
 `canvas_get` adds three read-only fields from the working spec's proposed primitives. They are derived from what the board already records, so they never disagree with it:
@@ -265,6 +272,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `overview` | Optional `parentId`, `limit`, `cursor`; compact listing of one level |
 | `runs` | Optional `limit`; recent agent runs in this tab |
 | `undo_run` | `runId`; reverses that run only, or fails listing conflicts |
+| `converge` | Prototype: `sourceIds`, `text`, optional `name`, `x`, `y`; synthesis card with derived-from arrows |
 | `dataset` | Prototype: `x`, `y`, optional size; `synthetic: "orders"` or `columns`, `rows`, `title`, `source` |
 | `chart` | Prototype: `x`, `y`, optional size, `datasetId`, `state` (x, y, aggregate, filter, selected) |
 | `chart_state` | Prototype: `id`, `expectedRevision`, partial `state`; recomputes on current data |
