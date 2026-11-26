@@ -189,6 +189,7 @@ task by which measure is furthest from target, not by backlog order.
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 
 ## Claims
+22. Refused save is not Offline | claude/sprint-save-refused | 2026-11-26T10:51Z
 3. Foundational primitives | claude/sprint-primitives-* | 2026-11-26T10:46Z
 5. Converge | claude/sprint-converge | 2026-11-26T10:50Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
