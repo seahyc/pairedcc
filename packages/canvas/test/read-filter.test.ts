@@ -40,3 +40,26 @@ describe("finding objects by their text", () => {
     expect(Object.keys(read.input)).toContain("text");
   });
 });
+
+describe("text filter: German sharp s and whole characters (item 79)", () => {
+  it("folds ß and ẞ to ss, both ways", () => {
+    expect(matchesText("STRASSE", "Hauptstraße 5")).toBe(true);
+    expect(matchesText("straße", "HAUPTSTRASSE")).toBe(true);
+    expect(matchesText("STRAẞE", "strasse")).toBe(true);
+  });
+  it("never matches part of a character", () => {
+    expect(matchesText("कल", "कला")).toBe(false);
+    expect(matchesText("かく", "かぐ")).toBe(false);
+    expect(matchesText("कल", "आज कल")).toBe(true);
+    expect(matchesText("かく", "かくれんぼ")).toBe(true);
+  });
+  it("finds a later whole match after a partial one", () => {
+    expect(matchesText("कल", "कला और कल")).toBe(true);
+  });
+  it("keeps accented, Greek and plain matching as before", () => {
+    expect(matchesText("cafe", "Café au lait")).toBe(true);
+    expect(matchesText("ΟΔΟΣ", "μια οδός εδώ")).toBe(true);
+    expect(matchesText("pric", "Pricing plan")).toBe(true);
+    expect(matchesText("", "anything")).toBe(true);
+  });
+});

@@ -4,17 +4,30 @@
 /**
  * Lower case without accents, for matching. Only combining diacritics (U+0300 to U+036F)
  * are dropped, so "Café" matches "cafe" while vowel signs in scripts such as Devanagari are
- * kept (दिन and दीन stay different). Greek final sigma is folded to σ, so a query ending in
- * Σ still matches the same letter inside a word.
+ * kept (दिन and दीन stay different). Case is folded through upper case, so ß and ẞ become ss
+ * ("STRASSE" finds "Straße"). Greek final sigma is folded to σ, so a query ending in Σ still
+ * matches the same letter inside a word.
  */
 const fold = (s: string) =>
-  s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ς/g, "σ").replace(/\s+/g, " ").trim();
+  s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toUpperCase().toLowerCase().replace(/ß/g, "ss").replace(/ς/g, "σ").replace(/\s+/g, " ").trim();
+
+const graphemes = typeof Intl !== "undefined" && "Segmenter" in Intl ? new Intl.Segmenter(undefined, { granularity: "grapheme" }) : undefined;
+
+/** Whether `q` occurs in `text` starting and ending between whole characters (कल is not in कला). */
+function containsWhole(text: string, q: string) {
+  let at = text.indexOf(q);
+  if (at < 0 || !graphemes) return at >= 0;
+  const bounds = new Set<number>([text.length]);
+  for (const { index } of graphemes.segment(text)) bounds.add(index);
+  for (; at >= 0; at = text.indexOf(q, at + 1)) if (bounds.has(at) && bounds.has(at + q.length)) return true;
+  return false;
+}
 
 /** Whether any of the fields contains the query, ignoring case, accents and spacing. */
 export function matchesText(query: string, ...fields: (string | undefined | null)[]) {
   const q = fold(query);
   if (!q) return true;
-  return fields.some((f) => typeof f === "string" && fold(f).includes(q));
+  return fields.some((f) => typeof f === "string" && containsWhole(fold(f), q));
 }
 
 type Node = { type?: unknown; text?: unknown; content?: unknown };
