@@ -29,12 +29,14 @@ import {
   revision,
 } from "./operations";
 import { createPrompt } from "./learning/prompt-shape";
+import { bendFor, chooseAnchors } from "./connector-follow";
 import { convergeInput, placeBeside, synthesisText } from "./converge/model";
 import { overview } from "./overview";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
+import { importForAgent } from "./import-board";
 
 const cardInput = z.object({
   x: z.number().finite(),
@@ -47,6 +49,16 @@ const cardInput = z.object({
 /** A comfortable line of handwriting: about six words. */
 export const HUMAN_CARD_W = 300;
 const agentWidths = { agent: 420, heading: 440, quote: 380, code: 360 } as const;
+
+/**
+ * The style a card was written in, as agents name it on create: note, heading, quote or
+ * code; "handwriting" for the person's cards and "caption" for image captions.
+ */
+export function cardStyle(tone: unknown): string | undefined {
+  if (tone === "agent") return "note";
+  if (tone === "human") return "handwriting";
+  return typeof tone === "string" ? tone : undefined;
+}
 
 /** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
 export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}) {
@@ -229,12 +241,12 @@ export function connect(editor: Editor, value: unknown, actor: string, anchors?:
   const id = createShapeId();
   // Thariq-style connector: thin indigo line with a filled head. Arrows leaving the same
   // side of a card share one anchor point, so several of them fan out from it.
-  const dx = b.center.x - a.center.x, dy = b.center.y - a.center.y;
-  const vertical = Math.abs(dy) >= Math.abs(dx) * 0.6;
-  const startAnchor = anchors?.start ?? (vertical ? { x: 0.5, y: dy > 0 ? 1 : 0 } : { x: dx > 0 ? 1 : 0, y: 0.5 });
-  const endAnchor = anchors?.end ?? (vertical ? { x: 0.5, y: dy > 0 ? 0 : 1 } : { x: dx > 0 ? 0 : 1, y: 0.5 });
+  // Facing sides; src/connector-follow.ts re-picks them when either object moves.
+  const facing = chooseAnchors(a, b);
+  const startAnchor = anchors?.start ?? facing.start;
+  const endAnchor = anchors?.end ?? facing.end;
   // A fixed edge-to-edge route runs straight; the bend is tuned for the chosen sides only.
-  const bend = anchors ? 0 : Math.max(-60, Math.min(60, (vertical ? dx : -dy) * 0.12)) * (vertical ? (dy > 0 ? 1 : -1) : dx > 0 ? 1 : -1);
+  const bend = anchors ? 0 : bendFor(facing);
   editor.markHistoryStoppingPoint("connect objects");
   editor.run(() => {
     editor.createShape({
@@ -242,7 +254,7 @@ export function connect(editor: Editor, value: unknown, actor: string, anchors?:
       type: "arrow",
       x: a.x + startAnchor.x * a.w,
       y: a.y + startAnchor.y * a.h,
-      meta: { fromId, toId, relation: input.relation, createdBy: actor },
+      meta: { fromId, toId, relation: input.relation, createdBy: actor, ...(anchors ? { fixedAnchors: true } : {}) },
       props: {
         start: { x: 0, y: 0 },
         end: { x: b.x + endAnchor.x * b.w - (a.x + startAnchor.x * a.w), y: b.y + endAnchor.y * b.h - (a.y + startAnchor.y * a.h) },
@@ -376,7 +388,13 @@ export function createComment(editor: Editor, value: { targetIds?: string[]; x?:
   if (targets.length) {
     const boxes = targets.flatMap((t) => editor.getShapePageBounds(t) ?? []);
     if (!boxes.length) throw new Error("Target must have bounds");
-    const right = Math.max(...boxes.map((b) => b.maxX)), top = Math.min(...boxes.map((b) => b.y));
+    // A card inside a group (an imported record) is commented on from beside the whole group, level with the card.
+    const outer = (t: TLShape): TLShape => {
+      const parent = editor.getShape(t.parentId);
+      return parent?.type === "group" ? outer(parent) : t;
+    };
+    const around = targets.flatMap((t) => editor.getShapePageBounds(outer(t)) ?? []);
+    const right = Math.max(...boxes.map((b) => b.maxX), ...around.map((b) => b.maxX)), top = Math.min(...boxes.map((b) => b.y));
     const spot = freeSpot(editor, { x: right + 56, y: top, w: HUMAN_CARD_W, h: 72 }, new Set(targets.map((t) => t.id)));
     x = spot.x;
     y = spot.y;
@@ -469,6 +487,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         text:
           "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
         author: authorOf(s),
+        ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         meta: s.meta,
         asset,
       };
@@ -625,6 +644,7 @@ export async function executeCommand(
           : undefined;
       return {
         ...result,
+        ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         meta: s.meta,
         ...dataFields(editor, s, true),
         ...primitiveFields(editor, s),
@@ -687,6 +707,8 @@ export async function executeCommand(
       return setAskStatus(editor, command.input, actor);
     case "answer":
       return answerAsk(editor, command.input, actor);
+    case "import":
+      return importForAgent(editor, command.input, actor);
     case "remove": {
       const input = z
           .object({

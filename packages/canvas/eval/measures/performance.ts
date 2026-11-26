@@ -69,8 +69,13 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
       steps.push("loaded");
       await page.evaluate(() => void (window as any).__pairedEditor.zoomToFit());
       steps.push("fitted");
-      const pan = await frames(page);
-      results.push({ objects: size, buildMs: Math.round(buildMs), loadMs, panMedianFrameMs: round(pan.median), panP95FrameMs: round(pan.p95) });
+      // One pan sample swings by up to 2x on a busy machine (35 to 71 ms at 10k in one page), so
+      // the first sample is a discarded warm-up and the figure is the median of the next few.
+      await frames(page);
+      const samples = [];
+      for (let k = 0; k < PAN_SAMPLES; k++) samples.push(await frames(page));
+      const pan = summarisePan(samples);
+      results.push({ objects: size, buildMs: Math.round(buildMs), loadMs, panMedianFrameMs: pan.median, panP95FrameMs: pan.p95, panSampleMediansMs: pan.sampleMedians });
     } catch (error) {
       results.push({ objects: size, error: error instanceof Error ? error.message.split("\n")[0] : String(error), ...(process.env.EVAL_TRACE ? { steps } : {}) });
     } finally {
@@ -80,3 +85,14 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
   return results;
 }
 const round = (n: number) => Math.round(n * 10) / 10;
+
+const PAN_SAMPLES = Math.max(1, Number(process.env.EVAL_PAN_SAMPLES ?? 5));
+
+/** The median of the samples' medians and p95s, with each sample's median kept to show the spread. */
+export function summarisePan(samples: { median: number; p95: number }[]) {
+  const mid = (xs: number[]) => {
+    const s = [...xs].sort((a, b) => a - b);
+    return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+  };
+  return { median: round(mid(samples.map((x) => x.median))), p95: round(mid(samples.map((x) => x.p95))), sampleMedians: samples.map((x) => round(x.median)) };
+}

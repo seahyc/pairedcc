@@ -166,7 +166,7 @@ task by which measure is furthest from target, not by backlog order.
     `packages/canvas/eval/tasks/`, each with a machine-checked end state, a runner that sets each
     one up in a real tab, and a recorded attempt by a fresh agent that has only `AGENT_API.md` and
     the tools. Done when the scorecard reports a completion rate and median tool calls.
-19. (#32 and #35 merged; PR #39 open and awaiting review: restore from Menu → Earlier versions, open from Menu → Saved boards. Complete once all three merge.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
+19. (Merged, see Done: #32, #35, #39. restore from Menu → Earlier versions, open from Menu → Saved boards. Complete once all three merge.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
     their boards, open one, and restore an earlier revision from the canvas.
 21. (Merged, see Done.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
@@ -198,7 +198,7 @@ task by which measure is furthest from target, not by backlog order.
     the flag names the changed input (and the upstream cause for transitive staleness) in words a
     person can act on, is readable by assistive technology, with before/after screenshots.
 
-30. (PR #38 open, awaiting review.) **A board opened on another device can show nothing.** A board created on a 1440 px screen
+30. (Merged, see Done.) **A board opened on another device can show nothing.** A board created on a 1440 px screen
     and opened on a 390 px phone (board sync) opens on an empty view: its cards sit where the first
     screen's viewport was. Done when opening a board with no object in view frames its objects
     (never zooming past 100%), tested, with a 390 px screenshot before and after.
@@ -220,6 +220,21 @@ task by which measure is furthest from target, not by backlog order.
     but stay where they were placed." Done when moving an object moves the comments, agent notes
     and replies attached to it by the same amount (not those also being moved, not ones about
     several objects), as one undo step, tested, with before/after screenshots.
+
+50. (PR #71 open, awaiting review.) **Stale checks on shared inputs stay linear.** (From an automated review of #11, verified by
+    reading `staleChain`.) A shared upstream input is walked once per path: notes built on notes in
+    rounds make the board's stale badges and `read` grow exponentially (millions of visits after
+    20 rounds). Done when staleness is computed once per object per pass, `read` reports repeated
+    causes by reference or bounded, and a test with 20 rounds of shared inputs runs fast.
+51. (PR #68 open, awaiting review.) **CSV import keeps what the file says.** (From an automated review of #18, verified.) (a) A
+    numeric column with integers beyond 2^53 (long IDs) is rounded, merging distinct IDs: keep it
+    as text. (b) A one-column file drops rows whose value is a quoted empty string. (c) A
+    Windows-1252 file imports with replacement characters: decode strictly and say to re-export as
+    UTF-8. Done when each has a failing-first test and is fixed.
+52. (PR #72 open, awaiting review.) **Stale flags never spoil a hidden answer, and are readable by keyboard.** (From an automated
+    review of #34.) The stale reason quotes an input's name even when that input is hidden behind
+    a learning prompt; and the full reason is only in a hover tooltip. Done when hidden inputs are
+    unnamed in the flag and the full reason is reachable without a pointer.
 
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 28. (Merged, see Done.) **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
@@ -286,7 +301,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     when a scripted check restores, reloads at once and still sees the restored board, for example
     by recording in the memo what content was synced and re-reading the account when it differs.
 
-44. **Asks carry the person's picks and cross-outs.** `docs/canvas/principles.md`, finding 6
+44. (PR #64 open, awaiting review.) **Asks carry the person's picks and cross-outs.** `docs/canvas/principles.md`, finding 6
     (comparing beats describing): "picking one does not carry it forward." An ask's context lists
     the selected objects and the exchange behind them, but not which options the person picked (P)
     or crossed out (X), although the board shows both; an agent asked to "take this further" about
@@ -295,7 +310,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     sibling options with their marks, the resident agent's prompt says to build on picks and not
     offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
 
-45. **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
+45. ((a) to (c): PR #66 open, awaiting review; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): PR #70 open, awaiting review. (d): PR #76 open, awaiting review.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
     failing test first, then a fix or a recorded decision: (a) after a board is deleted and
     recreated under the same ID, a save or delete holding the old revision number is accepted
     (revisions restart at 1); (b) PostgreSQL `JSONB` rejects a snapshot holding an unpaired UTF-16
@@ -306,14 +321,69 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     made while the account's board is loading are replaced (only objects created in that window are
     carried over).
 
+47. (Renumbered from 45 to avoid a clash. PR #67 open, awaiting review; stacked on #64.) **An ask about a frame is about what it holds.** `docs/canvas/principles.md`, finding 3
+    (spatial thinking comes first: inside) and finding 2 (moving things is thinking). Selecting a
+    frame and asking gives the agent only "(Pricing, no text)": an ask's `frame` field is the
+    frame the selection sits in, so a selected frame's own contents are never sent, though the
+    ask outlines the frame as its context. Done when a selected frame target carries the objects
+    inside it (nested frames included, reading order, capped, with marks and a count of what was
+    left out), the resident prompt lists them under the frame, documented, unit-tested and checked
+    in a real tab.
+
+46. (PR #69 open, awaiting review; stacked on #64 and #67.) **An answer lands on its ask's page.** `docs/canvas/principles.md`, "Not done": "An ask on a
+    page that is not open fails with a message and a retry." If the person asks, then opens another
+    page while waiting (the ask loop invites moving on), `answer` throws "That ask is on another
+    page" and the ask shows failed although the agent answered. Done when an answer is placed under
+    its ask on the ask's own page whatever page is open, the person on another page is told who
+    answered and where, the principles' "Not done" line is updated, unit-tested, and checked in a
+    real tab (failing before, passing after).
+53. (PR #74 open, awaiting review.) **`canvas_read` can find objects by their text.** The fresh agent reported that `canvas_read`
+    is large and has no text filter (Decisions needed, 13), so finding "the card about pricing"
+    means reading everything. Done when `read` accepts a `text` filter (case-insensitive, matched
+    against an object's text and name) that combines with `ids`, the tool definition and AGENT_API
+    document it, unit tests cover matching, and a live MCP call shows the smaller result.
+
+54. **Text never leaves its container, even without spaces.** The brief's rule ("Text never leaves
+    its container") is checked only with ordinary prose (`verify-calm.mjs`). Done when a long URL,
+    a long unbroken word, a code card and a long frame name each stay inside their card, comment,
+    answer or frame in a real page at 1440 and 390 px, checked by a script that fails before the fix,
+    with before/after screenshots.
+55. (PR #75 open, awaiting review.) **Board history reaches back more than a few minutes.** Sync saves after every pause, so the
+    50 kept revisions cover a few minutes of work and "Earlier versions" cannot reach yesterday.
+    Done when the server keeps the newest 20 revisions and thins older ones to about one per 15
+    minutes (still at most 50 per board), by one tested pure rule used by both stores, checked
+    against real Postgres, with the choice recorded.
+
+56. **A dropped or pasted image arrives at a size that fits beside your thoughts.** Feedback 8
+    ("it should render in a way that's super intuitive") and the calm brief (one obvious thing on
+    screen). An image is placed at its pixel size, so a 3000 px photo covers the whole board and
+    every card on it (seen while checking item 45 (d)). Done when an image the person adds is
+    placed no larger than a set size on its longest side (keeping its shape and its full-resolution
+    asset, and leaving small images alone), agent `canvas_image` sizes are untouched, unit-tested,
+    with before and after screenshots of a dropped photo.
+56. **`read`'s text filter: three matching gaps (review of #74, marked optional).** (a) Search text
+    is built with `richTextPlain`, which puts a space between formatting runs, so a word that is
+    partly bold ("**pr**icing") does not match; join inline runs without a separator. (b) Greek
+    final sigma: lowercasing makes a query's `ς` differ from a mid-word `σ`; fold `ς` to `σ`.
+    (c) Stripping every Unicode mark also erases Devanagari vowel signs (`दिन` matches `दीन`); strip
+    only combining diacritics (U+0300 to U+036F). Done when each has a failing test, then a fix.
+    Build on #74 once it merges.
+
 ## Claims
-44. Asks carry picks and cross-outs | claude/sprint-ask-marks | 2026-11-26T11:55Z
+56. Dropped images fit beside your thoughts | claude/sprint-image-size | 2026-11-26T12:16Z
+54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 45 (d). Images survive a clean profile (build-B): PR #76.
+- 52. Stale flags readable without a pointer (build-B): PR #72 ((a) was already true as #34 merged; now pinned by tests).
+- 46. Answer lands on its ask's page (build-B): PR #69, stacked on #64 and #67.
+- 47. Ask about a frame gives its contents (build-B): PR #67, stacked on #64.
+- 44. Asks carry picks and cross-outs (build-B): PR #64.
 - 40. Say which tool answers feedback (build-A): PR #53.
+- Reviewed and merged 2026-11-26 by the review lane: #38 as e489580, #39 as e53322f.
 - Reviewed and merged 2026-11-26 by the review lane: #33 as 2b83999, #34 as 0f1807f, #35 as 6b92e2f, #36 as bac1a93.
 - Reviewed and merged 2026-11-26 by the review lane: #24 as 984374b, #29 as 2a36db5, #30 as e8b3218, #31 as 66678b5, #32 as b8b30a3 (each after merging in the integration branch and re-running its proof; fixes noted in the Log).
 - 37. read reports card style (build-A): PR #51.
@@ -341,6 +411,11 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B, item 45 d) Images the person adds are kept inside the board snapshot as data URLs, with photos over 1.5 MB scaled to 2048 px WebP, rather than in a server asset store. This needs no new storage or secret, and images count toward the 10 MB board limit (a refused save says so). Images added before this move into the board once sync is listening. Alternative: a server asset store with per-account quotas when boards outgrow this.
+- (build-B, item 52) A stale flag opens its whole reason when its object is selected (under the object, clear of the selection bar) or when the flag is focused with Tab (growing upward). Unselected, it stays one line. Part (a), never naming a hidden input, was already in #34 as merged; it is now pinned by unit tests rather than changed.
+- (build-B, item 46) An answer to an ask on another page is placed on the ask's page, and the person sees a toast naming who answered and on which page. The board never switches their page for them, because moving their view uninvited would undo their own navigation. Alternative: a "Go there" button in the toast.
+- (build-B, item 47) A selected frame's contents go to the agent as `inside` on that target: up to 20 objects in reading order, with nested frames walked into and `insideMore` counting the rest. Objects with neither text nor media (ink strokes, empty shapes) are left out, as `frame.objects` already does.
+- (build-B, item 44) An ask gives the person's marks on every object it hands over, and an ask about one option also gives that answer's other options (each object once). The resident prompt tells the model to build on picks and not re-offer crossed-out ideas. Marks are not a filter: crossed-out objects are still sent, labelled, because the board still shows them.
 - (build-A, item 35) Every connector made by `connect` (agent connections, annotations, feedback) now re-picks facing sides when an end moves, not only annotations; connectors given explicit anchors (converge) and arrows the person draws are left alone. #31 and #48 both touch `connect`; whichever merges second rebases. Claim 36 (comments move with their target, `claude/sprint-follow`) is next to #48: #48 re-picks arrow sides when either end moves, it does not move the comment.
 - (review, #26) `canvas_get`'s prototype fields (relationships, source, transformation) are not behind a flag; they are read-only and add nothing to the board.
 - (build-A, item 5) The person's synthesis card starts empty so the conclusion is theirs (augmentation principle); alternative: prefill an agent draft to edit. build-A had built converge in parallel before seeing #27; rather than open a competing PR it rebuilt its additions on #27 as #31.
@@ -413,6 +488,15 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (build-B, item 41) The scorecard gains an "Ask loop" row next to the maintainer's measures (target: every step passes). It runs with no resident agent, so step 1 accepts any line that gives a way to an answer ("pnpm …", "chat", "Connect an agent" or "Waiting for …"). Answer cards may sit up to 400 px from their ask.
 
 - (review, #33) `canvas_group` was let in as an ordinary tool although it comes from the spec's proposed agent interface list, because the list's other verbs already are ordinary tools. Alternative: a flagged prototype (`?prototype=group`).
+- (build-B) Security note for the maintainer (from an automated review of #19, not changed): `e2e/serve.mjs` writes the test server's output, including live magic links, to a log in the system temp directory with default file permissions, so another local user could read and redeem a link while the test runs. It is test-only and the accounts are synthetic; restricting the file mode (0600) is a one-line change if you want it.
+
+- (build-B, item 45a) Not fixed: after a board is deleted and recreated under the same ID, revisions restart at 1, so a client holding an old revision number could save over the new board. No client deletes boards (the canvas has no delete). Keeping revisions continuous needs a tombstone table, which means a new migration that runs on server start and reaches production. Product choice: add the tombstone migration, or keep deletion API-only and say so in the API docs.
+
+- (build-A, feedback 8) Import follow-ups are stacked: #46 (bring yc/import-paste in) ← #55 (side by side) ← #58 (cited sections); #46 ← #60 (.xlsx); #46 ← #65 (web pages) ← #73 (PDF). #60 and #73 touch adjacent lines of `import-ui.tsx`. Side by side and cited sections **move** objects (one undo) rather than copy them, so text is never on the board twice; the cited-section arrows use the person's ink. Only the first sheet of a workbook is read; PDFs and workbooks are read by small built-in readers rather than SheetJS or pdf.js (less coverage, no new dependency). Feedback item 8 stays open for the second playtest.
+- (build-A, item 51) A non-UTF-8 CSV is refused with a fix rather than guessed as Windows-1252; precision is kept (long IDs stay text) but `007` and `0x10` still read as numbers (item 13 decision unchanged).
+- (build-A, item 50) Repeated stale causes are reported by reference (`repeated: true`), not cut off by depth.
+
+- (build-B, item 55) Board history keeps the newest 20 revisions, then the newest revision in each older 15-minute wall-clock slot, 50 in all (the storage bound is unchanged). A day of editing then reaches back hours instead of minutes. The dev board store still keeps the newest 50. Alternatives: hour-long slots for older revisions, or a byte budget per account instead of a count.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -474,3 +558,21 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:45Z | review | Review #33 to #36 | #33 #34 #35 #36 | All four merged (squash) after merging in the integration branch and re-running each proof; #34 no longer names a hidden input; scorecard on bac1a93: all six rows pass (acceptance 10/10, agent usability 21/21, safety 9/9, persistence, 10k pan 37.3 ms, existing product with throwaway services) |
 | 2026-11-26T11:46Z | build-A | 35 follow-up | #48 | Bot findings fixed: undo after re-route, frame moves, copied connectors; merged base; scorecard all pass. Filed item 45 from bot review of merged #12/#15 |
 | 2026-11-26T11:45Z | build-B | 42 Restored board survives an immediate reload | #59 | Memo records a content hash; restore + reload at 0 ms keeps the restored board (lost before); acceptance, persistence, safety unchanged |
+| 2026-11-26T11:55Z | review | Review #38 #39 | #38 #39 | Both merged (squash) after merging in the integration branch; #38 reproduced at 390 px after a 1440 px save; #39 driven with one tab and two; scorecard on e53322f: five rows pass, 10k pan flagged at 77.9 ms and re-measured at 35 ms on the same commit |
+| 2026-11-26T11:52Z | build-B | 44 Asks carry picks and cross-outs | #64 | Targets, frame objects and history report `mark`; sibling options given; real tab 5/8 before, 8/8 after; scorecard unchanged (10k pan noise seen on the old code too) |
+| 2026-11-26T11:52Z | build-B | Review fixes on merged PRs | #61 #62, #52 | Board-limit overwrite of the account's board fixed (#61); learning prompts no longer hide human comments or frames holding human work (#62); frame moves in #52; items 50 to 52 filed from the remaining findings |
+| 2026-11-26T11:53Z | build-B | 45 Board sync gaps (a)-(c) | #66 | Lone surrogates no longer fail a Postgres save (reproduced on PostgreSQL 16); merged changes stay out of undo (reproduced in two browsers); (a) recorded as a decision |
+| 2026-11-26T11:57Z | build-B | 47 Ask about a frame gives its contents | #67 | Frame target lists what it holds (nested, reading order, marks); real tab 4/6 before, 6/6 after; scorecard unchanged apart from 10k pan noise |
+| 2026-11-26T11:58Z | build-A | Feedback 8 import, parts 4 and 5 | #60 #65 | #60 .xlsx workbooks read without a dependency (same plan as the paste, fuzzed; verify-import 51/51); #65 web pages and copied web content as section cards (verify-webpage 9/9, verify-import 47/47); both stacked on #46 only |
+| 2026-11-26T11:58Z | build-A | 51 CSV keeps what the file says | #68 | Long IDs stay text, quoted-empty rows kept, non-UTF-8 refused with a fix; 5 failing-first tests, 3 mutations each fail; browser check 5/5; scorecard unchanged |
+| 2026-11-26T11:59Z | build-B | 42 review fixes, 41 review fix | #59 #56 | #59: second-reload, in-flight-save and connecting-edit gaps fixed with failing-first tests, merged with #39; #56: the Ask loop runs on its own dev server so a resident agent never gets the fixture asks |
+| 2026-11-26T12:02Z | build-B | 46 Answer lands on its ask's page | #69 | Answer placed on the ask's page with a toast where the person is; real tab 2/7 before, 7/7 after; first screen unchanged; scorecard unchanged apart from 10k pan noise |
+| 2026-11-26T12:08Z | build-B | 45 Board sync gap (e) | #70 | Edits to existing objects made while the account's board loads are kept, field by field (reproduced with a delayed GET in two browsers); derived fields and welcome boards never carried |
+| 2026-11-26T12:05Z | build-A | 50 Stale checks stay linear | #71 | Memoised per object, repeated causes by reference; 16-round read 1772 ms/28 MB → 8 ms/93 KB, 18 rounds no longer hangs; 3 failing-first tests; scorecard unchanged |
+| 2026-11-26T12:16Z | build-B | 45 review fixes | #66 | Colliding keys refused with 400 (no silent column loss); tab applies the server's repair before saving so a deletion survives a merge; restore clears undo and redo; names clipped without splitting a character |
+| 2026-11-26T12:10Z | build-B | 52 Stale flags readable without a pointer | #72 | Full reason on select and on keyboard focus; hidden-input rule pinned by tests; real tab 5/8 before, 8/8 after; first screen unchanged; scorecard unchanged |
+| 2026-11-26T12:12Z | build-B | 45e review fixes | #70 | Parent and position carried as one unit, only under a parent still on the board (no orphans, no wrong-frame coordinates); object revisions never reused |
+| 2026-11-26T12:13Z | build-A | Feedback 8 import, part 6 | #73 | Text PDFs as section cards without a library (ToUnicode, layout from size and position, list by indent); Chromium-printed and hand-written fixtures; fuzzed; verify-pdf 7/7; stacked on #65 |
+| 2026-11-26T12:14Z | build-B | 53 canvas_read text filter | #74 | `read` takes `text` (case- and accent-insensitive, with `ids`); live MCP read 5 objects/3,145 B to 2/1,577 B; manifest regenerated; root build green |
+| 2026-11-26T12:24Z | build-B | 55 Board history thinning | #75 | Newest 20 plus one per 15-minute slot, 50 max; 10 h of saves every 5 min spans more than 8 h (was about 4); checked on PostgreSQL 16; root build green |
+| 2026-11-26T12:17Z | build-B | 45 (d) Images survive a clean profile | #76 | Images kept in the board; older ones moved in once sync listens; real tabs: fresh 2/5 before, 5/5 after; legacy 4/4; scorecard unchanged |
