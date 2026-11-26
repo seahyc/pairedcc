@@ -57,6 +57,7 @@ defensible option, record the choice and the reason under Decisions needed, and 
 8. **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
 
 ## Claims
+2. Acceptance scenario prototype | claude/sprint-acceptance-dataset | 2026-11-26T08:45Z
 
 ## Done
 
