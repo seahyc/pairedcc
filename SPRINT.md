@@ -321,7 +321,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     made while the account's board is loading are replaced (only objects created in that window are
     carried over).
 
-45. (PR #67 open, awaiting review; stacked on #64.) **An ask about a frame is about what it holds.** `docs/canvas/principles.md`, finding 3
+47. (Renumbered from 45 to avoid a clash. PR #67 open, awaiting review; stacked on #64.) **An ask about a frame is about what it holds.** `docs/canvas/principles.md`, finding 3
     (spatial thinking comes first: inside) and finding 2 (moving things is thinking). Selecting a
     frame and asking gives the agent only "(Pricing, no text)": an ask's `frame` field is the
     frame the selection sits in, so a selected frame's own contents are never sent, though the
@@ -339,6 +339,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     real tab (failing before, passing after).
 
 ## Claims
+52. Stale flags never spoil a hidden answer | claude/sprint-stale-hidden | 2026-11-26T12:00Z
 50. Stale checks on shared inputs stay linear | claude/sprint-stale-linear | 2026-11-26T12:02Z
 45. Board sync gap (e): edits while the account's board loads | claude/sprint-load-edits | 2026-11-26T11:59Z
 46. Answer lands on its ask's page | claude/sprint-answer-page | 2026-11-26T11:57Z
@@ -347,7 +348,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
-- 45. Ask about a frame gives its contents (build-B): PR #67, stacked on #64.
+- 47. Ask about a frame gives its contents (build-B): PR #67, stacked on #64.
 - 44. Asks carry picks and cross-outs (build-B): PR #64.
 - 40. Say which tool answers feedback (build-A): PR #53.
 - Reviewed and merged 2026-11-26 by the review lane: #38 as e489580, #39 as e53322f.
@@ -378,7 +379,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
-- (build-B, item 45) A selected frame's contents go to the agent as `inside` on that target: up to 20 objects in reading order, with nested frames walked into and `insideMore` counting the rest. Objects with neither text nor media (ink strokes, empty shapes) are left out, as `frame.objects` already does.
+- (build-B, item 47) A selected frame's contents go to the agent as `inside` on that target: up to 20 objects in reading order, with nested frames walked into and `insideMore` counting the rest. Objects with neither text nor media (ink strokes, empty shapes) are left out, as `frame.objects` already does.
 - (build-B, item 44) An ask gives the person's marks on every object it hands over, and an ask about one option also gives that answer's other options (each object once). The resident prompt tells the model to build on picks and not re-offer crossed-out ideas. Marks are not a filter: crossed-out objects are still sent, labelled, because the board still shows them.
 - (build-A, item 35) Every connector made by `connect` (agent connections, annotations, feedback) now re-picks facing sides when an end moves, not only annotations; connectors given explicit anchors (converge) and arrows the person draws are left alone. #31 and #48 both touch `connect`; whichever merges second rebases. Claim 36 (comments move with their target, `claude/sprint-follow`) is next to #48: #48 re-picks arrow sides when either end moves, it does not move the comment.
 - (review, #26) `canvas_get`'s prototype fields (relationships, source, transformation) are not behind a flag; they are read-only and add nothing to the board.
@@ -520,7 +521,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:52Z | build-B | 44 Asks carry picks and cross-outs | #64 | Targets, frame objects and history report `mark`; sibling options given; real tab 5/8 before, 8/8 after; scorecard unchanged (10k pan noise seen on the old code too) |
 | 2026-11-26T11:52Z | build-B | Review fixes on merged PRs | #61 #62, #52 | Board-limit overwrite of the account's board fixed (#61); learning prompts no longer hide human comments or frames holding human work (#62); frame moves in #52; items 50 to 52 filed from the remaining findings |
 | 2026-11-26T11:53Z | build-B | 45 Board sync gaps (a)-(c) | #66 | Lone surrogates no longer fail a Postgres save (reproduced on PostgreSQL 16); merged changes stay out of undo (reproduced in two browsers); (a) recorded as a decision |
-| 2026-11-26T11:57Z | build-B | 45 Ask about a frame gives its contents | #67 | Frame target lists what it holds (nested, reading order, marks); real tab 4/6 before, 6/6 after; scorecard unchanged apart from 10k pan noise |
+| 2026-11-26T11:57Z | build-B | 47 Ask about a frame gives its contents | #67 | Frame target lists what it holds (nested, reading order, marks); real tab 4/6 before, 6/6 after; scorecard unchanged apart from 10k pan noise |
 | 2026-11-26T11:58Z | build-A | Feedback 8 import, parts 4 and 5 | #60 #65 | #60 .xlsx workbooks read without a dependency (same plan as the paste, fuzzed; verify-import 51/51); #65 web pages and copied web content as section cards (verify-webpage 9/9, verify-import 47/47); both stacked on #46 only |
 | 2026-11-26T11:58Z | build-A | 51 CSV keeps what the file says | #68 | Long IDs stay text, quoted-empty rows kept, non-UTF-8 refused with a fix; 5 failing-first tests, 3 mutations each fail; browser check 5/5; scorecard unchanged |
 | 2026-11-26T11:59Z | build-B | 42 review fixes, 41 review fix | #59 #56 | #59: second-reload, in-flight-save and connecting-edit gaps fixed with failing-first tests, merged with #39; #56: the Ask loop runs on its own dev server so a resident agent never gets the fixture asks |
