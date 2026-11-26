@@ -1459,7 +1459,21 @@ function App() {
     });
     editor.sideEffects.registerAfterChangeHandler("shape", (_previous, next) => wrapText(next));
     // What the person moves takes its comments, notes and replies along (same step, same undo).
+    // Undo and redo restore followers from history themselves, so following pauses while they run.
+    let replaying = false;
+    for (const name of ["undo", "redo"] as const) {
+      const original = editor[name].bind(editor);
+      editor[name] = () => {
+        replaying = true;
+        try {
+          return original();
+        } finally {
+          replaying = false;
+        }
+      };
+    }
     editor.sideEffects.registerAfterChangeHandler("shape", (previous, next) => {
+      if (replaying) return;
       const dx = next.x - previous.x, dy = next.y - previous.y;
       if ((!dx && !dy) || previous.parentId !== next.parentId) return;
       const selected = new Set<string>(editor.getSelectedShapeIds());
