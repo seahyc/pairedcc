@@ -379,7 +379,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     browser A restores an earlier revision after browser B saved a newer edit; the restore is
     refused and B's edit is still on the server and in A after reload (0 human edits lost).
 
-60. (Renumbered from 59 to avoid a clash.) **Key hints name the person's own keys.** `docs/canvas/principles.md`, finding 7 (recognising
+60. (Renumbered from 59 to avoid a clash. PR #83 open, awaiting review.) **Key hints name the person's own keys.** `docs/canvas/principles.md`, finding 7 (recognising
     beats recalling) and playtest item 6 ("I don't know how to trigger the agent"). Every hint on
     screen says ⌘↵ (selection bar, typing hint, tooltips, shortcut sheet, the first board's card),
     but on Windows and Linux the key is Ctrl, so the one way to ask is named in a key those people
@@ -388,12 +388,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     screen or the selection bar, and screenshots.
 
 ## Claims
-60. Key hints name the person's own keys | claude/sprint-mod-keys | 2026-11-26T12:30Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 60. Key hints in the person's own keys (build-A): PR #83 (Ctrl on Windows, Linux and Android, ⌘ on Apple; verify-keys 10/16 → 16/16).
 - 57. Dev board store survives its folder being removed (build-B): PR #81.
 - 54. Text and the next step stay inside the window (build-A): PR #80 (unbroken text already wrapped; the selection bar, Ask box and ask state line ran off a 390 px phone and the bar off a desktop's right edge; fixed, 11/20 to 20/20).
 - 56. Dropped images fit beside your thoughts (build-B): PR #77.
@@ -431,6 +431,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 60) The first board's "How to ask" card is board text, written in the keys of the device that laid it out; a board seeded on a Mac and opened on Windows keeps ⌘↵ on that card while the bar and hints say Ctrl. Alternative: render that card's key at display time.
 - (build-B, item 47) With frame contents sent on an ask (#67), a selected frame now gets group starters ("What do these have in common?", "What is missing from this group?", "Which of these matters most?"). #42 had held these back because the frame's children were not sent. Charts still get the default three.
 - (build-A, item 54) On a window too narrow for the selection bar or Ask box beside the tool strip (phones), they cover the strip while open rather than leave the screen. An ask's state line now wraps within its card's width (260 to 640 px) instead of running on in one line. Alternative: hide the tool strip while asking on phones.
 - (build-B, item 56) An image the person drops, pastes or imports first lands at most 600 on its longest side (about two card widths, whole on a laptop screen at 100%). The asset keeps full resolution and small images keep their size. Agent images with an explicit size are untouched. Alternative: fit to a share of the current view.
@@ -607,3 +608,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:27Z | build-A | 54 Text and next step inside the window | #80 | verify-contain 11/20 → 20/20 at 1440 and 390 px (Ask box send button was off a phone screen, Send again too); 8 failing-first unit tests; first screen unchanged; scorecard unchanged |
 | 2026-11-26T12:29Z | build-B | 59 Safety race for restore | #82 | Safety 9 to 10 races, 0 lost; a restore that overwrites instead of writing conditionally fails it (1 lost) |
 | 2026-11-26T12:30Z | build-B | 57 Dev board store folder; merge-ups | #81 #64 #67 #69 #76 | Failing-first test and live check for #81. #64, #67, #69 and #76 merged up after the import lane's merge; checks re-run on the merged code: 8/8, 6/6, 7/7, 5/5 |
+| 2026-11-26T12:45Z | build-A | 60 Key hints in the person's own keys | #83 | Windows browser saw ⌘ on every hint; verify-keys 10/16 → 16/16; 5 unit tests; first screen layout unchanged; scorecard unchanged |
