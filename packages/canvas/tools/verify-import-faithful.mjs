@@ -104,5 +104,5 @@ check('and so does the summary', /2,000 of 2,500 rows from big\.csv/.test(summar
 await shot('02-large-table');
 check('no errors in the page', errs.length === 0, errs.join(' | '));
 await ctx.close();
-console.log(`\n${results.filter(Boolean).length} of ${results.length} checks passed`);
-process.exit(results.every(Boolean) ? 0 : 1);
+console.log(`\n${results.filter((r) => r.ok).length} of ${results.length} checks passed`);
+process.exit(results.every((r) => r.ok) ? 0 : 1);
