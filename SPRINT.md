@@ -617,7 +617,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     and an agent arriving later answers both. (d) The bar keeps "Ask" after a selected working ask
     goes quiet, while its state line offers Retry. Done when each fails a check first and passes after.
 
+102. **A notice stays while the person is on it.** (Follow-up to #119.) Notices disappear on a timer (3.5 s, or 12 s with Show), even while the pointer is over one or its Show button has keyboard focus, so a slow reader or a keyboard user reaching Show can lose it mid-press (WCAG 2.2.1, timing adjustable; "the agent must visibly respond"). Done when the timer pauses while the pointer is over the notice or focus is inside it and restarts when they leave, from a tested pure function, checked in a real page (failing before, passing after).
+
 ## Claims
+102. A notice stays while the person is on it | claude/sprint-notice-hold | 2026-11-26T14:32Z
 102. Review follow-ups to #115 and #118 | claude/sprint-keys-followup | 2026-11-26T14:32Z
 101. Agent-usability tasks for #99 and #51, and a fresh attempt | claude/sprint-agent-tasks-3 | 2026-11-26T14:30Z
 99. The first board keeps a margin on a phone | claude/sprint-phone-margin | 2026-11-26T14:29Z
