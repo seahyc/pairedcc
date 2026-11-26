@@ -97,6 +97,9 @@ export function createBoardSync(o: SyncOptions) {
   let started = false;
   let synced = "";
   let base: Snapshot | null = null;
+  // The board as it was when sync was created; edits made while the account's board is
+  // loading are merged onto it instead of being replaced.
+  const initial = o.local.snapshot();
   let status: SyncStatus = { state: "local" };
   const emit = (s: SyncStatus) => {
     status = s;
@@ -225,10 +228,16 @@ export function createBoardSync(o: SyncOptions) {
         if (!copy.ok) throw new Error(copy.stale ? `Board ${id} already exists` : copy.error);
         note = `This browser's earlier board was saved to your account as "${id}".`;
       }
-      apply(server.snapshot);
+      const current = o.local.snapshot();
+      const editedWhileLoading = JSON.stringify(current) !== JSON.stringify(initial);
+      apply(editedWhileLoading ? mergeSnapshots(initial, current, server.snapshot).snapshot : server.snapshot);
       base = server.snapshot;
-      synced = JSON.stringify(o.local.snapshot());
       revision = server.revision;
+      if (editedWhileLoading) {
+        started = true;
+        return await push(note ?? "Kept the changes made while your board was loading.");
+      }
+      synced = JSON.stringify(o.local.snapshot());
       remember(false);
       emit({ state: "saved", account, revision, at: now().getTime(), ...(note ? { note } : {}) });
     } catch (error) {

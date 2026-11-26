@@ -239,7 +239,7 @@ describe("board sync and late store events", () => {
     await srv.api.put("main", 0, snap("from laptop"));
     const b = browser(snap("welcome"));
     const { s } = sync(srv, b, false);
-    b.edit("welcome, laid out"); // reported late, before start() ran
+    b.edit("welcome"); // the layout is already in the store; only its event arrives late
     await s.start();
     expect(text(b.doc)).toBe("from laptop");
     expect([...srv.boards.keys()]).toEqual(["main"]);
@@ -303,5 +303,20 @@ describe("board sync merges a stale save", () => {
     expect(values(srv.boards.get("main")!.snapshot)).toEqual({ a: "edited elsewhere", n: "new here" });
     expect(values(b.doc)).toEqual({ a: "edited elsewhere", n: "new here" });
     expect(last()).toMatchObject({ state: "saved", note: "Merged changes from another tab or device." });
+  });
+});
+
+describe("board sync during the first load", () => {
+  it("merges edits made while the account's board was loading instead of replacing them", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, doc({ a: "from laptop" }));
+    const b = browser(doc({ w: "welcome" }));
+    const { s, last } = sync(srv, b, false);
+    const started = s.start();
+    b.local.load(doc({ w: "welcome", n: "typed while loading" })); // a real edit before start finished
+    await started;
+    expect(values(b.doc)).toEqual({ a: "from laptop", n: "typed while loading" });
+    expect(values(srv.boards.get("main")!.snapshot)).toEqual({ a: "from laptop", n: "typed while loading" });
+    expect(last()).toMatchObject({ state: "saved", revision: 2, note: expect.stringContaining("while your board was loading") });
   });
 });

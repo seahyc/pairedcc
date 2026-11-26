@@ -56,10 +56,12 @@ if (want("workspace")) {
   log("eval: workspace build and tests…");
   raw.workspace = workspace();
 }
-// Measures skipped with --only keep their previous results, marked as carried over.
+// Measures skipped with --only keep their previous results, marked as carried over. A
+// measure that was run but crashed is reported as not run, never carried over.
 const carried: string[] = [];
+const option: Record<string, string> = { agentUsability: "agent" };
 for (const key of ["acceptance", "agentUsability", "safety", "persistence", "performance", "workspace"] as const)
-  if (raw[key] === undefined && previous?.raw?.[key] !== undefined) {
+  if (raw[key] === undefined && !want(option[key] ?? key) && previous?.raw?.[key] !== undefined) {
     (raw as Record<string, unknown>)[key] = previous.raw[key];
     carried.push(key);
   }

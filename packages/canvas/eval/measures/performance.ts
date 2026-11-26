@@ -1,4 +1,4 @@
-import { openCanvas, ready, type Browser } from "../lib";
+import { openCanvas, ready, savedToAccount, type Browser } from "../lib";
 
 // Load time and pan frame time for boards of 1k and 10k objects. The board is built
 // with the editor directly (development builds expose it) because building 10k
@@ -49,8 +49,9 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
       if (built.created < size) throw new Error(`only ${built.created} of ${size} objects could be created on one page (tldraw's default maxShapesPerPage is 4,000)`);
       const buildMs = built.ms;
       steps.push("built");
-      // Let the board persist to IndexedDB before reloading.
+      // Let the board persist (IndexedDB, and the account when there is one) before reloading.
       await page.waitForTimeout(Math.max(2000, size));
+      await savedToAccount(page, 30000);
       steps.push("persisted");
       const t = Date.now();
       await page.reload();

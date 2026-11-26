@@ -106,6 +106,31 @@ export async function ready(page: Page) {
     .catch(() => undefined);
 }
 
+/**
+ * Wait until the board is saved to the account (or the development board store), as a
+ * person would before closing the tab: nothing unsaved and no save in flight. Returns
+ * false if the board never reports being saved there (for example, no board storage).
+ */
+export async function savedToAccount(page: Page, timeout = 20000): Promise<boolean> {
+  await sleep(300);
+  return page
+    .waitForFunction(
+      () => {
+        const el = document.querySelector(".save-state");
+        let memo: { dirty?: boolean } | null = null;
+        try {
+          memo = JSON.parse(localStorage.getItem("paired-board-sync") ?? "null");
+        } catch {
+          /* unreadable memo counts as unsaved */
+        }
+        return !!el && el.textContent?.startsWith("Saved to") && !el.classList.contains("saving") && memo?.dirty === false;
+      },
+      null,
+      { timeout },
+    )
+    .then(() => true, () => false);
+}
+
 /** The relay session ID of a tab, once the tab has connected to the relay. */
 export async function sessionOf(page: Page, base: string): Promise<string> {
   const id: string = await page.evaluate(() => sessionStorage.getItem("picabird-agent-session"));
