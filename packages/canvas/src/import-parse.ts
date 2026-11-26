@@ -113,7 +113,8 @@ function cellText(html: string) {
 export function htmlTableHasHeader(html: string): boolean {
   const table = /<table[\s\S]*?<\/table>/i.exec(html)?.[0];
   const first = table && /<tr[^>]*>([\s\S]*?)<\/tr>/i.exec(table)?.[1];
-  return Boolean(first && /<th\b/i.test(first) && !/<td\b/i.test(first));
+  // One <th> on its own (usually spanning the table) is a title above the header, not the header.
+  return Boolean(first && (first.match(/<th\b/gi)?.length ?? 0) > 1 && !/<td\b/i.test(first));
 }
 
 /** The first table in an HTML fragment as rows of cell text, or null when there is none. */
