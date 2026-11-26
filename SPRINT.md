@@ -420,7 +420,19 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested rule, checked in a headless phone emulation (failing before, passing after) with
     screenshots; desktop unchanged.
 
+67. **The person chooses what an ask leaves out (prototype, `?prototype=context`).** Solveit:
+    "hidden messages are excluded from AI context"; the brief: "the context the agent sees is
+    visible and chosen by the person"; `principles.md` lists hiding objects from context as not
+    borrowed yet. An ask sends every text object in the selection's frame and the whole thread,
+    with no way to keep a draft or an aside out. Done when, in a tab with `?prototype=context`, the
+    person can mark objects "left out" from the selection bar (one key), a left-out object looks
+    left out on the board, is never given to an agent through an ask's frame objects, record parts
+    or history (an object the person selects for the ask is still given), the ask says how many
+    were left out, tabs without the flag behave as before, unit-tested and checked in a real tab
+    with before/after screenshots.
+
 ## Claims
+67. The person chooses what an ask leaves out | claude/sprint-context-leave-out | 2026-11-26T12:50Z
 66. Touch screens say tap | claude/sprint-touch-hints | 2026-11-26T12:42Z
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
