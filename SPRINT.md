@@ -405,13 +405,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     Done when an answer that lands while the person is looking at its ask (not typing or dragging)
     is brought wholly into view, options wrap into rows that fit the window when one row cannot,
     unit-tested, and checked in a real page at 1440 and 390 px (failing before, passing after).
-64. **CSV codes keep their leading zeros.** Decisions needed 11: an all-numeric column becomes
+64. (PR #84 open, awaiting review.) **CSV codes keep their leading zeros.** Decisions needed 11: an all-numeric column becomes
     numbers, so codes such as `007` or the ZIP `02139` lose their zeros. Done when a column holding
     any zero-padded value (`0` followed by a digit, before any decimal point) stays text, plain
     numbers (`0`, `0.5`, `-3`, `1e3`) still become numbers, with unit tests and a drop in the page.
 
 ## Claims
-64. CSV codes keep leading zeros | claude/sprint-csv-codes | 2026-11-26T12:38Z
 63. Answer lands in view | claude/sprint-answer-view | 2026-11-26T12:38Z
 62. Import keeps what the source and the person said | claude/sprint-import-faithful | 2026-11-26T12:36Z
 61. Ask about a chart or dataset gives what it shows | claude/sprint-ask-chart | 2026-11-26T12:31Z
@@ -502,6 +501,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 
 - (build-B, item 16) Raised tldraw's `maxShapesPerPage` from 4,000 to 20,000 (`src/canvas-options.ts`). With #16, a 10k board loads in about 8 s and pans at 39.6 ms per frame when every object is on screen (16.7 ms at 100% zoom; the remaining cost is tldraw's own rendering). Open product choices: level-of-detail or culling when zoomed far out, and virtualising or summarising the layers panel, which still mounts one row per object.
 - (build-B, item 15) A card's auto-sized `props.h` no longer bumps the revision (one definition of derived fields in `src/revision.ts`, shared with run-undo), and reload no longer re-estimates card heights; cards on screen re-measure once fonts load.
+- (build-B, item 64) CSV columns are numeric only when every value is a plain decimal without zero padding, so codes (`007`, ZIP `02139`) and hex or binary-looking values stay text (#84). The person still cannot set a column's type.
 - (build-B, item 13) Dropping a CSV creates a dataset only with `?prototype=data`, since the scenario is still proposed; without the flag a CSV drop does what it did before. The dataset's top-left corner lands at the drop point; a column is numeric only if every value is.
 - (build-B, item 10) The e2e spec signs in by reading the real magic link from the server log (email sending is not built) and invites the second user through Share, because a signed-in user's document is private. Mismatch found, not changed: the editor tells the owner "anyone with this link can edit", but the API returns 404 to signed-in non-collaborators and the page stays on "Loading document...". Product choice needed: make link access real, or change the banner.
 - (build-A, item 21) A tab without `?prototype=data` refuses `dataset`, `chart`, `chart_state` and `cell`, and one without `?prototype=learning` refuses `learn`, before touching the board. Prototype objects already on a saved board still show everywhere. Agents still see the tools (hosted manifest under `hostedPrototypeTools`, still on; local stdio lists all); alternative: turn `hostedPrototypeTools` off too.
@@ -637,3 +637,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:30Z | build-B | 57 Dev board store folder; merge-ups | #81 #64 #67 #69 #76 | Failing-first test and live check for #81. #64, #67, #69 and #76 merged up after the import lane's merge; checks re-run on the merged code: 8/8, 6/6, 7/7, 5/5 |
 | 2026-11-26T12:31Z | build-A | 60 Key hints in the person's own keys | #83 | Windows browser saw ⌘ on every hint; verify-keys 10/16 → 16/16; 5 unit tests; first screen layout unchanged; scorecard unchanged |
 | 2026-11-26T12:36Z | build-B | 45/59 merges and a review fix | #66 #70 #82 | #66 and #70 merged with #59 and re-checked in two browsers; #82's restore race uses a throwaway server under EVAL_URL (26 fixture writes to a reused board's history before, 0 after) |
+| 2026-11-26T12:41Z | build-B | 64 CSV codes keep leading zeros | #84 | 007 and 02139 stay text, 0x1A no longer becomes 26; plain numbers unchanged; drop in the page and acceptance 10/10 |
