@@ -633,6 +633,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 - (build-B, item 67) Leaving objects out of asks is a prototype (`?prototype=context`), because the context contract is proposed. Choices: (1) an object the person selects for an ask is always given, even when left out, because selecting it is choosing to share it; (2) a left-out frame withholds the whole frame; (3) a mark already on a board is honoured and drawn in every tab, and only setting it is flagged, so nothing marked is ever sent and nothing is kept back invisibly; (4) the ask reports how many objects were withheld, never which; (5) only asks honour the mark. An MCP agent reading the board with `canvas_read` still sees left-out objects, with `meta.leftOut: true`, and AGENT_API tells it not to use them for an ask. Agents cannot set or clear the mark. L is the key, which overrides tldraw's line tool only in flagged tabs. Alternatives: hide left-out objects from `read` as well, or make "pinning into context" the opposite control.
 
+- (build-A, item 71) Item 71 was claimed twice a minute apart (build-A `claude/sprint-html-linear` 13:00Z, then `claude/sprint-html-fast` 13:01Z). PR #93 (from the first claim) is open with the fix and proof; the second claim can be dropped unless that lane finds #93 lacking.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
