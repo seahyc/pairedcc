@@ -106,6 +106,8 @@ pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents 
 cd /some/dir/with/playwright && node /path/to/packages/canvas/tools/verify-calm.mjs /tmp/shots
 ```
 
+Each change of an ask's state (sent, taken by an agent with its note, answered with how many options, failed with Retry) is said once in a polite live region for screen readers; the state lines themselves tick each second and are not live. `tools/verify-ask-live.mjs <screenshot dir>`, run the same way, starts its own dev server and checks it with an agent over HTTP.
+
 `tools/verify-contain.mjs <screenshot dir>` is run the same way and needs no agent. At 1440 and 390 px it checks that a long URL, a long unbroken word, a code note and plain text stay inside their shapes, that the selection bar and the Ask box (send button included) sit inside the window wherever the selection is, and that an ask's state line wraps under its card rather than running off screen.
 
 Live checks against a running dev server are listed at the end of [AGENT_API.md](AGENT_API.md).
