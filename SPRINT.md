@@ -369,7 +369,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     only combining diacritics (U+0300 to U+036F). Done when each has a failing test, then a fix.
     Build on #74 once it merges.
 
-57. **The development board store survives its folder being removed.** Deleting
+57. (PR #81 open, awaiting review.) **The development board store survives its folder being removed.** Deleting
     `packages/canvas/.local/boards` (or `PAIRED_BOARDS_DIR`) while `pnpm dev:canvas` runs makes
     every board call fail with ENOENT, shown as a Vite error overlay, until the folder is made by
     hand (seen while resetting boards for item 46's screenshots). Done when list answers empty and
@@ -379,7 +379,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     browser A restores an earlier revision after browser B saved a newer edit; the restore is
     refused and B's edit is still on the server and in A after reload (0 human edits lost).
 
-60. (Renumbered from 59 to avoid a clash.) **Key hints name the person's own keys.** `docs/canvas/principles.md`, finding 7 (recognising
+60. (Renumbered from 59 to avoid a clash. PR #83 open, awaiting review.) **Key hints name the person's own keys.** `docs/canvas/principles.md`, finding 7 (recognising
     beats recalling) and playtest item 6 ("I don't know how to trigger the agent"). Every hint on
     screen says ⌘↵ (selection bar, typing hint, tooltips, shortcut sheet, the first board's card),
     but on Windows and Linux the key is Ctrl, so the one way to ask is named in a key those people
@@ -387,14 +387,40 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested function, with a headless check under a Windows platform finding no ⌘ on the first
     screen or the selection bar, and screenshots.
 
+61. **An ask about a chart or dataset gives what it shows.** The acceptance scenario's "agent
+    reads that exact state" holds for MCP agents (`canvas_chart_state`, `read`'s `widget`), but an
+    ask carries only `"(Chart, no text)"`, and the resident agent answers with no tools, so "what
+    does this chart show?" is answered blind. `startersFor` withholds chart starters for that
+    reason. Done when an ask's chart target carries what the chart shows (measure, grouping,
+    filter, rows in view, each bar, the selection, stale state) and a dataset target its title,
+    columns, row count and first rows, as text a model can read, from tested pure functions;
+    chart starters are offered; checked in a real tab with `?prototype=data`.
+
+62. **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
+
+63. **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
+    (comparing beats describing) and "the agent must visibly respond". Sending an ask makes room
+    for one 340 px answer, but four options in a row are about 1,060 px: at 1440 px option D lands
+    off the right edge, and on a 390 px phone only A is visible, and nothing brings them into view.
+    Done when an answer that lands while the person is looking at its ask (not typing or dragging)
+    is brought wholly into view, options wrap into rows that fit the window when one row cannot,
+    unit-tested, and checked in a real page at 1440 and 390 px (failing before, passing after).
+64. (PR #84 open, awaiting review.) **CSV codes keep their leading zeros.** Decisions needed 11: an all-numeric column becomes
+    numbers, so codes such as `007` or the ZIP `02139` lose their zeros. Done when a column holding
+    any zero-padded value (`0` followed by a digit, before any decimal point) stays text, plain
+    numbers (`0`, `0.5`, `-3`, `1e3`) still become numbers, with unit tests and a drop in the page.
+
 ## Claims
-60. Key hints name the person's own keys | claude/sprint-mod-keys | 2026-11-26T12:30Z
-57. Dev board store survives its folder being removed | claude/sprint-dev-store-dir | 2026-11-26T12:19Z
+63. Answer lands in view | claude/sprint-answer-view | 2026-11-26T12:38Z
+62. Import keeps what the source and the person said | claude/sprint-import-faithful | 2026-11-26T12:36Z
+61. Ask about a chart or dataset gives what it shows | claude/sprint-ask-chart | 2026-11-26T12:31Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 60. Key hints in the person's own keys (build-A): PR #83 (Ctrl on Windows, Linux and Android, ⌘ on Apple; verify-keys 10/16 → 16/16).
+- 57. Dev board store survives its folder being removed (build-B): PR #81.
 - 54. Text and the next step stay inside the window (build-A): PR #80 (unbroken text already wrapped; the selection bar, Ask box and ask state line ran off a 390 px phone and the bar off a desktop's right edge; fixed, 11/20 to 20/20).
 - 56. Dropped images fit beside your thoughts (build-B): PR #77.
 - 45 (d). Images survive a clean profile (build-B): PR #76.
@@ -431,6 +457,8 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 60) The first board's "How to ask" card is board text, written in the keys of the device that laid it out; a board seeded on a Mac and opened on Windows keeps ⌘↵ on that card while the bar and hints say Ctrl. Alternative: render that card's key at display time.
+- (build-B, item 47) With frame contents sent on an ask (#67), a selected frame now gets group starters ("What do these have in common?", "What is missing from this group?", "Which of these matters most?"). #42 had held these back because the frame's children were not sent. Charts still get the default three.
 - (build-A, item 54) On a window too narrow for the selection bar or Ask box beside the tool strip (phones), they cover the strip while open rather than leave the screen. An ask's state line now wraps within its card's width (260 to 640 px) instead of running on in one line. Alternative: hide the tool strip while asking on phones.
 - (build-B, item 56) An image the person drops, pastes or imports first lands at most 600 on its longest side (about two card widths, whole on a laptop screen at 100%). The asset keeps full resolution and small images keep their size. Agent images with an explicit size are untouched. Alternative: fit to a share of the current view.
 - (build-B, item 45 d) Images the person adds are kept inside the board snapshot as data URLs, with photos over 1.5 MB scaled to 2048 px WebP, rather than in a server asset store. This needs no new storage or secret, and images count toward the 10 MB board limit (a refused save says so). Images added before this move into the board once sync is listening. Alternative: a server asset store with per-account quotas when boards outgrow this.
@@ -473,6 +501,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 
 - (build-B, item 16) Raised tldraw's `maxShapesPerPage` from 4,000 to 20,000 (`src/canvas-options.ts`). With #16, a 10k board loads in about 8 s and pans at 39.6 ms per frame when every object is on screen (16.7 ms at 100% zoom; the remaining cost is tldraw's own rendering). Open product choices: level-of-detail or culling when zoomed far out, and virtualising or summarising the layers panel, which still mounts one row per object.
 - (build-B, item 15) A card's auto-sized `props.h` no longer bumps the revision (one definition of derived fields in `src/revision.ts`, shared with run-undo), and reload no longer re-estimates card heights; cards on screen re-measure once fonts load.
+- (build-B, item 64) CSV columns are numeric only when every value is a plain decimal without zero padding, so codes (`007`, ZIP `02139`) and hex or binary-looking values stay text (#84). The person still cannot set a column's type.
 - (build-B, item 13) Dropping a CSV creates a dataset only with `?prototype=data`, since the scenario is still proposed; without the flag a CSV drop does what it did before. The dataset's top-left corner lands at the drop point; a column is numeric only if every value is.
 - (build-B, item 10) The e2e spec signs in by reading the real magic link from the server log (email sending is not built) and invites the second user through Share, because a signed-in user's document is private. Mismatch found, not changed: the editor tells the owner "anyone with this link can edit", but the API returns 404 to signed-in non-collaborators and the page stays on "Loading document...". Product choice needed: make link access real, or change the banner.
 - (build-A, item 21) A tab without `?prototype=data` refuses `dataset`, `chart`, `chart_state` and `cell`, and one without `?prototype=learning` refuses `learn`, before touching the board. Prototype objects already on a saved board still show everywhere. Agents still see the tools (hosted manifest under `hostedPrototypeTools`, still on; local stdio lists all); alternative: turn `hostedPrototypeTools` off too.
@@ -605,3 +634,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:26Z | build-B | 8 Docs: board history on the menu | #79 | README and working spec no longer say no screen lists boards; #75's README line describes the new retention |
 | 2026-11-26T12:27Z | build-A | 54 Text and next step inside the window | #80 | verify-contain 11/20 → 20/20 at 1440 and 390 px (Ask box send button was off a phone screen, Send again too); 8 failing-first unit tests; first screen unchanged; scorecard unchanged |
 | 2026-11-26T12:29Z | build-B | 59 Safety race for restore | #82 | Safety 9 to 10 races, 0 lost; a restore that overwrites instead of writing conditionally fails it (1 lost) |
+| 2026-11-26T12:30Z | build-B | 57 Dev board store folder; merge-ups | #81 #64 #67 #69 #76 | Failing-first test and live check for #81. #64, #67, #69 and #76 merged up after the import lane's merge; checks re-run on the merged code: 8/8, 6/6, 7/7, 5/5 |
+| 2026-11-26T12:31Z | build-A | 60 Key hints in the person's own keys | #83 | Windows browser saw ⌘ on every hint; verify-keys 10/16 → 16/16; 5 unit tests; first screen layout unchanged; scorecard unchanged |
+| 2026-11-26T12:36Z | build-B | 45/59 merges and a review fix | #66 #70 #82 | #66 and #70 merged with #59 and re-checked in two browsers; #82's restore race uses a throwaway server under EVAL_URL (26 fixture writes to a reused board's history before, 0 after) |
+| 2026-11-26T12:38Z | build-B | 64 CSV codes keep leading zeros | #84 | 007 and 02139 stay text, 0x1A no longer becomes 26; plain numbers unchanged; drop in the page and acceptance 10/10 |

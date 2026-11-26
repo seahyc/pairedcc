@@ -1,5 +1,5 @@
 import type postgres from 'postgres'
-import { KEEP_REVISIONS, byteSize, defaultLimits, documentName, type BoardLimits, type BoardStore, type BoardSummary, type RemoveResult, type SaveInput, type SaveResult, type Snapshot } from './store.js'
+import { KEEP_REVISIONS, byteSize, defaultLimits, documentName, type BoardLimits, type BoardStore, type BoardSummary, type RemoveResult, type SaveInput, type SaveResult, type Snapshot, storable } from './store.js'
 
 // Postgres board store (migration 007). Every save is one transaction: a conditional
 // UPDATE on the expected revision (or an INSERT for revision 0), a revision row, and
@@ -28,7 +28,8 @@ export class PostgresBoardStore implements BoardStore {
     return row ? { ...summary(row), snapshot: row.snapshot } : null
   }
 
-  async save(userId: string, id: string, input: SaveInput): Promise<SaveResult> {
+  async save(userId: string, id: string, raw: SaveInput): Promise<SaveResult> {
+    const input = storable(raw)
     const sizeBytes = byteSize(input.snapshot)
     const name = input.name ?? documentName(input.snapshot) ?? null
     const json = this.sql.json(input.snapshot as never)

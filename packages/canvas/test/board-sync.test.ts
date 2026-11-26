@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contentHash, copyId, createBoardSync, mergeSnapshots, withNewRecords, type BoardApi, type Snapshot, type SyncMemo, type SyncStatus } from "../src/board-sync";
+import { wellFormed } from "../src/text";
 
 const snap = (text: string): Snapshot => ({ store: { "shape:a": { id: "shape:a", typeName: "shape", text } }, schema: { schemaVersion: 2 } });
 const text = (s: Snapshot) => (s.store["shape:a"] as { text: string }).text;
@@ -28,6 +29,7 @@ function server(signedIn: string | null = "alice", keep = 50) {
       await hooks.beforePut?.();
       if (JSON.stringify(snapshot).includes("HUGE")) return { ok: false, stale: false, refused: 413, error: "Boards are limited to 10 MB" };
       const b = boards.get(id);
+      snapshot = wellFormed(snapshot);
       if (!b) {
         if (expectedRevision !== 0) return { ok: false, stale: false, error: "Board not found" };
         boards.set(id, { revision: 1, snapshot: structuredClone(snapshot), history: [structuredClone(snapshot)], first: 1 });
@@ -233,6 +235,31 @@ describe("board sync", () => {
     expect(text(b.doc)).toBe("phone");
     expect(b.stored.memo).toMatchObject({ revision: 2, dirty: false });
     expect(last()).toMatchObject({ state: "saved", revision: 2, note: expect.stringContaining(id) });
+  });
+
+  it("at the board limit, never replaces the account's board when this browser's work cannot be set aside", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("v1"));
+    await srv.api.put("main", 1, snap("phone"));
+    // The account is at its board limit: any new board is refused, as the server does with 403.
+    const put = srv.api.put;
+    srv.api.put = async (id, rev, snapshot) =>
+      id !== "main" && rev === 0 ? { ok: false, stale: false, refused: 403, error: "This account already has 50 boards" } : put(id, rev, snapshot);
+    // Case 1: unsaved edits on an older revision. Case 2 (below): earlier work with no memo at all.
+    for (const memo of [{ account: "alice", boardId: "main", revision: 1, dirty: true }, null] as const) {
+    const b = browser(snap("laptop offline"), memo);
+    const { s } = sync(srv, b, true);
+    await s.start().catch(() => undefined);
+    // Let any automatic retries run, then the person keeps working: the next save must still
+    // not land on the account's board, which this browser never merged with.
+    for (let i = 0; i < 4 && b.timers.length; i++) await Promise.resolve(b.timers.shift()!()).catch(() => undefined);
+    for (const t of ["laptop, more work", "laptop, still more"]) {
+      b.edit(t);
+      for (let i = 0; i < 4 && b.timers.length; i++) await Promise.resolve(b.timers.shift()!()).catch(() => undefined);
+    }
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "phone"]);
+    expect(text(b.doc)).toBe("laptop, still more");
+    }
   });
 
   it("when two browsers create the account's board at once, the loser keeps its board as a separate one", async () => {
@@ -698,6 +725,37 @@ describe("withNewRecords", () => {
     expect(b.timers).toHaveLength(0);
   });
 
+
+  it("holds what the server stores when the board has half an emoji, so a deletion is not undone by a merge", async () => {
+    const card = (id: string, text: string) => ({ id, typeName: "shape", text });
+    const board = (...cards: ReturnType<typeof card>[]): Snapshot => ({ store: Object.fromEntries(cards.map((c) => [c.id, c])), schema: { schemaVersion: 2 } });
+    const srv = server();
+    const a = browser(board(card("shape:a", "Plans \uD83D"), card("shape:b", "other")));
+    const tabA = sync(srv, a, true);
+    await tabA.s.start(); // first save; the server repairs the half emoji
+    expect((a.doc.store["shape:a"] as { text: string }).text).toBe("Plans \uFFFD"); // this tab holds the same
+    // Another browser opens the board and adds a card.
+    const b = browser(board(), null);
+    await sync(srv, b, false).s.start();
+    b.local.load(board(...(Object.values(srv.boards.get("main")!.snapshot.store) as ReturnType<typeof card>[]), card("shape:c", "from B")));
+    await srv.api.put("main", 1, b.local.snapshot());
+    // A deletes card a; its save is stale and merges B's card in.
+    const { "shape:a": _gone, ...rest } = a.doc.store;
+    a.local.load({ ...a.doc, store: rest });
+    await tabA.s.save();
+    expect(Object.keys(srv.boards.get("main")!.snapshot.store).sort()).toEqual(["shape:b", "shape:c"]);
+  });
+
+  it("forgets undo and redo after a restore, so redo cannot bring a newer object back", async () => {
+    const srv = server(), b = browser(snap("Draft"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("Final");
+    await b.flush();
+    await s.restore(1);
+    expect(text(b.doc)).toBe("Draft");
+    expect(b.resets).toBe(1);
+  });
 
   it("reopens the restored board when the tab reloads before the browser stored it", async () => {
     const srv = server(), b = browser(snap("v1"));

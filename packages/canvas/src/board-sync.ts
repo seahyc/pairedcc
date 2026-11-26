@@ -12,6 +12,7 @@
 //    cannot succeed, so the controller says why and waits until the board changes.
 
 import { changedPaths } from "./run-undo";
+import { hasLoneSurrogate, wellFormed } from "./text";
 
 export type Snapshot = { store: Record<string, unknown>; schema: Record<string, unknown> };
 export type ServerBoard = { revision: number; snapshot: Snapshot };
@@ -270,7 +271,14 @@ export function createBoardSync(o: SyncOptions) {
   /** Put this browser's board on top of whatever revision the server has now. */
   async function push(note?: string, attempt = 0): Promise<void> {
     followOtherTab();
-    const snapshot = o.local.snapshot(), json = JSON.stringify(snapshot);
+    let snapshot = o.local.snapshot(), json = JSON.stringify(snapshot);
+    if (hasLoneSurrogate(json)) {
+      // Half a character (an emoji cut in two) is stored by the server as U+FFFD. Make the
+      // same repair here first, so what this tab holds and merges from is what is stored.
+      apply(wellFormed(snapshot));
+      snapshot = o.local.snapshot();
+      json = JSON.stringify(snapshot);
+    }
     if (json === synced && attempt === 0 && !note) {
       remember(false);
       return emit({ state: "saved", account: account!, revision, at: now().getTime() });
@@ -301,17 +309,20 @@ export function createBoardSync(o: SyncOptions) {
     // version stays in the board's revision history.
     const server = await o.api.get(boardId);
     if (!server) throw new Error("The board was deleted on the server.");
-    revision = server.revision;
     if (!base) {
       // No common version to merge from, so neither side may replace the other: this
       // browser's board is set aside as its own board and the account's board is opened.
+      // The server's revision is adopted only once the copy is safe: if setting aside is
+      // refused (at the board limit), a later save must not land on the account's board.
       const note = await setAside("Another tab or device saved this board first.");
+      revision = server.revision;
       apply(server.snapshot);
       base = server.snapshot;
       markSynced(o.local.snapshot());
       remember(false);
       return emit({ state: "saved", account: account!, revision, at: now().getTime(), note });
     }
+    revision = server.revision;
     const merged = mergeSnapshots(base, o.local.snapshot(), server.snapshot);
     apply(merged.snapshot);
     base = server.snapshot;
@@ -477,6 +488,7 @@ export function createBoardSync(o: SyncOptions) {
       }
       revision = result.revision;
       base = old.snapshot;
+      o.local.reset?.(); // redo must not bring a newer object back over the restored one
       markSynced(o.local.snapshot());
       remember(false);
       retry = 1000;
