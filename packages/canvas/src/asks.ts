@@ -1,12 +1,14 @@
-import { type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { type Editor, type TLPageId, type TLShape, type TLShapeId } from "tldraw";
 import { z } from "zod";
 import { answerInput, askStates, askStatusInput, asksInput, type AskState } from "./protocol";
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
-import { keepForAgent } from "./leave-out";
+import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
+import { followers } from "./follow";
+import { clusterAround } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -57,9 +59,12 @@ function beside(editor: Editor, host: TLShape, skip: Set<string>) {
   if (!box) return [];
   const gap = (b: { x: number; y: number; maxX: number; maxY: number }) =>
     Math.max(0, b.x - box.maxX, box.x - b.maxX) + Math.max(0, b.y - box.maxY, box.y - b.maxY);
-  const near = editor
-    .getCurrentPageShapes()
-    .filter((s) => !skip.has(s.id) && s.parentId === host.parentId && s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s))
+  const page = editor.getCurrentPageShapes();
+  // What is said about a left-out object (its comments, replies and notes) is as private as it is.
+  const leftOut = page.filter((s) => isLeftOut(s.meta)).map((s) => s.id as string);
+  const aboutLeftOut = new Set(leftOut.length ? followers(leftOut, page, new Set()) : []);
+  const near = page
+    .filter((s) => !skip.has(s.id) && !aboutLeftOut.has(s.id) && s.parentId === host.parentId && s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s))
     .flatMap((s) => {
       const b = editor.getShapePageBounds(s);
       return b && gap(b) <= NEAR ? [{ s, d: gap(b) }] : [];
@@ -213,6 +218,26 @@ type Keep = (shapes: TLShape[]) => TLShape[];
  */
 // Objects worth giving with no text of their own: media, and data the ask can describe.
 const media = new Set(["image", "video", "bookmark", "embed", "chart", "dataset"]);
+/**
+ * Comments, agent notes, replies and answers about what a frame holds. They sit on the page, not
+ * in the frame (so it never clips them), but they belong with its contents, as when the drag
+ * follower moves them with it (follow.ts). Asks are left out, as frame children always were.
+ */
+function attachedTo(editor: Editor, frame: TLShape) {
+  const pageId = editor.getAncestorPageId(frame);
+  if (!pageId) return [];
+  const page = [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []);
+  const subtree = [...editor.getShapeAndDescendantIds([frame.id])] as string[];
+  const within = new Set(subtree);
+  // What the person left out of asks inside the frame, and what it holds, brings nothing along:
+  // a comment about a left-out card is as private as the card.
+  const leftOut = subtree.filter((id) => id !== frame.id && isLeftOut(editor.getShape(id as TLShapeId)?.meta));
+  const blocked = new Set<string>(leftOut.length ? (editor.getShapeAndDescendantIds(leftOut as TLShapeId[]) as Set<string>) : []);
+  return followers(subtree.filter((id) => !blocked.has(id)), page, new Set())
+    .flatMap((id) => editor.getShape(id as TLShapeId) ?? [])
+    .filter((s) => !within.has(s.id) && !askOf(s) && !editor.isShapeHidden(s) && textOf(s));
+}
+
 function inside(editor: Editor, frame: TLShape, skip: Set<string>, keep: Keep = (x) => x) {
   const found: TLShape[] = [];
   const walk = (id: TLShapeId) => {
@@ -227,6 +252,7 @@ function inside(editor: Editor, frame: TLShape, skip: Set<string>, keep: Keep = 
     }
   };
   walk(frame.id);
+  for (const s of keep(attachedTo(editor, frame).filter((a) => !skip.has(a.id)))) found.push(s);
   const at = (s: TLShape) => editor.getShapePageBounds(s) ?? { x: 0, y: 0 };
   found.sort((a, b) => at(a).y - at(b).y || at(a).x - at(b).x);
   return { inside: found.slice(0, INSIDE_LIMIT).map((s) => given(editor, s, 400, keep)), more: Math.max(0, found.length - INSIDE_LIMIT) };
@@ -256,6 +282,41 @@ function thread(editor: Editor, shape: TLShape, keep: Keep, depth = 0, seen = ne
   ];
 }
 
+/** What the person pinned on a page for every ask there (see leave-out.ts), minus what is already given. */
+export function pinnedOnPage(editor: Editor, pageId: TLPageId, given: Iterable<string>) {
+  const marked = [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []).filter((s) => s.type !== "arrow" && isPinned(s.meta));
+  if (!marked.length) return { pinned: [] as TLShape[], more: 0 };
+  const found = pinnedFor(
+    marked.map((shape) => {
+      const b = editor.getShapePageBounds(shape);
+      return { id: shape.id, x: b?.x ?? 0, y: b?.y ?? 0, meta: shape.meta, hidden: editor.isShapeHidden(shape), shape };
+    }),
+    given,
+  );
+  return { pinned: found.pinned.map((p) => p.shape), more: found.more };
+}
+
+/**
+ * The rest of the group the ask's card sits in (objects chained within CLUSTER_GAP at its own
+ * level), each with where it sits relative to the card, minus what the ask already gives.
+ * Answers to this ask, the first board's seeded cards, hidden and left-out objects are not part of it.
+ */
+function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep: Keep) {
+  const placed = editor
+    .getSortedChildIdsForParent(host.parentId)
+    .flatMap((id) => editor.getShape(id) ?? [])
+    .filter((s) => s.id === host.id || (s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s)))
+    .flatMap((s) => {
+      const b = editor.getShapePageBounds(s);
+      return b ? [{ id: s.id as string, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
+    });
+  const found = clusterAround(placed, host.id, skip);
+  // A left-out member is withheld (and counted as such), like anything else around the ask.
+  const kept = new Set<string>(keep(found.members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? [])).map((s) => s.id));
+  const members = found.members.filter((m) => kept.has(m.id)).map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
+  return { members, more: found.more };
+}
+
 /** Everything an agent is given for one ask: exactly what the board shows as its context. */
 export function describeAsk(editor: Editor, shape: TLShape) {
   const ask = askOf(shape);
@@ -273,6 +334,28 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   const around = frameOf(editor, selected[0] ?? shape);
   const frame = around && keep([around]).length ? around : undefined;
   const skip = new Set<string>([shape.id, ...targets.map((t) => t.id)]);
+  const givenTargets = targets.map((t) => {
+    if (t.type !== "frame") return given(editor, t, 2000, keep);
+    const held = inside(editor, t, skip, keep);
+    return { ...given(editor, t, 2000, keep), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
+  });
+  const frameObjects = frame
+    ? keep(
+        editor
+          .getSortedChildIdsForParent(frame.id)
+          .flatMap((id) => editor.getShape(id) ?? [])
+          .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset"))
+          .concat(attachedTo(editor, frame).filter((a) => !skip.has(a.id))),
+      ).slice(0, 12)
+    : [];
+  // Where things sit carries meaning: the group the card is in, said with relations. What the
+  // ask already gives (targets, and the frame's objects when the card is in a frame) is not repeated.
+  const group = editor.getShapePageBounds(shape)
+    ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : []), ...frameObjects.map((s) => s.id)]), keep)
+    : { members: [], more: 0 };
+  // Pinned for every ask on this page, unless this ask already gives it.
+  const alreadyGiven = [...skip, ...group.members.map((m) => m.id), ...(frame ? [frame.id] : []), ...frameObjects.map((s) => s.id), ...givenTargets.flatMap((t) => t.inside?.map((i) => i.id) ?? [])];
+  const pins = page ? pinnedOnPage(editor, page.id, alreadyGiven) : { pinned: [], more: 0 };
   return {
     id: shape.id,
     revision: revision(shape),
@@ -285,30 +368,21 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     ...(ask.error ? { error: ask.error } : {}),
     pageId: page?.id,
     pageName: page?.name,
-    targets: targets.map((t) => {
-      if (t.type !== "frame") return given(editor, t, 2000, keep);
-      const held = inside(editor, t, skip, keep);
-      return { ...given(editor, t, 2000, keep), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
-    }),
+    targets: givenTargets,
     history: mergeHistory(targets.flatMap((t) => thread(editor, t, keep)), targets.map((t) => t.id)),
     ...(frame
       ? {
           frame: {
             id: frame.id,
             name: shapeName(frame),
-            objects: keep(
-              editor
-                .getSortedChildIdsForParent(frame.id)
-                .flatMap((id) => editor.getShape(id) ?? [])
-                .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset")),
-            )
-              .slice(0, 12)
-              .map((s) => given(editor, s, 400, keep)),
+            objects: frameObjects.map((s) => given(editor, s, 400, keep)),
           },
         }
       : {}),
+    ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
     ...(withheld.size ? { leftOut: withheld.size } : {}),
+    ...(pins.pinned.length ? { pinned: pins.pinned.map((s) => given(editor, s, 400)), ...(pins.more ? { pinnedMore: pins.more } : {}) } : {}),
   };
 }
 export type AskView = ReturnType<typeof describeAsk>;
@@ -371,7 +445,12 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   // The room the person's window has beside the canvas chrome, so no answer lands off screen.
   const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
   const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
-  const spot = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
+  // Under the ask, or beside it when the space under it is taken (later asks stacked below),
+  // so the answer never ends up under someone else's question.
+  const under = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
+  const besideBox = { ...layout.box, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
+  const beside = freeSpot(editor, besideBox, new Set([shape.id]), pageId);
+  const spot = pickAnswerSpot(under.y - layout.box.y, beside.y - besideBox.y) === "under" ? under : beside;
   // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
   // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
   // work here must not silently remove an answer they cannot see (canvas_undo_run still can).
@@ -382,6 +461,8 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     editor.run(() => void (result = work()), { history: "ignore" });
     return result;
   };
+  // One answer's cards share its time, so a later answer is never counted with an earlier one.
+  const answeredAt = Date.now();
   const ids = place(() => {
     // Rows stack under the measured height of the row above (a card sizes to its text when made).
     let rowY = spot.y, rowBottom = spot.y, row = 0;
@@ -397,12 +478,13 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         author: actor,
         targetId: shape.id,
         replyTo: shape.id,
+        answeredAt,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
       }, pageId);
       rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
       return id;
     });
-    setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt: Date.now(), read: input.read, note: undefined, error: undefined });
+    setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt, read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.
     if (!input.question && shape.meta.role === "annotation" && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
     return made;

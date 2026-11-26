@@ -1,14 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { startEditingShapeWithRichText, useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { atom, startEditingShapeWithRichText, useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
 import { askDirect, askOf, createAsk, describeAsk, retryAsk, shouldSend, writtenByPerson } from "./asks";
-import { askAnnouncement, askStatusLine, isQuestion, retryLabel, BAR_MARGIN, placeBar, statusWidth } from "./ask-rules";
+import { announceState, askAnnouncement, askStatusLine, isQuestion, liveText, optionsInLatestRound, retryLabel, BAR_MARGIN, placeBar, statusWidth } from "./ask-rules";
 import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
-import { isLeftOut, leftOutLabel, toggleLeftOut } from "./leave-out";
+import { isLeftOut, isPinned, leftOutLabel, pinnedLabel, toggleLeftOut, togglePinned } from "./leave-out";
 import { toggleSettled } from "./settled";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
@@ -28,6 +28,12 @@ function givenLabel(editor: Editor, ids: string[]) {
   return `${first}${things.length > 1 ? ` + ${things.length - 1} more` : ""}${frames[0] ? ` + frame “${short(shapeName(frames[0]), 20)}”` : ""}`;
 }
 
+/** "“card” + 1 pinned · 1 left out", or just "1 pinned" when nothing else is given. */
+function givenWith(base: string, pins: string, kept: string) {
+  const main = [base, pins].filter(Boolean).join(" + ");
+  return [main, kept].filter(Boolean).join(" · ");
+}
+
 export function sendAsk(editor: Editor, id: string) {
   const shape = editor.getShape(id as TLShapeId);
   if (shape) announceAsk(describeAsk(editor, shape));
@@ -37,12 +43,19 @@ export function sendAsk(editor: Editor, id: string) {
  * The one selected ask that can be sent again (failed, went quiet, or not heard), with the
  * word its state line uses: Retry or Send again. Reads the same signals as the state line.
  */
-export function selectedRetry(editor: Editor): { id: string; label: "Retry" | "Send again" } | undefined {
+/**
+ * A clock the selection bar reads, so an ask that goes quiet while selected turns its first
+ * button to Retry when its state line does. It ticks only while a selected ask is waiting or
+ * working.
+ */
+export const askClock = atom("ask clock", Date.now());
+
+export function selectedRetry(editor: Editor, now = Date.now()): { id: string; label: "Retry" | "Send again" } | undefined {
   const shapes = editor.getSelectedShapes().filter((s) => s.type !== "arrow");
   const ask = shapes.length === 1 ? askOf(shapes[0]) : undefined;
   if (!ask) return undefined;
   const listeners = agentListeners.get(), hosted = agentLink.get().mode === "hosted";
-  const line = askStatusLine(ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Date.now(), given: "", recent: chatAgentActivity(agentActivity.get()) });
+  const line = askStatusLine(ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now, given: "", recent: chatAgentActivity(agentActivity.get()) });
   const label = retryLabel(line);
   return label ? { id: shapes[0].id, label } : undefined;
 }
@@ -65,20 +78,39 @@ export function AskLayer() {
       const selected = new Set<string>(editor.getSelectedShapeIds());
       // Counting what was kept back reads each ask's whole context, so only on a page that has a left-out object.
       const anyLeftOut = editor.getCurrentPageShapes().some((s) => isLeftOut(s.meta));
+      // Likewise pins: an ask gives what is pinned now, so its outline and label follow the pins.
+      const anyPinned = editor.getCurrentPageShapes().some((s) => isPinned(s.meta));
       return editor.getCurrentPageShapes().flatMap((s) => {
+        // Most objects are not asks: skip them before parsing or measuring.
+        if (!s.meta.ask) return [];
         const ask = askOf(s), b = editor.getShapePageBounds(s);
         if (!ask || !b) return [];
         const answers = editor.getCurrentPageShapes().filter((r) => r.meta.replyTo === s.id);
         const focused = selected.has(s.id) || answers.some((r) => selected.has(r.id)) || ask.state === "working";
+        const view = focused || anyLeftOut || anyPinned ? describeAsk(editor, s) : undefined;
+        const pinnedIds = view?.pinned?.map((p) => p.id) ?? [];
         const outlines = focused
-          ? ask.contextIds.flatMap((id) => {
+          ? [...ask.contextIds, ...pinnedIds].flatMap((id) => {
               const box = editor.getShapePageBounds(id as TLShapeId);
               return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
             })
           : [];
+        // While the ask is in view of the person (selected or being answered), the group its card
+        // sits in is drawn as one soft outline: the agent is given it, so the person sees it.
+        const groupIds = focused ? (view?.cluster ?? []).map((m) => m.id) : [];
+        const groupBoxes = groupIds.length ? [s.id, ...groupIds].flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []) : [];
+        const group = groupBoxes.length
+          ? (() => {
+              const x = Math.min(...groupBoxes.map((g) => g.x)), y = Math.min(...groupBoxes.map((g) => g.y));
+              return { x, y, w: Math.max(...groupBoxes.map((g) => g.maxX)) - x, h: Math.max(...groupBoxes.map((g) => g.maxY)) - y, count: groupIds.length + (view?.clusterMore ?? 0) };
+            })()
+          : undefined;
         // What the person kept back from this ask, as an agent reading it now would be given it.
-        const kept = anyLeftOut ? leftOutLabel(describeAsk(editor, s).leftOut ?? 0) : "";
-        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds.filter((id) => id !== s.id))}${kept ? ` · ${kept}` : ""}`, outlines }];
+        const kept = anyLeftOut && view ? leftOutLabel(view.leftOut ?? 0) : "";
+        const pins = anyPinned && view ? pinnedLabel(pinnedIds.length + (view.pinnedMore ?? 0)) : "";
+        const groupSaid = group ? `${group.count} more in its group` : "";
+        const base = [givenLabel(editor, ask.contextIds.filter((id) => id !== s.id)), groupSaid].filter(Boolean).join(" + ");
+        return [{ id: s.id, ask, question: textOf(s), answers: optionsInLatestRound(answers.map((r) => ({ answeredAt: typeof r.meta.answeredAt === "number" ? r.meta.answeredAt : undefined, at: typeof r.meta.createdAt === "number" ? r.meta.createdAt : undefined }))), x: b.x, y: b.maxY, w: b.w, given: givenWith(base, pins, kept), outlines, group }];
       });
     },
     [editor],
@@ -89,16 +121,6 @@ export function AskLayer() {
   const pageId = useValue("ask page", () => editor.getCurrentPageId(), [editor]);
   const heard = useRef<{ page: string; states: Map<string, string> } | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  useEffect(() => {
-    const states = new Map(asks.map((a) => [a.id, a.ask.state]));
-    if (!heard.current || heard.current.page !== pageId) {
-      heard.current = { page: pageId, states };
-      return;
-    }
-    const said = asks.flatMap((a) => askAnnouncement(heard.current!.states.get(a.id), { ...a.ask, question: a.question }, a.answers) ?? []);
-    heard.current.states = states;
-    if (said.length) setAnnouncement(said.join(" "));
-  }, [asks, pageId]);
   const active = asks.some((a) => a.ask.state === "waiting" || a.ask.state === "working");
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -106,6 +128,19 @@ export function AskLayer() {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [active]);
+  useEffect(() => {
+    // An agent that goes quiet past the timeout is news too (its line then offers Retry).
+    const at = Math.max(now, Date.now());
+    const states = new Map(asks.map((a) => [a.id, announceState(a.ask, at)]));
+    if (!heard.current || heard.current.page !== pageId) {
+      heard.current = { page: pageId, states };
+      return;
+    }
+    const said = asks.flatMap((a) => askAnnouncement(heard.current!.states.get(a.id), { ...a.ask, state: states.get(a.id) ?? a.ask.state, question: a.question }, a.answers) ?? []);
+    heard.current.states = states;
+    // The same words twice in a row still have to change the region to be said.
+    if (said.length) setAnnouncement((previous) => liveText(previous, said.join(" ")));
+  }, [asks, pageId, now]);
   return (
     <div className="scratch-layer ask-layer">
       {createPortal(
@@ -118,6 +153,9 @@ export function AskLayer() {
         const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given, recent });
         return (
           <div key={a.id}>
+            {a.group && (
+              <div className="ask-group" data-ask-group={a.id} style={{ transform: `translate(${a.group.x - 18}px, ${a.group.y - 18}px)`, width: a.group.w + 36, height: a.group.h + 36 }} />
+            )}
             {a.outlines.map((o) => (
               <div key={o.id} className="ask-given" style={{ transform: `translate(${o.x - 6}px, ${o.y - 6}px)`, width: o.w + 12, height: o.h + 12 }} />
             ))}
@@ -231,7 +269,9 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       const only = shapes.length === 1 ? shapes[0] : undefined;
       return {
         // A failed or unheard ask: the first button sends it again.
-        retry: selectedRetry(editor)?.label ?? "",
+        retry: selectedRetry(editor, Math.max(askClock.get(), Date.now()))?.label ?? "",
+        // A selected ask still in progress: the clock ticks so going quiet shows on the bar.
+        pending: Boolean(only && ["waiting", "working"].includes(askOf(only)?.state ?? "")),
         ids: shapes.map((s) => s.id).join(","),
         x: Math.round(from.x),
         y: Math.round(from.y),
@@ -241,6 +281,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
         settled: shapes.every((s) => s.meta.settled === true),
         leftOut: shapes.every((s) => isLeftOut(s.meta)),
+        pinned: shapes.every((s) => isPinned(s.meta)),
         text: only ? textOf(only) : "",
         blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
         question: Boolean(only && writtenByPerson(only) && (isQuestion(textOf(only)) || only.meta.askWhenWritten === true)),
@@ -280,6 +321,12 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+  const pending = Boolean(state?.pending);
+  useEffect(() => {
+    if (!pending) return;
+    const timer = setInterval(() => askClock.set(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, [pending]);
   // There is no question box any more: "asking" means send what is selected now.
   useEffect(() => {
     if (!asking) return;
@@ -390,6 +437,18 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
           title={state.leftOut ? "Bring back: asks about things nearby may give this to the agent again (L)" : "Leave out: asks about things nearby will not give this to the agent (L)"}
         >
           {state.leftOut ? "Bring back" : "Leave out"} <Kbd>L</Kbd>
+        </button>
+      )}
+      {prototypeEnabled("context") && (
+        <button
+          className={state.pinned ? "on" : ""}
+          onClick={() => {
+            togglePinned(editor, editor.getSelectedShapes());
+            editor.focus();
+          }}
+          title={state.pinned ? "Unpin: asks give this only when it is selected or nearby (I)" : "Pin: every ask on this page gives this to the agent, selected or not (I)"}
+        >
+          {state.pinned ? "Unpin" : "Pin"} <Kbd>I</Kbd>
         </button>
       )}
       {state.cites && (

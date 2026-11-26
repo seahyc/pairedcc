@@ -95,7 +95,7 @@ export function askStatusLine(
   if (ask.state === "failed") return { tone: "failed", text: `No answer: ${ask.error ?? "something went wrong"}`, retry: true };
   if (ask.state === "working") {
     // An agent that says nothing for two minutes has stopped; offer the way out.
-    if (opts.now - (ask.startedAt ?? ask.askedAt) > 120_000) return { tone: "failed", text: `${ask.agent ?? "The agent"} went quiet.`, retry: true };
+    if (opts.now - (ask.startedAt ?? ask.askedAt) > QUIET_MS) return { tone: "failed", text: `${ask.agent ?? "The agent"} went quiet.`, retry: true };
     return { tone: "working", text: `${ask.agent ?? "Agent"}: ${ask.note ?? "thinking"} · ${secs(ask.startedAt ?? ask.askedAt, opts.now)}` };
   }
   // Nothing watches for asks, but an agent connected to this tab acted recently: it is there
@@ -193,6 +193,12 @@ export function elsewhereShow(
 /** How long a notice stays: long enough to read, and to press its button when it has one. */
 export const noticeMs = (hasAction: boolean) => (hasAction ? 12000 : 3500);
 
+/**
+ * When a notice goes: never while the pointer is over it or focus is in it (the person is
+ * reading it or about to press Show), and its full time again once they leave it.
+ */
+export const noticeDelay = (hasAction: boolean, held: boolean) => (held ? null : noticeMs(hasAction));
+
 /** Gap kept between the selection bar and the window's edges. */
 export const BAR_MARGIN = 8;
 /** Left edge that keeps the bar clear of the tool strip, when the window has room for that. */
@@ -223,6 +229,21 @@ export function statusWidth(cardWidth: number) {
   return Math.min(640, Math.max(260, Math.round(cardWidth)));
 }
 
+/** Gap between an ask and an answer placed beside it. */
+export const BESIDE_GAP = 40;
+/** How far an answer may slide down from under its ask before beside is tried. */
+export const ANSWER_SLIDE = 28;
+
+/**
+ * Under the ask, or beside it: an answer belongs next to its own ask. Under is the default; when
+ * the space under the ask is taken (later asks stacked below it), the answer would slide down
+ * past them and sit under someone else's question, so it goes beside its ask instead, unless
+ * beside would slide further.
+ */
+export function pickAnswerSpot(underSlide: number, besideSlide: number): "under" | "beside" {
+  return underSlide <= ANSWER_SLIDE || underSlide <= besideSlide ? "under" : "beside";
+}
+
 /**
  * What a screen reader is told when an ask's state changes, once per change: sent and
  * waiting, taken by an agent, answered (and where), or failed (and that Retry is there).
@@ -244,9 +265,46 @@ export function askAnnouncement(
       return `${who} answered${answers > 1 ? ` with ${answers} options` : ""}, under your ask.`;
     case "failed":
       return `Your ask failed${ask.error ? `: ${ask.error}` : ""}. Retry is under the ask.`;
+    case "quiet":
+      return `${who} went quiet. Retry is under the ask.`;
     default:
       return undefined;
   }
+}
+
+/** How long a working agent may say nothing before the ask is treated as gone quiet. */
+export const QUIET_MS = 120_000;
+
+/**
+ * The state an announcement is about: the ask's own state, or "quiet" once a working agent has
+ * said nothing past the timeout (its line then offers Retry, so that change is news too).
+ */
+export function announceState(ask: { state: string; askedAt: number; startedAt?: number }, now: number) {
+  return ask.state === "working" && now - (ask.startedAt ?? ask.askedAt) > QUIET_MS ? "quiet" : ask.state;
+}
+
+/**
+ * Text for a polite live region. The same words twice in a row would leave the region unchanged
+ * and unspoken, so a repeat alternates a trailing no-break space that changes the text, not the words.
+ */
+export function liveText(previous: string, text: string) {
+  return previous === text ? `${text}\u00a0` : text;
+}
+
+/**
+ * How many cards the latest answer to an ask placed: one card, or two to four options. Cards an
+ * answer places share its `answeredAt`, so an earlier clarifying question or round of options is
+ * not counted with it. Cards from before that stamp are grouped by creation within two seconds.
+ */
+export function optionsInLatestRound(replies: { answeredAt?: number; at?: number; option?: unknown }[]) {
+  if (!replies.length) return 0;
+  const stamped = replies.filter((r) => typeof r.answeredAt === "number");
+  if (stamped.length) {
+    const latest = Math.max(...stamped.map((r) => r.answeredAt!));
+    return stamped.filter((r) => r.answeredAt === latest).length;
+  }
+  const latest = Math.max(...replies.map((r) => r.at ?? 0));
+  return replies.filter((r) => (r.at ?? 0) >= latest - 2000).length;
 }
 
 /**

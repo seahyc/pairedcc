@@ -1,9 +1,10 @@
 // Browser check for item 91: a failed ask is retried from the keyboard.
 //
-// On a fresh profile at 1440 x 900: the person writes a card and asks; an agent fails the ask
-// over HTTP. With the failed ask selected, the selection bar's first button must say Retry with
-// its key, and Ctrl/⌘+Enter must send the ask again (a new attempt, waiting) without opening
-// the Ask box or making a new ask. The button does the same. An answered ask and a card keep Ask.
+// On a fresh profile at 1440 x 900: the person writes a question card and sends it; an agent
+// fails the ask over HTTP. With the failed ask selected, the selection bar's first button must say
+// Retry with its key, and Ctrl/⌘+Enter must send the ask again (a new attempt, waiting) without
+// making a new ask. The bar's button and the toolbar's Ask do the same; a selected working ask that
+// goes quiet turns the bar to Retry. An answered ask and a card keep Ask.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-retry-key.mjs <screenshot dir>
 //
@@ -55,13 +56,11 @@ const select = async (id) => { await p.evaluate((id) => { window.paired.select([
 // The person's card and an ask about it.
 const card = await p.evaluate(() => window.paired.create({ kind: 'note', x: 120, y: 560, width: 300, text: 'How should we price the team plan?' }));
 const cardId = typeof card === 'string' ? card : card.id;
+// The card is the question: selected, Ctrl/⌘+Enter sends it.
 await select(cardId);
 await p.keyboard.press(`${mod}+Enter`);
-await p.waitForSelector('.selection-bar.asking input');
-await p.fill('.selection-bar.asking input', 'Give me options');
-await p.keyboard.press('Enter');
 await p.waitForTimeout(500);
-const ask = (await command('asks', {})).asks.find((a) => a.question === 'Give me options');
+const ask = (await command('asks', {})).asks.find((a) => /price the team plan/.test(a.question));
 check('the ask was sent', Boolean(ask));
 
 // The agent fails it.
@@ -95,12 +94,38 @@ await p.waitForTimeout(500);
 after = await askState(ask.id);
 check('the Retry button sends it again too', after?.state === 'waiting' && after.attempt === (before?.attempt ?? 0) + 2, JSON.stringify({ state: after?.state, attempt: after?.attempt }));
 
+// The toolbar's Ask button sends what is selected: for a failed ask, that is sending it again.
+await command('ask_status', { id: ask.id, state: 'failed', error: 'Once more' });
+await p.waitForTimeout(500);
+await select(ask.id);
+const attemptBefore = (await askState(ask.id))?.attempt;
+const asksNow = await askCount();
+await p.click('.tool-button.ask');
+await p.waitForTimeout(400);
+check("the toolbar's Ask button sends a failed ask again too, without a new ask", (await askState(ask.id))?.attempt === attemptBefore + 1 && (await askCount()) === asksNow, `attempt ${attemptBefore} → ${(await askState(ask.id))?.attempt}, asks ${asksNow} → ${await askCount()}`);
+
+// A working ask that goes quiet: the bar turns to Retry as the state line does, without a new selection.
+await command('ask_status', { id: ask.id, state: 'working', note: 'thinking' });
+await p.waitForTimeout(400);
+await select(ask.id);
+const workingLabel = await primary();
+// Move the page's clock past the two-minute quiet mark, then give the bar's 5-second tick
+// (a timer started before the fake clock) one real tick to notice.
+await p.clock.install();
+await p.clock.fastForward(130_000);
+await p.waitForTimeout(5600);
+const quietLabel = await primary();
+const lineRetry = await p.evaluate((id) => Boolean([...document.querySelectorAll('.ask-status button')].length), ask.id);
+check('a selected ask that goes quiet turns the bar to Retry, as its state line does', /Ask/.test(workingLabel ?? '') && /Retry/.test(quietLabel ?? '') && lineRetry, `${workingLabel} → ${quietLabel}; line retry ${lineRetry}`);
+await p.clock.resume();
+
 // An answered ask and a card keep Ask.
 await command('answer', { id: ask.id, text: 'Start with one case: a team of five paying per seat.' });
 await p.waitForTimeout(500);
 await select(ask.id);
 check('an answered ask keeps Ask', /Ask/.test((await primary()) ?? '') && !/Retry/.test((await primary()) ?? ''), String(await primary()));
-await select(cardId);
+const other = await p.evaluate(() => window.paired.create({ kind: 'note', x: 520, y: 900, width: 300, text: 'Teams of five are the common case' }));
+await select(typeof other === 'string' ? other : other.id);
 check('a card keeps Ask', /Ask/.test((await primary()) ?? ''), String(await primary()));
 check('no page errors', errors.length === 0, errors.join(' | '));
 

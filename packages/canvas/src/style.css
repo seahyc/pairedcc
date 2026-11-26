@@ -609,6 +609,8 @@ p {
   width: max-content;
   max-width: min(640px, calc(100vw - 32px));
   box-sizing: border-box;
+  /* The pointer over it holds it up, so it must receive the pointer (the chrome passes it through). */
+  pointer-events: auto;
 }
 .toast-action {
   flex: none;
@@ -859,6 +861,24 @@ p {
   border-radius: 6px;
   background: #efede8;
   color: #5f6168;
+  font: 500 11px/16px Inter, -apple-system, sans-serif;
+  white-space: nowrap;
+}
+/* Pinned into every ask (the context prototype): a solid lavender fence, the agent's colour, as it is given to the agent. */
+.scratch-pinned {
+  position: absolute;
+  inset: -4px;
+  border: 1.5px solid #8b7fd6;
+  border-radius: 10px;
+}
+.scratch-pinned span {
+  position: absolute;
+  top: -9px;
+  left: 10px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #ece9fb;
+  color: #4b3fa8;
   font: 500 11px/16px Inter, -apple-system, sans-serif;
   white-space: nowrap;
 }
@@ -1676,6 +1696,16 @@ kbd {
   background: #3a2fd0;
   animation: save-pulse 0.9s ease-in-out infinite;
 }
+/* The group an ask's card sits in, given to the agent with it: softer than what was selected. */
+.ask-group {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 1.5px dotted #b7b0ee;
+  border-radius: 22px;
+  background: rgba(143, 134, 227, 0.04);
+  box-sizing: border-box;
+}
 .ask-given {
   position: absolute;
   left: 0;
@@ -1769,7 +1799,9 @@ kbd {
 .stale-flag { position: absolute; top: 0; left: 0; padding: 1px 7px; border-radius: 999px; background: #fff1e0; border: 1px dashed #b4540a; color: #8a3f06; font: 600 11px 'JetBrains Mono', monospace; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; cursor: help; }
 .stale-flag.open, .stale-flag:focus-visible { width: max-content; max-width: 420px; white-space: normal; overflow: visible; border-radius: 10px; z-index: 2; }
 /* Focused from the keyboard, it grows upward from where its one line sat, clear of the object's text. */
-.stale-flag:not(.open):not(.grow-down):focus-visible { translate: 0 calc(-100% + 20px); }
+.stale-flag:not(.open):not(.grow-down):focus-visible { translate: var(--focus-x, 0) calc(-100% + 20px); }
+/* Near the top it grows down instead, from no higher than the top of the view (flag-layout.ts). */
+.stale-flag.grow-down:not(.open):focus-visible { translate: var(--focus-x, 0) var(--focus-y, 0); }
 .stale-flag:focus-visible { outline: 2px solid #b4540a; outline-offset: 2px; }
 .prototype-row { color: #3a2fd0; }
 
