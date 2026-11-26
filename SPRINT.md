@@ -587,7 +587,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     headless Chromium, 26 Nov). Done when nothing on the first board touches either edge at 390 px,
     with before/after screenshots, desktop unchanged.
 
-98. **Follow-ups from the bot review of #99 and #88 (build-A, verified).** (a) Cards an agent
+98. ((a): PR #125 open, awaiting review. (b) was already fixed on the branch.) **Follow-ups from the bot review of #99 and #88 (build-A, verified).** (a) Cards an agent
     imports carry no creator, so `authorOf` counts them as the person's and #99 refuses the agent's
     own corrections; (b) the touch "✦ Ask about this" button acts only on pointerdown, so a screen
     reader's click-only activation does nothing. Done when an agent can correct its own import
@@ -596,12 +596,23 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 97. (PR #126 open, awaiting review.) **verify-answer-page's frame step after #104.** On `claude/sprint-int` at 8cea125, `tools/verify-answer-page.mjs` fails "an answer that lands inside a frame on the open page belongs to the frame" (10/11); #104 made answers land clear of frames so they are never clipped. Done when the product choice (answer inside the frame, unclipped, or beside it) is recorded and the check asserts that choice, passing on the branch.
 
+100. **Bot review findings on build-A's merged PRs (not yet reproduced).** Each needs a failing test
+    first, then a fix or a recorded decision. #101: (a) two answers announced with identical text in
+    a row are spoken once (React keeps the same live-region text); (b) an ask that goes quiet past
+    the two-minute timeout gets Retry on screen but no announcement; (c) a clarifying question and a
+    later answer to the same ask are counted together as "options". #91: (d) two devices loading the
+    same pre-calm board before either saves can each add a Thinking page, and the merge keeps both;
+    (e) a pre-calm board whose only page is empty but named (for example by an agent's `page`) is
+    renamed "Board 1" by the layout after the account load. #87: (f) rows stacked by measured height
+    can run past the rectangle `freeSpot` checked (estimated heights) and cover a note below; (g) an
+    ask and answer taller than the window are panned to the ask's top, leaving the answer cut off.
+
 ## Claims
 99. The first board keeps a margin on a phone | claude/sprint-phone-margin | 2026-11-26T14:29Z
-98. Follow-ups to bot review of #99 and #88 | claude/sprint-review-followups-a | 2026-11-26T14:23Z
 94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
 
 ## Done
+- 98 (a). Agent may correct its own import (build-A): PR #125 (`canvas_import` records the agent as `createdBy`; a person's paste stays protected; verify-import-author 3/4 → 4/4).
 - 97. verify-answer-page's frame step after #104 (build-B): PR #126 (the check now asserts #104's recorded choice, on the page and following the frame; 10/11 → 12/12).
 - 93. Stale flag placement follows the drawn flag (build-A): PR #124 (placement and Tab stops from the flag's drawn size; room measured at the current zoom; a focused flag kept inside the view; verify-stale-edges 5/10 → 10/10).
 - 95. Before sending, the person sees what an ask will give (build-B): PR #123, stacked on #121 (Ask box line and board outlines from the same code as the sent ask; verify-ask-preview 6/16 → 16/16; first screen byte-identical).
@@ -956,3 +967,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:25Z | build-B | 95 Preview what an ask will give | #123 | Ask box says "Gives …" and the board outlines it, from describeSelection/askContextIds/contextSummary shared with the sent ask; verify-ask-preview 6/16 → 16/16; pin, leave-out, ask-frame/marks/chart/record/live, touch green; first screen unchanged; filed item 97 (verify-answer-page 10/11 on int) |
 | 2026-11-26T14:40Z | build-A | 93 Stale flag placement follows the drawn flag | #124 | (a) Tab stops and focus shift by drawn size, (b) opened-reason room at the current zoom, (c) focused flag grows down from the top edge; verify-stale-edges 5/10 → 10/10, verify-stale-flag 8/8, 473 unit tests; scorecard rows unchanged except 10k pan noise (105.7 ms) |
 | 2026-11-26T14:27Z | build-B | 97 verify-answer-page after #104 | #126 | Check was wrong, not the board: asserts answers near a frame sit on the page and move with the frame; 10/11 → 12/12 |
+| 2026-11-26T14:28Z | build-A | 98 (a) and bot-review triage | #125 #113 | Agent's own imports correctable, person's protected (3/4 → 4/4); #113 merged up, converge and data prototype now PASS/FAIL in verify-all; seven unreproduced bot findings on #87 #91 #101 filed as 100 |
