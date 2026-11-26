@@ -138,22 +138,33 @@ export async function safety(browser: Browser, base: string) {
     });
 
     await race("Agent cannot hide the person's work behind a learning prompt", async (lost) => {
-      if (!(await agent.tools()).includes("canvas_learn")) return true; // prototype tools switched off
-      const humanId = await human("(p) => p.create({ kind: 'note', x: 1200, y: 400, text: 'My own working' })");
-      let rejected = false;
+      // Its own tab with the learning prototype on, so the race does not depend on flags.
+      const tab = await openCanvas(browser, base, "?prototype=learning");
+      const learner = await mcpAgent(base, tab.session);
       try {
-        await agent.call("canvas_learn", { mode: "predict", question: "What will this show?", x: 1200, y: 700, hideIds: [humanId] });
-      } catch {
-        rejected = true;
+        if (!(await learner.tools()).includes("canvas_learn")) return true; // prototype tools switched off
+        await learner.call("canvas_page", { name: "Learning safety" });
+        const humanId = await tab.page.evaluate(() => (window as any).paired.create({ kind: "note", x: 0, y: 0, text: "My own working" }));
+        // Only a refusal on the person's behalf counts (not, say, a prototype flag being off).
+        let rejected = false, reason = "";
+        try {
+          await learner.call("canvas_learn", { mode: "predict", question: "What will this show?", x: 0, y: 300, hideIds: [humanId] });
+        } catch (error) {
+          reason = String(error);
+          rejected = /person made/.test(reason);
+        }
+        const hidden = await tab.page.evaluate((id: string) => {
+          const e = (window as any).__pairedEditor;
+          const s = e.getShape(id);
+          return !s || e.isShapeHidden(s);
+        }, humanId);
+        if (hidden) lost(1);
+        if (!rejected) return reason ? `canvas_learn refused for another reason: ${reason.slice(0, 160)}` : "canvas_learn accepted a person's object in hideIds";
+        return hidden ? "the person's object is hidden" : true;
+      } finally {
+        await learner.close();
+        await tab.context.close();
       }
-      const hidden = await page.evaluate((id: string) => {
-        const e = (window as any).__pairedEditor;
-        const s = e.getShape(id);
-        return !s || e.isShapeHidden(s);
-      }, humanId);
-      if (hidden) lost(1);
-      if (!rejected) return "canvas_learn accepted a person's object in hideIds";
-      return hidden ? "the person's object is hidden" : true;
     });
   } finally {
     await agent.close();
