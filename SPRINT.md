@@ -483,6 +483,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 76. Agent never rewrites the person's words | claude/sprint-human-words | 2026-11-26T13:14Z
+69. The 10k pan figure survives a slow-mode run | claude/sprint-pan-quartile | 2026-11-26T13:14Z
 71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
