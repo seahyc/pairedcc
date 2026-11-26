@@ -11,6 +11,7 @@ export const LISTENER_GRACE_MS = 6000;
 export class AskDesk {
   private queue: (Delivery & { key: string })[] = [];
   private known = new Set<string>();
+  private latest = new Map<string, number>();
   private waiters: Waiter[] = [];
   private lastSeen = new Map<string, number>();
   private announced = "";
@@ -20,10 +21,19 @@ export class AskDesk {
     private now: () => number = Date.now,
   ) {}
 
-  /** Queue an ask, or hand it straight to a waiting agent. A repeated attempt is ignored. */
+  /**
+   * Queue an ask, or hand it straight to a waiting agent. A repeated attempt is ignored. A newer
+   * attempt (the person pressed Retry or Send again) replaces an older one still in the queue,
+   * so an agent arriving later answers once; an older attempt arriving late is dropped.
+   */
   announce(sessionId: string, ask: AnnouncedAsk) {
     const key = `${sessionId}:${ask.id}:${ask.attempt}`;
     if (this.known.has(key)) return false;
+    const askKey = `${sessionId}:${ask.id}`;
+    if ((this.latest.get(askKey) ?? -1) > ask.attempt) return false;
+    this.latest.set(askKey, ask.attempt);
+    if (this.latest.size > 2000) this.latest.delete(this.latest.keys().next().value!);
+    this.queue = this.queue.filter((q) => !(q.sessionId === sessionId && q.ask.id === ask.id));
     this.known.add(key);
     if (this.known.size > 2000) this.known.delete(this.known.values().next().value!);
     const waiter = this.waiters.shift();

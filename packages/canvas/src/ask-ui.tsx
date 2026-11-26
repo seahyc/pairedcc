@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { atom, useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
 import { askAnnouncement, askStatusLine, retryLabel, BAR_MARGIN, placeBar, startersFor, statusWidth, suggestQuestion } from "./ask-rules";
@@ -35,12 +35,19 @@ export function sendAsk(editor: Editor, id: string) {
  * The one selected ask that can be sent again (failed, went quiet, or not heard), with the
  * word its state line uses: Retry or Send again. Reads the same signals as the state line.
  */
-export function selectedRetry(editor: Editor): { id: string; label: "Retry" | "Send again" } | undefined {
+/**
+ * A clock the selection bar reads, so an ask that goes quiet while selected turns its first
+ * button to Retry when its state line does. It ticks only while a selected ask is waiting or
+ * working.
+ */
+export const askClock = atom("ask clock", Date.now());
+
+export function selectedRetry(editor: Editor, now = Date.now()): { id: string; label: "Retry" | "Send again" } | undefined {
   const shapes = editor.getSelectedShapes().filter((s) => s.type !== "arrow");
   const ask = shapes.length === 1 ? askOf(shapes[0]) : undefined;
   if (!ask) return undefined;
   const listeners = agentListeners.get(), hosted = agentLink.get().mode === "hosted";
-  const line = askStatusLine(ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Date.now(), given: "", recent: chatAgentActivity(agentActivity.get()) });
+  const line = askStatusLine(ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now, given: "", recent: chatAgentActivity(agentActivity.get()) });
   const label = retryLabel(line);
   return label ? { id: shapes[0].id, label } : undefined;
 }
@@ -167,7 +174,9 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       const only = shapes.length === 1 ? shapes[0] : undefined;
       return {
         // A failed or unheard ask: the first button sends it again.
-        retry: selectedRetry(editor)?.label ?? "",
+        retry: selectedRetry(editor, Math.max(askClock.get(), Date.now()))?.label ?? "",
+        // A selected ask still in progress: the clock ticks so going quiet shows on the bar.
+        pending: Boolean(only && ["waiting", "working"].includes(askOf(only)?.state ?? "")),
         ids: shapes.map((s) => s.id).join(","),
         x: Math.round(from.x),
         y: Math.round(from.y),
@@ -220,6 +229,12 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     return () => window.removeEventListener("resize", onResize);
   }, []);
   const ids = state?.ids;
+  const pending = Boolean(state?.pending);
+  useEffect(() => {
+    if (!pending) return;
+    const timer = setInterval(() => askClock.set(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, [pending]);
   useEffect(() => {
     if (asking && !ids) setAsking(false);
   }, [asking, ids, setAsking]);

@@ -495,7 +495,7 @@ function Shell() {
       const target = event.target;
       if (
         target instanceof HTMLElement &&
-        target.closest("input,textarea,select,[contenteditable=true]")
+        target.closest("input,textarea,select,[contenteditable=true],[role=dialog]")
       )
         return;
       if (event.altKey) return;
@@ -554,6 +554,16 @@ function Shell() {
     // P and X judge the selection. Capture first so tldraw's own X (pen) shortcut doesn't fire.
     function judge(event: KeyboardEvent) {
       const target = event.target;
+      // Keys meant for the board do nothing behind an open dialog; ? still closes the shortcuts.
+      const dialog = target instanceof HTMLElement ? target.closest("[role=dialog]") : null;
+      if (dialog) {
+        if (event.key === "?" && dialog.getAttribute("aria-label") === "Keyboard shortcuts") {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          setHelpOpen(false);
+        }
+        return;
+      }
       const typingOnBoard = target instanceof HTMLElement && Boolean(target.closest(".tl-container [contenteditable=true]"));
       const asksNow = (event.metaKey || event.ctrlKey) && event.key === "Enter" && typingOnBoard;
       if (
@@ -569,7 +579,7 @@ function Shell() {
         event.stopImmediatePropagation();
         // The canvas starts editing a selected card when Enter is released; this Enter is ours.
         swallowEnterUp = true;
-        if (!event.repeat) askAboutSelection();
+        if (!event.repeat) askAboutSelection({ resendFailed: true });
         return;
       }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -758,8 +768,12 @@ function Shell() {
     );
     (backwards ? controls[controls.length - 1] : controls[0])?.focus();
   }
-  /** Ask: finish typing if a card is being written, then open the question box on the selection. */
-  function askAboutSelection() {
+  /**
+   * Ask: finish typing if a card is being written, then open the question box on the selection.
+   * From the keyboard (Ctrl/⌘+Enter) a failed or unheard ask is sent again instead; the toolbar's
+   * Ask button always opens the question box.
+   */
+  function askAboutSelection({ resendFailed = false }: { resendFailed?: boolean } = {}) {
     const editing = editor.getEditingShapeId();
     if (editing) {
       editor.complete();
@@ -771,7 +785,7 @@ function Shell() {
       return;
     }
     // A failed or unheard ask is sent again rather than asked about.
-    const retry = editing ? undefined : selectedRetry(editor);
+    const retry = editing || !resendFailed ? undefined : selectedRetry(editor);
     if (retry) {
       resendAsk(editor, retry.id);
       return;
@@ -1236,7 +1250,7 @@ function Shell() {
             <span>{t.name}</span>
           </button>
         ))}
-        <button type="button" className="tool-button ask" title={keys("Ask your agent about the selection (⌘↵)")} onClick={askAboutSelection}>
+        <button type="button" className="tool-button ask" title={keys("Ask your agent about the selection (⌘↵)")} onClick={() => askAboutSelection()}>
           <Sparkles size={18} strokeWidth={1.6} />
           <span>Ask</span>
         </button>

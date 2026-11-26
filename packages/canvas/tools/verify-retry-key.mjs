@@ -3,7 +3,9 @@
 // On a fresh profile at 1440 x 900: the person writes a card and asks; an agent fails the ask
 // over HTTP. With the failed ask selected, the selection bar's first button must say Retry with
 // its key, and Ctrl/⌘+Enter must send the ask again (a new attempt, waiting) without opening
-// the Ask box or making a new ask. The button does the same. An answered ask and a card keep Ask.
+// the Ask box or making a new ask. The button does the same; the toolbar's Ask button still opens
+// the question box; a selected working ask that goes quiet turns the bar to Retry. An answered ask
+// and a card keep Ask.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-retry-key.mjs <screenshot dir>
 //
@@ -94,6 +96,36 @@ await p.click('.selection-bar > button.primary');
 await p.waitForTimeout(500);
 after = await askState(ask.id);
 check('the Retry button sends it again too', after?.state === 'waiting' && after.attempt === (before?.attempt ?? 0) + 2, JSON.stringify({ state: after?.state, attempt: after?.attempt }));
+
+// The toolbar's Ask button still opens the question box on a failed ask.
+await command('ask_status', { id: ask.id, state: 'failed', error: 'Once more' });
+await p.waitForTimeout(500);
+await select(ask.id);
+const attemptBefore = (await askState(ask.id))?.attempt;
+await p.click('.tool-button.ask');
+await p.waitForTimeout(400);
+const toolbarBox = await p.evaluate(() => Boolean(document.querySelector('.selection-bar.asking input')));
+check("the toolbar's Ask button opens the question box, and does not resend", toolbarBox && (await askState(ask.id))?.attempt === attemptBefore, `box ${toolbarBox}, attempt ${attemptBefore} → ${(await askState(ask.id))?.attempt}`);
+await p.keyboard.press('Escape');
+await p.waitForTimeout(200);
+
+// A working ask that goes quiet: the bar turns to Retry as the state line does, without a new selection.
+await select(ask.id);
+await p.click('.selection-bar > button.primary');
+await p.waitForTimeout(300);
+await command('ask_status', { id: ask.id, state: 'working', note: 'thinking' });
+await p.waitForTimeout(400);
+await select(ask.id);
+const workingLabel = await primary();
+// Move the page's clock past the two-minute quiet mark, then give the bar's 5-second tick
+// (a timer started before the fake clock) one real tick to notice.
+await p.clock.install();
+await p.clock.fastForward(130_000);
+await p.waitForTimeout(5600);
+const quietLabel = await primary();
+const lineRetry = await p.evaluate((id) => Boolean([...document.querySelectorAll('.ask-status button')].length), ask.id);
+check('a selected ask that goes quiet turns the bar to Retry, as its state line does', /Ask/.test(workingLabel ?? '') && /Retry/.test(quietLabel ?? '') && lineRetry, `${workingLabel} → ${quietLabel}; line retry ${lineRetry}`);
+await p.clock.resume();
 
 // An answered ask and a card keep Ask.
 await command('answer', { id: ask.id, text: 'Start with one case: a team of five paying per seat.' });

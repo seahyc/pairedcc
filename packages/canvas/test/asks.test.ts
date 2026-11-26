@@ -23,6 +23,24 @@ describe("ask desk", () => {
     expect(desk.announce("tab", ask("shape:a", 1))).toBe(true);
     expect((await desk.wait("Claude", 10).promise)?.ask.attempt).toBe(1);
   });
+  it("a newer attempt replaces an older one nobody has taken yet", async () => {
+    const desk = new AskDesk();
+    desk.announce("tab", ask("shape:a", 0));
+    desk.announce("tab", ask("shape:a", 1));
+    desk.announce("tab", ask("shape:b", 0));
+    expect((await desk.wait("Claude", 10).promise)?.ask).toEqual(ask("shape:a", 1));
+    expect((await desk.wait("Claude", 10).promise)?.ask.id).toBe("shape:b");
+    expect(await desk.wait("Claude", 10).promise).toBeNull();
+  });
+  it("an attempt already taken is not replaced, and an older attempt arriving late is dropped", async () => {
+    const desk = new AskDesk();
+    desk.announce("tab", ask("shape:a", 1));
+    expect((await desk.wait("Claude", 10).promise)?.ask.attempt).toBe(1);
+    desk.announce("tab", ask("shape:a", 2));
+    desk.announce("tab", ask("shape:a", 0));
+    expect((await desk.wait("Claude", 10).promise)?.ask.attempt).toBe(2);
+    expect(await desk.wait("Claude", 10).promise).toBeNull();
+  });
   it("gives one ask to one agent only", async () => {
     const desk = new AskDesk();
     const first = desk.wait("A", 30), second = desk.wait("B", 30);
