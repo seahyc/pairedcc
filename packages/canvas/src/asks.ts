@@ -100,9 +100,12 @@ export function askDirect(editor: Editor, hostId: string, otherIds: string[] = [
   return host.id;
 }
 
+/** The person's writing: their own cards, and a first-board card they wrote over. */
+export const writtenByPerson = (s: TLShape) => authorOf(s) === HUMAN || (s.meta.seed === true && typeof s.meta.updatedAt === "number");
+
 /** True when a card the person just finished writing should go to the agent by itself. */
 export function shouldSend(shape: TLShape | undefined) {
-  if (!shape || authorOf(shape) !== HUMAN) return false;
+  if (!shape || !writtenByPerson(shape)) return false;
   const text = textOf(shape), ask = askOf(shape);
   if (!text) return false;
   if (ask) return ask.sent !== undefined && ask.sent !== text;

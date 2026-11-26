@@ -2,12 +2,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { startEditingShapeWithRichText, useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
-import { askDirect, askOf, createAsk, describeAsk, retryAsk, shouldSend } from "./asks";
+import { askDirect, askOf, createAsk, describeAsk, retryAsk, shouldSend, writtenByPerson } from "./asks";
 import { askAnnouncement, askStatusLine, isQuestion, retryLabel, BAR_MARGIN, placeBar, statusWidth } from "./ask-rules";
 import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
-import { HUMAN, authorOf, toggleMark } from "./scratchbook";
+import { toggleMark } from "./scratchbook";
 import { isLeftOut, leftOutLabel, toggleLeftOut } from "./leave-out";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
@@ -170,7 +170,7 @@ export function askSelection(editor: Editor, onNotice: (text: string) => void, k
     }
     const shapes = editor.getSelectedShapes().filter((s) => s.type !== "arrow");
     if (!shapes.length) return onNotice("Write a thought first. A question is sent as soon as you finish writing it.");
-    const host = shapes.find((s) => authorOf(s) === HUMAN && textOf(s) && !sourceOf(s));
+    const host = shapes.find((s) => writtenByPerson(s) && textOf(s) && !sourceOf(s));
     if (host) {
       sendCard(editor, host.id, shapes.map((s) => s.id), keepInView);
       editor.selectNone();
@@ -241,9 +241,9 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         leftOut: shapes.every((s) => isLeftOut(s.meta)),
         text: only ? textOf(only) : "",
         blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
-        question: Boolean(only && authorOf(only) === HUMAN && (isQuestion(textOf(only)) || only.meta.askWhenWritten === true)),
-        mine: shapes.some((s) => authorOf(s) === HUMAN && textOf(s) && !sourceOf(s)),
-        asked: shapes.some((s) => authorOf(s) === HUMAN && Boolean(askOf(s))),
+        question: Boolean(only && writtenByPerson(only) && (isQuestion(textOf(only)) || only.meta.askWhenWritten === true)),
+        mine: shapes.some((s) => writtenByPerson(s) && textOf(s) && !sourceOf(s)),
+        asked: shapes.some((s) => writtenByPerson(s) && Boolean(askOf(s))),
         // One record that cites sections of an imported document: they can be brought beside it.
         cites: (() => {
           const records = selectedRecords(editor);
