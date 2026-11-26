@@ -79,7 +79,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_overview",
     op: "overview",
     description:
-      "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
+      "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
     input: overviewInput.shape,
     output: "json",
   },
