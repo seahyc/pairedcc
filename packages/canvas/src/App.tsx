@@ -594,10 +594,16 @@ function Shell() {
     redo = useValue("can redo", () => editor.getCanRedo(), [editor]);
   const [leftOpen, setLeftOpen] = useState(false),
     [agentOpen, setAgentOpen] = useState(false),
-    [notice, setNoticeText] = useState(""),
+    [notice, setNoticeShown] = useState(""),
+    // Bumped each time a notice is shown, so the same words shown again get their full time.
+    [noticeAt, setNoticeAt] = useState(0),
     // The ask a notice is about when it was answered (or failed) on another page: Show goes there.
     [noticeShow, setNoticeShow] = useState<string | null>(null),
     [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const setNoticeText = (text: string) => {
+    setNoticeShown(text);
+    setNoticeAt((n) => n + 1);
+  };
   // Any other notice is about something else, so it drops the Show from the one before.
   const setNotice = (text: string) => {
     setNoticeText(text);
@@ -978,7 +984,7 @@ function Shell() {
     if (delay === null) return;
     const t = setTimeout(() => setNotice(""), delay);
     return () => clearTimeout(t);
-  }, [notice, noticeShow, noticeHeld]);
+  }, [notice, noticeAt, noticeShow, noticeHeld]);
   useEffect(() => {
     if (!notice) setNoticeHeld(false);
   }, [notice]);

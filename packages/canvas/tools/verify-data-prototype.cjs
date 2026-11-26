@@ -56,7 +56,10 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ?
   // Reload persists
   await p.reload(); await p.waitForTimeout(3000);
   const charts = await p.locator('.chart').count();
-  check('reload keeps the data prototype page and its chart', (await p.getByText('Data prototype', { exact: true }).count()) >= 1 && charts === 1, `charts: ${charts}`);
+  // The page is read from the board itself: the layers panel that lists pages is not built while
+// it is closed (#127), so its text is no longer on the page to find.
+  const pages = await p.evaluate(() => window.__pairedEditor.getPages().map((pg) => pg.name));
+  check('reload keeps the data prototype page and its chart', pages.includes('Data prototype') && charts === 1, `charts: ${charts}; pages: ${pages.join(', ')}`);
   check('no page errors', errors.length === 0, errors.join(' | '));
   await b.close();
   const failed = results.filter(ok => !ok).length;
