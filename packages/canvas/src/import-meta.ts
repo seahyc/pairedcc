@@ -52,7 +52,13 @@ export function sourceText(shape: TLShape, plain: string): string | undefined {
   }
   if ((source.kind === "title" || source.kind === "record") && source.values) {
     const short = Object.entries(source.values).filter(([, value]) => value.length < 50);
-    return short.map(([column, value]) => `${column}: ${value}`).join(" · ") || plain;
+    // The column names help an agent while the title is as imported. Once the person edits it,
+    // what the board shows is what the agent gets.
+    // The card's name is its title line as imported, so it tells an edited title from an untouched one.
+    const flat = (t: string) => t.replace(/\s+/g, " ").trim();
+    const original = flat(String(shape.meta.name ?? ""));
+    const unedited = !plain || !original || flat(plain).startsWith(original);
+    return unedited ? short.map(([column, value]) => `${column}: ${value}`).join(" · ") || plain : plain;
   }
   if (source.kind === "table" && shape.type === "datatable") {
     const props = shape.props as { title: string; columns: string[]; rows: string[][] };
