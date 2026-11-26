@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { AskDesk, LISTENER_GRACE_MS } from "../server/asks";
-import { answerLayout, askStatusLine, capWords, suggestQuestion, OPTION_W } from "../src/ask-rules";
+import { answerLayout, askStatusLine, capWords, isQuestion, OPTION_W } from "../src/ask-rules";
 import { answerInput, askStatusInput } from "../src/protocol";
 import { buildPrompt, parseReply, readingNote, systemPrompt } from "../tools/resident-prompt";
 import { toolDefs } from "../tools/tool-defs";
@@ -75,8 +75,8 @@ describe("ask rules", () => {
     expect(answerLayout({ x: 0, y: 0 }, ["word ".repeat(80)]).box.h).toBeGreaterThan(short);
   });
   it("prefills only when the selection is a question", () => {
-    expect(suggestQuestion("Should we charge per seat?")).toBe("Answer this");
-    expect(suggestQuestion("Charge per seat")).toBe("");
+    expect(isQuestion("Should we charge per seat? ")).toBe(true);
+    expect(isQuestion("Charge per seat")).toBe(false);
   });
   it("never leaves an ask silent: every state has words, and a way out when stuck", () => {
     const base = { attempt: 0, askedAt: 0 };
@@ -95,7 +95,7 @@ describe("ask rules", () => {
     expect(askStatusLine({ ...base, state: "working", agent: "Claude", note: "reading 1 object", startedAt: 1000 }, opts).text).toBe("Claude: reading 1 object · 3s");
     expect(askStatusLine({ ...base, state: "working", agent: "Claude", startedAt: 0 }, { ...opts, now: 130_000 }).retry).toBe(true);
     expect(askStatusLine({ ...base, state: "failed", error: "Claude took longer than 90 seconds" }, opts)).toMatchObject({ tone: "failed", retry: true });
-    expect(askStatusLine({ ...base, state: "answered", agent: "Claude", answeredAt: 3500 }, opts).text).toContain("answered in 4s · given “a card”");
+    expect(askStatusLine({ ...base, state: "answered", agent: "Claude", answeredAt: 3500 }, opts).text).toContain("answered in 4s · also read “a card”");
     expect(askStatusLine({ ...base, state: "waiting" }, { ...opts, listeners: null }).text).toContain("Connect an agent");
   });
 });
@@ -129,7 +129,10 @@ describe("resident agent prompt", () => {
   };
   it("sends only what the ask shows: the question, the selection, its frame and the thread", () => {
     const prompt = buildPrompt(given);
-    expect(prompt).toContain('The ask: """What\'s missing?"""');
+    expect(prompt).toContain('The person wrote this, and it is what you respond to: """What\'s missing?"""');
+    const alone = buildPrompt({ question: "What's the GDP of Singapore?", targets: [] });
+    expect(alone).toContain('"""What\'s the GDP of Singapore?"""');
+    expect(alone).not.toContain("beside");
     expect(prompt).toContain('card written by the person: """Charge per seat"""');
     expect(prompt).toContain('the frame "Pricing"');
     expect(prompt).toContain("Per post today");
@@ -141,6 +144,7 @@ describe("resident agent prompt", () => {
     expect(systemPrompt).toContain("One step, then stop");
     expect(systemPrompt).toContain("2 to 4 short alternatives");
     expect(systemPrompt).toContain("ask one short question instead of guessing");
+    expect(systemPrompt).toContain("answer it directly");
   });
   it("reads an answer, alternatives, a question back, fenced JSON and plain prose", () => {
     expect(parseReply('{"read":"your card","kind":"answer","text":"Try it on one team."}')).toEqual({ read: "your card", kind: "answer", text: "Try it on one team." });

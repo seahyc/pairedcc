@@ -1498,60 +1498,6 @@ kbd {
   gap: 5px;
   pointer-events: none;
 }
-.selection-bar.asking {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  padding: 8px;
-  width: 430px;
-  box-sizing: border-box;
-}
-.ask-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.ask-spark {
-  color: #3a2fd0;
-  font-size: 15px;
-}
-.ask-row input {
-  flex: 1;
-  min-width: 0;
-  border: 1px solid #d9d6f3;
-  border-radius: 7px;
-  padding: 8px 10px;
-  font: 400 13px Inter, -apple-system, sans-serif;
-  outline-color: #6b5fe0;
-}
-.ask-send {
-  border: 0;
-  border-radius: 7px;
-  padding: 8px 11px;
-  background: #3a2fd0;
-  color: #fff;
-  font: 500 12px Inter, -apple-system, sans-serif;
-}
-.ask-send:disabled {
-  background: #c9c6ea;
-}
-.ask-starters {
-  display: flex;
-  gap: 6px;
-  padding-left: 23px;
-}
-.ask-starters button {
-  border: 1px solid #e1dff5;
-  background: #f6f5fd;
-  color: #4a3fb8;
-  border-radius: 999px;
-  padding: 4px 10px;
-  font: 400 11.5px Inter, -apple-system, sans-serif;
-}
-.ask-starters button:hover {
-  background: #e9e8fb;
-}
-
 /* An ask's state, written under it on the board. */
 .ask-status {
   position: absolute;

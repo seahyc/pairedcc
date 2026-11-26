@@ -287,7 +287,7 @@ export function calmSeed(editor: Editor) {
           x,
           y: hint + 52,
           width: 400,
-          text: "Then select it and press ⌘↵ to ask. I answer beside it in a few lines; lavender is me. After that you pick (P), cross out (X) or comment (C), and ask again.",
+          text: "End it with a question mark and I answer under it when you finish writing. For anything else, press ⌘↵. Lavender is me. Then pick (P), cross out (X), or write the next thing.",
         },
         AGENT,
         { name: "How to ask", ...meta },

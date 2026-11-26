@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { startEditingShapeWithRichText, useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentListeners, agentLink, announceAsk } from "./agent-client";
-import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
-import { askStatusLine, startersFor, suggestQuestion } from "./ask-rules";
-import { sourceOf } from "./import-meta";
+import { askDirect, askOf, createAsk, describeAsk, retryAsk, shouldSend } from "./asks";
+import { askStatusLine, isQuestion } from "./ask-rules";
 import { richTextPlain, shapeName } from "./operations";
-import { toggleMark } from "./scratchbook";
+import { HUMAN, authorOf, toggleMark } from "./scratchbook";
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
 const short = (text: string, max = 28) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
@@ -14,6 +13,7 @@ const short = (text: string, max = 28) => (text.length > max ? `${text.slice(0, 
 function givenLabel(editor: Editor, ids: string[]) {
   const shapes = ids.flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
   const frames = shapes.filter((s) => s.type === "frame"), things = shapes.filter((s) => s.type !== "frame");
+  if (!shapes.length) return "";
   const first = things[0] ? `“${short(textOf(things[0]) || shapeName(things[0]))}”` : "nothing";
   return `${first}${things.length > 1 ? ` + ${things.length - 1} more` : ""}${frames[0] ? ` + frame “${short(shapeName(frames[0]), 20)}”` : ""}`;
 }
@@ -21,6 +21,68 @@ function givenLabel(editor: Editor, ids: string[]) {
 export function sendAsk(editor: Editor, id: string) {
   const shape = editor.getShape(id as TLShapeId);
   if (shape) announceAsk(describeAsk(editor, shape));
+}
+
+type Box = { x: number; y: number; maxX: number; maxY: number };
+
+/** Send a card to the agent as it stands, and bring the room for its answer into view. */
+function sendCard(editor: Editor, hostId: string, otherIds: string[], keepInView: (box: Box) => void) {
+  const id = askDirect(editor, hostId, otherIds);
+  sendAsk(editor, id);
+  const box = editor.getShapePageBounds(id as TLShapeId);
+  if (box) keepInView({ x: box.x, y: box.y, maxX: box.maxX + 60, maxY: box.maxY + 240 });
+}
+
+/**
+ * Ask, with no box in between. A card the person wrote is sent as it is. For anything else
+ * (an agent's answer, imported material) a pink card opens beside it to write the question on.
+ */
+export function askSelection(editor: Editor, onNotice: (text: string) => void, keepInView: (box: Box) => void) {
+  try {
+    const editing = editor.getEditingShapeId();
+    if (editing) {
+      editor.complete();
+      editor.setCurrentTool("select");
+      editor.select(editing);
+    }
+    const shapes = editor.getSelectedShapes().filter((s) => s.type !== "arrow");
+    if (!shapes.length) return onNotice("Write a thought first: double-click the board. A question is sent as soon as you finish writing it.");
+    const host = shapes.find((s) => authorOf(s) === HUMAN && textOf(s));
+    if (host) {
+      sendCard(editor, host.id, shapes.map((s) => s.id), keepInView);
+      editor.selectNone();
+    } else {
+      const id = createAsk(editor, { targetIds: shapes.map((s) => s.id) });
+      editor.setCurrentTool("select");
+      editor.select(id);
+      const box = editor.getShapePageBounds(id);
+      if (box) keepInView(box);
+      startEditingShapeWithRichText(editor, id, { selectAll: true });
+    }
+    editor.focus();
+  } catch (error) {
+    onNotice(error instanceof Error ? error.message : "Could not ask");
+  }
+}
+
+/** Writing is asking: when the person finishes a card that is a question, it goes to the agent. */
+export function AutoAsk({ keepInView }: { keepInView: (box: Box) => void }) {
+  const editor = useEditor();
+  const editing = useValue("editing shape", () => editor.getEditingShapeId(), [editor]);
+  const last = useRef<TLShapeId | null>(null);
+  useEffect(() => {
+    const done = last.current;
+    last.current = editing;
+    if (!done || done === editing) return;
+    const shape = editor.getShape(done);
+    if (!shape) return;
+    if (shape.meta.askWhenWritten === true && !askOf(shape) && !textOf(shape)) {
+      editor.run(() => editor.deleteShapes([shape.id]), { history: "ignore" });
+      return;
+    }
+    if (shouldSend(editor, shape)) sendCard(editor, shape.id, [], keepInView);
+  }, [editing, editor, keepInView]);
+  return null;
 }
 
 /** Page-space layer: each ask's state under it, and an outline around what the agent was given. */
@@ -43,7 +105,7 @@ export function AskLayer() {
               return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
             })
           : [];
-        return [{ id: s.id, ask, x: b.x, y: b.maxY, given: givenLabel(editor, ask.contextIds), outlines }];
+        return [{ id: s.id, ask, x: b.x, y: b.maxY, given: givenLabel(editor, ask.contextIds.filter((id) => id !== s.id)), outlines }];
       });
     },
     [editor],
@@ -69,7 +131,7 @@ export function AskLayer() {
               <span>
                 {line.tone === "working" || line.tone === "done" ? "✦ " : ""}
                 {line.text}
-                {line.tone !== "done" && line.tone !== "failed" && line.tone !== "nobody" ? ` · given ${a.given}` : ""}
+                {line.tone !== "done" && line.tone !== "failed" && line.tone !== "nobody" && a.given ? ` · with ${a.given}` : ""}
               </span>
               {line.retry && (
                 <button
@@ -93,15 +155,9 @@ export function AskLayer() {
 
 /**
  * The next step, shown at the moment it is possible: a small bar on the selection with
- * Ask, Pick, Cross out and Comment. Ask opens a one-line question box in place.
+ * Ask, Pick, Cross out and Comment. Ask sends what is written; there is no question box.
  */
-export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInView }: {
-  asking: boolean;
-  setAsking: (open: boolean) => void;
-  onComment: () => void;
-  onNotice: (text: string) => void;
-  keepInView: (box: { x: number; y: number; maxX: number; maxY: number }) => void;
-}) {
+export function SelectionBar({ onAsk, onComment }: { onAsk: () => void; onComment: () => void }) {
   const editor = useEditor();
   const state = useValue(
     "selection bar",
@@ -111,53 +167,24 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       if (!shapes.length || !box || !editor.isInAny("select.idle", "select.editing_shape")) return null;
       const from = editor.pageToScreen({ x: box.x, y: box.y }), to = editor.pageToScreen({ x: box.maxX, y: box.maxY });
       const only = shapes.length === 1 ? shapes[0] : undefined;
+      const mine = shapes.find((s) => authorOf(s) === HUMAN && textOf(s));
       return {
-        ids: shapes.map((s) => s.id).join(","),
         x: Math.round(from.x),
         y: Math.round(from.y),
         bottom: Math.round(to.y),
         editing: Boolean(editor.getEditingShapeId()),
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
-        text: only ? textOf(only) : "",
         blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
-        record: shapes.some((s) => ["record", "title", "field"].includes(sourceOf(s)?.kind ?? "")),
+        question: Boolean(only && authorOf(only) === HUMAN && (isQuestion(textOf(only)) || only.meta.askWhenWritten === true)),
+        mine: Boolean(mine),
+        asked: Boolean(mine && askOf(mine)),
       };
     },
     [editor],
   );
-  const [question, setQuestion] = useState("");
-  const input = useRef<HTMLInputElement>(null);
-  const ids = state?.ids;
-  useEffect(() => {
-    if (asking && !ids) setAsking(false);
-  }, [asking, ids, setAsking]);
-  useEffect(() => {
-    if (!asking) return;
-    setQuestion(suggestQuestion(state?.text ?? ""));
-    const timer = setTimeout(() => input.current?.select(), 0);
-    return () => clearTimeout(timer);
-    // Only when the box opens: typing must not reset it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asking]);
   if (!state) return null;
-
-  function submit(text: string) {
-    try {
-      const id = createAsk(editor, { targetIds: state!.ids.split(","), question: text });
-      sendAsk(editor, id);
-      setAsking(false);
-      editor.selectNone();
-      const box = editor.getShapePageBounds(id);
-      // Bring the ask and the room for its answer into view; the answer lands just under it.
-      if (box) keepInView({ x: box.x, y: box.y, maxX: box.maxX + 60, maxY: box.maxY + 240 });
-      editor.focus();
-    } catch (error) {
-      onNotice(error instanceof Error ? error.message : "Could not ask");
-    }
-  }
-
-  const width = asking ? 430 : 330;
+  const width = 330;
   const left = Math.max(70, Math.min(state.x, window.innerWidth - width - 16));
   const top = state.y - 50 > 52 ? state.y - 50 : state.bottom + 12;
   // Keys keep working after a click: the board takes the keyboard back.
@@ -168,53 +195,25 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
   if (state.editing)
     return state.blank ? null : (
       <div className="selection-bar hint" style={{ left, top }}>
-        <kbd>⌘↵</kbd> ask about this · <kbd>Esc</kbd> done
+        {state.question ? (
+          <>
+            ✦ Goes to your agent when you finish · <kbd>Esc</kbd> or click away
+          </>
+        ) : (
+          <>
+            End with <kbd>?</kbd> and it is asked when you finish · <kbd>⌘↵</kbd> asks now
+          </>
+        )}
       </div>
-    );
-  if (asking)
-    return (
-      <form
-        className="selection-bar asking"
-        style={{ left, top }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit(question);
-        }}
-      >
-        <div className="ask-row">
-          <span className="ask-spark">✦</span>
-          <input
-            ref={input}
-            aria-label="Your question"
-            value={question}
-            placeholder="Ask about this…"
-            maxLength={300}
-            onChange={(e) => setQuestion(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                e.stopPropagation();
-                setAsking(false);
-                editor.focus();
-              }
-            }}
-          />
-          <button type="submit" className="ask-send" disabled={!question.trim()}>
-            Ask ↵
-          </button>
-        </div>
-        <div className="ask-starters">
-          {startersFor(state).map((s) => (
-            <button key={s} type="button" onClick={() => submit(s)}>
-              {s}
-            </button>
-          ))}
-        </div>
-      </form>
     );
   return (
     <div className="selection-bar" style={{ left, top }} role="toolbar" aria-label="What next">
-      <button className="primary" onClick={() => setAsking(true)} title="Ask your agent about the selection (⌘↵)">
-        ✦ Ask <kbd>⌘↵</kbd>
+      <button
+        className="primary"
+        onClick={onAsk}
+        title={state.mine ? "Send what you wrote to your agent (⌘↵)" : "Write a question beside this for your agent (⌘↵)"}
+      >
+        ✦ {state.mine ? (state.asked ? "Ask again" : "Ask") : "Ask about this"} <kbd>⌘↵</kbd>
       </button>
       <button className={state.picked ? "on" : ""} onClick={() => judge("picked")} title="Pick: this one (P)">
         Pick <kbd>P</kbd>

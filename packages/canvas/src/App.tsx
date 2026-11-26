@@ -68,7 +68,7 @@ import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { createComment } from "./agent-operations";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { calmSeed, seed } from "./seed";
-import { AskLayer, SelectionBar } from "./ask-ui";
+import { AskLayer, AutoAsk, SelectionBar, askSelection } from "./ask-ui";
 import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
 import { DataTableShapeUtil } from "./table-shape";
 import { ImportLayer, chooseImportFile } from "./import-ui";
@@ -251,7 +251,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
     title: "Think",
     rows: [
       ["Write a thought", "N, or double-click the board"],
-      ["Ask your agent about the selection", "⌘ ↵"],
+      ["Ask: write a question and finish, or send any card", "end with ?, or ⌘ ↵"],
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
@@ -297,7 +297,7 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
           </IconButton>
         </div>
         <p>
-          Pink handwriting is you, lavender with ✦ is your agent. Write a thought, select it and ask. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
+          Pink handwriting is you, lavender with ✦ is your agent. Write a question and it is asked when you finish; any other card is asked with ⌘↵. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
         </p>
         <div className="shortcut-grid">
           {shortcutGroups.map((group) => (
@@ -326,7 +326,6 @@ function Shell() {
   const setRightTab = setPanel;
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [asking, setAsking] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const openCount = useValue("open feedback", () => collectFeedback(editor).filter((i) => i.status === "open").length, [editor]);
   const link = useValue("agent link", () => agentLink.get(), []);
@@ -403,7 +402,6 @@ function Shell() {
         setHelpOpen(false);
         setMenuOpen(false);
         setMoreOpen(false);
-        setAsking(false);
         editor.cancel();
         editor.setCurrentTool("select");
         editor.selectNone();
@@ -510,19 +508,9 @@ function Shell() {
     const camera = editor.getCamera();
     if (dx || dy) editor.setCamera({ x: camera.x + dx / camera.z, y: camera.y + dy / camera.z, z: camera.z }, { animation: { duration: 160 } });
   }
-  /** Ask: finish typing if a card is being written, then open the question box on the selection. */
+  /** Ask: what is written goes to the agent as it stands; there is no question box. */
   function askAboutSelection() {
-    const editing = editor.getEditingShapeId();
-    if (editing) {
-      editor.complete();
-      editor.setCurrentTool("select");
-      editor.select(editing);
-    }
-    if (!editor.getSelectedShapes().some((s) => s.type !== "arrow")) {
-      setNotice("Select what you mean first, then ask");
-      return;
-    }
-    setAsking(true);
+    askSelection(editor, setNotice, keepInView);
   }
   /** C: comment on the selection, or pin a comment where the pointer is, and start typing. */
   function addComment() {
@@ -882,7 +870,7 @@ function Shell() {
             <span>{t.name}</span>
           </button>
         ))}
-        <button type="button" className="tool-button ask" title="Ask your agent about the selection (⌘↵)" onClick={askAboutSelection}>
+        <button type="button" className="tool-button ask" title="Send what you wrote to your agent (⌘↵)" onClick={askAboutSelection}>
           <Sparkles size={18} strokeWidth={1.6} />
           <span>Ask</span>
         </button>
@@ -919,7 +907,8 @@ function Shell() {
         />
       </nav>
       <ImportLayer onNotice={setNotice} />
-      <SelectionBar asking={asking} setAsking={setAsking} onComment={addComment} onNotice={setNotice} keepInView={keepInView} />
+      <SelectionBar onAsk={askAboutSelection} onComment={addComment} />
+      <AutoAsk keepInView={keepInView} />
       <aside className="right-panel">
         <div className="panel-tabs right-tabs" role="tablist">
           <button role="tab" aria-selected={rightTab === "properties"} className={rightTab === "properties" ? "tab-current" : "tab-other"} onClick={() => setRightTab("properties")}>

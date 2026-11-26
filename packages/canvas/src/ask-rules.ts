@@ -22,15 +22,8 @@ export function answerLayout(anchor: { x: number; y: number }, texts: string[]) 
   return { box: { x: anchor.x, y: anchor.y + STATUS_ROOM, w: count * w + (count - 1) * OPTION_GAP, h }, cards };
 }
 
-/** A sensible first question for what is selected: a question is answered, a thought is probed. */
-export function suggestQuestion(selectedText: string) {
-  return /\?\s*$/.test(selectedText.trim()) ? "Answer this" : "";
-}
-
-export const starters = ["What's missing?", "Give me alternatives", "Poke holes in this"];
-/** An imported record is an argument to judge, so its first starter asks exactly that. */
-export const recordStarters = ["Is this point valid?", "Is the defence enough?", "Poke holes in this"];
-export const startersFor = (selection: { record: boolean }) => (selection.record ? recordStarters : starters);
+/** A card that ends in a question mark is a question, and is sent as soon as it is written. */
+export const isQuestion = (text: string) => /[?？]\s*$/.test(text.trim());
 
 /** What an ask shows under itself, for each state. */
 export function askStatusLine(
@@ -39,7 +32,7 @@ export function askStatusLine(
 ) {
   const secs = (from: number, to: number) => `${Math.max(1, Math.round((to - from) / 1000))}s`;
   if (ask.state === "answered")
-    return { tone: "done", text: `${ask.agent ?? "Agent"} answered in ${secs(ask.askedAt, ask.answeredAt ?? opts.now)} · given ${opts.given}` };
+    return { tone: "done", text: `${ask.agent ?? "Agent"} answered in ${secs(ask.askedAt, ask.answeredAt ?? opts.now)}${opts.given ? ` · also read ${opts.given}` : ""}` };
   if (ask.state === "failed") return { tone: "failed", text: `No answer: ${ask.error ?? "something went wrong"}`, retry: true };
   if (ask.state === "working") {
     // An agent that says nothing for two minutes has stopped; offer the way out.

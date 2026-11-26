@@ -6,7 +6,9 @@ Status as of 26 Nov 2026, after the calm-canvas pass. "Does" means built and che
 
 ## The loop
 
-Write a thought (pink, handwritten, yours) → select what you mean → Ask → the agent answers beside it on a short lavender card, or with two to four alternatives side by side → pick (P), cross out (X) or comment (C) → ask again. Each next step appears on the selection at the moment it is possible.
+Write on the board (pink, handwritten, yours). The card is the question: end it with a question mark and it goes to the agent when you finish writing; any other card is sent as it stands with ⌘↵. There is no question box. The agent answers under the card on a short lavender card, reading what sits right beside the card too → pick (P), cross out (X) or write the next thing. To ask about something you did not write (an answer, imported material), Ask opens a pink card beside it and what you write there is sent.
+
+Changed on 26 Nov after YC's second playtest: the earlier build made you select a card, open a box and type or pick a second question, so a written question got "alternatives" instead of an answer.
 
 ## The nine findings
 
@@ -18,7 +20,7 @@ Write a thought (pink, handwritten, yours) → select what you mean → Ask → 
 | 4. We think with our eyes | Whose is what, and what state it is in, must be seen, not read. | Pink handwriting is the person, lavender print with ✦ is the agent. An ask shows its state in a line under it; what the agent was given is outlined on the board when the ask is selected or being worked on. Picks are boxed, crossed-out ideas are struck and faded but stay. | No overview of a large board; nothing shows which threads are settled. |
 | 5. Concrete before abstract | Answers start from a case. | The resident agent's instructions require a concrete example or specific case first. | No data or examples can be pulled onto the board yet; the agent answers only from the text it is given. |
 | 6. Comparing beats describing | Choices arrive as options side by side. | When the ask is a choice or asks for options, the answer is two to four cards in one row, lettered, each short. | Options cannot be compared on stated dimensions, and picking one does not carry it forward. |
-| 7. Recognising beats recalling | Offer things to pick from; do not ask the person to produce from nothing. | Next actions are shown on the selection (Ask, Pick, Cross out, Comment) with their keys. The ask box offers three starter questions. Toolbar buttons carry their names. | Starters are fixed; they do not adapt to what is selected. |
+| 7. Recognising beats recalling | Offer things to pick from; do not ask the person to produce from nothing. | Next actions are shown on the selection (Ask, Pick, Cross out, Comment) with their keys. Toolbar buttons carry their names. | No suggested questions any more: the starter chips went with the ask box. Suggestions written on the board itself are not built. |
 | 8. Rough means unfinished | Thoughts and drafts look open to change. | Handwriting, marker arrows, hand-drawn ink, dot-grid paper. Agent answers are plain cards that can be edited, crossed out or deleted like anything else. No added chrome. | Nothing marks an idea as settled, so "rough" has no opposite yet. |
 | 9. Understanding needs effort and repetition | Do not hand over a finished answer when the person should be doing the thinking. | The person writes first; the agent answers one step in about 60 words (cut at 90) and stops. A long answer cannot be placed through the answer operation. | No learning mode: no predict-then-check, retrieval or spaced return. Not built on purpose in this pass. |
 

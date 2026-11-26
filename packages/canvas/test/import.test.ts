@@ -16,7 +16,6 @@ import {
   type ImportPlan,
 } from "../src/import-parse";
 import { sourceAuthor, sourceText } from "../src/import-meta";
-import { startersFor } from "../src/ask-rules";
 import { buildPrompt } from "../tools/resident-prompt";
 import { toolDefs } from "../tools/tool-defs";
 
@@ -202,9 +201,7 @@ describe("what an agent is given", () => {
     const prompt = buildPrompt({ question: "Is this point valid?", targets: [{ id: "shape:a", type: "card", author: "Imported source (review.tsv, row 3)", text: "Gap / exposure: silent on timing" }] });
     expect(prompt).toContain('card written by the imported source material (review.tsv, row 3): """Gap / exposure: silent on timing"""');
   });
-  it("offers a record its own first question, and has an import tool", () => {
-    expect(startersFor({ record: true })[0]).toBe("Is this point valid?");
-    expect(startersFor({ record: false })[0]).toBe("What's missing?");
+  it("has an import tool", () => {
     expect(toolDefs.find((t) => t.name === "canvas_import")?.op).toBe("import");
   });
 });
