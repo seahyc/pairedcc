@@ -465,6 +465,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     with a headless check of each case.
 
 ## Claims
+71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
 71. Web page reader stays quick on awkward markup | claude/sprint-html-linear | 2026-11-26T13:00Z
 74. Stale flags at the canvas edge | claude/sprint-stale-edges | 2026-11-26T12:58Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
