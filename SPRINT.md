@@ -310,7 +310,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     sibling options with their marks, the resident agent's prompt says to build on picks and not
     offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
 
-45. **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
+45. ((a) to (c): PR #66 open, awaiting review; (b) and (c) reproduced and fixed, (a) recorded as a decision. (d) and (e) open.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
     failing test first, then a fix or a recorded decision: (a) after a board is deleted and
     recreated under the same ID, a save or delete holding the old revision number is accepted
     (revisions restart at 1); (b) PostgreSQL `JSONB` rejects a snapshot holding an unpaired UTF-16
@@ -331,7 +331,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     in a real tab.
 
 ## Claims
-45. Board sync gaps (a) to (c) | claude/sprint-sync-gaps | 2026-11-26T11:49Z
 45. Ask about a frame gives its contents | claude/sprint-ask-frame | 2026-11-26T11:52Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
@@ -442,6 +441,8 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (review, #33) `canvas_group` was let in as an ordinary tool although it comes from the spec's proposed agent interface list, because the list's other verbs already are ordinary tools. Alternative: a flagged prototype (`?prototype=group`).
 - (build-B) Security note for the maintainer (from an automated review of #19, not changed): `e2e/serve.mjs` writes the test server's output, including live magic links, to a log in the system temp directory with default file permissions, so another local user could read and redeem a link while the test runs. It is test-only and the accounts are synthetic; restricting the file mode (0600) is a one-line change if you want it.
 
+- (build-B, item 45a) Not fixed: after a board is deleted and recreated under the same ID, revisions restart at 1, so a client holding an old revision number could save over the new board. No client deletes boards (the canvas has no delete). Keeping revisions continuous needs a tombstone table, which means a new migration that runs on server start and reaches production. Product choice: add the tombstone migration, or keep deletion API-only and say so in the API docs.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -505,3 +506,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:55Z | review | Review #38 #39 | #38 #39 | Both merged (squash) after merging in the integration branch; #38 reproduced at 390 px after a 1440 px save; #39 driven with one tab and two; scorecard on e53322f: five rows pass, 10k pan flagged at 77.9 ms and re-measured at 35 ms on the same commit |
 | 2026-11-26T11:52Z | build-B | 44 Asks carry picks and cross-outs | #64 | Targets, frame objects and history report `mark`; sibling options given; real tab 5/8 before, 8/8 after; scorecard unchanged (10k pan noise seen on the old code too) |
 | 2026-11-26T11:52Z | build-B | Review fixes on merged PRs | #61 #62, #52 | Board-limit overwrite of the account's board fixed (#61); learning prompts no longer hide human comments or frames holding human work (#62); frame moves in #52; items 50 to 52 filed from the remaining findings |
+| 2026-11-26T11:55Z | build-B | 45 Board sync gaps (a)-(c) | #66 | Lone surrogates no longer fail a Postgres save (reproduced on PostgreSQL 16); merged changes stay out of undo (reproduced in two browsers); (a) recorded as a decision |
