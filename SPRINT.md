@@ -337,8 +337,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     its ask on the ask's own page whatever page is open, the person on another page is told who
     answered and where, the principles' "Not done" line is updated, unit-tested, and checked in a
     real tab (failing before, passing after).
+53. **`canvas_read` can find objects by their text.** The fresh agent reported that `canvas_read`
+    is large and has no text filter (Decisions needed, 13), so finding "the card about pricing"
+    means reading everything. Done when `read` accepts a `text` filter (case-insensitive, matched
+    against an object's text and name) that combines with `ids`, the tool definition and AGENT_API
+    document it, unit tests cover matching, and a live MCP call shows the smaller result.
 
 ## Claims
+53. canvas_read text filter | claude/sprint-read-filter | 2026-11-26T12:14Z
 45d. Board sync gap (d): images survive a clean profile | claude/sprint-board-images | 2026-11-26T12:08Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
