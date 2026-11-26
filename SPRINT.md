@@ -121,7 +121,7 @@ task by which measure is furthest from target, not by backlog order.
 5. (#27 merged; stacked on #20.) **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
    what it came from.
 6. (Merged, see Done.) **Learning mode prototypes** from the spec: predict-then-check and generate-first.
-7. **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
+7. (Keyboard loop: PR #105 open, awaiting review. Import fuzzing, 1k/10k performance and 390 px were done by the import PRs, the eval and #80/#87/#88.) **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
    (1k and 10k objects), keyboard accessibility, 390px layout.
 8. (Merged, see Done.) **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
    AGENT_API.md does not yet describe `canvas_dataset`, `canvas_chart`, `canvas_chart_state`,
@@ -499,9 +499,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 81. Agent note never lands on top of something | claude/sprint-annotate-clear | 2026-11-26T13:29Z
-7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
+- 7. Robustness, keyboard-only loop (build-A): PR #105 (N then Enter writes a card in view; Tab/Shift+Tab move through the board, skipping connectors and hidden objects; verify-keyboard 6/14 → 14/14).
 - 80. Asks and notes never clipped by a frame (build-B): PR #104 (verify-ask-unclipped 6/16 → 16/16).
 - 79. Read filter folds ß and matches whole characters (build-B): PR #103 (2 failing-first tests).
 - 77. Friction from the second agent attempt (build-B): PR #102 (asks page filter, schema descriptions for duplicate offsets and connect relations, overview and reply documented, `list --brief`; (a) not reproduced).
@@ -798,3 +798,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:21Z | build-B | 79 Read filter ß and grapheme boundaries | #103 | ß/ẞ fold to ss; matches start and end on whole characters; 2 failing-first tests; canvas suite green |
 | 2026-11-26T13:22Z | build-A | #100 review follow-up; run end | #100 | Non-numeric EVAL_PAN_* settings are an error row, not null figures (live check). build-A holds no claims; open: #85 #89 #93 #100 |
 | 2026-11-26T13:28Z | build-B | 80 Ask in a frame hidden by the frame | #104 | New item found in item 67 screenshots; asks, comments, replies, answers, agent notes on the page; real page 6/16 → 16/16; scorecard rows unchanged; filed 81 |
+| 2026-11-26T13:31Z | build-A | 7 Keyboard-only loop | #105 | N then Enter was a dead end and Tab never reached the board or moved on from a selection; verify-keyboard 6/14 → 14/14; 10 unit tests; regression sweep green (calm 32/33 = known #91 case); first screen unchanged; scorecard unchanged |
