@@ -58,7 +58,8 @@ import {
   type CanvasBridge,
 } from "./operations";
 import { agentLink, connectAgentAccess } from "./agent-client";
-import { createComment } from "./agent-operations";
+import { convergeForPerson, createComment } from "./agent-operations";
+import { prototypeEnabled } from "./prototype-flags";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { startBoardSync } from "./board-sync-browser";
 import { isLegacySeed, seed } from "./seed";
@@ -1032,6 +1033,20 @@ function Shell() {
                     Group
                   </button>
                 </div>
+              </div>
+            )}
+            {selected.length > 1 && prototypeEnabled("converge") && (
+              <div className="inspector-section">
+                <div className="section-title">Converge · prototype</div>
+                <p className="inspector-help">
+                  Pull these into one synthesis card that links back to each of them. Write the conclusion in your own words.
+                </p>
+                <button
+                  className="wide-button"
+                  onClick={() => convergeForPerson(editor, editor.getSelectedShapes().filter((s) => s.type !== "arrow").map((s) => s.id))}
+                >
+                  Pull into a synthesis
+                </button>
               </div>
             )}
             <div className="inspector-section">

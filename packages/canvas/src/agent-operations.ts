@@ -6,6 +6,7 @@ import {
   toRichText,
   type Editor,
   type TLShape,
+  type TLShapeId,
 } from "tldraw";
 import { sceneInput, orderedScene, arrangeInput, duplicateInput, layoutPositions } from "./composition";
 import { z } from "zod";
@@ -27,7 +28,7 @@ import {
   revision,
 } from "./operations";
 import { createPrompt } from "./learning/prompt-shape";
-import { convergeInput, placeBeside } from "./converge/model";
+import { convergeInput, placeBeside, synthesisText } from "./converge/model";
 import { overview } from "./overview";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell } from "./data/agent";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
@@ -271,23 +272,47 @@ export function connect(editor: Editor, value: unknown, actor: string) {
  */
 export function converge(editor: Editor, value: unknown, actor: string) {
   const input = convergeInput.parse(value);
-  const sources = input.sourceIds.map((id) => find(editor, id));
+  return placeSynthesis(editor, input.sourceIds, actor, { ...synthesisText(input), name: input.name ?? "Synthesis", points: input.points, at: input.x !== undefined && input.y !== undefined ? { x: input.x, y: input.y } : undefined });
+}
+
+/**
+ * The person's converge: from two or more selected objects, an empty synthesis card linked
+ * the same way, in typing mode, so they write the conclusion in their own words.
+ */
+export function convergeForPerson(editor: Editor, sourceIds: string[]) {
+  if (sourceIds.length < 2) throw new Error("Select at least two objects to pull together");
+  const { letters } = synthesisText({ sourceIds, text: "", points: [] });
+  const made = placeSynthesis(editor, sourceIds, HUMAN, { text: "", letters, name: "Synthesis" });
+  editor.setEditingShape(made.synthesis!.id as TLShapeId);
+  return made;
+}
+
+function placeSynthesis(
+  editor: Editor,
+  sourceIds: string[],
+  actor: string,
+  card: { text: string; letters: Map<string, string>; name: string; points?: unknown; at?: { x: number; y: number } },
+) {
+  const sources = sourceIds.map((id) => find(editor, id));
   for (const s of sources) if (editor.isShapeHidden(s)) throw new Error(`${s.id} is hidden; a synthesis must come from what the person can see`);
+  if (sources.some((s) => s.type === "arrow")) throw new Error("Connections cannot be sources; pass the objects they join");
   const boxes = sources.map((s) => editor.getShapePageBounds(s)).filter((b): b is NonNullable<typeof b> => !!b);
-  const at = input.x !== undefined && input.y !== undefined ? { x: input.x, y: input.y } : placeBeside(boxes);
-  const inputs = recordInputs(editor, input.sourceIds);
+  const at = card.at ?? placeBeside(boxes);
+  const inputs = recordInputs(editor, sourceIds);
   editor.markHistoryStoppingPoint("converge");
   let id = "";
   const connections: unknown[] = [];
   editor.run(() => {
-    id = createCard(editor, { kind: "note", x: at.x, y: at.y, text: input.text, name: input.name ?? "Synthesis" }, actor, {
+    id = createCard(editor, { kind: "note", x: at.x, y: at.y, text: card.text, name: card.name }, actor, {
       role: "synthesis",
-      convergedFrom: input.sourceIds,
+      convergedFrom: sourceIds,
+      ...(card.points ? { points: card.points } : {}),
       inputs,
     });
-    for (const source of input.sourceIds) connections.push(connect(editor, { fromId: source, toId: id, relation: "derived-from" }, actor));
+    // Each arrow carries its source's letter, which the card's claims cite.
+    for (const source of sourceIds) connections.push(connect(editor, { fromId: source, toId: id, relation: "derived-from", label: card.letters.get(source) }, actor));
   });
-  return { synthesis: describeObject(editor, id), sources: input.sourceIds, connections };
+  return { synthesis: describeObject(editor, id), sources: sourceIds, labels: Object.fromEntries(card.letters), connections };
 }
 
 export function annotateObject(editor: Editor, value: unknown) {

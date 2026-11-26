@@ -257,7 +257,7 @@ export const toolDefs: ToolDef[] = [
     op: "converge",
     prototype: true,
     description:
-      "PROTOTYPE converge. When several alternatives, branches or hypotheses are on the board and the person wants them pulled together, write one synthesis: what they add up to and where they still disagree, naming the sources. Creates an agent card beside the sources (or at x, y) with a derived-from arrow from each source; read reports convergedFrom in its meta and marks it stale when a source changes, so revise it then. Keep the sources; never delete or move them. Runs only in a tab opened with ?prototype=converge.",
+      "PROTOTYPE converge. When several alternatives, branches or hypotheses are on the board and the person wants them pulled together, write one synthesis: what they add up to and where they still disagree, naming the sources. Creates an agent card beside the sources (or at x, y) with a derived-from arrow from each source, labelled A, B, C; give claims as points citing their sources and the card cites them by those letters, so each claim can be checked against its evidence; read reports convergedFrom in its meta and marks it stale when a source changes, so revise it then. Keep the sources; never delete or move them. Runs only in a tab opened with ?prototype=converge.",
     input: convergeInput.shape,
     output: "json",
   },
