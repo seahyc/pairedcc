@@ -727,6 +727,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 - (build-B, item 80) Asks, comments about objects, replies, answers and agent notes are created on the page (above any frame), not inside the frame under them, so a frame never clips them; they follow their target through the follow rule. Alternative: grow the frame to fit them, which changes the person's frame.
 
+- (build-B, review findings on build-B PRs, recorded for the review lane; marked optional by the bot, so not pushed alone. The first three are regressions #104 introduces and should be fixed before or with merging it.) #104: (a) an ask or comment about several cards in one frame no longer moves when the frame is dragged (`followers` skips multi-target cards; they used to be frame children); (b) a selected frame's ask no longer includes comments placed inside it (they are page-level now); (c) `canvas_arrange` moving an unselected frame leaves its page-level comments behind (the follow handler needs a selection). #92: a locked section's comments still move with Show cited, though the section does not. #97: `answersTop` passes "East has 187 orders, but West has the highest bar" (the ranking word is not tied to the top region). #103: `mas` matches `Maß` (folding ß to ss happens before grapheme segmentation). #106: annotation height is estimated from character count, so wide (CJK) text can still overlap; `freeSpot` gives up after 1,680 px under a taller obstacle. #98's three findings (one red) are fixed in 9141bcc.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -852,3 +854,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:43Z | build-B | Kept open PRs mergeable | #104 #106 #109 | Merged the integration branch into each (asks.ts conflicts after #90 and the answer-row change merged); re-ran build, tests and each real-page check: 16/16, 4/4, 5/5 |
 | 2026-11-26T13:45Z | build-B | 86 canvas_overview shows left-out objects | #112 | leftOut: true on overview rows, documented; failing-first unit test; live stdio MCP check |
 | 2026-11-26T13:49Z | build-A | 83 One command runs every browser check | #113 | 31 checks in one run (about 6 min), stand-in model, throwaway store; found a new regression (board images in a clean profile, filed 88); open branches #87 #91 #95 #99 #101 #88 merged up to the integration branch and re-verified |
+| 2026-11-26T13:49Z | build-B | Review findings on #92 #97 #98 #103 #104 #106 | #98 | Red finding on #98 (legacy "<!--" in a script dropped the page) fixed with two optional ones, failing-first tests, verify-webpage 9/9; the other optional findings verified and recorded under Decisions needed, #104 flagged as needing (a)-(c) |
