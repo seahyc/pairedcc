@@ -104,7 +104,7 @@ import { richTextPlain } from "./operations";
 import { onlyDerivedChange } from "./revision";
 import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
-import { followers } from "./follow";
+import { followPause, followers } from "./follow";
 import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
 import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
@@ -1890,7 +1890,7 @@ function App() {
       };
     }
     editor.sideEffects.registerAfterChangeHandler("shape", (previous, next) => {
-      if (replaying) return;
+      if (replaying || followPause.active) return;
       const dx = next.x - previous.x, dy = next.y - previous.y;
       if ((!dx && !dy) || previous.parentId !== next.parentId) return;
       const selected = new Set<string>(editor.getSelectedShapeIds());

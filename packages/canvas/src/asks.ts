@@ -6,7 +6,8 @@ import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
 import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
-import { isPinned, keepForAgent, pinnedFor } from "./leave-out";
+import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
+import { followers } from "./follow";
 import { clusterAround } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
@@ -58,9 +59,12 @@ function beside(editor: Editor, host: TLShape, skip: Set<string>) {
   if (!box) return [];
   const gap = (b: { x: number; y: number; maxX: number; maxY: number }) =>
     Math.max(0, b.x - box.maxX, box.x - b.maxX) + Math.max(0, b.y - box.maxY, box.y - b.maxY);
-  const near = editor
-    .getCurrentPageShapes()
-    .filter((s) => !skip.has(s.id) && s.parentId === host.parentId && s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s))
+  const page = editor.getCurrentPageShapes();
+  // What is said about a left-out object (its comments, replies and notes) is as private as it is.
+  const leftOut = page.filter((s) => isLeftOut(s.meta)).map((s) => s.id as string);
+  const aboutLeftOut = new Set(leftOut.length ? followers(leftOut, page, new Set()) : []);
+  const near = page
+    .filter((s) => !skip.has(s.id) && !aboutLeftOut.has(s.id) && s.parentId === host.parentId && s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s))
     .flatMap((s) => {
       const b = editor.getShapePageBounds(s);
       return b && gap(b) <= NEAR ? [{ s, d: gap(b) }] : [];
@@ -213,6 +217,26 @@ type Keep = (shapes: TLShape[]) => TLShape[];
  */
 // Objects worth giving with no text of their own: media, and data the ask can describe.
 const media = new Set(["image", "video", "bookmark", "embed", "chart", "dataset"]);
+/**
+ * Comments, agent notes, replies and answers about what a frame holds. They sit on the page, not
+ * in the frame (so it never clips them), but they belong with its contents, as when the drag
+ * follower moves them with it (follow.ts). Asks are left out, as frame children always were.
+ */
+function attachedTo(editor: Editor, frame: TLShape) {
+  const pageId = editor.getAncestorPageId(frame);
+  if (!pageId) return [];
+  const page = [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []);
+  const subtree = [...editor.getShapeAndDescendantIds([frame.id])] as string[];
+  const within = new Set(subtree);
+  // What the person left out of asks inside the frame, and what it holds, brings nothing along:
+  // a comment about a left-out card is as private as the card.
+  const leftOut = subtree.filter((id) => id !== frame.id && isLeftOut(editor.getShape(id as TLShapeId)?.meta));
+  const blocked = new Set<string>(leftOut.length ? (editor.getShapeAndDescendantIds(leftOut as TLShapeId[]) as Set<string>) : []);
+  return followers(subtree.filter((id) => !blocked.has(id)), page, new Set())
+    .flatMap((id) => editor.getShape(id as TLShapeId) ?? [])
+    .filter((s) => !within.has(s.id) && !askOf(s) && !editor.isShapeHidden(s) && textOf(s));
+}
+
 function inside(editor: Editor, frame: TLShape, skip: Set<string>, keep: Keep = (x) => x) {
   const found: TLShape[] = [];
   const walk = (id: TLShapeId) => {
@@ -227,6 +251,7 @@ function inside(editor: Editor, frame: TLShape, skip: Set<string>, keep: Keep = 
     }
   };
   walk(frame.id);
+  for (const s of keep(attachedTo(editor, frame).filter((a) => !skip.has(a.id)))) found.push(s);
   const at = (s: TLShape) => editor.getShapePageBounds(s) ?? { x: 0, y: 0 };
   found.sort((a, b) => at(a).y - at(b).y || at(a).x - at(b).x);
   return { inside: found.slice(0, INSIDE_LIMIT).map((s) => given(editor, s, 400, keep)), more: Math.max(0, found.length - INSIDE_LIMIT) };
@@ -318,13 +343,14 @@ export function describeAsk(editor: Editor, shape: TLShape) {
         editor
           .getSortedChildIdsForParent(frame.id)
           .flatMap((id) => editor.getShape(id) ?? [])
-          .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset")),
+          .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset"))
+          .concat(attachedTo(editor, frame).filter((a) => !skip.has(a.id))),
       ).slice(0, 12)
     : [];
   // Where things sit carries meaning: the group the card is in, said with relations. What the
   // ask already gives (targets, and the frame's objects when the card is in a frame) is not repeated.
   const group = editor.getShapePageBounds(shape)
-    ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : [])]), keep)
+    ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : []), ...frameObjects.map((s) => s.id)]), keep)
     : { members: [], more: 0 };
   // Pinned for every ask on this page, unless this ask already gives it.
   const alreadyGiven = [...skip, ...group.members.map((m) => m.id), ...(frame ? [frame.id] : []), ...frameObjects.map((s) => s.id), ...givenTargets.flatMap((t) => t.inside?.map((i) => i.id) ?? [])];
