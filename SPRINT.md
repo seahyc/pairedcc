@@ -564,6 +564,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     (#87's rows).
 
 ## Claims
+92. Each answer stays with its own ask | claude/sprint-answer-beside | 2026-11-26T14:08Z
 90. The person pins what every ask should see | claude/sprint-pin-context | 2026-11-26T14:05Z
 
 ## Done
