@@ -1,3 +1,4 @@
+import { relationships, relationshipsOf, sourceOf, transformationOf, type ArrowEnd, type PrimitiveRecord } from "./primitives";
 import {
   AssetRecordType,
   createShapeId,
@@ -429,6 +430,24 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
   };
 }
 
+/** PROTOTYPE: the object's relationships on its page, its source and the transformation behind it. */
+function primitiveFields(editor: Editor, s: TLShape) {
+  const page = editor.getAncestorPageId(s.id);
+  const shapes = page ? [...editor.getSortedChildIdsForParent(page)].flatMap(function all(id): TLShape[] {
+    const shape = editor.getShape(id);
+    return shape ? [shape, ...editor.getSortedChildIdsForParent(id).flatMap(all)] : [];
+  }) : [s];
+  const ends: ArrowEnd[] = shapes
+    .filter((a) => a.type === "arrow")
+    .flatMap((a) => editor.getBindingsFromShape(a.id, "arrow").map((b) => ({ arrowId: a.id, terminal: (b.props as { terminal: "start" | "end" }).terminal, toId: b.toId })));
+  const source = sourceOf(s as PrimitiveRecord), transformation = transformationOf(s as PrimitiveRecord);
+  return {
+    relationships: relationshipsOf(s.id, relationships(shapes as PrimitiveRecord[], ends)),
+    ...(source ? { source } : {}),
+    ...(transformation ? { transformation } : {}),
+  };
+}
+
 export async function executeCommand(
   editor: Editor,
   command: CanvasCommand,
@@ -508,6 +527,7 @@ export async function executeCommand(
         ...result,
         meta: s.meta,
         ...dataFields(editor, s, true),
+        ...primitiveFields(editor, s),
         ...(asset && includeAsset ? { asset } : {}),
       };
     }

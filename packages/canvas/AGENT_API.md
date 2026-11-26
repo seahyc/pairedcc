@@ -61,6 +61,18 @@ When a chart is stale, `widget` still describes what the person sees: the older 
 
 Suggested loop: read the chart's `widget`, cite `summary` and the selected values in your explanation, create it with `inputs: [chartId]`, and re-read when the person changes something. If your note is stale, revise it rather than repeating it.
 
+### Relationships, sources and transformations (prototype)
+
+`canvas_get` adds three read-only fields from the working spec's proposed primitives. They are derived from what the board already records, so they never disagree with it:
+
+| Field | Meaning |
+|---|---|
+| `relationships` | `outgoing` and `incoming` lists for this object on its page. Each has `kind` (`alternative`, `reference`, `derived-from`, `feedback`, `depends-on`, `annotates`, or `decorative` for a hand-drawn arrow with no meaning), `from`, `to`, `via` (`arrow`, `inputs`, `chart` or `annotation`), and `arrowId`, `label` and `author` where they apply. |
+| `source` | Datasets and images: `origin` (a dataset's source note) or `url`, a dataset's content `version`, and `generated`, true when an agent made it without naming an origin. |
+| `transformation` | Charts: `name: "aggregate"`, the dataset and the version used as `inputs`, and the chart state as `parameters`. Objects created with `inputs`: `name: "derive"` and those inputs. |
+
+Use `relationships` to see what an object depends on and what depends on it before you change or remove it.
+
 ### Undo one agent operation
 
 Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists recent runs, newest first, with the object IDs each run created, updated and removed. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
@@ -194,7 +206,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `op` | `input` |
 |---|---|
 | `read` | Optional `ids`; returns page, selection, objects (with `author`, and `dataset`, `widget` or `stale` where they apply), annotations, open/resolved human `marks` and arrow bindings |
-| `get` | `id`, optional `includeAsset`; a dataset's `dataset` includes its `rows` |
+| `get` | `id`, optional `includeAsset`; a dataset's `dataset` includes its `rows`; prototype `relationships`, `source` and `transformation` (see below) |
 | `create` | `kind` (frame, rectangle, ellipse, text, note), `x`, `y`, optional dimensions, text, color, name, note `style` (note, heading, quote, code), `inputs` (IDs it was derived from) |
 | `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name |
 | `image` | `src` (base64 image data URL), `x`, `y`, `width`, `height`, optional name, sourceUrl, isAnimated, caption |
