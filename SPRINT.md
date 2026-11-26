@@ -134,6 +134,7 @@ task by which measure is furthest from target, not by backlog order.
 ## Claims
 0. Eval harness and baseline scorecard | claude/sprint-eval | 2026-11-26T09:14Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
+8. Docs | claude/sprint-docs | 2026-11-26T09:40Z
 
 ## Done
 - 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Reviewed and merged 2026-11-26 as f47a23f, with a fix so undo never writes to an object locked since the run.
