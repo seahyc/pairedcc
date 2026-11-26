@@ -579,7 +579,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 95. **Before sending, the person sees what an ask will give.** Solveit (brief): "the context the agent sees is visible and chosen by the person." Today what an ask gives is shown only after it is sent (the ask's line and outline), so the person learns that the frame, a pinned card or a withheld card went along, or did not, too late to change it. Done when, while the Ask box is open, the board outlines exactly what the ask would give and the box says it in one muted line ("Gives “Charge per seat” + frame “Pricing”", with "+ N pinned" and "· N left out" where they apply), computed by the same code that builds the ask so the preview cannot differ from what is sent (unit-tested against the sent ask), checked in a real page (failing before, passing after), with before/after screenshots of the Ask box; the first screen is unchanged.
 
+96. **Comments placed on the page by #104 move and are read as they did inside a frame.** (Review of #104, now merged.) Asks, comments and replies about objects in a frame now sit on the page, and three things were lost: (a) an ask or comment about several cards in one frame stays behind when the frame is dragged (`followers` skips multi-target cards); (b) asking about a frame no longer gives the comments placed on what it holds; (c) an agent's `canvas_arrange` moving an unselected frame leaves those comments behind. Done when each has a failing-first test or real-page check and is fixed, and moving a frame (person or agent) brings every comment, reply and answer about what it holds, in one undo step.
+
 ## Claims
+96. #104 follow-ups: comments follow and are read like frame children | claude/sprint-frame-followers | 2026-11-26T14:18Z
 95. Before sending, the person sees what an ask will give | claude/sprint-ask-preview | 2026-11-26T14:16Z
 93. Stale flag placement follows the drawn flag | claude/sprint-stale-drawn | 2026-11-26T14:20Z
 94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
