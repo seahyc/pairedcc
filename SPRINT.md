@@ -209,6 +209,12 @@ task by which measure is furthest from target, not by backlog order.
     dimensions they differ on; a question: answer it; a frame: the group; a chart: what it shows),
     keeps today's three otherwise, is unit-tested, and shown in screenshots.
 
+35. **Agents see what the person put together.** `docs/canvas/principles.md`, finding 2 (moving
+    things is thinking): "The agent does not read meaning from arrangement (what is near what)."
+    Done when `canvas_overview` reports clusters of nearby objects at the level it lists (frames
+    already show explicit grouping), computed by a tested pure function, documented, and checked
+    live over HTTP.
+
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 28. (PR #36 open, awaiting review.) **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
     fails only because `pnpm eval:canvas` runs the e2e suite without Postgres, Redis or a matching
@@ -246,6 +252,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 35. Annotation arrows follow their note | claude/sprint-annotation-arrows | 2026-11-26T11:22Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
+35. Agents see clusters | claude/sprint-clusters | 2026-11-26T11:21Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
