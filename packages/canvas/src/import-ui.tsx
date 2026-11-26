@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { ImportError, detectPaste, formatOfFile, type ImportAs, type ImportFormat } from "./import-parse";
 import { importContent, importImages, removeImport, showBox, type ImportResult } from "./import-board";
 import { sourceOf } from "./import-meta";
+import { importCsvFiles, isCsvFile } from "./data/csv";
+import { dataPrototypeEnabled } from "./data/shapes";
 
 // Paste, drop and "Import a file" all end in the same importer. Afterwards a small summary
 // offers the other view and undo, and a stepper walks through the records one at a time.
@@ -113,6 +115,8 @@ export function ImportLayer({ onNotice }: { onNotice: (text: string) => void }) 
   }
   const filesRef = useRef(importFiles);
   filesRef.current = importFiles;
+  const onNoticeRef = useRef(onNotice);
+  onNoticeRef.current = onNotice;
   const runRef = useRef(run);
   runRef.current = run;
 
@@ -134,11 +138,20 @@ export function ImportLayer({ onNotice }: { onNotice: (text: string) => void }) 
       if (hasFiles(event)) event.preventDefault();
     }
     function drop(event: DragEvent) {
-      const files = Array.from(event.dataTransfer?.files ?? []);
+      let files = Array.from(event.dataTransfer?.files ?? []);
       if (!files.length) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      void filesRef.current(files, editor.screenToPage({ x: event.clientX, y: event.clientY }));
+      const point = editor.screenToPage({ x: event.clientX, y: event.clientY });
+      // PROTOTYPE (?prototype=data): a dropped CSV becomes a typed dataset object, as before
+      // import and paste existed; other files still go to the importer.
+      if (dataPrototypeEnabled()) {
+        const csvs = files.filter(isCsvFile);
+        if (csvs.length) void importCsvFiles(editor, csvs, point).then(onNoticeRef.current);
+        files = files.filter((f) => !isCsvFile(f));
+        if (!files.length) return;
+      }
+      void filesRef.current(files, point);
     }
     function keydown(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || typing(event.target) || editor.getEditingShapeId()) return;
