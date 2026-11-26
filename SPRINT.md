@@ -541,7 +541,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     (#113) can only say they "ran". Done when each checks every state it prints, prints PASS or
     FAIL per step, exits non-zero on a failure, and a deliberate break of the behaviour fails it.
 
-88. **A failed ask is retried from the keyboard.** (Found while building item 7.) The brief: "Any ask
+88. (PR #118 open, awaiting review.) **A failed ask is retried from the keyboard.** (Found while building item 7.) The brief: "Any ask
     shows waiting, working, answered or failed", and a failed ask offers Retry, but Retry is a small
     button on the ask's state line that the keyboard reaches only by walking the whole page, and
     ⌘/Ctrl+Enter on a selected failed ask opens a new ask about the failed ask instead. Done when,
@@ -553,10 +553,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 86. The principles status table says what the build does now | claude/sprint-principles-status | 2026-11-26T14:05Z
-88. A failed ask is retried from the keyboard | claude/sprint-retry-key | 2026-11-26T14:00Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 
 ## Done
+- 88. A failed ask is retried from the keyboard (build-A): PR #118 (bar's first button is Retry / Send again with its key; Ctrl/⌘+Enter resends; verify-retry-key 2/9 → 9/9).
 - 87. Menu and dialogs from the keyboard (build-A): PR #115 (menu pattern for Menu and More, dialogs take focus, trap Tab and give it back; verify-menu-keys 2/16 → 16/16).
 - 89. Log-only checks give a verdict (build-A): PR #116 (data prototype 11 steps, converge 10; a broken Recompute and missing synthesis inputs each fail). After #113 and #116 both merge, drop `log: true` for them in `verify-all.mjs`.
 - 88. Clean-profile image check (build-A): PR #114 (the large image was off screen so tldraw drew no `<img>`; its bytes were in the board; the check now fits the page first, still requiring each image to load at its real width; 3/5 → 5/5).
@@ -633,6 +633,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (review, #76) Images are stored in the board snapshot; every save re-uploads them and every revision keeps a copy. Alternative: a server asset store.
 - (review, #73) The PDF reader is built in and refuses PDFs with compressed object streams. Alternative: pdf.js.
 - (build-A, item 76) An agent may not change the words of anything the person made (`authorOf` Human). It may still move, restyle or delete those objects, which `arrange`, `group` and the agent-usability tasks rely on; principles finding 2 says it should not move them either. To go further, extend `rewriteRefusal` (`src/authorship.ts`) to position and removal and re-record the agent-usability attempt.
+- (build-A, item 88) With one failed, quiet or unheard ask selected, Ctrl/⌘+Enter sends it again rather than asking about it, and the bar's first button says Retry or Send again. Asking about a failed ask (its question with no answer) had no use found; the alternative was a separate retry key, which would add one more key to learn.
 - (build-A) Regression sweep of the browser checks on `claude/sprint-int` at 12:59Z (connector-follow and feedback-mcp, the latter after a hand-made comment, also pass): verify-import 51/51, webpage 9/9, cite 15/15, compare 14/14, csv-faithful 5/5, ask-frame 8/8, ask-marks 8/8, answer-page 11/11, api, mcp, composition, converge, board-sync, data-agent, data-prototype, group and learning all pass; verify-calm 32/33 (fixed by #91) and verify-runs failing (fixed by #95). verify-feedback-mcp needs a hand-made comment first and was not run.
 - (build-A, item 73) A board saved before the calm canvas now gets the calm board right after the first load from the account (the alternative named in the review of #21), because the recorded "on the next reload" no longer happened at all since #59. Offline at start: on the next reload instead.
 - (build-A) `verify-calm.mjs` can run here with a stand-in for the model: `PAIRED_CLAUDE_BIN=<script printing {"result":"…"} after sleep 3> pnpm agent`. A stand-in that answers instantly fails "progress was shown" (no frame sees working).
@@ -882,3 +883,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:54Z | build-A | 89 Log-only checks give a verdict | #116 | verify-data-prototype 11/11, verify-converge 10/10; mutations fail 3 and 1 steps; no product change |
 | 2026-11-26T13:55Z | build-A | 87 Menu and dialogs from the keyboard; #105 keyboard-trap fix | #115 #105 #108 | #115: verify-menu-keys 2/16 → 16/16, 8 unit tests, Escape in a menu no longer clears the selection; #105: found its own keyboard trap (Tab on the page never reached the menu or tools), fixed with two failing-first checks, 16/16, merged with claude/sprint-int and into #108; scorecard unchanged |
 | 2026-11-26T13:57Z | build-A | 75 follow-up | #95 | The tab's empty first page takes the calm board instead of a third page (verify-early-agent 7/7); verify-runs passes, verify-calm 32/33 as base (older board is #91) |
+| 2026-11-26T14:02Z | build-A | 88 Retry a failed ask from the keyboard | #118 | ⌘↵ on a failed ask opened a new ask about it; now resends; verify-retry-key 2/9 → 9/9; 4 unit tests; ask loop's Retry step still passes; first screen unchanged; scorecard unchanged |
