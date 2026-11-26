@@ -1218,6 +1218,9 @@ kbd {
 .save-state.saving {
   color: #b0285a;
 }
+.save-state.offline {
+  color: #9a5b00;
+}
 .save-dot {
   width: 7px;
   height: 7px;

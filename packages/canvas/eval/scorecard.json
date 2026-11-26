@@ -1,0 +1,200 @@
+{
+  "generatedAt": "2026-11-26T10:37Z",
+  "commit": "8708875",
+  "carriedOver": [],
+  "table": [
+    {
+      "measure": "Acceptance scenario",
+      "target": "every step passes",
+      "result": "8/10 steps",
+      "status": "fail"
+    },
+    {
+      "measure": "Agent usability",
+      "target": "≥90% of ≥20 tasks",
+      "result": "0 tasks, no recorded attempt",
+      "status": "not run"
+    },
+    {
+      "measure": "Safety of shared edits",
+      "target": "0 human edits lost",
+      "result": "0 lost; 3/3 races pass",
+      "status": "pass"
+    },
+    {
+      "measure": "Persistence",
+      "target": "identical in a clean profile",
+      "result": "identical",
+      "status": "pass"
+    },
+    {
+      "measure": "Performance",
+      "target": "reported, not worse",
+      "result": "1k: load 2745 ms, pan 16.7 ms/frame; 10k: load 33584 ms, pan 80.6 ms/frame",
+      "status": "reported"
+    },
+    {
+      "measure": "Existing product",
+      "target": "green",
+      "result": "build passes; tests: e2e failing",
+      "status": "fail"
+    }
+  ],
+  "raw": {
+    "acceptance": {
+      "steps": [
+        {
+          "name": "Person imports a dataset by dropping a CSV file",
+          "pass": false,
+          "detail": "no dataset object after the drop (0 other objects added)",
+          "ms": 1514
+        },
+        {
+          "name": "Agent imports a dataset over MCP",
+          "pass": true,
+          "detail": "ok",
+          "ms": 40
+        },
+        {
+          "name": "Person selects a subset of the board and the agent sees it",
+          "pass": true,
+          "detail": "ok",
+          "ms": 501
+        },
+        {
+          "name": "Agent charts the selection",
+          "pass": true,
+          "detail": "ok",
+          "ms": 35
+        },
+        {
+          "name": "Person filters the chart directly",
+          "pass": true,
+          "detail": "ok",
+          "ms": 855
+        },
+        {
+          "name": "Agent reads that exact chart state",
+          "pass": true,
+          "detail": "ok",
+          "ms": 4
+        },
+        {
+          "name": "Agent adds a result next to the chart",
+          "pass": true,
+          "detail": "ok",
+          "ms": 47
+        },
+        {
+          "name": "A manual annotation survives an agent revision",
+          "pass": true,
+          "detail": "ok",
+          "ms": 1767
+        },
+        {
+          "name": "Changing an input marks its dependents stale",
+          "pass": true,
+          "detail": "ok",
+          "ms": 981
+        },
+        {
+          "name": "Reload restores everything",
+          "pass": false,
+          "detail": "1 of 5 objects differ after reload: card revision/props/meta (props h); 5 objects now",
+          "ms": 672
+        }
+      ],
+      "pageErrors": [],
+      "toolCalls": 28
+    },
+    "safety": {
+      "races": [
+        {
+          "name": "Stale agent write against a newer human edit",
+          "pass": true,
+          "detail": "ok",
+          "ms": 113,
+          "humanEditsLost": 0
+        },
+        {
+          "name": "Agent undo with interleaved human edits",
+          "pass": true,
+          "detail": "ok",
+          "ms": 271,
+          "humanEditsLost": 0
+        },
+        {
+          "name": "Agent write to a locked object",
+          "pass": true,
+          "detail": "ok",
+          "ms": 298,
+          "humanEditsLost": 0
+        }
+      ],
+      "humanEditsLost": 0
+    },
+    "persistence": {
+      "objects": 4,
+      "sameProfileReload": true,
+      "cleanProfile": true,
+      "detail": "identical"
+    },
+    "performance": [
+      {
+        "objects": 1000,
+        "buildMs": 527,
+        "loadMs": 2745,
+        "panMedianFrameMs": 16.7,
+        "panP95FrameMs": 18.9
+      },
+      {
+        "objects": 10000,
+        "buildMs": 3892,
+        "loadMs": 33584,
+        "panMedianFrameMs": 80.6,
+        "panP95FrameMs": 112.6
+      }
+    ],
+    "agentUsability": {
+      "tasks": 0,
+      "attempted": 0,
+      "completed": 0,
+      "medianToolCalls": null,
+      "recordedAt": null
+    },
+    "workspace": {
+      "build": true,
+      "packages": {
+        "e2e": {
+          "pass": false,
+          "summary": ""
+        },
+        "canvas": {
+          "pass": true,
+          "summary": "114 passed (114)"
+        },
+        "cli": {
+          "pass": true,
+          "summary": "no test files"
+        },
+        "mcp-server": {
+          "pass": true,
+          "summary": "4 passed (4)"
+        },
+        "sdk": {
+          "pass": true,
+          "summary": "12 passed (12)"
+        },
+        "server": {
+          "pass": true,
+          "summary": "129 passed | 7 skipped (136)"
+        },
+        "web": {
+          "pass": true,
+          "summary": "no test files"
+        }
+      },
+      "testExit": 1
+    }
+  }
+}

@@ -21,7 +21,7 @@ import {
   distinctValues,
   inputRefSchema,
   setCell,
-  staleInputs,
+  staleChain,
   syntheticOrders,
   toggleFilter,
   toggleSelection,
@@ -76,12 +76,10 @@ const inputRefsSchema = inputRefSchema.array();
 export function staleness(editor: Editor, shape: TLShape): StaleInput[] {
   const inputs = recordedInputs(shape);
   if (!inputs.length) return [];
-  const versions = new Map<string, number>();
-  for (const i of inputs) {
-    const s = editor.getShape(i.id as TLShapeId);
-    if (s) versions.set(i.id, contentVersion(s));
-  }
-  return staleInputs(inputs, versions);
+  return staleChain(inputs, (id) => {
+    const s = editor.getShape(id as TLShapeId);
+    return s && { version: contentVersion(s), inputs: recordedInputs(s) };
+  }, new Set([shape.id]));
 }
 
 function datasetOf(editor: Editor, chart: ChartShape) {
