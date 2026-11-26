@@ -110,6 +110,29 @@ try {
   const inA2 = await until(() => a2.page.evaluate((i: string) => Boolean((window as any).__pairedEditor.getShape(i)), id), "A's note in the clean browser", 15000).catch(() => false);
   report(inA2 === true, `a clean browser signed in as A opens A's note (chip: ${await chip(a2.page).textContent()})`);
 
+  // A race on one account: the clean browser edits the note and saves; the first browser, still
+  // on the older revision, adds a note. Its save is refused by the server (409) and merged by
+  // object, so both changes survive on the server.
+  await a2.page.evaluate((i: string) => {
+    const p = (window as any).paired;
+    const o = p.read().objects.find((x: any) => x.id === i);
+    return p.update({ id: i, expectedRevision: o.revision, text: "Edited in the second browser" });
+  }, id);
+  const afterEdit = await until(async () => {
+    const board = (await (await a2.page.request.get(`${canvas}/api/canvas/boards/main`)).json()).board;
+    return JSON.stringify(board.snapshot.store[id]?.props ?? {}).includes("Edited in the second browser") ? board.revision : undefined;
+  }, "the second browser's edit on the server");
+  const refusals: number[] = [];
+  a.page.on("response", (r: any) => r.request().method() === "PUT" && r.url().includes("/api/canvas/boards/") && refusals.push(r.status()));
+  const second: string = await a.page.evaluate(() => (window as any).paired.create({ kind: "note", x: 600, y: -300, text: "Added in the first browser" }));
+  const merged = await until(async () => {
+    const board = (await (await a.page.request.get(`${canvas}/api/canvas/boards/main`)).json()).board;
+    const store = board.snapshot.store;
+    return store[second] && JSON.stringify(store[id]?.props ?? {}).includes("Edited in the second browser") ? board : undefined;
+  }, "both browsers' changes on the server").catch(() => undefined);
+  await savedChip(a.page);
+  report(Boolean(merged) && refusals.includes(409), `a stale save from the first browser is refused (PUT statuses ${refusals.join(", ")}) and merged with the second browser's edit (server revision ${afterEdit} -> ${merged?.revision ?? "no merge"}; chip title: ${await chip(a.page).getAttribute("title")})`);
+
   // Another account never sees it.
   const b = await signedIn(`sync-b-${run}@example.test`);
   await savedChip(b.page);
