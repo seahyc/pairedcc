@@ -506,7 +506,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     ask with its state, comment, answer), its mark and its place in the Tab order, from a tested pure
     function, checked in a real page (failing before, passing after); nothing new is visible.
 
+83. **One command runs every browser check.** About twenty `tools/verify-*` checks exist but each
+    is run by hand, so regressions slip through merges: on 26 Nov `verify-runs.ts` and
+    `verify-calm.mjs` were both failing on this branch (#95, #91). Done when one command starts a
+    dev server with a throwaway board store, runs every check that needs no model, paid API or
+    external service (opening a tab or a stand-in agent where a check needs one), prints a
+    pass/fail table, writes it as JSON, exits non-zero on any failure, and is documented for the
+    review lane.
+
 ## Claims
+83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
 82. A Tab stop is heard | claude/sprint-robust-heard | 2026-11-26T13:40Z
 
 ## Done
