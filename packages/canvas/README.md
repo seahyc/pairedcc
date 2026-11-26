@@ -17,7 +17,8 @@ What the canvas is for, and what it does about each principle it is built on, is
 2. **Ask.** Select what you mean and press ⌘↵, or use Ask on the bar that appears on the selection. Type a question or tap a starter.
 3. **Read the answer beside it.** One short lavender card, or two to four alternatives side by side. The line under your ask says who answered, how long it took and what they were given.
 4. **Judge it.** Pick (P), cross out (X) or comment (C). Agent cards are ordinary cards: edit or delete them.
-5. **Ask again**, about the answer or about anything else. Layers, properties, the feedback queue, other boards and export are in the menu at the top right.
+5. **Bring material in.** Paste a copied spreadsheet range or a document (⌘V), drop a file, or use Import a file in the menu. Rows of prose become one cluster of cards per row, grids of numbers stay a table; J and K step through the records. See [`docs/canvas/import.md`](../../docs/canvas/import.md).
+6. **Ask again**, about the answer or about anything else. Layers, properties, the feedback queue, other boards and export are in the menu at the top right.
 
 ## The resident agent
 
@@ -87,6 +88,8 @@ pnpm build:canvas   # from the repository root: type check and production build
 pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents every tool
 ```
 
+`tools/verify-import.mjs <screenshot dir> [origin]` checks import and paste the same way (a pasted review as ten record clusters, the stepper, undo, pick / cross out / comment, the ask context, a numeric table, a markdown file, an image drop, the agent operation) against a dev server of this checkout, with the synthetic fixtures in `test/fixtures/`.
+
 `tools/verify-calm.mjs` drives a fresh browser profile through the whole loop (first load, long text in a card, plain text, a comment and a 300-word paste, an ask answered by the resident agent, the no-agent state, pick, cross out, comment, the queue, reload, an older saved board) and saves screenshots. Playwright is not a dependency here; run it from a directory where it is installed:
 
 ```sh
@@ -120,7 +123,7 @@ The prototype stores work in the current browser profile. Export a file to move 
 
 ## Agent workflow
 
-Open **Connect an agent** in the menu for the MCP configuration for this tab. The 31 tools include the Ask loop (asks, ask status, answer), an overview read, the feedback queue (read and reply), four prototype data tools (dataset, chart, chart state, cell), a prototype learning prompt, a prototype converge tool, scene composition, nested frames, grouping, layout and duplication, per-operation undo, targeted feedback and image operations. The **Agent studio** page is a scripted SVG demonstration. Integration checks cover the real HTTP/browser bridge and MCP stdio protocol. Locally the API runs in the development server. On paired.cc, Connect an agent shows a one-line command per client and the hosted endpoint forwards to the signed-in tab.
+Open **Connect an agent** in the menu for the MCP configuration for this tab. The 32 tools include the Ask loop (asks, ask status, answer), import of a table or document as cards, an overview read, the feedback queue (read and reply), four prototype data tools (dataset, chart, chart state, cell), a prototype learning prompt, a prototype converge tool, scene composition, nested frames, grouping, layout and duplication, per-operation undo, targeted feedback and image operations. The **Agent studio** page is a scripted SVG demonstration. Integration checks cover the real HTTP/browser bridge and MCP stdio protocol. Locally the API runs in the development server. On paired.cc, Connect an agent shows a one-line command per client and the hosted endpoint forwards to the signed-in tab.
 
 ## Migration compatibility
 

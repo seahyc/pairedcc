@@ -1,0 +1,7 @@
+Route,Sailings per day,Passengers 2024,Passengers 2025,Load factor,Fare,Cost per sailing
+Harbour to Eastpoint,8,41200,44800,52%,4.50,310
+Harbour to Saltmarsh,11,48550,52920,57%,5.00,355
+Eastpoint to Lighthouse,14,55900,61040,62%,5.50,400
+Saltmarsh loop,17,63250,69160,67%,6.00,445
+Night shuttle,20,70600,77280,72%,6.50,490
+Island summer service,23,77950,85400,77%,7.00,535
