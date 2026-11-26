@@ -14,7 +14,7 @@ export default task({
     await page.keyboard.type("Which one is cheapest?");
     await page.keyboard.press("Escape");
     await page.waitForTimeout(300);
-    const queue = await call("canvas_feedback", { status: "open" });
+    const queue = await call("canvas_feedback", { status: "open", allPages: false });
     refs.comment = queue.items.find((i: any) => i.kind === "comment")?.id;
     if (!refs.comment) throw new Error("the person's comment was not created");
   },
