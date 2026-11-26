@@ -17,7 +17,8 @@ What the canvas is for, and what it does about each principle it is built on, is
 2. **Ask.** Select what you mean and press ⌘↵, or use Ask on the bar that appears on the selection. Type a question or tap a starter.
 3. **Read the answer beside it.** One short lavender card, or two to four alternatives side by side. The line under your ask says who answered, how long it took and what they were given.
 4. **Judge it.** Pick (P), cross out (X) or comment (C). Agent cards are ordinary cards: edit or delete them.
-5. **Ask again**, about the answer or about anything else. Layers, properties, the feedback queue, other boards and export are in the menu at the top right.
+5. **Bring material in.** Paste a copied spreadsheet range or a document (⌘V), drop a file, or use Import a file in the menu. Rows of prose become one cluster of cards per row, grids of numbers stay a table; J and K step through the records. See [`docs/canvas/import.md`](../../docs/canvas/import.md).
+6. **Ask again**, about the answer or about anything else. Layers, properties, the feedback queue, other boards and export are in the menu at the top right.
 
 ## The resident agent
 
@@ -87,6 +88,8 @@ pnpm build:canvas   # from the repository root: type check and production build
 pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents every tool
 ```
 
+`tools/verify-import.mjs <screenshot dir> [origin]` checks import and paste the same way (a pasted review as ten record clusters, the stepper, undo, pick / cross out / comment, the ask context, a numeric table, a markdown file, an image drop, the agent operation) against a dev server of this checkout, with the synthetic fixtures in `test/fixtures/`.
+
 `tools/verify-calm.mjs` drives a fresh browser profile through the whole loop (first load, long text in a card, plain text, a comment and a 300-word paste, an ask answered by the resident agent, the no-agent state, pick, cross out, comment, the queue, reload, an older saved board) and saves screenshots. Playwright is not a dependency here; run it from a directory where it is installed:
 
 ```sh
@@ -104,9 +107,9 @@ Browser checks performed 17 Nov 2026: native object dragging, pen drawing, text 
 - **Acceptance**: the working spec's first scenario step by step; the person clicks, types and drops files in the page, the agent uses MCP. Expected values are computed from the fixture, not read back from the canvas.
 - **Safety**: stale agent write against a newer human edit, agent undo (`canvas_undo_run`) with interleaved human edits, and agent writes to a locked object; counts human edits lost.
 - **Persistence**: a board saved in one browser profile, compared through `read` in a clean profile.
-- **Performance**: load time and median pan frame time at 1k and 10k objects, compared with the previous scorecard (more than 25% slower is flagged). Boards are built with the editor directly through `window.__pairedEditor`, which only development builds expose.
+- **Performance**: load time and median pan frame time at 1k and 10k objects, compared with the previous scorecard (more than 25% slower is flagged). The pan figure is the median of five 120-frame samples after a discarded warm-up (`EVAL_PAN_SAMPLES` changes the count), and each sample's median is kept in the scorecard, because one sample can swing by 2x on a busy machine. Boards are built with the editor directly through `window.__pairedEditor`, which only development builds expose.
 - **Agent usability**: tasks in `eval/tasks/` with machine-checked end states; the script reports the latest recorded attempt (`eval/agent-runs/latest.json`) and never calls a model.
-- **Existing product**: `pnpm build` and `pnpm -r --no-bail test`, per package.
+- **Existing product**: `pnpm build` and `pnpm -r --no-bail test`, per package. The e2e suite gets `DATABASE_URL` and `REDIS_URL` from the environment when both are set; otherwise the eval starts throwaway Postgres and Redis when `initdb`, `pg_ctl`, `createdb` and `redis-server` are installed (as `nobody` when run as root), and deletes them afterwards. Without either, the row says the suite had no database (`eval/services.ts`).
 
 `--only=acceptance,safety,…` runs a subset and carries the other measures over from the previous scorecard, labelled as such. `--no-write` prints without writing. `EVAL_URL` reuses a running dev server; `CHROMIUM_PATH` points at a browser if Playwright has none installed.
 
@@ -120,7 +123,7 @@ The prototype stores work in the current browser profile. Export a file to move 
 
 ## Agent workflow
 
-Open **Connect an agent** in the menu for the MCP configuration for this tab. The 31 tools include the Ask loop (asks, ask status, answer), an overview read, the feedback queue (read and reply), four prototype data tools (dataset, chart, chart state, cell), a prototype learning prompt, a prototype converge tool, scene composition, nested frames, grouping, layout and duplication, per-operation undo, targeted feedback and image operations. The **Agent studio** page is a scripted SVG demonstration. Integration checks cover the real HTTP/browser bridge and MCP stdio protocol. Locally the API runs in the development server. On paired.cc, Connect an agent shows a one-line command per client and the hosted endpoint forwards to the signed-in tab.
+Open **Connect an agent** in the menu for the MCP configuration for this tab. The 32 tools include the Ask loop (asks, ask status, answer), import of a table or document as cards, an overview read, the feedback queue (read and reply), four prototype data tools (dataset, chart, chart state, cell), a prototype learning prompt, a prototype converge tool, scene composition, nested frames, grouping, layout and duplication, per-operation undo, targeted feedback and image operations. The **Agent studio** page is a scripted SVG demonstration. Integration checks cover the real HTTP/browser bridge and MCP stdio protocol. Locally the API runs in the development server. On paired.cc, Connect an agent shows a one-line command per client and the hosted endpoint forwards to the signed-in tab.
 
 ## Migration compatibility
 
