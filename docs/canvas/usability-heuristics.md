@@ -1,5 +1,7 @@
 # Canvas usability audit
 
+> **Secondary checklist.** The canvas is anchored on [`principles.md`](principles.md): the nine findings about how people think, what produces understanding, and the Solveit method. Jakob Nielsen's ten heuristics below are for catching ordinary interface faults after those are satisfied. Where the two disagree, `principles.md` wins. The audit below predates the calm-canvas pass of 26 Nov 2026; the Layers panel, Properties inspector and object counter it describes are now hidden by default.
+
 Audit of the thinking canvas (`packages/canvas`) against Jakob Nielsen's ten usability heuristics, with Michael Nielsen's augmentation ideas as the second lens. Written 26 Nov 2026 for the `yc/heuristics-pass` branch.
 
 How this was done: the local dev build was driven in headless Chromium at 1440×900, on a fresh browser profile (so the welcome board), by clicking and typing through the first few minutes of use: reading the welcome board, selecting, commenting, picking, rejecting, drawing with the pen, dropping notes, undoing, adding a page, reloading, and calling the local agent API against the open tab. Nobody other than the author used it; there is no user research behind this, and nothing below should be read as a finding about real users. "Today" means the state after this pass; what the pass changed is marked **(new)**. A few statements come from reading the code and were not exercised in the browser; they are marked *(code)*.

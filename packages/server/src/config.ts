@@ -17,6 +17,10 @@ const envSchema = z.object({
   SMTP_URL: z.string().optional(),
   BASE_URL: z.string().default('http://localhost:3000'),
   PORT: z.coerce.number().default(3000),
+  // Resident canvas agent: shared secret it presents, and the accounts (ids or emails,
+  // comma separated) whose asks it answers. Without a secret of at least 32 characters the channel is off.
+  CANVAS_RESIDENT_SECRET: z.string().optional(),
+  CANVAS_RESIDENT_ALLOW: z.string().optional(),
 })
 
 export const config = envSchema.parse(process.env)

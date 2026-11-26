@@ -50,6 +50,27 @@ export const replyInput = z.object({
   id: shapeId.describe("Feedback item id from canvas_feedback."),
   text: z.string().min(1).max(10000),
 });
+export const askStates = ["waiting", "working", "answered", "failed"] as const;
+export type AskState = (typeof askStates)[number];
+export const asksInput = z.object({
+  state: z.enum([...askStates, "all"]).default("waiting").describe("Which asks to return. Waiting asks are the ones nobody has picked up yet."),
+});
+export const askStatusInput = z.object({
+  id: shapeId.describe("Ask id from canvas_asks."),
+  state: z.enum(["working", "failed", "waiting"]).describe("working when you start, failed if you cannot answer, waiting to hand it back."),
+  note: z.string().max(200).optional().describe("What you are doing, shown on the ask: 'Reading 2 cards'."),
+  error: z.string().max(300).optional().describe("Why it failed, in plain words. Shown on the ask with a Retry button."),
+});
+/** An answer is one short step, never a finished essay: the caps are part of the contract. */
+export const answerInput = z
+  .object({
+    id: shapeId.describe("Ask id from canvas_asks."),
+    text: z.string().min(1).max(700).optional().describe("One short answer, about 60 words. One step, then stop."),
+    alternatives: z.array(z.string().min(1).max(400)).min(2).max(4).optional().describe("2 to 4 short options placed side by side, when the ask is a choice."),
+    question: z.boolean().default(false).describe("True when `text` is a clarifying question back to the human; the ask then stays open."),
+    read: z.string().max(200).optional().describe("What you read to answer, shown on the ask."),
+  })
+  .refine((v) => Boolean(v.text) !== Boolean(v.alternatives), "Give either text or alternatives");
 export const commandSchema = z.object({
   op: z.enum([
     "read",
@@ -70,6 +91,9 @@ export const commandSchema = z.object({
     "duplicate",
     "feedback",
     "reply",
+    "asks",
+    "ask_status",
+    "answer",
     "learn",
     "overview",
     "runs",
@@ -78,6 +102,7 @@ export const commandSchema = z.object({
     "chart",
     "chart_state",
     "cell",
+    "converge",
   ]),
   input: z.record(z.string(), z.unknown()).optional(),
 });
@@ -90,6 +115,15 @@ export const envelopeSchema = z.object({
 export const clientHelloSchema = z.object({
   sessionId: z.string().min(1).max(100),
   title: z.string().max(200),
+});
+/** A tab announcing an ask for whichever agent is listening. The ask itself is opaque to the relay. */
+export const askAnnounceSchema = z.object({
+  sessionId: z.string().min(1).max(100),
+  ask: z.looseObject({ id: z.string().min(1).max(100), attempt: z.number().int().nonnegative() }),
+});
+export const askWaitSchema = z.object({
+  agent: z.string().min(1).max(100).default("Agent"),
+  waitMs: z.number().int().min(0).max(30000).default(25000),
 });
 export const responseSchema = z.discriminatedUnion("ok", [
   z.object({ id: z.string(), ok: z.literal(true), result: z.unknown() }),

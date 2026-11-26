@@ -7,7 +7,7 @@ import { packageDir } from "../lib";
 
 export function agentUsability() {
   const dir = `${packageDir}/eval/tasks`;
-  const tasks = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".json")).length : 0;
+  const tasks = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".ts")).length : 0;
   const file = `${packageDir}/eval/agent-runs/latest.json`;
   if (!existsSync(file)) return { tasks, attempted: 0, completed: 0, medianToolCalls: null, recordedAt: null };
   const run = JSON.parse(readFileSync(file, "utf8")) as { recordedAt: string; results: { task: string; pass: boolean; toolCalls: number }[] };
