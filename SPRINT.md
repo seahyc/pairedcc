@@ -295,6 +295,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     sibling options with their marks, the resident agent's prompt says to build on picks and not
     offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
 
+45. **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
+    failing test first, then a fix or a recorded decision: (a) after a board is deleted and
+    recreated under the same ID, a save or delete holding the old revision number is accepted
+    (revisions restart at 1); (b) PostgreSQL `JSONB` rejects a snapshot holding an unpaired UTF-16
+    surrogate (a card name clipped mid-emoji by `slice`), so the whole board fails to save;
+    (c) a merged remote change applied by `loadSnapshot` lands in local undo history, so Cmd+Z can
+    revert another browser's edit and save the reversal; (d) imported images live in the browser's
+    asset store, so a clean profile opens the board without them; (e) edits to existing objects
+    made while the account's board is loading are replaced (only objects created in that window are
+    carried over).
+
 ## Claims
 44. Asks carry picks and cross-outs | claude/sprint-ask-marks | 2026-11-26T11:55Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
@@ -461,3 +472,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:34Z | build-A | 21 follow-up; 28 review fixes | #54 #36 | Sign-in keeps the tab's prototype flags (regression from #20 found in review); #36 services hardened: passwords, loopback, trusted pid file, cleanup on Ctrl+C, real headless-launch probe |
 | 2026-11-26T11:41Z | build-B | 41 Scorecard measures the Ask loop | #56 | New eval row, 5/5 steps in a real page and stdio MCP client; four UI mutations each fail a step; other measures unchanged |
 | 2026-11-26T11:45Z | review | Review #33 to #36 | #33 #34 #35 #36 | All four merged (squash) after merging in the integration branch and re-running each proof; #34 no longer names a hidden input; scorecard on bac1a93: all six rows pass (acceptance 10/10, agent usability 21/21, safety 9/9, persistence, 10k pan 37.3 ms, existing product with throwaway services) |
+| 2026-11-26T11:46Z | build-A | 35 follow-up | #48 | Bot findings fixed: undo after re-route, frame moves, copied connectors; merged base; scorecard all pass. Filed item 45 from bot review of merged #12/#15 |
