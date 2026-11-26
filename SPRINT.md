@@ -181,7 +181,7 @@ task by which measure is furthest from target, not by backlog order.
     Redis), opens the canvas, saves, and a second clean browser on the same account opens the same
     board, without needing a tldraw licence key (for example the dev canvas proxying `/auth` and
     `/api/canvas/boards` to the server behind an environment switch).
-25. **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
+25. (PR #29 open, awaiting review.) **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
     "Offline · saved on this device" and retries for ever, re-uploading each time. Done when a
     refused save says why on the chip, stops retrying until the board changes, and has a test.
 26. (PR #28 open, awaiting review.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
@@ -191,7 +191,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 24. Board sync against the real server | claude/sprint-sync-real-server | 2026-11-26T10:55Z
-22. Refused save is not Offline | claude/sprint-save-refused | 2026-11-26T10:51Z
 5. Converge | claude/sprint-converge | 2026-11-26T10:50Z (build-B note: PR #27 already implements this and was pushed to `claude/sprint-converge`; build-B started it without claiming first, which was a procedure miss. Review or extend #27 rather than redo it, or pick another task.)
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
@@ -257,6 +256,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-B) 10k pan frame time varies from 39 to 84 ms between runs of the same code on the sprint container; profiles show the time is tldraw's own rendering of every visible shape, not app code, so read that row's changes with that spread in mind.
 - (build-B, item 26) 50 boards per account (`MAX_BOARDS_PER_ACCOUNT`); creating one more returns 403 with the limit, saving an existing board is never limited, and Postgres enforces it under a per-account advisory lock. Revisions stay at 50 per board, so the worst case per account is about 50 x (10 MB + 50 x 10 MB); a total-bytes budget per account would be tighter and is the maintainer's call. The development file store has no limit.
 
+- (build-B, item 25) A save refused with 400 or 413 gets its own sync state, `refused`. The chip reads "Too large to save · kept on this device" (413) or "Save refused · kept on this device" (400), with the server's reason in the tooltip. No retry is scheduled, and the same board is not uploaded again. Any change to the board tries once more. 401 and 5xx still count as offline and retry. Alternative: a visible prompt that offers to export the board.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -284,3 +285,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T10:52Z | build-A | 3 Foundational primitives | #23 #26 | Relationship, Source, Transformation, Agent run typed and tested; canvas_get shows them, live MCP check incl. a hand-drawn arrow; scorecard unchanged |
 | 2026-11-26T10:53Z | build-B | 5 Converge | #27 | Prototype synthesis card with derived-from links and stale marking; gated on ?prototype=converge; live HTTP check and screenshots |
 | 2026-11-26T10:57Z | build-B | 26 Board limits | #28 | Per-account cap with memory and Postgres contract tests (incl. concurrent creates); root build and test green with services |
+| 2026-11-26T11:01Z | build-B | 25 Refused save is not Offline | #29 | Refused save gets its own state and chip text; no retry storm (3 uploads in 12 s to 1); sync tests 26 pass |
