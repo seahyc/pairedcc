@@ -157,7 +157,7 @@ task by which measure is furthest from target, not by backlog order.
 16. (Merged, see Done; panning a full 10k board is still slow.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
     Done when the performance measure reports 10k load and pan numbers (raise the limit or
     decide another way and record it).
-20. (PR #40 open, awaiting review. The calm first board has no overlap; the tour board did.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
+20. (#40 merged. The calm first board has no overlap; the tour board did.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
     out loud, with an agent beside you." wraps onto the shortcut hint line beneath it (seen at
     1440x900 in headless Chromium; `docs/canvas/screenshots/reload-late-fonts-*.png` runs show the
     page). Done when the header lines never overlap at 1440 and 390 px widths, with screenshots.
@@ -176,7 +176,7 @@ task by which measure is furthest from target, not by backlog order.
     (or `?prototype=learning`) refuses those operations with an error that says how to turn them
     on, flagged tabs and saved boards behave as before, and a test fails if the gate is removed.
 
-24. (#30 merged; PR #45 open, awaiting review, now merged up to the integration branch.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
+24. (#30 merged; #45 merged.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
     the development board store. Done when a scripted check signs in to a local server (Postgres,
     Redis), opens the canvas, saves, and a second clean browser on the same account opens the same
     board, without needing a tldraw licence key (for example the dev canvas proxying `/auth` and
@@ -203,19 +203,19 @@ task by which measure is furthest from target, not by backlog order.
     screen's viewport was. Done when opening a board with no object in view frames its objects
     (never zooming past 100%), tested, with a 390 px screenshot before and after.
 
-34. (PR #42 open, awaiting review.) **Ask starters fit the selection.** `docs/canvas/principles.md`, finding 7 (recognising beats
+34. (#42 merged.) **Ask starters fit the selection.** `docs/canvas/principles.md`, finding 7 (recognising beats
     recalling): "Starters are fixed; they do not adapt to what is selected." Done when the Ask box
     offers starters chosen from the selection (several objects: compare them and name the
     dimensions they differ on; a question: answer it; a frame: the group; a chart: what it shows),
     keeps today's three otherwise, is unit-tested, and shown in screenshots.
 
-35. (PR #47 open, awaiting review.) **Agents see what the person put together.** `docs/canvas/principles.md`, finding 2 (moving
+35. (#47 merged.) **Agents see what the person put together.** `docs/canvas/principles.md`, finding 2 (moving
     things is thinking): "The agent does not read meaning from arrangement (what is near what)."
     Done when `canvas_overview` reports clusters of nearby objects at the level it lists (frames
     already show explicit grouping), computed by a tested pure function, documented, and checked
     live over HTTP.
 
-36. (PR #52 open, awaiting review.) **Comments and replies move with what they are about.** `usability-heuristics.md`, what
+36. (#52 merged.) **Comments and replies move with what they are about.** `usability-heuristics.md`, what
     remains, item 10: "Replies and comments do not move with their target; they keep their arrow
     but stay where they were placed." Done when moving an object moves the comments, agent notes
     and replies attached to it by the same amount (not those also being moved, not ones about
@@ -242,11 +242,11 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     Chromium; with them it passes. Done when the workspace measure uses `DATABASE_URL`/`REDIS_URL`
     when set, otherwise starts throwaway services when the binaries exist, points Playwright at a
     preinstalled Chromium when needed, cleans up, and reports why when it cannot.
-31. (PR #43 open, awaiting review.) **Stable performance numbers.** Back-to-back runs of the same code measure the 10k pan median
+31. (#43 merged.) **Stable performance numbers.** Back-to-back runs of the same code measure the 10k pan median
     at 35.7 and 69.1 ms, so the scorecard's 25% "worse" flag fires on noise. Done when the
     performance measure repeats its pan sample and reports a figure whose spread across three
     back-to-back runs on one commit is under the flag threshold, with the spread recorded.
-32. (PR #41 open, awaiting review.) **An ask says "no agent" while the person's agent is connected.** When nothing long-polls for
+32. (#41 merged.) **An ask says "no agent" while the person's agent is connected.** When nothing long-polls for
     asks (every paired.cc account the resident agent does not serve, and any local board without
     `pnpm agent`), an ask reads "No agent is listening for this account. Connect yours" even while
     an MCP agent is connected and acting on the board, so the person reconnects instead of asking
@@ -269,7 +269,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     arrow keeps the anchor sides chosen when it was made and takes an odd route (reported by the
     agent-usability attempt, PR #24). Done when moving either end re-routes the arrow to the facing
     sides, shown by before/after screenshots and a check of the binding anchors.
-38. (Renumbered from 36 to avoid a clash. PR #49 open, awaiting review.) **Working spec's implemented sections, after the 26 Nov merges.** `docs/canvas/working-spec.md`
+38. (Renumbered from 36 to avoid a clash. #49 merged.) **Working spec's implemented sections, after the 26 Nov merges.** `docs/canvas/working-spec.md`
     still lists server-side storage, file import and a general Transformation object as not built,
     and says nothing of #11 to #30. Done when each merged PR's user- or agent-visible effect is in an
     implemented section with its PR number, no "not built" claim contradicts the code, and
@@ -286,7 +286,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 40. **Say which tool answers feedback.** The PR #24 agent could not tell whether to answer the
     person's comment with `canvas_reply` or `canvas_annotate`. Done when the tool descriptions and
     AGENT_API say which to use, checked by a test.
-41. (PR #56 open, awaiting review.) **The scorecard measures the Ask loop.** The calm canvas's core loop (write, select, Ask, see
+41. (#56 merged.) **The scorecard measures the Ask loop.** The calm canvas's core loop (write, select, Ask, see
     the agent respond) has no eval measure; the scorecard checks only the data scenario. Done when
     `pnpm eval:canvas` has an "Ask loop" row whose steps run in a real page and a real stdio MCP
     client: a person's ask shows a waiting state that names who can answer; an external agent finds
@@ -294,14 +294,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     `canvas_answer`; the page shows answered with the agent's name; the answer sits beside the ask
     and its text stays inside its card; a failed ask offers Retry. Unit tests cover the new row.
 
-42. (PR #59 open, awaiting review.) **A restored or freshly loaded board survives an immediate reload.** After `restore(revision)`
+42. (#59 merged.) **A restored or freshly loaded board survives an immediate reload.** After `restore(revision)`
     (or the first load of an account's board) the sync memo says this browser is in step with the
     server before the browser's own copy is written; a reload inside that moment (measured: lost at
     0 and 300 ms, kept at 1,000 ms) shows the old board, and the next edit saves it on top. Done
     when a scripted check restores, reloads at once and still sees the restored board, for example
     by recording in the memo what content was synced and re-reading the account when it differs.
 
-44. (PR #64 open, awaiting review.) **Asks carry the person's picks and cross-outs.** `docs/canvas/principles.md`, finding 6
+44. (#64 merged.) **Asks carry the person's picks and cross-outs.** `docs/canvas/principles.md`, finding 6
     (comparing beats describing): "picking one does not carry it forward." An ask's context lists
     the selected objects and the exchange behind them, but not which options the person picked (P)
     or crossed out (X), although the board shows both; an agent asked to "take this further" about
@@ -310,7 +310,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     sibling options with their marks, the resident agent's prompt says to build on picks and not
     offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
 
-45. ((a) to (c): PR #66 open, awaiting review; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): PR #70 open, awaiting review. (d): PR #76 open, awaiting review.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
+45. ((a) to (c): #66 merged; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): PR #70 open, awaiting review. (d): PR #76 open, awaiting review.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
     failing test first, then a fix or a recorded decision: (a) after a board is deleted and
     recreated under the same ID, a save or delete holding the old revision number is accepted
     (revisions restart at 1); (b) PostgreSQL `JSONB` rejects a snapshot holding an unpaired UTF-16
@@ -431,14 +431,33 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     were left out, tabs without the flag behave as before, unit-tested and checked in a real tab
     with before/after screenshots.
 
+69. **The 10k pan figure survives a slow-mode run.** (Review of #43.) On the sprint container a
+    120-frame pan sample is either about 38 ms or about 85 ms, in runs, on unchanged code; when
+    three of the five samples land slow the median reads as a regression (38.4 and 45.3 ms on
+    1d04324, 45.1, 38.4, 88.2 and 99.3 ms on 95a9daf). Done when three back-to-back runs on one
+    commit, including one taken straight after the other measures, stay inside the flag threshold
+    (for example the lower quartile of more, shorter samples), with the spread recorded and the
+    threshold unchanged.
+70. **Side by side and "Show cited" bring comments along.** (Review of #55 and #58 with #52.) Both
+    move records and sections with `updateShape` before selecting them, so the comments, notes and
+    replies attached to them stay where they were. Done when a comment on a moved record or section
+    moves with it in the same undo step, checked in a browser.
+71. **The web page reader stays quick on awkward markup.** (Review of #65.) 50,000 unclosed `<li>`
+    take 4 s and 20,000 unclosed advert `<div>`s 1.2 s; the file limit is 2 MB. Done when a 2 MB
+    page of unclosed tags is read, or refused with a plain message, in under a second, with a test.
+72. **A fresh agent-usability attempt on the merged branch.** The 23/24 in the scorecard was
+    recorded before #58 to #66 merged, and before read marks renamed `note` to `comment`. Done when
+    `eval/agent-runs/latest.json` holds an attempt against the current branch and task 14's check
+    is confirmed or corrected with the reason given.
+
 ## Claims
 67. The person chooses what an ask leaves out | claude/sprint-context-leave-out | 2026-11-26T12:50Z
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
-39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- Reviewed and merged 2026-11-26 by the review lane: #40 to #66, all 27 (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
 - 66. Touch screens say tap (build-A): PR #88, stacked on #83 (first board says tap, no key caps, writing hint is a tappable Ask; verify-touch 7/11 → 11/11).
 - 63. Answer lands in view (build-A): PR #87 (options wrap into rows that fit the window, cards narrow on a phone, the view pans to a landed answer; verify-answer-view 11/14 → 14/14).
 - 61. Ask about a chart or dataset gives what it shows (build-B): PR #86, stacked on #69.
@@ -480,6 +499,9 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (review, #46 with #42) An imported record keeps its record starters; other selections get starters fitted to them. Alternative: two selected records get the comparison starters.
+- (review, #47) Each cluster in `canvas_overview` lists its first 50 ids with a `count`, so a pile of thousands stays compact.
+- (review, #43) The scorecard's 10k pan figure still flips between about 38 and 85 ms on unchanged code (backlog 69); the committed 88.2 ms is not a regression.
 - (build-A, item 66) "Touch-only" is a coarse pointer with no fine pointer anywhere; a tablet with a trackpad keeps keyboard hints. On touch the writing hint becomes a primary "✦ Ask about this" button (the only way to ask while writing); on a desktop it stays a passive key hint. Alternative: a button everywhere.
 - (build-A, item 63) When an answer lands and the person can see its ask (not typing, dragging or asking), the view pans to show all of it, never zooming. On a phone, options wrap one per row, so comparing means scrolling down. Alternatives: a "4 options below →" pointer instead of panning; zooming out to fit a row.
 - (build-B, item 61) An ask about a chart gives its bars as text (up to 40, then a count) and, when stale, the bars still drawn with the reason, rather than bars recomputed from current data, so the agent sees what the person sees. A dataset gives its first five rows. Chart and dataset starters are offered (behind `?prototype=data`, where these objects exist).
@@ -671,3 +693,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:44Z | build-B | 64 review fix | #84 | CSV number pattern no longer backtracks (40,000-digit malformed cell: 762 ms before, under 200 ms test bound after) |
 | 2026-11-26T12:45Z | build-A | 66 Touch screens say tap | #88 | Phone saw key names on the first board, bar and writing hint, with no way to ask while writing; verify-touch 7/11 → 11/11; desktop unchanged; scorecard unchanged |
 | 2026-11-26T12:48Z | build-B | Bot review of #64 #67 #69 #72 #77 | #67 #69 #86 | #64 merged. Fixed with failing-first browser checks: hidden learning results no longer sent with a frame ask; same-worded asks kept apart; a frame in the history says what it held (#67, 5/8 to 8/8); off-page answers kept off the person's undo stack (red), return their cards, and on-page answers join frames (#69, 11/11). #86 merged up, all four ask checks pass. Yellow findings on #72 (flag at canvas edges, offscreen tab stops) and #77 (3000x2 image rounds to 0 height) confirmed and answered on their threads, to carry in the next push. The ten thread replies carry a tool footer the reply tool appended; no available tool can edit review comments, so it is left for the maintainer to remove |
+| 2026-11-26T12:50Z | review | Review #40 to #66 | #40 to #66 | All 27 merged (squash) after merging in the integration branch; workspace build and tests green after each (canvas 323, server 154 on Postgres 16, e2e 1); live checks re-run for #40 #41 #45 #46 #48 #52 #55 #56 #57 #58 #59 #60 #64 #65. Review fixes: #46 combined with #42 (record starters kept), #47 caps ids per cluster, #64 AGENT_API table. Scorecard on 95a9daf: seven rows pass; 10k pan 99.3 then 88.2 ms, shown to be noise by measuring before and after (backlog 69). Filed 69 to 72 |
