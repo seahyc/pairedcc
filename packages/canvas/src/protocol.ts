@@ -89,6 +89,7 @@ export const commandSchema = z.object({
     "scene",
     "arrange",
     "duplicate",
+    "group",
     "feedback",
     "reply",
     "asks",
@@ -111,6 +112,8 @@ export const envelopeSchema = z.object({
   sessionId: z.string().max(100).optional(),
   requestId: z.string().min(1).max(100),
   actor: z.string().min(1).max(100).default("External agent"),
+  /** "mcp" when an MCP client (a chat agent the person talks to) sent it; absent for scripts. */
+  via: z.literal("mcp").optional(),
   command: commandSchema,
 });
 export const clientHelloSchema = z.object({

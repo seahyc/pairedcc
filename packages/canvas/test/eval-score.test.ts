@@ -55,6 +55,14 @@ describe("scorecard rows", () => {
     expect(rows(raw).at(-1)).toMatchObject({ status: "fail", result: "build passes; tests: e2e failing" });
   });
 
+  it("says why e2e failed when it had no database, and still fails the row", () => {
+    const e2e = "e2e had no database: set DATABASE_URL and REDIS_URL, or install initdb (see e2e/README.md)";
+    const raw = { ...allPass, workspace: { build: true, e2e, packages: { canvas: { pass: true, summary: "" }, e2e: { pass: false, summary: "" } } } };
+    expect(rows(raw).at(-1)).toMatchObject({ status: "fail", result: "build passes; tests: e2e failing (had no database: set DATABASE_URL and REDIS_URL, or install initdb (see e2e/README.md))" });
+    const ran = { ...allPass, workspace: { build: true, e2e: "e2e used throwaway Postgres and Redis started by the eval", packages: { e2e: { pass: true, summary: "" } } } };
+    expect(rows(ran).at(-1)).toMatchObject({ status: "pass", result: "build passes; tests: all packages pass" });
+  });
+
   it("reports measures that were not run as not run", () => {
     expect(rows({}).every((r) => r.status === "not run")).toBe(true);
   });
@@ -78,6 +86,11 @@ describe("report splicing", () => {
 });
 
 describe("workspace output parsing", () => {
+  it("reads Playwright's passed count for the e2e package", () => {
+    const out = ["e2e test$ playwright test", "e2e test:   ✓  1 tests/editor-collab.spec.ts:26:7 › two users (1.2s)", "e2e test:   1 passed (11.9s)", "e2e test: Done"].join("\n");
+    expect(packageResults(out).e2e).toEqual({ pass: true, summary: "1 passed (11.9s)" });
+  });
+
   it("reads per-package results from pnpm -r test output", () => {
     const out = [
       "packages/canvas test:  Test Files  9 passed (9)",

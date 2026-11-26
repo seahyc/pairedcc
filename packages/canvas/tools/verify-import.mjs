@@ -250,16 +250,7 @@ const image = objs.find(o => o.type === 'image');
 check('a dropped image becomes an image, marked with its file name', Boolean(image) && image.meta.source?.kind === 'image' && image.meta.source.from === 'swatch.png', image ? JSON.stringify(image.meta.source) : 'no image');
 await shot('10-image-dropped');
 await p.locator('input[aria-label="Import a file"]').setInputFiles({ name: 'book.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from('PK') }); await p.waitForTimeout(500);
-check('a broken .xlsx file says plainly it cannot be read', /not an Excel workbook that can be read/.test(await p.locator('.toast').textContent().catch(() => '')));
-await p.locator('input[aria-label="Import a file"]').setInputFiles({ name: 'old.xls', mimeType: 'application/vnd.ms-excel', buffer: Buffer.from('xx') }); await p.waitForTimeout(500);
-check('an .xls file says only .xlsx is read', /only \.xlsx workbooks are/.test(await p.locator('.toast').textContent().catch(() => '')));
-await p.locator('input[aria-label="Import a file"]').setInputFiles(fixturePath('review.xlsx')); await p.waitForTimeout(1500);
-objs = await objects();
-const fromBook = records(objs.filter(o => o.meta.source?.from === 'review.xlsx'));
-check('an .xlsx workbook becomes the same ten record clusters as the paste', fromBook.length === 10 && fromBook.every(r => objs.filter(o => o.parentId === r.id).length === 5) && fromBook.map(r => r.meta.source.values.Severity[0]).join('') === 'CCCHHHMMMM', `${fromBook.length} records`);
-check('its summary says where it came from', /10 records from review\.xlsx/.test(await p.locator('.import-summary').textContent().catch(() => '')), await p.locator('.import-summary').textContent().catch(() => ''));
-check('a workbook with two sheets says only the first was read', (await p.locator('.toast').allTextContents()).some(t => /first sheet of review\.xlsx, “Review”/.test(t)), JSON.stringify(await p.locator('.toast').allTextContents()));
-await shot('10b-xlsx-records');
+check('an .xlsx file says plainly that it is not read yet', /not read yet/.test(await p.locator('.toast').textContent().catch(() => '')));
 
 // 14. An agent imports through the same operation.
 const imported = await api('import', { content: fixture('findings.json'), name: 'findings.json' });
@@ -273,7 +264,7 @@ const total = objs.length;
 await p.waitForTimeout(1200);
 await p.reload(); await p.waitForSelector('.topbar'); await p.waitForFunction(() => window.paired?.read().objects.length > 10, null, { timeout: 15000 }); await p.waitForTimeout(1500);
 objs = await objects();
-check('the board is the same after a reload', objs.length === total && records(objs).length === 24 /* 10 pasted, 10 from the workbook, 4 from the agent */ && objs.some(o => o.type === 'datatable'), `${objs.length} of ${total}`);
+check('the board is the same after a reload', objs.length === total && records(objs).length === 14 && objs.some(o => o.type === 'datatable'), `${objs.length} of ${total}`);
 check('no errors in the page', errs.length === 0, errs.slice(0, 3).join(' | '));
 
 await ctx.close();

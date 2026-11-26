@@ -1,7 +1,7 @@
 // Writes the synthetic import fixtures. Everything here is invented: Larkspur Ferries is
 // not a real company and the review is not a real review. Run: node build-fixtures.mjs
 import { writeFileSync } from "node:fs";
-import { deflateRawSync, deflateSync } from "node:zlib";
+import { deflateSync } from "node:zlib";
 
 const here = new URL("./", import.meta.url);
 const title = "Adversarial review: Larkspur Ferries funding pack (draft 3)";
@@ -113,74 +113,4 @@ ihdr.writeUInt32BE(W, 0);
 ihdr.writeUInt32BE(H, 4);
 ihdr.set([8, 2, 0, 0, 0], 8);
 writeFileSync(new URL("swatch.png", here), Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]));
-// The same review as an Excel workbook (.xlsx): a zip of XML parts, written by hand so the
-// fixture needs no spreadsheet program. Sheet 1 is the review: text cells use the shared
-// string table (one with two formatted runs), the No. column is numeric, one cell is an inline
-// string, and the empty Check column has no cells at all, as Excel writes it. Sheet 2 is
-// ignored by the importer. Fixed timestamps keep the bytes the same on every run.
-const xml = (v) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const colName = (i) => (i >= 26 ? colName(Math.floor(i / 26) - 1) : "") + String.fromCharCode(65 + (i % 26));
-const shared = [];
-const sharedIndex = (v) => (shared.includes(v) ? shared.indexOf(v) : shared.push(v) - 1);
-const sheetRows = [[title], [note], header, ...rows];
-const sheetXml =
-  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>` +
-  sheetRows
-    .map((r, ri) => {
-      const cells = r
-        .map((v, ci) => {
-          const ref = `${colName(ci)}${ri + 1}`;
-          if (v === "") return "";
-          if (ri >= 3 && ci === 0) return `<c r="${ref}"><v>${v}</v></c>`;
-          if (ri === 4 && ci === 2) return `<c r="${ref}" t="inlineStr"><is><t>${xml(v)}</t></is></c>`;
-          return `<c r="${ref}" t="s"><v>${sharedIndex(v)}</v></c>`;
-        })
-        .join("");
-      return `<row r="${ri + 1}">${cells}</row>`;
-    })
-    .join("") +
-  `</sheetData></worksheet>`;
-const richTitle = shared.indexOf(title);
-const sharedXml =
-  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${shared.length}" uniqueCount="${shared.length}">` +
-  shared
-    .map((v, i) =>
-      i === richTitle
-        ? `<si><r><rPr><b/></rPr><t xml:space="preserve">${xml(v.slice(0, 20))}</t></r><r><t xml:space="preserve">${xml(v.slice(20))}</t></r></si>`
-        : `<si><t xml:space="preserve">${xml(v)}</t></si>`,
-    )
-    .join("") +
-  `</sst>`;
-const parts = {
-  "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>`,
-  "_rels/.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
-  "xl/workbook.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Review" sheetId="1" r:id="rId1"/><sheet name="Scratch" sheetId="2" r:id="rId2"/></sheets></workbook>`,
-  "xl/_rels/workbook.xml.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="/xl/worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>`,
-  "xl/sharedStrings.xml": sharedXml,
-  "xl/worksheets/sheet1.xml": sheetXml,
-  "xl/worksheets/sheet2.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>not this sheet</t></is></c></row></sheetData></worksheet>`,
-};
-const zip = (files) => {
-  const locals = [], centrals = [];
-  let offset = 0;
-  for (const [name, text] of Object.entries(files)) {
-    const data = Buffer.from(text), packed = deflateRawSync(data), nameBuf = Buffer.from(name), sum = crc(data);
-    const local = Buffer.alloc(30);
-    local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4); local.writeUInt16LE(0, 6); local.writeUInt16LE(8, 8);
-    local.writeUInt16LE(0, 10); local.writeUInt16LE(0x5b21, 12); local.writeUInt32LE(sum, 14);
-    local.writeUInt32LE(packed.length, 18); local.writeUInt32LE(data.length, 22); local.writeUInt16LE(nameBuf.length, 26); local.writeUInt16LE(0, 28);
-    const central = Buffer.alloc(46);
-    central.writeUInt32LE(0x02014b50, 0); central.writeUInt16LE(20, 4); central.writeUInt16LE(20, 6); central.writeUInt16LE(0, 8); central.writeUInt16LE(8, 10);
-    central.writeUInt16LE(0, 12); central.writeUInt16LE(0x5b21, 14); central.writeUInt32LE(sum, 16); central.writeUInt32LE(packed.length, 20);
-    central.writeUInt32LE(data.length, 24); central.writeUInt16LE(nameBuf.length, 28); central.writeUInt32LE(offset, 42);
-    locals.push(local, nameBuf, packed);
-    centrals.push(central, nameBuf);
-    offset += 30 + nameBuf.length + packed.length;
-  }
-  const dir = Buffer.concat(centrals), end = Buffer.alloc(22);
-  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(Object.keys(files).length, 8); end.writeUInt16LE(Object.keys(files).length, 10);
-  end.writeUInt32LE(dir.length, 12); end.writeUInt32LE(offset, 16);
-  return Buffer.concat([...locals, dir, end]);
-};
-writeFileSync(new URL("review.xlsx", here), zip(parts));
 console.log("fixtures written");

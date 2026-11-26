@@ -40,13 +40,12 @@ Solveit's "the person sees exactly what the AI sees" holds: what the agent is gi
 | `.json` | Works for an array of objects, or an object holding exactly one such array |
 | `.html` | The first table in the file |
 | Images | Works by drop, the file chooser or the existing image paste |
-| `.xlsx` | Works, by drop or the file chooser: the first sheet's cell values become the same records or table as pasting that range (`src/xlsx.ts`, no dependency: the zip is read with the browser's own decompression). Formulas give their last computed value; dates stay Excel's serial numbers; merged cells are read as their first cell. A workbook with more sheets says only the first was read. A damaged file says it cannot be read. |
-| `.xls`, `.numbers`, `.ods` | Not read. The canvas says only `.xlsx` is, and suggests saving as `.xlsx` or CSV or copying the cells. |
+| `.xlsx`, `.xls`, `.numbers`, `.ods` | Not read. The canvas says so and suggests copying the cells or saving as CSV. No spreadsheet parser is a dependency. |
 | PDF, Word, slides | Not read |
 
 ## Not handled yet
 
-- Older spreadsheet files (above), and sheets after the first in an `.xlsx` workbook. Only the first table of an HTML fragment is read; merged cells are read as their first cell.
+- Spreadsheet files (above). Only the first table of an HTML fragment is read; merged cells are read as their first cell.
 - A table inside a longer markdown document is not drawn as a table; inline formatting (bold, links) is reduced to plain text.
 - The import is placed below everything already on the board, not at the drop point. Images are placed at the drop point.
 - Clusters are laid out from estimated card heights. Text never leaves its card, but spacing between clusters can be slightly uneven.
