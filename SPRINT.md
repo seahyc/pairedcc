@@ -197,11 +197,11 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 19. Board picker and history (part 1: restore and revisions API, no UI) | claude/sprint-board-history | 2026-11-26T11:04Z
-5. Converge | claude/sprint-converge | 2026-11-26T10:50Z (build-B note: PR #27 already implements this and was pushed to `claude/sprint-converge`; build-B started it without claiming first, which was a procedure miss. Review or extend #27 rather than redo it, or pick another task.)
 27. Group operation | claude/sprint-group | 2026-11-26T11:00Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 5. Converge, part 2 (build-A): PR #31, built on build-B's #27: the person's own synthesis from a selection (empty card in typing mode), claims citing sources by arrow letter, placement that keeps arrows clear of sources.
 - Calm canvas (maintainer branch `yc/calm-canvas`, playtest 1 rework): PR #21, merged 2026-11-26 as a local squash combined with the sprint work (15 conflicted files resolved on a copy; the branch itself was not touched). **Build on this layout from now on.**
 - 18. Agent-usability tasks: PR #24 (21 tasks, self-test proves every check fails before and passes after a reference solution; first attempt by a fresh agent 20/21, median 3 tool calls).
 - Reviewed and merged 2026-11-26 by the review lane: #16 as af63474, #17 as c6b5849, #18 as f104315, #19 as a4b927e, #20 as be3dce9.
@@ -222,6 +222,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 5) The person's synthesis card starts empty so the conclusion is theirs (augmentation principle); alternative: prefill an agent draft to edit. build-A had built converge in parallel before seeing #27; rather than open a competing PR it rebuilt its additions on #27 as #31.
 - (review, #21) How the calm canvas was combined with the sprint work: the calm layout, menu and first board win wherever the two disagreed; the legacy welcome-board swap is dropped (an older board is kept as its own page, as #21 does); board sync starts after the calm first board is laid out; the prototype page buttons stay in the pages list, which is now behind Menu → Show layers and pages, so with a prototype flag on they are two clicks away. Alternative: a flagged entry in the menu itself.
 - (review, #21) The resident agent calls the local Claude Code CLI, which the sprint may not spend on, so the Ask loop was verified with a stand-in program that returns a fixed reply. A real model has not answered an ask on this branch.
 - (build-A, item 18) The agent under test reaches the tools through a counting command-line MCP client (`eval/mcp-call.ts`) rather than native MCP tools in its harness, so calls can be counted and the session pinned. Task 14 failed with no board evidence kept; the check was left strict and the runner now records evidence. The agent's friction list (annotate `author` default, annotation arrow anchors, 39 KB tool list) is in PR #24.
@@ -299,3 +300,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T11:01Z | build-B | 25 Refused save is not Offline | #29 | Refused save gets its own state and chip text; no retry storm (3 uploads in 12 s to 1); sync tests 26 pass |
 | 2026-11-26T11:00Z | review | Review #21 | #21 | Merged as a local squash with the sprint work; 150 canvas tests, scorecard 10/10 acceptance, calm check 33/33 with a stand-in model, data, learning, run-undo and board-sync live checks pass; board sync no longer logs a 404 on first open |
 | 2026-11-26T11:01Z | build-A | 24 Sync against the real server | #30 | Dev canvas proxies to a real server; scripted check signs in by magic link, saves, clean browser opens it, other account isolated, 401 signed out; relay path bug fixed |
+| 2026-11-26T11:10Z | build-A | 5 Converge part 2 | #31 | Person's synthesis, cited claims, clear placement on top of #27; headless check and screenshots; scorecard unchanged |
