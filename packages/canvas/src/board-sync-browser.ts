@@ -1,5 +1,6 @@
 import { atom, getSnapshot, loadSnapshot, type Editor } from "tldraw";
-import { createBoardSync, type BoardApi, type MemoStore, type PutResult, type RevisionSummary, type Snapshot, type SyncMemo, type SyncStatus } from "./board-sync";
+import { createBoardSync, type BoardApi, type MemoStore, type PutResult, type RevisionSummary, type BoardSummary, type Snapshot, type SyncMemo, type SyncStatus } from "./board-sync";
+import { bringContentIntoView } from "./reframe";
 
 // Wires board sync to the editor, the network and localStorage. On paired.cc the account
 // comes from the session (/auth/me) and boards from /api/canvas/boards. The development
@@ -56,6 +57,11 @@ export const boardApi: BoardApi = {
     const { board } = (await r.json()) as { board: { revision: number; snapshot: Snapshot } };
     return { revision: board.revision, snapshot: board.snapshot };
   },
+  async list() {
+    const r = await fetch("/api/canvas/boards", { credentials: "same-origin" });
+    if (!r.ok) throw new Error(`Loading your boards failed (${r.status})`);
+    return ((await r.json()) as { boards: BoardSummary[] }).boards;
+  },
   async revisions(id) {
     const r = await fetch(`/api/canvas/boards/${encodeURIComponent(id)}/revisions`, { credentials: "same-origin" });
     if (r.status === 404) return null;
@@ -97,6 +103,12 @@ export const boardHistory = {
     if (!active) return Promise.reject(new Error("This board is not saved to an account yet."));
     return active.restore(revision);
   },
+  boards: () => (active ? active.boards() : Promise.resolve(null)),
+  current: () => active?.boardId() ?? null,
+  open: (boardId: string) => {
+    if (!active) return Promise.reject(new Error("This board is not saved to an account yet."));
+    return active.open(boardId);
+  },
 };
 
 /** Start keeping this editor's board saved to the account. Returns a stop function. */
@@ -112,7 +124,9 @@ export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
         const page = editor.getCurrentPageId();
         loadSnapshot(editor.store, { document: snapshot as never });
         if (editor.getPage(page)) editor.setCurrentPage(page);
+        bringContentIntoView(editor);
       },
+      reset: () => editor.clearHistory(),
       listen: (fn) => editor.store.listen(fn, { scope: "document", source: "user" }),
     },
   });
