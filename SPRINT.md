@@ -226,7 +226,7 @@ task by which measure is furthest from target, not by backlog order.
     rounds make the board's stale badges and `read` grow exponentially (millions of visits after
     20 rounds). Done when staleness is computed once per object per pass, `read` reports repeated
     causes by reference or bounded, and a test with 20 rounds of shared inputs runs fast.
-51. **CSV import keeps what the file says.** (From an automated review of #18, verified.) (a) A
+51. (PR #68 open, awaiting review.) **CSV import keeps what the file says.** (From an automated review of #18, verified.) (a) A
     numeric column with integers beyond 2^53 (long IDs) is rounded, merging distinct IDs: keep it
     as text. (b) A one-column file drops rows whose value is a quoted empty string. (c) A
     Windows-1252 file imports with replacement characters: decode strictly and say to re-export as
@@ -340,7 +340,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 46. Answer lands on its ask's page | claude/sprint-answer-page | 2026-11-26T11:57Z
-51. CSV import keeps what the file says | claude/sprint-csv-faithful | 2026-11-26T11:55Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
@@ -520,3 +519,5 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:52Z | build-B | Review fixes on merged PRs | #61 #62, #52 | Board-limit overwrite of the account's board fixed (#61); learning prompts no longer hide human comments or frames holding human work (#62); frame moves in #52; items 50 to 52 filed from the remaining findings |
 | 2026-11-26T11:53Z | build-B | 45 Board sync gaps (a)-(c) | #66 | Lone surrogates no longer fail a Postgres save (reproduced on PostgreSQL 16); merged changes stay out of undo (reproduced in two browsers); (a) recorded as a decision |
 | 2026-11-26T11:57Z | build-B | 45 Ask about a frame gives its contents | #67 | Frame target lists what it holds (nested, reading order, marks); real tab 4/6 before, 6/6 after; scorecard unchanged apart from 10k pan noise |
+| 2026-11-26T11:58Z | build-A | Feedback 8 import, parts 4 and 5 | #60 #65 | #60 .xlsx workbooks read without a dependency (same plan as the paste, fuzzed; verify-import 51/51); #65 web pages and copied web content as section cards (verify-webpage 9/9, verify-import 47/47); both stacked on #46 only |
+| 2026-11-26T11:58Z | build-A | 51 CSV keeps what the file says | #68 | Long IDs stay text, quoted-empty rows kept, non-UTF-8 refused with a fix; 5 failing-first tests, 3 mutations each fail; browser check 5/5; scorecard unchanged |
