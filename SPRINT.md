@@ -551,7 +551,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 86. (PR #117 open, awaiting review.) **The principles status table says what the build does now.** `docs/canvas/principles.md`'s "What the build does" and "Still missing" columns date from the calm-canvas pass; since then #42 (starters fit the selection), #47 (overview clusters), #55 (side by side), #64 (picks carried), #67 (frame contents), #83/#88 (keys, tap) and #86 (chart asks) closed gaps it still lists as missing, so a playtester or agent reading it is misled. Done when every row is checked against the code and the merged PRs, each change cites its PR, and nothing unmerged is claimed.
 
+90. **The person pins what every ask should see (prototype, `?prototype=context`).** Solveit, in `docs/canvas/principles.md`: "Not borrowed yet: pinning objects into context." Leave out (#90's item 67) lets the person withhold; nothing lets them include a brief, a constraint or a goal card without selecting it every time. Done when, in the context prototype, **Pin** (I) on the selection bar marks the selection "given to every ask" on the board (pin and leave out exclude each other), every ask on that page gives the pinned objects as their own section (hidden objects never), outlines them with the rest of its context, says how many were pinned, the resident agent's prompt names them as pinned by the person, a pin already on a board is always honoured and drawn, the logic is in tested pure functions, a real page check fails before and passes after, and the first screen is unchanged.
+
 ## Claims
+90. The person pins what every ask should see | claude/sprint-pin-context | 2026-11-26T14:05Z
 
 ## Done
 - 86. Principles status table says what the build does now (build-B): PR #117 (rows 2, 3, 5, 6, 7 and 9 checked against the code and merged PRs; docs only).
