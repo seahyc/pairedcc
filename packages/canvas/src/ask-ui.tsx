@@ -1,12 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
-import { askStatusLine, startersFor, suggestQuestion } from "./ask-rules";
+import { askStatusLine, BAR_MARGIN, placeBar, startersFor, statusWidth, suggestQuestion } from "./ask-rules";
 import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
+import { isLeftOut, leftOutLabel, toggleLeftOut } from "./leave-out";
+import { prototypeEnabled } from "./prototype-flags";
+import { TOUCH, keys } from "./keys";
+
+/** A key cap, left out on a touch screen where it names a key nobody has. */
+const Kbd = ({ children }: { children: string }) => (TOUCH ? null : <kbd>{children}</kbd>);
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
 const short = (text: string, max = 28) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
@@ -34,6 +40,8 @@ export function AskLayer() {
     "asks on page",
     () => {
       const selected = new Set<string>(editor.getSelectedShapeIds());
+      // Counting what was kept back reads each ask's whole context, so only on a page that has a left-out object.
+      const anyLeftOut = editor.getCurrentPageShapes().some((s) => isLeftOut(s.meta));
       return editor.getCurrentPageShapes().flatMap((s) => {
         const ask = askOf(s), b = editor.getShapePageBounds(s);
         if (!ask || !b) return [];
@@ -45,7 +53,9 @@ export function AskLayer() {
               return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
             })
           : [];
-        return [{ id: s.id, ask, x: b.x, y: b.maxY, given: givenLabel(editor, ask.contextIds), outlines }];
+        // What the person kept back from this ask, as an agent reading it now would be given it.
+        const kept = anyLeftOut ? leftOutLabel(describeAsk(editor, s).leftOut ?? 0) : "";
+        return [{ id: s.id, ask, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds)}${kept ? ` · ${kept}` : ""}`, outlines }];
       });
     },
     [editor],
@@ -66,7 +76,7 @@ export function AskLayer() {
             {a.outlines.map((o) => (
               <div key={o.id} className="ask-given" style={{ transform: `translate(${o.x - 6}px, ${o.y - 6}px)`, width: o.w + 12, height: o.h + 12 }} />
             ))}
-            <div className={`ask-status ${line.tone}`} data-ask-state={a.ask.state} data-ask-tone={line.tone} style={{ transform: `translate(${a.x}px, ${a.y + 6}px)` }}>
+            <div className={`ask-status ${line.tone}`} data-ask-state={a.ask.state} data-ask-tone={line.tone} style={{ transform: `translate(${a.x}px, ${a.y + 6}px)`, maxWidth: statusWidth(a.w) }}>
               {(line.tone === "working" || line.tone === "waiting") && <span className="ask-pulse" />}
               <span>
                 {line.tone === "working" || line.tone === "done" ? "✦ " : ""}
@@ -121,6 +131,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         editing: Boolean(editor.getEditingShapeId()),
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
+        leftOut: shapes.every((s) => isLeftOut(s.meta)),
         text: only ? textOf(only) : "",
         blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
         // An imported record keeps its own starters; anything else gets ones that fit the selection.
@@ -144,6 +155,26 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
   );
   const [question, setQuestion] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  // The bar's real width (it depends on its labels and font), measured after each render, so
+  // placing it never assumes a size it does not have.
+  const bar = useRef<HTMLElement | null>(null);
+  const setBar = (el: HTMLElement | null) => {
+    bar.current = el;
+  };
+  const [measured, setMeasured] = useState(0);
+  const [measuredHeight, setMeasuredHeight] = useState(0);
+  const [viewWidth, setViewWidth] = useState(() => window.innerWidth);
+  useLayoutEffect(() => {
+    const w = bar.current?.offsetWidth ?? 0;
+    if (w && w !== measured) setMeasured(w);
+    const h = bar.current?.offsetHeight ?? 0;
+    if (h && h !== measuredHeight) setMeasuredHeight(h);
+  });
+  useEffect(() => {
+    const onResize = () => setViewWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const ids = state?.ids;
   useEffect(() => {
     if (asking && !ids) setAsking(false);
@@ -173,11 +204,13 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     }
   }
 
-  const width = asking ? 430 : 330;
-  const left = Math.max(70, Math.min(state.x, window.innerWidth - width - 16));
-  // Above the selection, else below it; a selection taller than the screen (two records far
-  // apart) keeps the bar on screen instead of pushing it out of reach.
-  const top = Math.max(52, Math.min(state.y - 50 > 52 ? state.y - 50 : state.bottom + 12, window.innerHeight - 64));
+  // The Ask box asks for 430 px; the bar is as wide as its buttons. Both narrow to the window.
+  // The Ask box keeps its usual place; the bar is lifted by its real height when its buttons wrap.
+  const placed = placeBar(state, asking ? 430 : measured || 380, viewWidth, asking || state.editing ? undefined : measuredHeight || undefined);
+  const { left, width } = placed;
+  // A selection taller than the screen (two records far apart) keeps the bar on screen
+  // instead of pushing it out of reach.
+  const top = Math.max(52, Math.min(placed.top, window.innerHeight - 64));
   // Keys keep working after a click: the board takes the keyboard back.
   const judge = (mark: "picked" | "rejected") => {
     toggleMark(editor, editor.getSelectedShapes(), mark);
@@ -196,17 +229,48 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     if (!result.ok) onNotice(result.reason);
     editor.focus();
   };
-  if (state.editing)
-    return state.blank ? null : (
-      <div className="selection-bar hint" style={{ left, top }}>
-        <kbd>⌘↵</kbd> ask about this · <kbd>Esc</kbd> done
+  const askAboutWriting = () => {
+    const id = editor.getEditingShapeId();
+    if (id) {
+      editor.complete();
+      editor.setCurrentTool("select");
+      editor.select(id);
+    }
+    setAsking(true);
+  };
+  if (state.editing) {
+    if (state.blank) return null;
+    // On a touch screen the hint is the way to ask: no keyboard shortcut can be pressed.
+    if (TOUCH)
+      return (
+        <button
+          ref={setBar}
+          className="selection-bar hint tappable"
+          style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }}
+          onPointerDown={(e) => {
+            // Act on the press, before the text editor loses focus and the bar changes under the finger.
+            e.preventDefault();
+            e.stopPropagation();
+            askAboutWriting();
+          }}
+          // A screen reader or switch activates a button with a click and no pointer press.
+          onClick={askAboutWriting}
+        >
+          ✦ Ask about this
+        </button>
+      );
+    return (
+      <div ref={setBar} className="selection-bar hint" style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }}>
+        <kbd>{keys("⌘↵")}</kbd> ask about this · <kbd>Esc</kbd> done
       </div>
     );
+  }
   if (asking)
     return (
       <form
+        ref={setBar}
         className="selection-bar asking"
-        style={{ left, top }}
+        style={{ left, top, width }}
         onSubmit={(e) => {
           e.preventDefault();
           submit(question);
@@ -243,19 +307,31 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       </form>
     );
   return (
-    <div className="selection-bar" style={{ left, top }} role="toolbar" aria-label="What next">
-      <button className="primary" onClick={() => setAsking(true)} title="Ask your agent about the selection (⌘↵)">
-        ✦ Ask <kbd>⌘↵</kbd>
+    <div ref={setBar} className="selection-bar" style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }} role="toolbar" aria-label="What next">
+      <button className="primary" onClick={() => setAsking(true)} title={keys("Ask your agent about the selection (⌘↵)")}>
+        ✦ Ask <Kbd>{keys("⌘↵")}</Kbd>
       </button>
       <button className={state.picked ? "on" : ""} onClick={() => judge("picked")} title="Pick: this one (P)">
-        Pick <kbd>P</kbd>
+        Pick <Kbd>P</Kbd>
       </button>
       <button className={state.rejected ? "on" : ""} onClick={() => judge("rejected")} title="Cross out: not this (X)">
-        Cross out <kbd>X</kbd>
+        Cross out <Kbd>X</Kbd>
       </button>
       <button onClick={onComment} title="Comment on it (C)">
-        Comment <kbd>C</kbd>
+        Comment <Kbd>C</Kbd>
       </button>
+      {prototypeEnabled("context") && (
+        <button
+          className={state.leftOut ? "on" : ""}
+          onClick={() => {
+            toggleLeftOut(editor, editor.getSelectedShapes());
+            editor.focus();
+          }}
+          title={state.leftOut ? "Bring back: asks about things nearby may give this to the agent again (L)" : "Leave out: asks about things nearby will not give this to the agent (L)"}
+        >
+          {state.leftOut ? "Bring back" : "Leave out"} <Kbd>L</Kbd>
+        </button>
+      )}
       {state.cites && (
         <button onClick={bringSources} title={`Bring the sections this record cites (${state.cites.split(" ").join(", ")}) beside it, linked by arrows (one undo)`}>
           Show {state.cites.split(" ").join(", ")}

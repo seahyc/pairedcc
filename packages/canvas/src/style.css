@@ -813,6 +813,25 @@ p {
   left: -16px;
   font-size: 12px;
 }
+/* Left out of asks (the context prototype): veiled and fenced, still readable and editable. */
+.scratch-left-out {
+  position: absolute;
+  inset: -4px;
+  border: 1.5px dashed #8a8c92;
+  border-radius: 10px;
+  background: repeating-linear-gradient(135deg, rgba(239, 237, 232, 0.5) 0 6px, rgba(239, 237, 232, 0.15) 6px 12px);
+}
+.scratch-left-out span {
+  position: absolute;
+  top: -9px;
+  left: 10px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #efede8;
+  color: #5f6168;
+  font: 500 11px/16px Inter, -apple-system, sans-serif;
+  white-space: nowrap;
+}
 .scratch-done {
   position: absolute;
   top: -10px;
@@ -1462,6 +1481,9 @@ kbd {
   box-shadow: 0 6px 20px #1517281f;
   pointer-events: auto;
   white-space: nowrap;
+  /* On a narrow window the buttons wrap to a second row rather than leave the screen. */
+  flex-wrap: wrap;
+  box-sizing: border-box;
 }
 .selection-bar > button {
   display: flex;
@@ -1501,13 +1523,21 @@ kbd {
   gap: 5px;
   pointer-events: none;
 }
+/* On a touch screen the writing hint is a button: the one way to ask while writing. */
+.selection-bar.hint.tappable {
+  pointer-events: auto;
+  padding: 9px 14px;
+  font: 500 13px Inter, -apple-system, sans-serif;
+  color: #fff;
+  background: #3a2fd0;
+  border-color: #3a2fd0;
+}
 .selection-bar.asking {
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
   padding: 8px;
-  width: 430px;
-  box-sizing: border-box;
+  flex-wrap: nowrap;
 }
 .ask-row {
   display: flex;
@@ -1563,9 +1593,11 @@ kbd {
   top: 0;
   width: max-content;
   max-width: 640px;
-  white-space: nowrap;
+  /* Wraps within its card's width (set inline) so its button never ends up off screen. */
+  white-space: normal;
+  overflow-wrap: anywhere;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 7px;
   font: 400 12.5px/1.35 "Shantell Sans", Inter, sans-serif;
   color: #5d5a78;
@@ -1691,6 +1723,10 @@ kbd {
 .bar.on .bar-key { font-weight: 700; color: #3a2fd0; }
 .chart-empty { margin: auto; color: #7a766c; }
 .stale-flag { position: absolute; top: 0; left: 0; padding: 1px 7px; border-radius: 999px; background: #fff1e0; border: 1px dashed #b4540a; color: #8a3f06; font: 600 11px 'JetBrains Mono', monospace; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; cursor: help; }
+.stale-flag.open, .stale-flag:focus-visible { width: max-content; max-width: 420px; white-space: normal; overflow: visible; border-radius: 10px; z-index: 2; }
+/* Focused from the keyboard, it grows upward from where its one line sat, clear of the object's text. */
+.stale-flag:not(.open):focus-visible { translate: 0 calc(-100% + 20px); }
+.stale-flag:focus-visible { outline: 2px solid #b4540a; outline-offset: 2px; }
 .prototype-row { color: #3a2fd0; }
 
 /* Earlier versions dialog */

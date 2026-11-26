@@ -2,8 +2,8 @@ import { createShapeId, toRichText, type Editor, type TLRichText, type TLShape, 
 import { moveWithAttached, type Mover } from "./follow";
 import { z } from "zod";
 import { atomic, connect } from "./agent-operations";
-import { HUMAN } from "./scratchbook";
-import { planImport, parseImport, summarise, type ImportAs, type ImportFormat, type ImportPlan } from "./import-parse";
+import { HUMAN, inkTargets } from "./scratchbook";
+import { MAX_TABLE_ROWS, planImport, parseImport, summarise, type ImportAs, type ImportFormat, type ImportPlan } from "./import-parse";
 import { sourceOf, type SourceMeta } from "./import-meta";
 import { tableLayout } from "./table-shape";
 import { fieldSlots, planSideBySide, type RecordBox } from "./import-compare";
@@ -109,6 +109,7 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
         const titleText = record.details ? `${record.title}\n${record.details}` : record.title;
         const titleId = card(start.x, y, Math.max(200, Math.round(rowW - chipRoom(record.chips))), "sourceTitle", toRichText(titleText), record.title, {
           kind: "title",
+          shown: titleText,
           row: record.row,
           values: record.values,
           chips: record.chips,
@@ -135,7 +136,7 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
           stepId = createShapeId();
           editor.groupShapes(ids, { groupId: stepId, select: false });
           editor.updateShape({ id: stepId, type: "group", meta: { name: record.title.slice(0, 80), revision: 0, source: { ...base, ...record_ } } });
-        } else editor.updateShape({ id: titleId, type: "card", meta: { ...editor.getShape(titleId)!.meta, source: { ...base, ...record_, chips: record.chips } } });
+        } else editor.updateShape({ id: titleId, type: "card", meta: { ...editor.getShape(titleId)!.meta, source: { ...base, ...record_, chips: record.chips, shown: titleText } } });
         stepIds.push(stepId);
         // First view: the heading and the first record, and the second when it is close.
         if (order === 0 || (order === 1 && y - start.y < 760)) focusBottom = y;
@@ -159,7 +160,10 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
       });
     } else {
       const title = plan.table.title ?? (origin.from === "pasted" ? "" : origin.from);
-      const layout = tableLayout(plan.table.columns, plan.table.rows, title);
+      // A table keeps at most MAX_TABLE_ROWS rows; its title says so, so the loss is never silent.
+      const total = plan.table.rows.length;
+      const tableTitle = total > MAX_TABLE_ROWS ? `${title ? `${title} · ` : ""}first ${MAX_TABLE_ROWS.toLocaleString("en")} of ${total.toLocaleString("en")} rows` : title;
+      const layout = tableLayout(plan.table.columns, plan.table.rows.slice(0, MAX_TABLE_ROWS), tableTitle);
       const id = createShapeId();
       editor.createShape({
         id,
@@ -168,7 +172,7 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
         x: start.x,
         y: start.y,
         meta: { name: title || "Table", revision: 0, source: { ...base, kind: "table" } },
-        props: { w: layout.w, h: layout.h, title, columns: plan.table.columns, rows: plan.table.rows.slice(0, 2000) },
+        props: { w: layout.w, h: layout.h, title: tableTitle, columns: plan.table.columns, rows: plan.table.rows.slice(0, MAX_TABLE_ROWS) },
       });
       width = layout.w;
       focusBottom = start.y + Math.min(layout.h, 900);
@@ -185,6 +189,31 @@ export function showBox(editor: Editor, box: Box) {
 /** Every object of one import, on any page. */
 export function importShapes(editor: Editor, importId: string) {
   return editor.store.allRecords().filter((r): r is TLShape => r.typeName === "shape" && sourceOf(r as TLShape)?.importId === importId);
+}
+
+/**
+ * What the person could have done to an import, as one string: each object's revision and mark,
+ * and every binding or other object that refers to one of them (a comment, an arrow). It changes
+ * when an object is edited, moved, picked, crossed out or commented on; not when the canvas
+ * re-measures a card or table.
+ */
+export function importFingerprint(editor: Editor, importId: string) {
+  const shapes = importShapes(editor, importId);
+  const ids = new Set<string>(shapes.map((s) => s.id));
+  const own = shapes.map((s) => `${s.id}:${String(s.meta.revision ?? 0)}:${String(s.meta.mark ?? "")}`).sort();
+  const refs = editor.store
+    .allRecords()
+    .filter((r) => {
+      if (r.typeName === "binding") return ids.has((r as { toId: string }).toId);
+      if (r.typeName !== "shape" || ids.has(r.id)) return false;
+      // Pen feedback is tied to what it covers, not by reference.
+      if ((r as TLShape).type === "draw") return inkTargets(editor, r as TLShape, shapes).length > 0;
+      const meta = JSON.stringify((r as TLShape).meta ?? {});
+      return [...ids].some((id) => meta.includes(id));
+    })
+    .map((r) => r.id)
+    .sort();
+  return `${own.join(",")}|${refs.join(",")}`;
 }
 
 export function removeImport(editor: Editor, importId: string) {
