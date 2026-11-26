@@ -209,7 +209,7 @@ task by which measure is furthest from target, not by backlog order.
     dimensions they differ on; a question: answer it; a frame: the group; a chart: what it shows),
     keeps today's three otherwise, is unit-tested, and shown in screenshots.
 
-35. **Agents see what the person put together.** `docs/canvas/principles.md`, finding 2 (moving
+35. (PR #47 open, awaiting review.) **Agents see what the person put together.** `docs/canvas/principles.md`, finding 2 (moving
     things is thinking): "The agent does not read meaning from arrangement (what is near what)."
     Done when `canvas_overview` reports clusters of nearby objects at the level it lists (frames
     already show explicit grouping), computed by a tested pure function, documented, and checked
@@ -252,7 +252,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 35. Annotation arrows follow their note | claude/sprint-annotation-arrows | 2026-11-26T11:22Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
-35. Agents see clusters | claude/sprint-clusters | 2026-11-26T11:21Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
@@ -390,3 +389,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:21Z | build-A | 31 Stable performance numbers | #43 | 10k pan = median of 5 samples after warm-up; three runs 39.3/38.6/39.8 ms (was 35.7 vs 69.1) |
 | 2026-11-26T11:21Z | build-A | 33 No authorship field for agents | #44 | Schema fix with a failing-then-passing test; live MCP and HTTP check; scorecard unchanged |
 | 2026-11-26T11:23Z | build-A | 24 Sync against the real server (race) | #45 | Real server refuses a stale save with 409 and the canvas merges; both browsers' changes on the server |
+| 2026-11-26T11:24Z | build-B | 35 Agents see clusters | #47 | `canvas_overview` reports piles of nearby objects; tested pure function; live HTTP check; root build and test green |
