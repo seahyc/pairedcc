@@ -193,6 +193,11 @@ task by which measure is furthest from target, not by backlog order.
     keeps their page positions, rejects the whole call on a stale or locked object, is one undoable
     run, and is tested at editor level and live over HTTP and MCP.
 
+29. **Say why something is stale.** The board flags a stale derived object with just "stale";
+    the person cannot tell which input changed (read reports it, the board does not). Done when
+    the flag names the changed input (and the upstream cause for transitive staleness) in words a
+    person can act on, is readable by assistive technology, with before/after screenshots.
+
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 28. **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
     fails only because `pnpm eval:canvas` runs the e2e suite without Postgres, Redis or a matching
@@ -202,6 +207,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 28. Existing product row runs e2e for real | claude/sprint-eval-services | 2026-11-26T11:06Z
+29. Say why something is stale | claude/sprint-stale-why | 2026-11-26T11:04Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
