@@ -481,7 +481,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     after, and the person's own edits are unaffected. Moving and deleting the person's objects are
     recorded as a decision, not changed.
 
-77. **Friction from the 26 Nov 13:03 agent-usability attempt (PR #97; reported by the agent, not yet reproduced).** (a) `eval/mcp-call.ts list` prints about 50 KB that does not parse as one JSON value; (b) `canvas_asks` lists every page's asks with no current-page filter; (c) the agent found no `locked` hint or child count in `canvas_overview` under the names it expected, costing a `canvas_read`; (d) `canvas_duplicate`'s default offset (320) overlaps a wider frame; (e) the docs do not say which `canvas_connect` relation means "supports", or whether `canvas_reply` changes the comment's revision before `canvas_resolve`. Done when each is reproduced with a failing test and fixed, or recorded as a decision with the reason.
+77. (PR #102 open, awaiting review.) **Friction from the 26 Nov 13:03 agent-usability attempt (PR #97; reported by the agent, not yet reproduced).** (a) `eval/mcp-call.ts list` prints about 50 KB that does not parse as one JSON value; (b) `canvas_asks` lists every page's asks with no current-page filter; (c) the agent found no `locked` hint or child count in `canvas_overview` under the names it expected, costing a `canvas_read`; (d) `canvas_duplicate`'s default offset (320) overlaps a wider frame; (e) the docs do not say which `canvas_connect` relation means "supports", or whether `canvas_reply` changes the comment's revision before `canvas_resolve`. Done when each is reproduced with a failing test and fixed, or recorded as a decision with the reason.
 
 78. (PR #101 open, awaiting review.) **An ask's progress is announced to assistive technology.** The brief: "The agent must visibly
     respond. Any ask shows waiting, working, answered or failed." The state line under an ask is
@@ -492,10 +492,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     item 7's keyboard-only loop: this is what is heard, not what is reachable.)
 
 ## Claims
-77. Friction from the 13:03 agent-usability attempt | claude/sprint-agent-friction-2 | 2026-11-26T13:17Z
 7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
+- 77. Friction from the second agent attempt (build-B): PR #102 (asks page filter, schema descriptions for duplicate offsets and connect relations, overview and reply documented, `list --brief`; (a) not reproduced).
 - 78. Ask progress announced (build-A): PR #101 (one polite live region says each change of an ask's state once; verify-ask-live 3/8 → 8/8).
 - Reviewed and merged 2026-11-26 by the review lane: #67 to #84 and #96, 19 more (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
 - 76. Agent never rewrites the person's words (build-A): PR #99 (text change to a person's object refused; new safety race 9/10 → 10/10; agent tasks self-test 24/24).
@@ -666,6 +666,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-B, item 72) Task 14's check required a note naming only the top region; the fresh agent wrote a correct note that also gave the other bars' values and failed. Corrected, not weakened: when the note names other regions it must name the top region first and say it is the highest; a bare list, a wrong pick or no pick still fail (unit-tested, self-test OK). The recorded attempt is kept as scored under the old check (23/24); under the corrected check its evidence passes. Alternative: keep "only the top region" and say so in the prompt.
 - (build-B, item 71) Two lanes built item 71 at once (#93 unclaimed at 13:04, #98 under the 13:01 claim). In #98 a "<" with no ">" before the next "<" is text and an unclosed comment runs to the end of the page, as a browser reads them; open list items close at the next item or the end of their list. Lanes should claim before starting.
 
+- (build-B, item 77) Not changed, for the maintainer: tools silently drop input keys they do not know (`canvas_update` with `locked: true` succeeds and changes nothing), so an agent can believe it did something it cannot. Refusing unknown keys would touch every tool's schema (zod `strict`) and could break clients that send extra fields; alternative: return a `ignored` list of dropped keys.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -778,3 +780,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:17Z | build-A | 69 10k pan survives a slow-mode run | #100 | Lower quartile of twelve 40-frame samples; three back-to-back runs on one commit 38.2, 41.0, 36.1 ms (13.6% spread; run 1 had 7/12 slow samples, old median ~74.6); threshold unchanged |
 | 2026-11-26T13:19Z | build-A | 78 Ask progress announced | #101 | Screen readers heard nothing of an ask's progress; live region says sent, working, answered, failed once each; verify-ask-live 3/8 → 8/8; first screen unchanged; scorecard unchanged |
 | 2026-11-26T13:18Z | review | Review #67 to #84, #96 | #67 to #84 #96 | 19 merged (squash); workspace build and tests green after each (canvas 377, server 157 on Postgres 16, e2e 1); live checks re-run for #67 #68 #69 #70 #72 #73 #76 #77 #80 #82 #83. Review fixes: #73 page-tree cycle guard with a test, #80 keeps #55's vertical clamp, AGENT_API paragraphs lost in the #67 merge restored. Scorecard on 8da6809: six rows pass, safety 10/10, 10k pan 49 ms |
+| 2026-11-26T13:27Z | build-B | 77 Friction from the second agent attempt | #102 | asks page filter, schema descriptions, overview/reply docs, list --brief; 5 failing-first tests; live MCP check; workspace measure pass with throwaway services |
