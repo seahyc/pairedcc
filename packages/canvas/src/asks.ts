@@ -4,8 +4,10 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
+import { chartText, datasetText, staleReason } from "./data/model";
+import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
 // An ask is the human's question to an agent, attached to what they selected. It is a
 // pink card on the board (so it is in the feedback queue like any comment) that carries
@@ -71,13 +73,32 @@ type Given = { id: string; type: string; author: string; text: string; mark?: As
 /** How many of a selected frame's objects an ask gives, in reading order. */
 export const INSIDE_LIMIT = 20;
 // Imported material is given with its column names and where it came from.
-const given = (s: TLShape, max = 2000): Given => {
+/**
+ * A chart or dataset has no text of its own; an agent answering with no tools reads what it
+ * shows instead: the chart's measure, filter, bars and selection, or the dataset's columns and
+ * first rows. A stale chart says so and gives the bars the person still sees.
+ */
+function dataText(editor: Editor, s: TLShape): string {
+  if (s.type === "dataset") return datasetText((s as DatasetShape).props.data);
+  if (s.type !== "chart") return "";
+  const chart = s as ChartShape, dataset = editor.getShape(chart.props.datasetId as TLShapeId) as DatasetShape | undefined;
+  if (!dataset) return `Bar chart whose dataset was deleted. Its last bars: ${chart.props.bars.map((b) => `${b.key} ${b.value}`).join(", ") || "none"}.`;
+  const stale = staleness(editor, s);
+  if (!stale.length) return chartText(dataset.props.data, chart.props.state);
+  const nameOf = (id: string) => {
+    const shape = editor.getShape(id as TLShapeId);
+    return shape && !editor.isShapeHidden(shape) ? shapeName(shape) : undefined;
+  };
+  return chartText(dataset.props.data, chart.props.state, { stale: staleReason(stale, nameOf), bars: chart.props.bars });
+}
+
+const given = (editor: Editor, s: TLShape, max = 2000): Given => {
   const source = sourceOf(s), mark = markOf(s.meta);
   return {
     id: s.id,
     type: s.type,
     author: source ? sourceAuthor(source) : authorOf(s),
-    text: clip(sourceText(s, textOf(s)) || textOf(s) || `(${shapeName(s)}, no text)`, max),
+    text: clip(sourceText(s, textOf(s)) || textOf(s) || dataText(editor, s) || `(${shapeName(s)}, no text)`, max),
     ...(mark ? { mark } : {}),
   };
 };
@@ -101,7 +122,8 @@ const parts = (editor: Editor, s: TLShape): TLShape[] => {
  * What a selected frame holds, nested frames included: the person put these together, so an
  * ask about the frame is about them. Reading order (top to bottom, then left to right).
  */
-const media = new Set(["image", "video", "bookmark", "embed"]);
+// Objects worth giving with no text of their own: media, and data the ask can describe.
+const media = new Set(["image", "video", "bookmark", "embed", "chart", "dataset"]);
 function inside(editor: Editor, frame: TLShape, skip: Set<string>) {
   const found: TLShape[] = [];
   const walk = (id: TLShapeId) => {
@@ -116,7 +138,7 @@ function inside(editor: Editor, frame: TLShape, skip: Set<string>) {
   walk(frame.id);
   const at = (s: TLShape) => editor.getShapePageBounds(s) ?? { x: 0, y: 0 };
   found.sort((a, b) => at(a).y - at(b).y || at(a).x - at(b).x);
-  return { inside: found.slice(0, INSIDE_LIMIT).map((s) => given(s, 400)), more: Math.max(0, found.length - INSIDE_LIMIT) };
+  return { inside: found.slice(0, INSIDE_LIMIT).map((s) => given(editor, s, 400)), more: Math.max(0, found.length - INSIDE_LIMIT) };
 }
 
 /** The exchange that led here, oldest first, when the human asks about an agent's answer. */
@@ -164,9 +186,9 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     pageId: page?.id,
     pageName: page?.name,
     targets: targets.map((t) => {
-      if (t.type !== "frame") return given(t);
+      if (t.type !== "frame") return given(editor, t);
       const held = inside(editor, t, skip);
-      return { ...given(t), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
+      return { ...given(editor, t), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
     }),
     history: mergeHistory(targets.flatMap((t) => thread(editor, t)), targets.map((t) => t.id)),
     ...(frame
@@ -177,9 +199,9 @@ export function describeAsk(editor: Editor, shape: TLShape) {
             objects: editor
               .getSortedChildIdsForParent(frame.id)
               .flatMap((id) => editor.getShape(id) ?? [])
-              .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && textOf(s))
+              .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset"))
               .slice(0, 12)
-              .map((s) => given(s, 400)),
+              .map((s) => given(editor, s, 400)),
           },
         }
       : {}),
@@ -241,7 +263,9 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   const texts = input.alternatives
     ? input.alternatives.map((text, i) => `${"ABCD"[i]} · ${capWords(text, 60)}`)
     : [capWords(input.text ?? "", 90)];
-  const layout = answerLayout({ x: anchor.x, y: bottom }, texts);
+  // The room the person's window has beside the canvas chrome, so no answer lands off screen.
+  const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
+  const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
   const spot = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
   // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
   // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
@@ -254,8 +278,14 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     return result;
   };
   const ids = place(() => {
-    const made = texts.map((text, i) =>
-      createCard(editor, { x: spot.x + layout.cards[i].dx, y: spot.y, width: layout.cards[i].w, text }, actor, {
+    // Rows stack under the measured height of the row above (a card sizes to its text when made).
+    let rowY = spot.y, rowBottom = spot.y, row = 0;
+    const made = texts.map((text, i) => {
+      if (layout.cards[i].row !== row) {
+        row = layout.cards[i].row;
+        rowY = rowBottom + OPTION_GAP;
+      }
+      const id = createCard(editor, { x: spot.x + layout.cards[i].dx, y: rowY, width: layout.cards[i].w, text }, actor, {
         name: input.alternatives ? `Option ${"ABCD"[i]}` : input.question ? "Question" : "Answer",
         role: "annotation",
         status: "open",
@@ -263,8 +293,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         targetId: shape.id,
         replyTo: shape.id,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
-      }, offPage ? pageId : undefined),
-    );
+      }, offPage ? pageId : undefined);
+      rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
+      return id;
+    });
     setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt: Date.now(), read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.
     if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);

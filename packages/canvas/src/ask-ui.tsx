@@ -155,10 +155,13 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     bar.current = el;
   };
   const [measured, setMeasured] = useState(0);
+  const [measuredHeight, setMeasuredHeight] = useState(0);
   const [viewWidth, setViewWidth] = useState(() => window.innerWidth);
   useLayoutEffect(() => {
     const w = bar.current?.offsetWidth ?? 0;
     if (w && w !== measured) setMeasured(w);
+    const h = bar.current?.offsetHeight ?? 0;
+    if (h && h !== measuredHeight) setMeasuredHeight(h);
   });
   useEffect(() => {
     const onResize = () => setViewWidth(window.innerWidth);
@@ -195,7 +198,8 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
   }
 
   // The Ask box asks for 430 px; the bar is as wide as its buttons. Both narrow to the window.
-  const placed = placeBar(state, asking ? 430 : measured || 380, viewWidth);
+  // The Ask box keeps its usual place; the bar is lifted by its real height when its buttons wrap.
+  const placed = placeBar(state, asking ? 430 : measured || 380, viewWidth, asking || state.editing ? undefined : measuredHeight || undefined);
   const { left, width } = placed;
   // A selection taller than the screen (two records far apart) keeps the bar on screen
   // instead of pushing it out of reach.

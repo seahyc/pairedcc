@@ -121,7 +121,7 @@ task by which measure is furthest from target, not by backlog order.
 5. (#27 merged; stacked on #20.) **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
    what it came from.
 6. (Merged, see Done.) **Learning mode prototypes** from the spec: predict-then-check and generate-first.
-7. **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
+7. (Keyboard loop: PR #105 open, awaiting review. Import fuzzing, 1k/10k performance and 390 px were done by the import PRs, the eval and #80/#87/#88.) **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
    (1k and 10k objects), keyboard accessibility, 390px layout.
 8. (Merged, see Done.) **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
    AGENT_API.md does not yet describe `canvas_dataset`, `canvas_chart`, `canvas_chart_state`,
@@ -412,7 +412,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 65. (PR #89 open, awaiting review.) **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
 
-66. (PR #88 open, awaiting review; stacked on #83.) **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
+66. (PR #88 open, awaiting review; #83 has merged and the integration branch is merged into #88, so its diff is the touch change alone, verify-touch 11/11.) **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
     item 6. A phone has no keyboard, yet the first board says "press ⌘↵ to ask" (with #83, Android
     reads "Ctrl+↵"), the selection bar shows key caps, and while writing a card the hint names
     keys and offers no way to ask. Done when, on a touch-only device, the first board says to tap
@@ -481,7 +481,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     after, and the person's own edits are unaffected. Moving and deleting the person's objects are
     recorded as a decision, not changed.
 
-77. **Friction from the 26 Nov 13:03 agent-usability attempt (PR #97; reported by the agent, not yet reproduced).** (a) `eval/mcp-call.ts list` prints about 50 KB that does not parse as one JSON value; (b) `canvas_asks` lists every page's asks with no current-page filter; (c) the agent found no `locked` hint or child count in `canvas_overview` under the names it expected, costing a `canvas_read`; (d) `canvas_duplicate`'s default offset (320) overlaps a wider frame; (e) the docs do not say which `canvas_connect` relation means "supports", or whether `canvas_reply` changes the comment's revision before `canvas_resolve`. Done when each is reproduced with a failing test and fixed, or recorded as a decision with the reason.
+77. (PR #102 open, awaiting review.) **Friction from the 26 Nov 13:03 agent-usability attempt (PR #97; reported by the agent, not yet reproduced).** (a) `eval/mcp-call.ts list` prints about 50 KB that does not parse as one JSON value; (b) `canvas_asks` lists every page's asks with no current-page filter; (c) the agent found no `locked` hint or child count in `canvas_overview` under the names it expected, costing a `canvas_read`; (d) `canvas_duplicate`'s default offset (320) overlaps a wider frame; (e) the docs do not say which `canvas_connect` relation means "supports", or whether `canvas_reply` changes the comment's revision before `canvas_resolve`. Done when each is reproduced with a failing test and fixed, or recorded as a decision with the reason.
 
 78. (PR #101 open, awaiting review.) **An ask's progress is announced to assistive technology.** The brief: "The agent must visibly
     respond. Any ask shows waiting, working, answered or failed." The state line under an ask is
@@ -491,11 +491,30 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     with an agent over HTTP (failing before, passing after); nothing new is visible. (Separate from
     item 7's keyboard-only loop: this is what is heard, not what is reachable.)
 
+79. (PR #103 open, awaiting review.) **`read`'s text filter: the two findings left open on #78.** (Decisions needed, build-B item 58.) (a) `ß` does not fold to `ss`, so `STRASSE` misses `Straße`; (b) a match may end inside a grapheme, so `कल` matches `कला` and `かく` matches `かぐ` once normalised. Done when each has a failing-first unit test and is fixed, with Latin, Greek and accented matching unchanged.
+
+80. (PR #104 open, awaiting review.) **An ask about something in a frame is hidden by the frame.** "The agent must visibly respond" and "Text never leaves its container". Selecting a card inside a frame and asking places the ask just right of the card; the canvas parents it into the frame under that spot, and the frame clips it, so the person sees an empty pink strip instead of their question (seen at 1440 px while checking item 67). Comments, replies and answers placed near objects in a frame can be clipped the same way. Done when asks, comments, replies and answers are never clipped by a frame (they sit on the page above it and still follow what they are about when it or its frame moves), checked in a real page that fails before and passes after, with before/after screenshots.
+
+81. (PR #106 open, awaiting review; stacked on #104.) **An agent's note never lands on top of something.** `canvas_annotate` places its note under the target without looking for free space, so it can cover an ask or another note (seen in PR #104's screenshot; also point 10 of the fresh agent in PR #97). Done when an annotation without `x`/`y` is placed clear of other objects (as answers and comments already are, via `freeSpot`), with a test and a before/after screenshot.
+
+82. **A Tab stop is heard: whose it is, what it says, and its mark.** (Found while building item 7's
+    keyboard loop, #105.) The canvas runs with tldraw's UI hidden, which also removes its screen
+    reader announcer, so when Tab or a click selects a card nothing is said: a screen-reader user
+    cannot tell their own thought from an agent's answer, hear an option's text, or know it was
+    picked or crossed out (finding 4, "whose is what, and what state it is in"). Done when one polite
+    live region says, for each single selection, who made it, its text (clipped), its kind (thought,
+    ask with its state, comment, answer), its mark and its place in the Tab order, from a tested pure
+    function, checked in a real page (failing before, passing after); nothing new is visible.
+
 ## Claims
-77. Friction from the 13:03 agent-usability attempt | claude/sprint-agent-friction-2 | 2026-11-26T13:17Z
-7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
+82. A Tab stop is heard | claude/sprint-robust-heard | 2026-11-26T13:40Z
 
 ## Done
+- 81. Agent note never lands on top of something (build-B): PR #106, stacked on #104 (verify-annotate-clear 3/4 → 4/4).
+- 7. Robustness, keyboard-only loop (build-A): PR #105 (N then Enter writes a card in view; Tab/Shift+Tab move through the board, skipping connectors and hidden objects; verify-keyboard 6/14 → 14/14).
+- 80. Asks and notes never clipped by a frame (build-B): PR #104 (verify-ask-unclipped 6/16 → 16/16).
+- 79. Read filter folds ß and matches whole characters (build-B): PR #103 (2 failing-first tests).
+- 77. Friction from the second agent attempt (build-B): PR #102 (asks page filter, schema descriptions for duplicate offsets and connect relations, overview and reply documented, `list --brief`; (a) not reproduced).
 - 78. Ask progress announced (build-A): PR #101 (one polite live region says each change of an ask's state once; verify-ask-live 3/8 → 8/8).
 - Reviewed and merged 2026-11-26 by the review lane: #67 to #84 and #96, 19 more (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
 - 76. Agent never rewrites the person's words (build-A): PR #99 (text change to a person's object refused; new safety race 9/10 → 10/10; agent tasks self-test 24/24).
@@ -666,6 +685,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-B, item 72) Task 14's check required a note naming only the top region; the fresh agent wrote a correct note that also gave the other bars' values and failed. Corrected, not weakened: when the note names other regions it must name the top region first and say it is the highest; a bare list, a wrong pick or no pick still fail (unit-tested, self-test OK). The recorded attempt is kept as scored under the old check (23/24); under the corrected check its evidence passes. Alternative: keep "only the top region" and say so in the prompt.
 - (build-B, item 71) Two lanes built item 71 at once (#93 unclaimed at 13:04, #98 under the 13:01 claim). In #98 a "<" with no ">" before the next "<" is text and an unclosed comment runs to the end of the page, as a browser reads them; open list items close at the next item or the end of their list. Lanes should claim before starting.
 
+- (build-B, item 77) Not changed, for the maintainer: tools silently drop input keys they do not know (`canvas_update` with `locked: true` succeeds and changes nothing), so an agent can believe it did something it cannot. Refusing unknown keys would touch every tool's schema (zod `strict`) and could break clients that send extra fields; alternative: return a `ignored` list of dropped keys.
+
+- (build-B, item 79) `read`'s text filter folds case through upper case, so Turkish dotless ı also matches i (looser, never stricter). Matches must start and end on grapheme boundaries (`Intl.Segmenter`, default locale).
+
+- (build-B, item 80) Asks, comments about objects, replies, answers and agent notes are created on the page (above any frame), not inside the frame under them, so a frame never clips them; they follow their target through the follow rule. Alternative: grow the frame to fit them, which changes the person's frame.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -778,3 +803,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:17Z | build-A | 69 10k pan survives a slow-mode run | #100 | Lower quartile of twelve 40-frame samples; three back-to-back runs on one commit 38.2, 41.0, 36.1 ms (13.6% spread; run 1 had 7/12 slow samples, old median ~74.6); threshold unchanged |
 | 2026-11-26T13:19Z | build-A | 78 Ask progress announced | #101 | Screen readers heard nothing of an ask's progress; live region says sent, working, answered, failed once each; verify-ask-live 3/8 → 8/8; first screen unchanged; scorecard unchanged |
 | 2026-11-26T13:18Z | review | Review #67 to #84, #96 | #67 to #84 #96 | 19 merged (squash); workspace build and tests green after each (canvas 377, server 157 on Postgres 16, e2e 1); live checks re-run for #67 #68 #69 #70 #72 #73 #76 #77 #80 #82 #83. Review fixes: #73 page-tree cycle guard with a test, #80 keeps #55's vertical clamp, AGENT_API paragraphs lost in the #67 merge restored. Scorecard on 8da6809: six rows pass, safety 10/10, 10k pan 49 ms |
+| 2026-11-26T13:19Z | build-B | 77 Friction from the second agent attempt | #102 | asks page filter, schema descriptions, overview/reply docs, list --brief; 5 failing-first tests; live MCP check; workspace measure pass with throwaway services |
+| 2026-11-26T13:20Z | build-A | #93 review follow-up | #93 | Bounded byline search (3 s → 65 ms), region outside comments/head and whole tag names, ASCII-only lowercase for offsets, one-pass comment strip; 4 new tests; verify-webpage 9/9 |
+| 2026-11-26T13:21Z | build-B | 79 Read filter ß and grapheme boundaries | #103 | ß/ẞ fold to ss; matches start and end on whole characters; 2 failing-first tests; canvas suite green |
+| 2026-11-26T13:22Z | build-A | #100 review follow-up; run end | #100 | Non-numeric EVAL_PAN_* settings are an error row, not null figures (live check). build-A holds no claims; open: #85 #89 #93 #100 |
+| 2026-11-26T13:28Z | build-B | 80 Ask in a frame hidden by the frame | #104 | New item found in item 67 screenshots; asks, comments, replies, answers, agent notes on the page; real page 6/16 → 16/16; scorecard rows unchanged; filed 81 |
+| 2026-11-26T13:31Z | build-A | 7 Keyboard-only loop | #105 | N then Enter was a dead end and Tab never reached the board or moved on from a selection; verify-keyboard 6/14 → 14/14; 10 unit tests; regression sweep green (calm 32/33 = known #91 case); first screen unchanged; scorecard unchanged |
+| 2026-11-26T13:31Z | build-B | 81 Agent note never lands on top of something | #106 | annotate without x/y uses freeSpot down the target column; real page 3/4 → 4/4; annotate tasks self-test 4/4 |
