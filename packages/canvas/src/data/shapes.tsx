@@ -305,8 +305,10 @@ export function DataLayer() {
           // A result still hidden behind a learning prompt is not named before the person answers.
           return shape && !editor.isShapeHidden(shape) ? shapeName(shape) : undefined;
         };
-        const layout = { ...flagLayout(b, viewport, zoom, selected.has(s.id)), zoom };
-        return [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, name: shapeName(s), reason: staleReason(stale, nameOf), open: selected.has(s.id), ...layout }];
+        const reason = staleReason(stale, nameOf);
+        // Placed by the flag's drawn size, which follows its text (see flag-layout.ts).
+        const layout = { ...flagLayout(b, viewport, zoom, selected.has(s.id), `stale · ${reason}`), zoom };
+        return [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, name: shapeName(s), reason, open: selected.has(s.id), ...layout }];
       });
     },
     [editor],
@@ -328,6 +330,9 @@ export function DataLayer() {
           // Selected, the whole reason opens under the object, clear of the selection bar above it,
           // or above the object when the bottom of the view is too close.
           style={{
+            // Focused, it shifts by these to stay inside the view (style.css applies them).
+            ["--focus-x" as string]: `${i.focusX}px`,
+            ["--focus-y" as string]: `${i.focusY}px`,
             transform: !i.open
               ? `translate(${i.x + i.w}px, ${i.flagY}px) translateX(-100%)`
               : i.openBelow

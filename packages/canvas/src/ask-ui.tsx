@@ -8,7 +8,7 @@ import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
-import { isLeftOut, leftOutLabel, toggleLeftOut } from "./leave-out";
+import { isLeftOut, isPinned, leftOutLabel, pinnedLabel, toggleLeftOut, togglePinned } from "./leave-out";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
 
@@ -25,6 +25,12 @@ function givenLabel(editor: Editor, ids: string[]) {
   if (!shapes.length) return "";
   const first = things[0] ? `“${short(textOf(things[0]) || shapeName(things[0]))}”` : "nothing";
   return `${first}${things.length > 1 ? ` + ${things.length - 1} more` : ""}${frames[0] ? ` + frame “${short(shapeName(frames[0]), 20)}”` : ""}`;
+}
+
+/** "“card” + 1 pinned · 1 left out", or just "1 pinned" when nothing else is given. */
+function givenWith(base: string, pins: string, kept: string) {
+  const main = [base, pins].filter(Boolean).join(" + ");
+  return [main, kept].filter(Boolean).join(" · ");
 }
 
 export function sendAsk(editor: Editor, id: string) {
@@ -64,6 +70,8 @@ export function AskLayer() {
       const selected = new Set<string>(editor.getSelectedShapeIds());
       // Counting what was kept back reads each ask's whole context, so only on a page that has a left-out object.
       const anyLeftOut = editor.getCurrentPageShapes().some((s) => isLeftOut(s.meta));
+      // Likewise pins: an ask gives what is pinned now, so its outline and label follow the pins.
+      const anyPinned = editor.getCurrentPageShapes().some((s) => isPinned(s.meta));
       return editor.getCurrentPageShapes().flatMap((s) => {
         // Most objects are not asks: skip them before parsing or measuring.
         if (!s.meta.ask) return [];
@@ -71,15 +79,30 @@ export function AskLayer() {
         if (!ask || !b) return [];
         const answers = editor.getCurrentPageShapes().filter((r) => r.meta.replyTo === s.id);
         const focused = selected.has(s.id) || answers.some((r) => selected.has(r.id)) || ask.state === "working";
+        const view = focused || anyLeftOut || anyPinned ? describeAsk(editor, s) : undefined;
+        const pinnedIds = view?.pinned?.map((p) => p.id) ?? [];
         const outlines = focused
-          ? ask.contextIds.flatMap((id) => {
+          ? [...ask.contextIds, ...pinnedIds].flatMap((id) => {
               const box = editor.getShapePageBounds(id as TLShapeId);
               return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
             })
           : [];
+        // While the ask is in view of the person (selected or being answered), the group its card
+        // sits in is drawn as one soft outline: the agent is given it, so the person sees it.
+        const groupIds = focused ? (view?.cluster ?? []).map((m) => m.id) : [];
+        const groupBoxes = groupIds.length ? [s.id, ...groupIds].flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []) : [];
+        const group = groupBoxes.length
+          ? (() => {
+              const x = Math.min(...groupBoxes.map((g) => g.x)), y = Math.min(...groupBoxes.map((g) => g.y));
+              return { x, y, w: Math.max(...groupBoxes.map((g) => g.maxX)) - x, h: Math.max(...groupBoxes.map((g) => g.maxY)) - y, count: groupIds.length + (view?.clusterMore ?? 0) };
+            })()
+          : undefined;
         // What the person kept back from this ask, as an agent reading it now would be given it.
-        const kept = anyLeftOut ? leftOutLabel(describeAsk(editor, s).leftOut ?? 0) : "";
-        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds.filter((id) => id !== s.id))}${kept ? ` · ${kept}` : ""}`, outlines }];
+        const kept = anyLeftOut && view ? leftOutLabel(view.leftOut ?? 0) : "";
+        const pins = anyPinned && view ? pinnedLabel(pinnedIds.length + (view.pinnedMore ?? 0)) : "";
+        const groupSaid = group ? `${group.count} more in its group` : "";
+        const base = [givenLabel(editor, ask.contextIds.filter((id) => id !== s.id)), groupSaid].filter(Boolean).join(" + ");
+        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given: givenWith(base, pins, kept), outlines, group }];
       });
     },
     [editor],
@@ -119,6 +142,9 @@ export function AskLayer() {
         const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given, recent });
         return (
           <div key={a.id}>
+            {a.group && (
+              <div className="ask-group" data-ask-group={a.id} style={{ transform: `translate(${a.group.x - 18}px, ${a.group.y - 18}px)`, width: a.group.w + 36, height: a.group.h + 36 }} />
+            )}
             {a.outlines.map((o) => (
               <div key={o.id} className="ask-given" style={{ transform: `translate(${o.x - 6}px, ${o.y - 6}px)`, width: o.w + 12, height: o.h + 12 }} />
             ))}
@@ -241,6 +267,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
         leftOut: shapes.every((s) => isLeftOut(s.meta)),
+        pinned: shapes.every((s) => isPinned(s.meta)),
         text: only ? textOf(only) : "",
         blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
         question: Boolean(only && writtenByPerson(only) && (isQuestion(textOf(only)) || only.meta.askWhenWritten === true)),
@@ -387,6 +414,18 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
           title={state.leftOut ? "Bring back: asks about things nearby may give this to the agent again (L)" : "Leave out: asks about things nearby will not give this to the agent (L)"}
         >
           {state.leftOut ? "Bring back" : "Leave out"} <Kbd>L</Kbd>
+        </button>
+      )}
+      {prototypeEnabled("context") && (
+        <button
+          className={state.pinned ? "on" : ""}
+          onClick={() => {
+            togglePinned(editor, editor.getSelectedShapes());
+            editor.focus();
+          }}
+          title={state.pinned ? "Unpin: asks give this only when it is selected or nearby (I)" : "Pin: every ask on this page gives this to the agent, selected or not (I)"}
+        >
+          {state.pinned ? "Unpin" : "Pin"} <Kbd>I</Kbd>
         </button>
       )}
       {state.cites && (

@@ -6,7 +6,7 @@ import {
   type Editor,
   type TLShape,
 } from "tldraw";
-import { isLeftOut } from "./leave-out";
+import { isLeftOut, isPinned } from "./leave-out";
 import { revision, richTextPlain, shapeName } from "./operations";
 import { buildFeedback, mayBeFeedback, type FeedbackSource } from "./feedback";
 
@@ -377,12 +377,12 @@ export function ScratchbookLayer() {
         const agent = isAgentShape(s) && Boolean(textual);
         const mark = s.meta.mark === "picked" || s.meta.mark === "rejected" ? s.meta.mark : undefined;
         const comment = s.meta.role === "annotation" && !isAgentShape(s);
-        const leftOut = isLeftOut(s.meta);
-        if (!agent && !mark && !comment && !leftOut && !resolved.has(s.id)) return [];
+        const leftOut = isLeftOut(s.meta), pinned = !leftOut && isPinned(s.meta);
+        if (!agent && !mark && !comment && !leftOut && !pinned && !resolved.has(s.id)) return [];
         // Bounds and visibility only for what is drawn: on a big board most objects are not.
         const b = editor.getShapePageBounds(s);
         if (!b || editor.isShapeHidden(s)) return [];
-        return [{ leftOut, comment, id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, type: s.type, caption: s.meta.role === "caption", heading: s.type === "card" && s.props.tone === "heading", agent, mark, resolved: resolved.has(s.id) }];
+        return [{ leftOut, pinned, comment, id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, type: s.type, caption: s.meta.role === "caption", heading: s.type === "card" && s.props.tone === "heading", agent, mark, resolved: resolved.has(s.id) }];
       });
     },
     [editor],
@@ -408,6 +408,11 @@ export function ScratchbookLayer() {
           {i.leftOut && (
             <div className="scratch-left-out">
               <span>left out of asks</span>
+            </div>
+          )}
+          {i.pinned && (
+            <div className="scratch-pinned">
+              <span>pinned · given to every ask</span>
             </div>
           )}
         </div>
