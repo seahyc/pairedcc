@@ -209,8 +209,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     Chromium; with them it passes. Done when the workspace measure uses `DATABASE_URL`/`REDIS_URL`
     when set, otherwise starts throwaway services when the binaries exist, points Playwright at a
     preinstalled Chromium when needed, cleans up, and reports why when it cannot.
+31. **Stable performance numbers.** Back-to-back runs of the same code measure the 10k pan median
+    at 35.7 and 69.1 ms, so the scorecard's 25% "worse" flag fires on noise. Done when the
+    performance measure repeats its pan sample and reports a figure whose spread across three
+    back-to-back runs on one commit is under the flag threshold, with the spread recorded.
 
 ## Claims
+31. Stable performance numbers | claude/sprint-perf-stable | 2026-11-26T11:13Z
 19. Board picker, part 3: list and open saved boards | claude/sprint-board-picker | 2026-11-26T11:09Z
 30. Board opens on an empty view | claude/sprint-reframe | 2026-11-26T11:09Z
 20. Welcome board header overlaps | claude/sprint-welcome-check | 2026-11-26T11:07Z
