@@ -14,3 +14,17 @@ describe("bringing a board into view", () => {
     expect(needsReframe(phone, [])).toBe(false);
   });
 });
+
+import { framingCandidates } from "../src/reframe";
+describe("what counts as visible content", () => {
+  it("uses visible top-level objects only: a frame stands for its children, hidden results do not count", () => {
+    const shapes = [
+      { id: "shape:frame", parentId: "page:1" },
+      { id: "shape:child", parentId: "shape:frame" },
+      { id: "shape:hidden-result", parentId: "page:1" },
+      { id: "shape:card", parentId: "page:1" },
+    ];
+    const hidden = new Set(["shape:hidden-result"]);
+    expect(framingCandidates(shapes, "page:1", (s) => hidden.has(s.id)).map((s) => s.id)).toEqual(["shape:frame", "shape:card"]);
+  });
+});

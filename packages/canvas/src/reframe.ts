@@ -13,9 +13,17 @@ export function needsReframe(view: Box, objects: readonly Box[]) {
   return objects.length > 0 && !objects.some((o) => overlaps(o, view));
 }
 
+/**
+ * The objects that decide whether a board is "in view": visible top-level ones. A frame stands
+ * for its children (which it may clip), and a result hidden behind a learning prompt does not count.
+ */
+export function framingCandidates<S extends { parentId: string }>(shapes: readonly S[], pageId: string, isHidden: (s: S) => boolean) {
+  return shapes.filter((s) => s.parentId === pageId && !isHidden(s));
+}
+
 export function bringContentIntoView(editor: Editor) {
-  const objects = [...editor.getCurrentPageShapeIds()]
-    .map((id) => editor.getShapePageBounds(id))
+  const objects = framingCandidates(editor.getCurrentPageShapes(), editor.getCurrentPageId(), (s) => editor.isShapeHidden(s))
+    .map((s) => editor.getShapePageBounds(s))
     .filter((b): b is NonNullable<typeof b> => !!b);
   if (!needsReframe(editor.getViewportPageBounds(), objects)) return false;
   const bounds = editor.getCurrentPageBounds();
