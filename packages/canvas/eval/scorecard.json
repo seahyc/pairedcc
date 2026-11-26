@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T10:49Z",
-  "commit": "816edb9",
+  "generatedAt": "2026-11-26T11:00Z",
+  "commit": "16ce025",
   "carriedOver": [],
   "table": [
     {
@@ -30,7 +30,7 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 1311 ms, pan 16.7 ms/frame; 10k: load 9400 ms, pan 89 ms/frame",
+      "result": "1k: load 1358 ms, pan 16.7 ms/frame; 10k: load 7135 ms, pan 40 ms/frame",
       "status": "reported"
     },
     {
@@ -47,61 +47,61 @@
           "name": "Person imports a dataset by dropping a CSV file",
           "pass": true,
           "detail": "ok",
-          "ms": 1516
+          "ms": 1514
         },
         {
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 19
+          "ms": 15
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 478
+          "ms": 496
         },
         {
           "name": "Agent charts the selection",
           "pass": true,
           "detail": "ok",
-          "ms": 23
+          "ms": 20
         },
         {
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 861
+          "ms": 826
         },
         {
           "name": "Agent reads that exact chart state",
           "pass": true,
           "detail": "ok",
-          "ms": 5
+          "ms": 4
         },
         {
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 30
+          "ms": 27
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1266
+          "ms": 1154
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": true,
           "detail": "ok",
-          "ms": 924
+          "ms": 920
         },
         {
           "name": "Reload restores everything",
           "pass": true,
           "detail": "ok",
-          "ms": 510
+          "ms": 391
         }
       ],
       "pageErrors": [],
@@ -113,21 +113,21 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 66,
+          "ms": 69,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 147,
+          "ms": 134,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 256,
+          "ms": 246,
           "humanEditsLost": 0
         }
       ],
@@ -142,17 +142,17 @@
     "performance": [
       {
         "objects": 1000,
-        "buildMs": 230,
-        "loadMs": 1311,
+        "buildMs": 166,
+        "loadMs": 1358,
         "panMedianFrameMs": 16.7,
-        "panP95FrameMs": 17.1
+        "panP95FrameMs": 16.9
       },
       {
         "objects": 10000,
-        "buildMs": 1717,
-        "loadMs": 9400,
-        "panMedianFrameMs": 89,
-        "panP95FrameMs": 122.3
+        "buildMs": 1221,
+        "loadMs": 7135,
+        "panMedianFrameMs": 40,
+        "panP95FrameMs": 83.9
       }
     ],
     "agentUsability": {
@@ -169,17 +169,17 @@
           "pass": false,
           "summary": ""
         },
+        "cli": {
+          "pass": true,
+          "summary": "no test files"
+        },
         "canvas": {
           "pass": true,
-          "summary": "134 passed (134)"
+          "summary": "150 passed (150)"
         },
         "mcp-server": {
           "pass": true,
           "summary": "4 passed (4)"
-        },
-        "cli": {
-          "pass": true,
-          "summary": "no test files"
         },
         "sdk": {
           "pass": true,

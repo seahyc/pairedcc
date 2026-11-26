@@ -38,15 +38,19 @@ export function createRunLedger(max = 100) {
       if (runs.length > max) runs.shift();
     },
     get: (runId: string) => runs.find((r) => r.runId === runId),
-    list: (limit: number) => runs.slice(-limit).reverse(),
+    /** Newest first; with an actor, only that actor's runs. */
+    list: (limit: number, actor?: string) => runs.filter((r) => actor === undefined || r.actor === actor).slice(-limit).reverse(),
   };
 }
 export type RunLedger = ReturnType<typeof createRunLedger>;
 
-export function undoRun(editor: Editor, ledger: RunLedger, value: unknown) {
+export function undoRun(editor: Editor, ledger: RunLedger, value: unknown, actor?: string) {
   const { runId } = undoRunInput.parse(value);
   const run = ledger.get(runId);
   if (!run) throw new Error(`Unknown run: ${runId}. canvas_runs lists recent runs in this tab.`);
+  // Agents undo their own runs. The actor label is not authenticated, so this prevents
+  // mistakes between cooperating agents rather than a determined one.
+  if (actor !== undefined && run.actor !== actor) throw new Error(`Run ${runId} belongs to ${run.actor}. An agent can undo only its own runs.`);
   if (run.undone) throw new Error("This run has already been undone");
   const plan = planUndo(run.changes, (id) => editor.store.get(id as never) as never);
   if (plan.conflicts.length)
@@ -64,8 +68,8 @@ export function undoRun(editor: Editor, ledger: RunLedger, value: unknown) {
 
 /** Run one agent command, recording its document changes as an undoable run. */
 export async function runCommand(editor: Editor, ledger: RunLedger, command: CanvasCommand, actor: string, runId: string) {
-  if (command.op === "runs") return { runs: ledger.list(runsInput.parse(command.input ?? {}).limit).map(summariseRun) };
-  if (command.op === "undo_run") return undoRun(editor, ledger, command.input);
+  if (command.op === "runs") return { runs: ledger.list(runsInput.parse(command.input ?? {}).limit, actor).map(summariseRun) };
+  if (command.op === "undo_run") return undoRun(editor, ledger, command.input, actor);
   if (readOnly.has(command.op)) return executeCommand(editor, command, actor);
   // Mutating operations finish synchronously, so every change lands inside this capture.
   let work: Promise<unknown> = Promise.resolve();

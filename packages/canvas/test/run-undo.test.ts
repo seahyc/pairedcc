@@ -63,9 +63,27 @@ describe("planning the undo of one agent run", () => {
     const page = { id: "page:2", typeName: "page", name: "P", index: "a1", meta: {} };
     const s = shape("shape:a", { parentId: "page:2" });
     const binding = { id: "binding:1", typeName: "binding", type: "arrow", fromId: "shape:x", toId: "shape:a", props: {}, meta: {} };
-    const plan = planUndo(diff({ removed: { [binding.id]: binding, [s.id]: s, [page.id]: page } }), store());
+    // The arrow's other end (shape:x) still exists on the board.
+    const plan = planUndo(diff({ removed: { [binding.id]: binding, [s.id]: s, [page.id]: page } }), store(shape("shape:x")));
     expect(plan.put.map((r) => r.id)).toEqual(["page:2", "shape:a", "binding:1"]);
     expect(planUndo(diff({ removed: { [s.id]: s } }), store(s)).conflicts[0].reason).toMatch(/recreated/);
+  });
+  it("refuses to put back a shape whose frame was deleted since, rather than leave an orphan", () => {
+    const frame = shape("shape:frame", { type: "frame" });
+    const child = shape("shape:child", { parentId: "shape:frame" });
+    // The run deleted the child; the person then deleted the frame.
+    const plan = planUndo(diff({ removed: { [child.id]: child } }), store());
+    expect(plan.put).toEqual([]);
+    expect(plan.conflicts).toEqual([{ id: "shape:child", reason: "its parent shape:frame was deleted after the run" }]);
+    // Restoring the frame in the same undo is fine, and so is a parent that still exists.
+    const page1 = { id: "page:1", typeName: "page" } as unknown as ReturnType<typeof shape>;
+    expect(planUndo(diff({ removed: { [child.id]: child, [frame.id]: frame } }), store(page1)).conflicts).toEqual([]);
+    expect(planUndo(diff({ removed: { [child.id]: child } }), store(frame)).conflicts).toEqual([]);
+  });
+  it("refuses to put back an arrow binding whose other end is gone", () => {
+    const binding = { id: "binding:1", typeName: "binding", type: "arrow", fromId: "shape:arrow", toId: "shape:gone", props: {}, meta: {} };
+    const plan = planUndo(diff({ removed: { [binding.id]: binding } }), store(shape("shape:arrow")));
+    expect(plan.conflicts).toEqual([{ id: "binding:1", reason: "it connects shape:gone, which was deleted after the run" }]);
   });
   it("removes created bindings before created shapes", () => {
     const s = shape("shape:a");
@@ -84,5 +102,19 @@ describe("document diff", () => {
     expect(Object.keys(d.added)).toEqual(["shape:a"]);
     expect(d.updated).toEqual({});
     expect(isEmptyDiff(documentDiff(diff({ updated: { "camera:1": [{ id: "camera:1", typeName: "camera" }, { id: "camera:1", typeName: "camera" }] } })))).toBe(true);
+  });
+});
+
+import { createRunLedger, summariseRun, type AgentRun } from "../src/agent-runs";
+describe("whose runs an agent sees", () => {
+  const run = (runId: string, actor: string): AgentRun => ({ runId, op: "update", actor, at: "2026-11-26T10:00:00Z", changes: diff({}), undone: false });
+  it("lists only the calling agent's runs, newest first", () => {
+    const ledger = createRunLedger();
+    ledger.add(run("r1", "Agent A"));
+    ledger.add(run("r2", "Agent B"));
+    ledger.add(run("r3", "Agent A"));
+    expect(ledger.list(10, "Agent A").map((r) => r.runId)).toEqual(["r3", "r1"]);
+    expect(ledger.list(1, "Agent A").map((r) => r.runId)).toEqual(["r3"]);
+    expect(ledger.list(10).map(summariseRun).map((r) => r.runId)).toEqual(["r3", "r2", "r1"]);
   });
 });
