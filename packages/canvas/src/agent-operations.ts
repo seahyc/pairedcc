@@ -9,7 +9,7 @@ import {
   type TLShape,
   type TLShapeId,
 } from "tldraw";
-import { sceneInput, orderedScene, arrangeInput, duplicateInput, layoutPositions, groupInput, frameAround } from "./composition";
+import { sceneInput, orderedScene, arrangeInput, duplicateInput, layoutPositions, groupInput, frameAround, chooseDuplicateOffset } from "./composition";
 import { z } from "zod";
 import {
   annotationInput,
@@ -600,7 +600,22 @@ export async function executeCommand(
       const shapes = checkedObjects(editor, input.objects);
       return atomic(editor, "duplicate exploration", () => {
         const before = new Set(editor.getCurrentPageShapeIds());
-        editor.duplicateShapes(shapes, { x: input.offsetX, y: input.offsetY });
+        let offset = { x: input.offsetX ?? 0, y: input.offsetY ?? 0 };
+        if (input.offsetX === undefined && input.offsetY === undefined) {
+          // Copies keep a parent frame that is not itself duplicated, and that frame clips them.
+          const ids = new Set(shapes.map((shape) => shape.id));
+          const items = shapes.flatMap((shape) => {
+            const box = editor.getShapePageBounds(shape);
+            if (!box) return [];
+            const parent = editor.getShape(shape.parentId as TLShape["id"]);
+            const container = parent && parent.type === "frame" && !ids.has(parent.id) ? editor.getShapePageBounds(parent) : undefined;
+            return [{ box, ...(container ? { container } : {}) }];
+          });
+          const chosen = chooseDuplicateOffset(items);
+          if (!chosen) throw new Error("No room for the copy beside or below the originals inside their frame, where it would be hidden. Pass offsetX/offsetY, or duplicate the frame itself. Nothing was changed.");
+          offset = chosen;
+        }
+        editor.duplicateShapes(shapes, offset);
         const created = editor.getCurrentPageShapes().filter(shape => !before.has(shape.id));
         if (!created.length) throw new Error("Canvas could not create the duplicate objects");
         const feedbackTargets = new Map<string, string>();

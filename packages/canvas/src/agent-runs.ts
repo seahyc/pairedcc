@@ -1,7 +1,7 @@
 import type { Editor } from "tldraw";
 import { executeCommand } from "./agent-operations";
 import type { CanvasCommand } from "./protocol";
-import { documentDiff, isEmptyDiff, planUndo, runsInput, undoRunInput, type RunDiff } from "./run-undo";
+import { changedPaths, documentDiff, isEmptyDiff, planUndo, runsInput, undoRunInput, type RunDiff } from "./run-undo";
 
 // Agent runs: every mutating agent command is captured as one run (who, what, which
 // objects it created, changed or removed) so an agent, or the person, can undo that
@@ -25,6 +25,8 @@ export function summariseRun(run: AgentRun) {
     at: run.at,
     created: Object.keys(run.changes.added),
     updated: Object.keys(run.changes.updated),
+    /** For each updated object, the fields this run changed (derived fields left out). */
+    fields: Object.fromEntries(Object.entries(run.changes.updated).map(([id, [from, to]]) => [id, changedPaths(from, to)])),
     removed: Object.keys(run.changes.removed),
     undone: run.undone,
   };
