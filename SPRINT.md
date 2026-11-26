@@ -609,7 +609,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 101. **Agent-usability tasks for #99 and #51, and a fresh attempt.** Two agent-facing features merged after the 24-task set have no task: the refusal to rewrite the person's words (#99, build-A) and `style` in read (#51, build-A). Done when tasks for both exist with a passing self-test, written by a lane that did not build them, and a fresh attempt by an agent given only `AGENT_API.md` and the tools is recorded so the scorecard counts them, with its friction filed.
 
+102. **Review follow-ups to #115 and #118 (bot review, verified by reading the code).** (a) With a dialog
+    open, the board's keys still act: `?` opens Shortcuts behind the agent dialog and takes focus
+    there, and P, X, C and Backspace act on the selection behind the dialog. (b) The toolbar's Ask
+    button on a failed ask now resends it instead of opening the question box; only Ctrl/⌘+Enter
+    should. (c) "Send again" while no agent is listening queues a second attempt beside the first,
+    and an agent arriving later answers both. (d) The bar keeps "Ask" after a selected working ask
+    goes quiet, while its state line offers Retry. Done when each fails a check first and passes after.
+
 ## Claims
+102. Review follow-ups to #115 and #118 | claude/sprint-keys-followup | 2026-11-26T14:32Z
 101. Agent-usability tasks for #99 and #51, and a fresh attempt | claude/sprint-agent-tasks-3 | 2026-11-26T14:30Z
 99. The first board keeps a margin on a phone | claude/sprint-phone-margin | 2026-11-26T14:29Z
 
