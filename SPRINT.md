@@ -497,7 +497,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 81. (PR #106 open, awaiting review; stacked on #104.) **An agent's note never lands on top of something.** `canvas_annotate` places its note under the target without looking for free space, so it can cover an ask or another note (seen in PR #104's screenshot; also point 10 of the fresh agent in PR #97). Done when an annotation without `x`/`y` is placed clear of other objects (as answers and comments already are, via `freeSpot`), with a test and a before/after screenshot.
 
+82. **A Tab stop is heard: whose it is, what it says, and its mark.** (Found while building item 7's
+    keyboard loop, #105.) The canvas runs with tldraw's UI hidden, which also removes its screen
+    reader announcer, so when Tab or a click selects a card nothing is said: a screen-reader user
+    cannot tell their own thought from an agent's answer, hear an option's text, or know it was
+    picked or crossed out (finding 4, "whose is what, and what state it is in"). Done when one polite
+    live region says, for each single selection, who made it, its text (clipped), its kind (thought,
+    ask with its state, comment, answer), its mark and its place in the Tab order, from a tested pure
+    function, checked in a real page (failing before, passing after); nothing new is visible.
+
 ## Claims
+82. A Tab stop is heard | claude/sprint-robust-heard | 2026-11-26T13:40Z
 
 ## Done
 - 81. Agent note never lands on top of something (build-B): PR #106, stacked on #104 (verify-annotate-clear 3/4 → 4/4).
