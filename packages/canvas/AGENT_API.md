@@ -87,7 +87,7 @@ Use `relationships` to see what an object depends on and what depends on it befo
 
 ### Undo one agent operation
 
-Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists your own recent runs, newest first, with the object IDs each run created, updated and removed, and `fields`: for each updated object, the fields that run changed (for example `props.color`), so you can tell which run made a change. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
+Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists your own recent runs, newest first, with the object IDs each run created, updated and removed, and `fields`: for each updated object, the fields that run changed (for example `props.color`), so you can tell which run made a change, and `pages`: the pages whose objects it changed. Pass `page: "current"` to list only runs that changed something on the page open in the tab. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
 
 The undo is all-or-nothing. If the human or a later run has changed a field the run set, edited an object the run created, deleted an object the run changed, or locked one, or if something the run deleted can no longer go back (its frame or page, or the other end of its arrow, was deleted since), nothing is changed and the error names each conflicting object and field. Undo the later run first, or leave it. The canvas's own derived values (the revision counter, the text-edit timestamp and auto-sized card height) do not count as conflicts.
 
@@ -309,7 +309,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `group` | Guarded objects, `name`, optional `padding`; wraps them in a frame in place |
 | `learn` | Prototype: `mode` (predict/generate), `question`, `x`, `y`, optional `width`, `hideIds` |
 | `overview` | Optional `parentId`, `limit`, `cursor`; compact listing of one level |
-| `runs` | Optional `limit`; recent agent runs in this tab |
+| `runs` | Optional `limit`, optional `page` (`current` or `all`, default `all`); recent agent runs in this tab, each with the `pages` it touched |
 | `undo_run` | `runId`; reverses that run only, or fails listing conflicts |
 | `converge` | Prototype: `sourceIds`, `text`, optional `points` (each `text` and its `sourceIds`), `name`, `x`, `y`; synthesis card with lettered derived-from arrows |
 | `dataset` | Prototype: `x`, `y`, optional size; `synthetic: "orders"` or `columns`, `rows`, `title`, `source` |

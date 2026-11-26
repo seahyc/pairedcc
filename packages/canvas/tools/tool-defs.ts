@@ -249,7 +249,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_runs",
     op: "runs",
     description:
-      "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, and the object IDs each one created, updated and removed. Use a runId with canvas_undo_run.",
+      "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, the pages each touched, and the object IDs each one created, updated and removed. Pass page: \"current\" for only the open page. Use a runId with canvas_undo_run.",
     input: runsInput.shape,
     output: "json",
   },
