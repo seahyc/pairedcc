@@ -77,6 +77,8 @@ import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
+import { elsewhereNotice } from "./ask-rules";
+import { askOf } from "./asks";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
 import { DataTableShapeUtil } from "./table-shape";
 import { ImportLayer, chooseImportFile } from "./import-ui";
@@ -583,6 +585,26 @@ function Shell() {
   const shapeColor =
     shape && "color" in shape.props ? shape.props.color : undefined;
   const bounds = shape ? editor.getShapePageBounds(shape) : undefined;
+  // An ask answered (or failed) on a page the person has left: say so where they are now.
+  useEffect(
+    () =>
+      editor.store.listen(
+        ({ changes }) => {
+          for (const [before, after] of Object.values(changes.updated)) {
+            if (after.typeName !== "shape") continue;
+            const shape = after as TLShape, pageId = editor.getAncestorPageId(shape);
+            const said = elsewhereNotice(askOf(before as TLShape), askOf(shape), {
+              onScreen: pageId === editor.getCurrentPageId(),
+              question: "richText" in shape.props ? richTextPlain(shape.props.richText).trim() : "",
+              pageName: (pageId && editor.getPage(pageId)?.name) || "another page",
+            });
+            if (said) setNotice(said);
+          }
+        },
+        { scope: "document" },
+      ),
+    [editor],
+  );
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(""), 3500);

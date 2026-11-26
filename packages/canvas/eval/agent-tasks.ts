@@ -25,8 +25,9 @@ const selected = tasks.filter((t) => !only || only.includes(t.id));
 
 const server = await startServer();
 const browser = await launch();
-// Tasks 13 to 16 use the data prototype, which a tab refuses unless it was opened with its flag.
-const { page, session, context } = await openCanvas(browser, server.base, "?prototype=data");
+// Tasks 13 to 16 use the data prototype and task 24 converge; a tab refuses those unless it was
+// opened with their flags.
+const { page, session, context } = await openCanvas(browser, server.base, "?prototype=data&prototype=converge");
 const helper = await mcpAgent(server.base, session);
 const ctxFor = (refs: Record<string, any>): Ctx => ({
   call: helper.call,
