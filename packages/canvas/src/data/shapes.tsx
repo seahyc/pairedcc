@@ -304,7 +304,7 @@ export function DataLayer() {
           // A result still hidden behind a learning prompt is not named before the person answers.
           return shape && !editor.isShapeHidden(shape) ? shapeName(shape) : undefined;
         };
-        const layout = { ...flagLayout(b, viewport, zoom), zoom };
+        const layout = { ...flagLayout(b, viewport, zoom, selected.has(s.id)), zoom };
         return [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, name: shapeName(s), reason: staleReason(stale, nameOf), open: selected.has(s.id), ...layout }];
       });
     },
@@ -328,7 +328,7 @@ export function DataLayer() {
           // or above the object when the bottom of the view is too close.
           style={{
             transform: !i.open
-              ? `translate(${i.x + i.w}px, ${i.y - 12}px) translateX(-100%)`
+              ? `translate(${i.x + i.w}px, ${i.flagY}px) translateX(-100%)`
               : i.openBelow
                 ? `translate(${i.x}px, ${i.y + i.h + 8}px)`
                 : `translate(${i.x}px, ${i.y - (8 + SELECTION_BAR_ROOM) / i.zoom}px) translateY(-100%)`,
