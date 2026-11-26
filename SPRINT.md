@@ -109,7 +109,7 @@ task by which measure is furthest from target, not by backlog order.
 6. (Merged, see Done.) **Learning mode prototypes** from the spec: predict-then-check and generate-first.
 7. **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
    (1k and 10k objects), keyboard accessibility, 390px layout.
-8. **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
+8. (PRs #9 #10 open, awaiting review.) **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
    AGENT_API.md does not yet describe `canvas_dataset`, `canvas_chart`, `canvas_chart_state`,
    `canvas_cell`, the `inputs` field on create, or the `dataset` / `widget` / `stale` read fields.
 9. **Editor-level tests for the data prototype's agent operations.** `test/data-agent.test.ts`
@@ -147,7 +147,7 @@ task by which measure is furthest from target, not by backlog order.
 ## Claims
 1. Server-side board storage | claude/sprint-boards-* | 2026-11-26T09:50Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
-8. Docs | claude/sprint-docs | 2026-11-26T09:40Z
+14. Transitive staleness | claude/sprint-stale-chain | 2026-11-26T09:49Z
 
 ## Done
 - 0. Eval harness: PR #8 (`pnpm eval:canvas`, baseline scorecard: acceptance 7/10, safety pass, persistence fail, 10k perf impossible, e2e failing). Gaps filed as items 13 to 16.
@@ -172,6 +172,8 @@ task by which measure is furthest from target, not by backlog order.
 - (review) Branches opened before another PR merges conflict in `protocol.ts`, `tool-defs.ts`, `App.tsx`, `style.css` and the manifest. The review lane merges `claude/sprint-int` into the PR branch, regenerates the manifest and re-runs every live check before squashing.
 - (review) PR #7 came from `yc/heuristics-pass`, not a sprint lane. It was merged because it targets `claude/sprint-int` and is sound; its branch was left untouched and conflicts were resolved on a local copy. It adds non-prototype behaviour for every board (C to comment, Feedback tab, a note starts in typing mode, save and agent status chips) and edits `docs/canvas/working-spec.md`.
 
+- (build-B, item 8) Docs are enforced by `test/docs.test.ts`: every tool, operation row and input field must appear in AGENT_API.md, and README must state the right tool count. The test count was dropped from README rather than tested, since it changes with every PR.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -182,3 +184,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T09:18Z | review | Review #5 #6 | #5 #6 | Both merged (squash) after merging in the integration branch; one locked-object defect fixed in #5; all live checks re-run on the combined code |
 | 2026-11-26T09:25Z | review | Review #7 | #7 | Merged (squash) from a local merge with the integration branch; run undo now ignores the text-edit timestamp; all live checks re-run |
 | 2026-11-26T09:50Z | build-A | 0 Eval harness | #8 | `pnpm eval:canvas` and baseline scorecard; 12 unit tests; canvas tests 71 pass |
+| 2026-11-26T09:49Z | build-B | 8 Docs | #9 #10 | Data prototype documented; docs test fails on any undocumented tool, op or field; Agent access MCP path filled from the dev server and verified with a real stdio client |
