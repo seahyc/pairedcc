@@ -53,6 +53,7 @@ import {
   Sparkles,
   Layers,
   FilePlus2,
+  FileInput,
   Map as MapIcon,
 } from "lucide-react";
 import {
@@ -70,6 +71,8 @@ import { startBoardSync } from "./board-sync-browser";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
+import { DataTableShapeUtil } from "./table-shape";
+import { ImportLayer, chooseImportFile } from "./import-ui";
 import { PromptShapeUtil, createLearningPrototypePage, learningPrototypeEnabled, learningVisibility } from "./learning/prompt-shape";
 import { ChartShapeUtil, DataLayer, DatasetShapeUtil, createDataPrototypePage, dataPrototypeEnabled } from "./data/shapes";
 import { importCsvFiles, isCsvFile } from "./data/csv";
@@ -263,6 +266,8 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
       ["Open or close the feedback queue", "Shift C"],
+      ["Bring in a table or document as cards", "⌘ V, or drop a file"],
+      ["Next / previous imported record", "J / K"],
       ["Finish typing", "Esc"],
     ],
   },
@@ -374,8 +379,9 @@ function Shell() {
         mod = event.metaKey || event.ctrlKey;
       if (mod) {
         if (key === "z") {
+          // The canvas's own shortcut has usually undone already; a second undo here would take two steps.
+          if (!event.defaultPrevented) event.shiftKey ? editor.redo() : editor.undo();
           event.preventDefault();
-          event.shiftKey ? editor.redo() : editor.undo();
         } else if (key === "d") {
           event.preventDefault();
           editor.markHistoryStoppingPoint("duplicate");
@@ -813,6 +819,9 @@ function Shell() {
               <Keyboard size={14} /> Shortcuts <kbd>?</kbd>
             </button>
             <div className="menu-rule" />
+            <button role="menuitem" onClick={() => { chooseImportFile(); setMenuOpen(false); }}>
+              <FileInput size={14} /> Import a file
+            </button>
             <button role="menuitem" onClick={() => { void exportFile(); setMenuOpen(false); }}>
               <Download size={14} /> Export board file
             </button>
@@ -955,6 +964,7 @@ function Shell() {
           }}
         />
       </nav>
+      <ImportLayer onNotice={setNotice} />
       <SelectionBar asking={asking} setAsking={setAsking} onComment={addComment} onNotice={setNotice} keepInView={keepInView} />
       <aside className="right-panel">
         <div className="panel-tabs right-tabs" role="tablist">
@@ -1344,7 +1354,7 @@ function Shell() {
   );
 }
 import { GeoShapeGeoStyle, PageRecordType, createShapeId } from "tldraw";
-const scratchShapes = [CardShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil];
+const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil];
 const TEXT_WRAP = 460;
 // One set of editor options: the page limit, and double-click writes a card rather than plain text.
 const editorOptions = { ...canvasOptions, createTextOnCanvasDoubleClick: false };
