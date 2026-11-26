@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cellInput, chartInput, chartStateInput, datasetInput } from "../src/data/agent";
+import { cellInput, chartInput, chartStateInput, datasetInput, mergeChartState, summaryProps, writeRefusal } from "../src/data/agent";
 import { commandSchema } from "../src/protocol";
 import { createInput } from "../src/operations";
 import { toolDefs } from "../tools/tool-defs";
@@ -31,5 +31,33 @@ describe("data prototype agent operations", () => {
   it("lets created objects record the inputs they were derived from", () => {
     expect(createInput.parse({ kind: "note", x: 0, y: 0, inputs: ["shape:c"] }).inputs).toEqual(["shape:c"]);
     expect(createInput.safeParse({ kind: "note", x: 0, y: 0, inputs: ["c"] }).success).toBe(false);
+  });
+});
+
+describe("data prototype write rules", () => {
+  const chart = { id: "shape:c", type: "chart", meta: { revision: 3 } } as const;
+  it("accepts a write only at the revision the agent read", () => {
+    expect(writeRefusal(chart, chart.id, "chart", 3, false)).toBeUndefined();
+    expect(writeRefusal(chart, chart.id, "chart", 2, false)).toMatch(/changed/i);
+    expect(writeRefusal(chart, chart.id, "chart", 4, false)).toMatch(/changed/i);
+  });
+  it("refuses locked objects even at the right revision", () => {
+    expect(writeRefusal(chart, chart.id, "chart", 3, true)).toMatch(/unlock/i);
+  });
+  it("refuses missing objects and the wrong type", () => {
+    expect(writeRefusal(undefined, "shape:x", "chart", 0, false)).toMatch(/not found/);
+    expect(writeRefusal(chart, chart.id, "dataset", 3, false)).toMatch(/not a dataset/);
+  });
+  it("keeps omitted chart state fields and replaces filter and selection whole", () => {
+    const current = { x: "region", y: "orders", aggregate: "sum" as const, filter: { product: ["Cake"] }, selected: ["West"] };
+    expect(mergeChartState(current, { aggregate: "mean" })).toEqual({ ...current, aggregate: "mean" });
+    expect(mergeChartState(current, { filter: { month: ["Feb"] } })).toEqual({ ...current, filter: { month: ["Feb"] } });
+    expect(mergeChartState(current, { selected: [] }).selected).toEqual([]);
+  });
+  it("leaves rows and bars out of a summary read of data objects only", () => {
+    const props = { w: 1, h: 2, data: { rows: [{ a: 1 }] }, bars: [{ key: "k", value: 1 }], datasetId: "shape:d" };
+    expect(summaryProps("dataset", props)).toEqual({ w: 1, h: 2, datasetId: "shape:d" });
+    expect(summaryProps("chart", props)).toEqual({ w: 1, h: 2, datasetId: "shape:d" });
+    expect(summaryProps("note", props)).toBe(props);
   });
 });
