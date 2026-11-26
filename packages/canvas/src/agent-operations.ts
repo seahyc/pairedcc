@@ -1,3 +1,4 @@
+import { prototypeRefusal } from "./prototype-flags";
 import {
   AssetRecordType,
   createShapeId,
@@ -434,6 +435,8 @@ export async function executeCommand(
   command: CanvasCommand,
   actor: string,
 ): Promise<unknown> {
+  const refusal = prototypeRefusal(command.op);
+  if (refusal) throw new Error(refusal);
   switch (command.op) {
     case "scene":
       return composeScene(editor, command.input, actor);
