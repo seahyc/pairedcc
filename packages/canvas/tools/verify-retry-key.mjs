@@ -1,4 +1,4 @@
-// Browser check for item 88: a failed ask is retried from the keyboard.
+// Browser check for item 91: a failed ask is retried from the keyboard.
 //
 // On a fresh profile at 1440 x 900: the person writes a card and asks; an agent fails the ask
 // over HTTP. With the failed ask selected, the selection bar's first button must say Retry with
