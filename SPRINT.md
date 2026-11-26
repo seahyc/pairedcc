@@ -248,8 +248,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     arrow keeps the anchor sides chosen when it was made and takes an odd route (reported by the
     agent-usability attempt, PR #24). Done when moving either end re-routes the arrow to the facing
     sides, shown by before/after screenshots and a check of the binding anchors.
+36. **Working spec's implemented sections, after the 26 Nov merges.** `docs/canvas/working-spec.md`
+    still lists server-side storage, file import and a general Transformation object as not built,
+    and says nothing of #11 to #30. Done when each merged PR's user- or agent-visible effect is in an
+    implemented section with its PR number, no "not built" claim contradicts the code, and
+    `principles.md`'s "Not done" list matches the code.
 
 ## Claims
+36. Working spec implemented sections | claude/sprint-spec-sync | 2026-11-26T11:27Z
 35. Annotation arrows follow their note | claude/sprint-annotation-arrows | 2026-11-26T11:22Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
