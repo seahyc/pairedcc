@@ -578,6 +578,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     panel costs nothing, the panel still works when opened, and the scorecard is not worse.
 
 ## Claims
+93. Stale flag placement follows the drawn flag | claude/sprint-stale-drawn | 2026-11-26T14:20Z
 94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
 
 ## Done
