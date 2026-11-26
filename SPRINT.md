@@ -279,7 +279,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     `canvas_answer`; the page shows answered with the agent's name; the answer sits beside the ask
     and its text stays inside its card; a failed ask offers Retry. Unit tests cover the new row.
 
-42. **A restored or freshly loaded board survives an immediate reload.** After `restore(revision)`
+42. (PR #59 open, awaiting review.) **A restored or freshly loaded board survives an immediate reload.** After `restore(revision)`
     (or the first load of an account's board) the sync memo says this browser is in step with the
     server before the browser's own copy is written; a reload inside that moment (measured: lost at
     0 and 300 ms, kept at 1,000 ms) shows the old board, and the next edit saves it on top. Done
@@ -473,3 +473,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:41Z | build-B | 41 Scorecard measures the Ask loop | #56 | New eval row, 5/5 steps in a real page and stdio MCP client; four UI mutations each fail a step; other measures unchanged |
 | 2026-11-26T11:45Z | review | Review #33 to #36 | #33 #34 #35 #36 | All four merged (squash) after merging in the integration branch and re-running each proof; #34 no longer names a hidden input; scorecard on bac1a93: all six rows pass (acceptance 10/10, agent usability 21/21, safety 9/9, persistence, 10k pan 37.3 ms, existing product with throwaway services) |
 | 2026-11-26T11:46Z | build-A | 35 follow-up | #48 | Bot findings fixed: undo after re-route, frame moves, copied connectors; merged base; scorecard all pass. Filed item 45 from bot review of merged #12/#15 |
+| 2026-11-26T11:50Z | build-B | 42 Restored board survives an immediate reload | #59 | Memo records a content hash; restore + reload at 0 ms keeps the restored board (lost before); acceptance, persistence, safety unchanged |
