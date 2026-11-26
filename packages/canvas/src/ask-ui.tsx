@@ -36,6 +36,8 @@ export function AskLayer() {
     "asks on page",
     () => {
       const selected = new Set<string>(editor.getSelectedShapeIds());
+      // Counting what was kept back reads each ask's whole context, so only on a page that has a left-out object.
+      const anyLeftOut = editor.getCurrentPageShapes().some((s) => isLeftOut(s.meta));
       return editor.getCurrentPageShapes().flatMap((s) => {
         const ask = askOf(s), b = editor.getShapePageBounds(s);
         if (!ask || !b) return [];
@@ -48,7 +50,7 @@ export function AskLayer() {
             })
           : [];
         // What the person kept back from this ask, as an agent reading it now would be given it.
-        const kept = leftOutLabel(describeAsk(editor, s).leftOut ?? 0);
+        const kept = anyLeftOut ? leftOutLabel(describeAsk(editor, s).leftOut ?? 0) : "";
         return [{ id: s.id, ask, x: b.x, y: b.maxY, given: `${givenLabel(editor, ask.contextIds)}${kept ? ` · ${kept}` : ""}`, outlines }];
       });
     },
