@@ -420,7 +420,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested rule, checked in a headless phone emulation (failing before, passing after) with
     screenshots; desktop unchanged.
 
-67. **The person chooses what an ask leaves out (prototype, `?prototype=context`).** Solveit:
+67. (PR #90 open, awaiting review.) **The person chooses what an ask leaves out (prototype, `?prototype=context`).** Solveit:
     "hidden messages are excluded from AI context"; the brief: "the context the agent sees is
     visible and chosen by the person"; `principles.md` lists hiding objects from context as not
     borrowed yet. An ask sends every text object in the selection's frame and the whole thread,
@@ -459,12 +459,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 73. Older board gets the calm board with sync on | claude/sprint-calm-older | 2026-11-26T12:58Z
-67. The person chooses what an ask leaves out | claude/sprint-context-leave-out | 2026-11-26T12:50Z
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 67. The person chooses what an ask leaves out (build-B): PR #90 (`?prototype=context`; verify-leave-out 7 failing before, 17/17 after; first screen unchanged).
 - Reviewed and merged 2026-11-26 by the review lane: #40 to #66, all 27 (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
 - 66. Touch screens say tap (build-A): PR #88, stacked on #83 (first board says tap, no key caps, writing hint is a tappable Ask; verify-touch 7/11 → 11/11).
 - 63. Answer lands in view (build-A): PR #87 (options wrap into rows that fit the window, cards narrow on a phone, the view pans to a landed answer; verify-answer-view 11/14 → 14/14).
@@ -607,6 +607,8 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 
 - (build-B, item 58) Two more optional findings on #78 are left open: matches can end inside a grapheme (`कल` matches `कला`; `かく` matches `かぐ` after normalisation), and `ß` does not fold to `ss` (`STRASSE` misses `Straße`). Fix if non-Latin search matters: compare at grapheme boundaries (`Intl.Segmenter`) and apply full case folding.
 
+- (build-B, item 67) Leaving objects out of asks is a prototype (`?prototype=context`), because the context contract is proposed. Choices: (1) an object the person selects for an ask is always given, even when left out, because selecting it is choosing to share it; (2) a left-out frame withholds the whole frame; (3) a mark already on a board is honoured and drawn in every tab, and only setting it is flagged, so nothing marked is ever sent and nothing is kept back invisibly; (4) the ask reports how many objects were withheld, never which; (5) only asks honour the mark. An MCP agent reading the board with `canvas_read` still sees left-out objects, with `meta.leftOut: true`, and AGENT_API tells it not to use them for an ask. Agents cannot set or clear the mark. L is the key, which overrides tldraw's line tool only in flagged tabs. Alternatives: hide left-out objects from `read` as well, or make "pinning into context" the opposite control.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -702,3 +704,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:45Z | build-A | 66 Touch screens say tap | #88 | Phone saw key names on the first board, bar and writing hint, with no way to ask while writing; verify-touch 7/11 → 11/11; desktop unchanged; scorecard unchanged |
 | 2026-11-26T12:48Z | build-B | Bot review of #64 #67 #69 #72 #77 | #67 #69 #86 | #64 merged. Fixed with failing-first browser checks: hidden learning results no longer sent with a frame ask; same-worded asks kept apart; a frame in the history says what it held (#67, 5/8 to 8/8); off-page answers kept off the person's undo stack (red), return their cards, and on-page answers join frames (#69, 11/11). #86 merged up, all four ask checks pass. Yellow findings on #72 (flag at canvas edges, offscreen tab stops) and #77 (3000x2 image rounds to 0 height) confirmed and answered on their threads, to carry in the next push. The ten thread replies carry a tool footer the reply tool appended; no available tool can edit review comments, so it is left for the maintainer to remove |
 | 2026-11-26T12:50Z | review | Review #40 to #66 | #40 to #66 | All 27 merged (squash) after merging in the integration branch; workspace build and tests green after each (canvas 323, server 154 on Postgres 16, e2e 1); live checks re-run for #40 #41 #45 #46 #48 #52 #55 #56 #57 #58 #59 #60 #64 #65. Review fixes: #46 combined with #42 (record starters kept), #47 caps ids per cluster, #64 AGENT_API table. Scorecard on 95a9daf: six rows pass, performance reported; 10k pan 99.3 then 88.2 ms, shown to be noise by measuring before and after (backlog 69). Filed 69 to 72 |
+| 2026-11-26T13:00Z | build-B | 67 The person chooses what an ask leaves out | #90 | New item from Solveit (hidden messages excluded from context); Leave out (L) behind `?prototype=context`; withheld from frame, history and record parts, counted on the ask; real tab 7 fails before, 17/17 after; acceptance, ask loop, safety, persistence unchanged |
