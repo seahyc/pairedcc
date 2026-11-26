@@ -76,9 +76,10 @@ function thread(editor: Editor, shape: TLShape, depth = 0, seen = new Set<string
   const parent = typeof shape.meta.replyTo === "string" ? editor.getShape(shape.meta.replyTo as TLShapeId) : undefined;
   if (!parent || !askOf(parent)) return [];
   const about = targetsOf(parent).flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
+  const earlier = about.flatMap((t) => thread(editor, t, depth + 1, seen));
   return [
-    ...about.flatMap((t) => thread(editor, t, depth + 1, seen)),
-    ...about.filter((t) => !seen.has(t.id)).map((t) => ({ who: authorOf(t), said: clip(textOf(t), 600) })),
+    ...earlier,
+    ...about.map((t) => ({ who: authorOf(t), said: clip(textOf(t), 600) })),
     { who: `${HUMAN} asked`, said: clip(textOf(parent), 600) },
   ];
 }

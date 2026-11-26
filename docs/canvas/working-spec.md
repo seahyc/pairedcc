@@ -265,3 +265,11 @@ YC asked to anchor the UX on Jakob Nielsen's ten heuristics and Michael Nielsen'
 Built: one-key comments (C) on objects or on a spot on the board; a board-wide queue of comments, picks, rejects and ink with open/resolved state, shown in a Feedback tab with jump, resolve, reopen and Markdown/JSON export; `feedback` and `reply` agent operations (and MCP tools) alongside `resolve`; timestamps on new objects; live save state, an agent status chip, a lost-link banner and a shortcut sheet on `?`.
 
 Verified in headless Chromium against the local dev server: each feedback action, an HTTP and an MCP read returning a comment just left, reply and resolve by an agent, reopen by the human, export, the queue across two pages, and persistence across reload. Not built: comments on part of an object, a human reply box, separate undo per author, a rejected tray, a working chip on objects, a command palette.
+
+## Calm canvas and the Ask loop: 2026-11-26
+
+YC tried the heuristics build and rejected it: hard to use, noisy, too flexible and open-ended, text ran off the board, and nothing showed how to get the agent to respond. The anchor moved from Jakob Nielsen's heuristics to the nine findings above plus Solveit; `principles.md` records what each demands, what is built and what is missing.
+
+Built: a first board of three things with panels behind one menu; a five-tool strip; double-click to write; an action bar on the selection (Ask, Pick, Cross out, Comment); asks as board objects that show waiting, working, answered or failed and what the agent was given; a resident agent that answers asks with the local Claude Code CLI in about three seconds, with one short card or two to four alternatives; plain and pasted text wrapping at a reading width. An existing saved board is kept as its own page and the calm board opens beside it.
+
+Verified in headless Chromium on a fresh profile with `packages/canvas/tools/verify-calm.mjs` (36 checks). Not built: learning mode, context pinning or hiding, streaming answers, images in context, listener presence on the hosted relay.

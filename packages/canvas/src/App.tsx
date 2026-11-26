@@ -418,7 +418,9 @@ function Shell() {
       if ((event.metaKey || event.ctrlKey) && key === "enter") {
         event.preventDefault();
         event.stopImmediatePropagation();
-        askAboutSelection();
+        // The canvas starts editing a selected card when Enter is released; this Enter is ours.
+        swallowEnterUp = true;
+        if (!event.repeat) askAboutSelection();
         return;
       }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -440,6 +442,13 @@ function Shell() {
       event.stopImmediatePropagation();
       toggleMark(editor, picked, key === "p" ? "picked" : "rejected");
     }
+    let swallowEnterUp = false;
+    const enterUp = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" || !swallowEnterUp) return;
+      swallowEnterUp = false;
+      event.stopImmediatePropagation();
+    };
+    window.addEventListener("keyup", enterUp, { capture: true });
     const track = (event: PointerEvent) => {
       pointer.current = { x: event.clientX, y: event.clientY };
     };
@@ -451,6 +460,7 @@ function Shell() {
       window.removeEventListener("pointermove", track, { capture: true });
       window.removeEventListener("pointerdown", track, { capture: true });
       window.removeEventListener("keydown", judge, { capture: true });
+      window.removeEventListener("keyup", enterUp, { capture: true });
       window.removeEventListener("keydown", keydown);
     };
   }, [editor]);

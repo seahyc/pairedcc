@@ -144,6 +144,10 @@ check("the human's card was not edited or moved", thought.text === 'Maybe we sho
 await p.evaluate((id) => window.paired.select([id]), answers[0].id); await p.waitForTimeout(300);
 check('selection bar offers Ask, Pick, Cross out, Comment', (await p.locator('.selection-bar > button').allTextContents()).map(t => t.replace(/[⌘↵PXC✦ ]+$/u, '').replace('✦ ', '').trim()).join(',') === 'Ask,Pick,Cross out,Comment', (await p.locator('.selection-bar > button').allTextContents()).join('|'));
 await shot('09-selection-bar');
+await p.keyboard.press('ControlOrMeta+Enter'); await p.waitForTimeout(500);
+check('⌘↵ on a selected card opens the ask box and does not start editing', await p.locator('.selection-bar.asking input').count() === 1 && await p.locator('.selection-bar.hint').count() === 0);
+await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+await p.evaluate((id) => window.paired.select([id]), answers[0].id); await p.waitForTimeout(200);
 await p.keyboard.press('p'); await p.waitForTimeout(250);
 let fb = await p.evaluate(() => window.paired.read().objects.filter(o => o.meta.mark).map(o => ({ kind: o.meta.mark === 'picked' ? 'pick' : 'reject' })));
 check('P picks', fb.some(m => m.kind === 'pick'));
