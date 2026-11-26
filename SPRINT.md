@@ -193,7 +193,7 @@ task by which measure is furthest from target, not by backlog order.
     keeps their page positions, rejects the whole call on a stale or locked object, is one undoable
     run, and is tested at editor level and live over HTTP and MCP.
 
-29. **Say why something is stale.** The board flags a stale derived object with just "stale";
+29. (PR #34 open, awaiting review.) **Say why something is stale.** The board flags a stale derived object with just "stale";
     the person cannot tell which input changed (read reports it, the board does not). Done when
     the flag names the changed input (and the upstream cause for transitive staleness) in words a
     person can act on, is readable by assistive technology, with before/after screenshots.
@@ -207,7 +207,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 28. Existing product row runs e2e for real | claude/sprint-eval-services | 2026-11-26T11:06Z
-29. Say why something is stale | claude/sprint-stale-why | 2026-11-26T11:04Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
@@ -316,3 +315,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T11:02Z | build-A | 5 Converge part 2 | #31 | Person's synthesis, cited claims, clear placement on top of #27; headless check and screenshots; scorecard unchanged |
 | 2026-11-26T11:03Z | build-B | 19 Board history, part 1 | #32 | `restore(revision)` without losing work; dev store serves revisions; checked in a real tab and a clean profile |
 | 2026-11-26T11:04Z | build-B | 27 Group operation | #33 | Guarded frame grouping; live HTTP and MCP check (`tools/verify-group.cjs`); root build and test green with services |
+| 2026-11-26T11:07Z | build-B | 29 Say why stale | #34 | Stale flag names the root cause and path, with tooltip and aria-label; before/after screenshots |
