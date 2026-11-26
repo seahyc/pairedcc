@@ -6,6 +6,8 @@
 // options, P picks one, Tab and X cross out another, C comments on it; Escape clears the
 // selection and Tab comes back to the board. Every step must leave the person somewhere
 // visible: what Tab selects is on screen and has the selection bar beside it.
+// The menu, agent chip and tools stay reachable: Shift+Tab with nothing selected, or Tab past
+// the last object, leaves the board for them.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-keyboard.mjs <screenshot dir>
 //
@@ -156,6 +158,30 @@ check('Escape leaves nothing selected', s.ids.length === 0, s.ids.join(','));
 await press('Tab');
 s = await state();
 check('Tab after Escape selects something on screen again', s.ids.length === 1 && s.onScreen, JSON.stringify(s.ids));
+
+// 7. The controls stay reachable: with nothing selected Shift+Tab leaves the board for them,
+// and Tab past the last object on the board does too.
+const focused = () => p.evaluate(() => {
+  const a = document.activeElement;
+  return { tag: a?.tagName ?? '', label: (a?.getAttribute('aria-label') || a?.textContent || '').trim().slice(0, 30), inChrome: Boolean(a && a !== document.body && a.matches('button, a[href], input, select, [tabindex]') && !a.classList.contains('tl-container') && !a.closest('.tl-shape, .tl-html-layer, [contenteditable=true]')) };
+});
+await press('Escape');
+await press('Shift+Tab');
+let f = await focused();
+s = await state();
+check('Shift+Tab with nothing selected reaches the controls', f.inChrome && s.ids.length === 0, `${f.tag} "${f.label}", ${s.ids.length} selected`);
+await press('Escape');
+await p.evaluate(() => { const ed = window.__pairedEditor; ed.selectNone(); document.activeElement?.blur?.(); });
+const stops = await p.evaluate(() => window.__pairedEditor.getCurrentPageShapes().filter((x) => x.type !== 'arrow' && !x.parentId.startsWith('shape:')).length);
+let left = false;
+for (let i = 0; i < stops + 2 && !left; i++) {
+  await press('Tab', 200);
+  f = await focused();
+  left = f.inChrome;
+}
+s = await state();
+check('Tab past the last object leaves the board for the controls', left && s.ids.length === 0, `${f.tag} "${f.label}" after up to ${stops + 2} presses, ${s.ids.length} selected`);
+
 const after = await p.evaluate(() => window.paired.read().objects.length);
 check('the board grew only by what was made here', after > before, `${before} → ${after}`);
 check('no page errors', errors.length === 0, errors.join(' | '));

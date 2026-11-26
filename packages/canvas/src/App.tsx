@@ -289,6 +289,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
     title: "Move around",
     rows: [
       ["Next / previous thing on the board", "Tab / Shift Tab"],
+      ["To the menu and tools", "Esc, then Shift Tab"],
       ["Pan", "Space + drag, or scroll"],
       ["Zoom", "Pinch, or ⌘ scroll"],
       ["Fit everything", "Shift 1"],
@@ -557,12 +558,13 @@ function Shell() {
       // Tab only from the board itself: a flag or button on it keeps the browser's own Tab.
       const boardItself = target === document.body || (target instanceof HTMLElement && /\btl-(container|canvas)\b/.test(target.className));
       if (event.key === "Tab" && boardItself && editor.getCurrentToolId() === "select") {
-        if (tabOnBoard(event.shiftKey)) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-          // The canvas moves the selection when Tab is released; this Tab is ours.
-          swallowTabUp = true;
-        }
+        // Ours either way: the next object, or out to the controls (the browser alone would
+        // find nothing before the board, which holds them).
+        if (!tabOnBoard(event.shiftKey)) leaveBoard(event.shiftKey);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        // The canvas moves the selection when Tab is released; this Tab is ours.
+        swallowTabUp = true;
         return;
       }
       // ? shows the shortcuts, C comments, Shift+C opens the feedback queue.
@@ -667,18 +669,26 @@ function Shell() {
     startEditingShapeWithRichText(editor, id, { selectAll: true });
   }
   /**
-   * Tab on the board: with nothing selected, select the first thing on screen (Shift+Tab:
-   * the last); otherwise move to the next object in reading order. Either way the object
-   * is brought clear of the chrome.
+   * Tab on the board: with nothing selected, select the first thing on screen; otherwise move
+   * to the next object in reading order, brought clear of the chrome. The board does not trap
+   * the keyboard: Shift+Tab with nothing selected, and Tab past either end, return false so
+   * the browser moves on to the menu, agent chip and tools.
    */
   function tabOnBoard(backwards: boolean) {
     const ordered = tabStops(editor);
     const selectedIds = editor.getSelectedShapeIds() as string[];
     const at = ordered.findIndex((o) => o.id === selectedIds[selectedIds.length - 1]);
     let id: string | undefined;
-    if (!selectedIds.length) id = firstTabStop(ordered, visiblePage(), backwards);
-    else if (at >= 0) id = ordered[(at + (backwards ? -1 : 1) + ordered.length) % ordered.length]?.id;
-    else {
+    if (!selectedIds.length) {
+      if (backwards) return false;
+      id = firstTabStop(ordered, visiblePage());
+    } else if (at >= 0) {
+      id = ordered[at + (backwards ? -1 : 1)]?.id;
+      if (!id) {
+        editor.selectNone();
+        return false;
+      }
+    } else {
       // Inside a frame or group: the canvas's own order among its siblings.
       editor.selectAdjacentShape(backwards ? "prev" : "next");
       id = editor.getOnlySelectedShapeId() ?? undefined;
@@ -689,6 +699,13 @@ function Shell() {
     if (box) keepInView(box);
     editor.focus();
     return true;
+  }
+  /** Out of the board by keyboard: the first control (Tab) or the last (Shift+Tab). */
+  function leaveBoard(backwards: boolean) {
+    const controls = [...document.querySelectorAll<HTMLElement>("button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])")].filter(
+      (el) => !el.closest(".tl-shape, .tl-html-layer, [contenteditable=true], [class^='tl-watermark']") && !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0,
+    );
+    (backwards ? controls[controls.length - 1] : controls[0])?.focus();
   }
   /** Ask: finish typing if a card is being written, then open the question box on the selection. */
   function askAboutSelection() {
