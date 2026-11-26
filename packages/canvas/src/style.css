@@ -862,6 +862,24 @@ p {
   font: 500 11px/16px Inter, -apple-system, sans-serif;
   white-space: nowrap;
 }
+/* Pinned into every ask (the context prototype): a solid lavender fence, the agent's colour, as it is given to the agent. */
+.scratch-pinned {
+  position: absolute;
+  inset: -4px;
+  border: 1.5px solid #8b7fd6;
+  border-radius: 10px;
+}
+.scratch-pinned span {
+  position: absolute;
+  top: -9px;
+  left: 10px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #ece9fb;
+  color: #4b3fa8;
+  font: 500 11px/16px Inter, -apple-system, sans-serif;
+  white-space: nowrap;
+}
 .scratch-done {
   position: absolute;
   top: -10px;

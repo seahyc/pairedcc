@@ -27,6 +27,9 @@ export type AskForPrompt = {
   frame?: { name: string; objects: Given[] };
   /** How many nearby objects the person chose to keep out of this ask. */
   leftOut?: number;
+  /** What the person pinned for every ask on the page, and how many more were not sent. */
+  pinned?: Given[];
+  pinnedMore?: number;
   /** The rest of the group the card sits in, each with where it sits relative to the card. */
   cluster?: (Given & { relation: string })[];
   clusterMore?: number;
@@ -62,6 +65,11 @@ export function buildPrompt(ask: AskForPrompt) {
   if (ask.frame) {
     lines.push("", `They sit in the frame "${ask.frame.name}"${ask.frame.objects.length ? ", which also holds:" : "."}`);
     for (const o of ask.frame.objects) lines.push(`- ${o.type} by ${who(o.author)}${judged(o.mark)}: """${o.text}"""`);
+  }
+  if (ask.pinned?.length) {
+    lines.push("", "The person pinned these for every ask, as standing context:");
+    for (const o of ask.pinned) lines.push(`- ${o.type} written by ${who(o.author)}${judged(o.mark)}: """${o.text}"""`);
+    if (ask.pinnedMore) lines.push(`- and ${ask.pinnedMore} more not shown`);
   }
   if (ask.cluster?.length) {
     lines.push("", "In the same group as what the person wrote (they put these together):");

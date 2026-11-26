@@ -1,4 +1,4 @@
-import { type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { type Editor, type TLPageId, type TLShape, type TLShapeId } from "tldraw";
 import { z } from "zod";
 import { answerInput, askStates, askStatusInput, asksInput, type AskState } from "./protocol";
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
@@ -6,7 +6,7 @@ import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
 import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
-import { keepForAgent } from "./leave-out";
+import { isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { clusterAround } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
@@ -256,6 +256,20 @@ function thread(editor: Editor, shape: TLShape, keep: Keep, depth = 0, seen = ne
   ];
 }
 
+/** What the person pinned on a page for every ask there (see leave-out.ts), minus what is already given. */
+export function pinnedOnPage(editor: Editor, pageId: TLPageId, given: Iterable<string>) {
+  const marked = [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []).filter((s) => s.type !== "arrow" && isPinned(s.meta));
+  if (!marked.length) return { pinned: [] as TLShape[], more: 0 };
+  const found = pinnedFor(
+    marked.map((shape) => {
+      const b = editor.getShapePageBounds(shape);
+      return { id: shape.id, x: b?.x ?? 0, y: b?.y ?? 0, meta: shape.meta, hidden: editor.isShapeHidden(shape), shape };
+    }),
+    given,
+  );
+  return { pinned: found.pinned.map((p) => p.shape), more: found.more };
+}
+
 /**
  * The rest of the group the ask's card sits in (objects chained within CLUSTER_GAP at its own
  * level), each with where it sits relative to the card, minus what the ask already gives.
@@ -294,11 +308,27 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   const around = frameOf(editor, selected[0] ?? shape);
   const frame = around && keep([around]).length ? around : undefined;
   const skip = new Set<string>([shape.id, ...targets.map((t) => t.id)]);
+  const givenTargets = targets.map((t) => {
+    if (t.type !== "frame") return given(editor, t, 2000, keep);
+    const held = inside(editor, t, skip, keep);
+    return { ...given(editor, t, 2000, keep), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
+  });
+  const frameObjects = frame
+    ? keep(
+        editor
+          .getSortedChildIdsForParent(frame.id)
+          .flatMap((id) => editor.getShape(id) ?? [])
+          .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset")),
+      ).slice(0, 12)
+    : [];
   // Where things sit carries meaning: the group the card is in, said with relations. What the
   // ask already gives (targets, and the frame's objects when the card is in a frame) is not repeated.
   const group = editor.getShapePageBounds(shape)
     ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : [])]), keep)
     : { members: [], more: 0 };
+  // Pinned for every ask on this page, unless this ask already gives it.
+  const alreadyGiven = [...skip, ...group.members.map((m) => m.id), ...(frame ? [frame.id] : []), ...frameObjects.map((s) => s.id), ...givenTargets.flatMap((t) => t.inside?.map((i) => i.id) ?? [])];
+  const pins = page ? pinnedOnPage(editor, page.id, alreadyGiven) : { pinned: [], more: 0 };
   return {
     id: shape.id,
     revision: revision(shape),
@@ -311,31 +341,21 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     ...(ask.error ? { error: ask.error } : {}),
     pageId: page?.id,
     pageName: page?.name,
-    targets: targets.map((t) => {
-      if (t.type !== "frame") return given(editor, t, 2000, keep);
-      const held = inside(editor, t, skip, keep);
-      return { ...given(editor, t, 2000, keep), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
-    }),
+    targets: givenTargets,
     history: mergeHistory(targets.flatMap((t) => thread(editor, t, keep)), targets.map((t) => t.id)),
     ...(frame
       ? {
           frame: {
             id: frame.id,
             name: shapeName(frame),
-            objects: keep(
-              editor
-                .getSortedChildIdsForParent(frame.id)
-                .flatMap((id) => editor.getShape(id) ?? [])
-                .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset")),
-            )
-              .slice(0, 12)
-              .map((s) => given(editor, s, 400, keep)),
+            objects: frameObjects.map((s) => given(editor, s, 400, keep)),
           },
         }
       : {}),
     ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
     ...(withheld.size ? { leftOut: withheld.size } : {}),
+    ...(pins.pinned.length ? { pinned: pins.pinned.map((s) => given(editor, s, 400)), ...(pins.more ? { pinnedMore: pins.more } : {}) } : {}),
   };
 }
 export type AskView = ReturnType<typeof describeAsk>;

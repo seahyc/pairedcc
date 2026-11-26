@@ -39,19 +39,80 @@ export function nextLeftOut(metas: Meta[]) {
   return !metas.every((m) => isLeftOut(m));
 }
 
-/** Leave the selection out of asks, or bring it back. One undo step. */
-export function toggleLeftOut(editor: Editor, shapes: TLShape[]) {
+/**
+ * Solveit's pinned context: the person can pin an object so every ask on its page gives it,
+ * selected or not (a brief, a goal, a constraint). Like leaving out, setting the mark is the
+ * `context` prototype, and a pin already on a board is always honoured and always drawn.
+ */
+export function isPinned(meta: Meta) {
+  return meta?.pinned === true;
+}
+
+/** How many pinned objects one ask gives; the rest are counted, not sent. */
+export const PIN_LIMIT = 6;
+
+/**
+ * What an ask gives as pinned context, from the objects on its page: pinned ones it does not
+ * already give, never hidden ones, never one also left out (withholding wins), in reading
+ * order (top to bottom, then left to right). A card the person once asked with is still theirs
+ * to pin (the card is the question), so asks are not excluded.
+ */
+export function pinnedFor<T extends { id: string; x: number; y: number; meta?: Meta; hidden?: boolean }>(
+  shapes: T[],
+  given: Iterable<string> = [],
+  limit = PIN_LIMIT,
+) {
+  const skip = new Set(given);
+  const found = shapes
+    .filter((s) => isPinned(s.meta) && !isLeftOut(s.meta) && !s.hidden && !skip.has(s.id))
+    .sort((a, b) => a.y - b.y || a.x - b.x);
+  return { pinned: found.slice(0, limit), more: Math.max(0, found.length - limit) };
+}
+
+/** "1 pinned" / "3 pinned", or nothing. */
+export function pinnedLabel(count: number) {
+  return count > 0 ? `${count} pinned` : "";
+}
+
+/** Next state for a selection: pin all, or unpin all when every one is already pinned. */
+export function nextPinned(metas: Meta[]) {
+  return !metas.every((m) => isPinned(m));
+}
+
+type ContextMark = "leftOut" | "pinned";
+
+/** An object's metadata with one context mark set or cleared. The two marks exclude each other. */
+export function contextMarkUpdate(meta: Record<string, unknown>, mark: ContextMark, on: boolean) {
+  const next = { ...meta };
+  delete next.leftOut;
+  delete next.pinned;
+  if (on) next[mark] = true;
+  else if (mark === "leftOut" && meta.pinned === true) next.pinned = true;
+  else if (mark === "pinned" && meta.leftOut === true) next.leftOut = true;
+  return next;
+}
+
+function toggleContextMark(editor: Editor, shapes: TLShape[], mark: ContextMark) {
   const targets = shapes.filter((s) => s.type !== "arrow");
   if (!targets.length) return;
-  const out = nextLeftOut(targets.map((s) => s.meta));
-  editor.markHistoryStoppingPoint(out ? "leave out" : "bring back");
+  const metas = targets.map((s) => s.meta);
+  const on = mark === "leftOut" ? nextLeftOut(metas) : nextPinned(metas);
+  editor.markHistoryStoppingPoint(mark === "leftOut" ? (on ? "leave out" : "bring back") : on ? "pin to asks" : "unpin");
   editor.run(() => {
     for (const s of targets) {
-      const meta = { ...s.meta };
-      if (out) meta.leftOut = true;
-      else delete meta.leftOut;
+      const meta = contextMarkUpdate(s.meta, mark, on);
       // updateShape merges metadata, so a removed key would survive; replace the record's meta instead.
-      editor.store.update(s.id, (record) => ({ ...record, meta }));
+      editor.store.update(s.id, (record) => ({ ...record, meta: meta as typeof record.meta }));
     }
   });
+}
+
+/** Leave the selection out of asks, or bring it back. One undo step. */
+export function toggleLeftOut(editor: Editor, shapes: TLShape[]) {
+  toggleContextMark(editor, shapes, "leftOut");
+}
+
+/** Pin the selection into every ask on its page, or unpin it. One undo step. */
+export function togglePinned(editor: Editor, shapes: TLShape[]) {
+  toggleContextMark(editor, shapes, "pinned");
 }
