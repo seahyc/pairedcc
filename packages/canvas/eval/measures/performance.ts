@@ -69,13 +69,15 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
       steps.push("loaded");
       await page.evaluate(() => void (window as any).__pairedEditor.zoomToFit());
       steps.push("fitted");
-      // One pan sample swings by up to 2x on a busy machine (35 to 71 ms at 10k in one page), so
-      // the first sample is a discarded warm-up and the figure is the median of the next few.
-      await frames(page);
+      // A pan sample on a busy machine is either fast or about twice as slow, in runs (38 or 85 ms
+      // at 10k on the sprint container). After a discarded warm-up, many short samples are taken
+      // and the figure is the lower quartile of their medians: it reads the fast mode whenever a
+      // quarter of the samples land there, so a slow spell does not read as a regression.
+      await frames(page, PAN_FRAMES);
       const samples = [];
-      for (let k = 0; k < PAN_SAMPLES; k++) samples.push(await frames(page));
+      for (let k = 0; k < PAN_SAMPLES; k++) samples.push(await frames(page, PAN_FRAMES));
       const pan = summarisePan(samples);
-      results.push({ objects: size, buildMs: Math.round(buildMs), loadMs, panMedianFrameMs: pan.median, panP95FrameMs: pan.p95, panSampleMediansMs: pan.sampleMedians });
+      results.push({ objects: size, buildMs: Math.round(buildMs), loadMs, panMedianFrameMs: pan.median, panP95FrameMs: pan.p95, panSampleMediansMs: pan.sampleMedians, panMethod: pan.method });
     } catch (error) {
       results.push({ objects: size, error: error instanceof Error ? error.message.split("\n")[0] : String(error), ...(process.env.EVAL_TRACE ? { steps } : {}) });
     } finally {
@@ -86,13 +88,26 @@ export async function performanceMeasure(browser: Browser, base: string, sizes =
 }
 const round = (n: number) => Math.round(n * 10) / 10;
 
-const PAN_SAMPLES = Math.max(1, Number(process.env.EVAL_PAN_SAMPLES ?? 5));
+/** How many pan samples are taken after the warm-up, and how many frames each one is. */
+export const PAN_SAMPLES = Math.max(1, Number(process.env.EVAL_PAN_SAMPLES ?? 12));
+export const PAN_FRAMES = Math.max(10, Number(process.env.EVAL_PAN_FRAMES ?? 40));
 
-/** The median of the samples' medians and p95s, with each sample's median kept to show the spread. */
+/** The lower quartile (nearest rank) of a list. */
+const lowerQuartile = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.floor((s.length - 1) * 0.25)];
+};
+
+/**
+ * The pan figure: the lower quartile of the samples' medians (and of their p95s), with every
+ * sample's median kept to show the spread. Reported as `panMedianFrameMs` so runs before and
+ * after compare on one key; `method` says how it was taken.
+ */
 export function summarisePan(samples: { median: number; p95: number }[]) {
-  const mid = (xs: number[]) => {
-    const s = [...xs].sort((a, b) => a - b);
-    return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+  return {
+    median: round(lowerQuartile(samples.map((x) => x.median))),
+    p95: round(lowerQuartile(samples.map((x) => x.p95))),
+    sampleMedians: samples.map((x) => round(x.median)),
+    method: `lower quartile of ${samples.length} sample medians of ${PAN_FRAMES} frames each`,
   };
-  return { median: round(mid(samples.map((x) => x.median))), p95: round(mid(samples.map((x) => x.p95))), sampleMedians: samples.map((x) => round(x.median)) };
 }
