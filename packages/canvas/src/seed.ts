@@ -2,6 +2,7 @@ import { b64Vecs, createShapeId, toRichText, type Editor, type TLShapeId } from 
 import { annotateObject, connect, createCard, image } from "./agent-operations";
 import { HUMAN } from "./scratchbook";
 import { firstBoard, keys } from "./keys";
+import { EDGE_MARGIN, MARK_ROOM, toolStrip, type Strip } from "./reframe";
 
 // The welcome board, laid out like a scratchbook: a handwritten title and a row of
 // pages, one per capability, each showing the thing working rather than describing it.
@@ -270,13 +271,41 @@ export function isLegacySeed(editor: Editor) {
  * The first board: an invitation to write and a hint for how to ask, and nothing else.
  * Working memory holds about four things, so the board starts with three.
  */
+/** The first board's width on a screen with room for it, and the margin it keeps from each edge. */
+export const FIRST_BOARD_WIDTH = 460;
+export const FIRST_BOARD_MARGIN = EDGE_MARGIN;
+
+/**
+ * Where the first board goes: centred in the view, as on a desktop, unless that would put it under
+ * the tool strip (`strip`, page units from the view's top-left corner) or past an edge. Then it
+ * narrows (its cards wrap) and sits right of the strip or below it, whichever leaves it wider, a
+ * margin from each side, with room for the ✦ marks drawn left of its heading and caption.
+ */
+export function firstBoardPlace(view: { x: number; y: number; w: number; h: number }, strip?: Strip) {
+  const y = Math.round(view.y + view.h / 2 - 170);
+  const centred = Math.round(view.x + view.w / 2 - FIRST_BOARD_WIDTH / 2);
+  const edge = FIRST_BOARD_MARGIN + MARK_ROOM, right = view.x + view.w - FIRST_BOARD_MARGIN;
+  const besideLeft = view.x + (strip?.right ?? 0) + edge;
+  if (centred >= besideLeft && centred + FIRST_BOARD_WIDTH <= right) return { x: centred, y, width: FIRST_BOARD_WIDTH };
+  const place = (left: number, y: number) => {
+    const width = Math.max(200, Math.min(FIRST_BOARD_WIDTH, Math.floor(right - left)));
+    return { x: Math.round(left + Math.max(0, (right - left - width) / 2)), y, width };
+  };
+  const beside = place(besideLeft, y);
+  // Below the strip, when the board (about 340 high) still fits under it.
+  const belowTop = view.y + (strip?.bottom ?? 0) + FIRST_BOARD_MARGIN;
+  if (!strip || view.y + view.h - belowTop < 340) return beside;
+  const below = place(view.x + edge, Math.round(belowTop));
+  return below.width > beside.width ? below : beside;
+}
+
 export function calmSeed(editor: Editor) {
-  const view = editor.getViewportPageBounds();
-  const x = Math.round(view.center.x - 230), y = Math.round(view.center.y - 170);
+  const z = editor.getZoomLevel(), strip = toolStrip(editor);
+  const { x, y, width } = firstBoardPlace(editor.getViewportPageBounds(), strip && { right: strip.right / z, bottom: strip.bottom / z });
   const meta = { seed: true };
   editor.run(
     () => {
-      const title = createCard(editor, { x, y, width: 460, text: "Write a thought.", style: "heading" }, AGENT, meta);
+      const title = createCard(editor, { x, y, width, text: "Write a thought.", style: "heading" }, AGENT, meta);
       const titleBox = editor.getShapePageBounds(title);
       const hint = (titleBox?.maxY ?? y + 40) + 6;
       editor.createShape({
@@ -284,14 +313,14 @@ export function calmSeed(editor: Editor) {
         x,
         y: hint,
         meta: { name: "How to write", createdBy: AGENT, revision: 0, role: "caption", ...meta },
-        props: { w: 460, richText: toRichText(firstBoard().write), tone: "caption" },
+        props: { w: width, richText: toRichText(firstBoard().write), tone: "caption" },
       });
       createCard(
         editor,
         {
           x,
           y: hint + 52,
-          width: 400,
+          width: Math.min(400, width),
           text: firstBoard().ask,
         },
         AGENT,

@@ -23,6 +23,39 @@ describe("ask desk", () => {
     expect(desk.announce("tab", ask("shape:a", 1))).toBe(true);
     expect((await desk.wait("Claude", 10).promise)?.ask.attempt).toBe(1);
   });
+  it("a newer attempt replaces an older one nobody has taken yet", async () => {
+    const desk = new AskDesk();
+    desk.announce("tab", ask("shape:a", 0));
+    desk.announce("tab", ask("shape:a", 1));
+    desk.announce("tab", ask("shape:b", 0));
+    expect((await desk.wait("Claude", 10).promise)?.ask).toEqual(ask("shape:a", 1));
+    expect((await desk.wait("Claude", 10).promise)?.ask.id).toBe("shape:b");
+    expect(await desk.wait("Claude", 10).promise).toBeNull();
+  });
+  it("an attempt already taken is not replaced, and an older attempt waits behind a newer one", async () => {
+    const desk = new AskDesk();
+    desk.announce("tab", ask("shape:a", 1));
+    expect((await desk.wait("Claude", 10).promise)?.ask.attempt).toBe(1);
+    desk.announce("tab", ask("shape:a", 2));
+    expect(desk.announce("tab", ask("shape:a", 0))).toBe(false);
+    expect((await desk.wait("Claude", 10).promise)?.ask.attempt).toBe(2);
+    expect(await desk.wait("Claude", 10).promise).toBeNull();
+  });
+  it("a board restored to an earlier attempt can send it again after a reload", async () => {
+    const desk = new AskDesk();
+    desk.announce("tab", ask("shape:a", 0));
+    desk.announce("tab", ask("shape:a", 1));
+    desk.dropSession("tab");
+    expect(desk.announce("tab", ask("shape:a", 0))).toBe(true);
+    expect((await desk.wait("Claude", 10).promise)?.ask.attempt).toBe(0);
+  });
+  it("asks of other tabs or with lookalike ids never replace each other", async () => {
+    const desk = new AskDesk();
+    desk.announce("a:b", ask("c", 0));
+    desk.announce("a", ask("b:c", 1));
+    const got = [await desk.wait("Claude", 10).promise, await desk.wait("Claude", 10).promise].map((d) => `${d?.sessionId}|${d?.ask.id}`);
+    expect(got.sort()).toEqual(["a:b|c", "a|b:c"]);
+  });
   it("gives one ask to one agent only", async () => {
     const desk = new AskDesk();
     const first = desk.wait("A", 30), second = desk.wait("B", 30);
@@ -261,7 +294,7 @@ describe("an ask answered on a page the person has left", () => {
   });
 });
 
-import { elsewhereShow, noticeMs } from "../src/ask-rules";
+import { elsewhereShow, noticeDelay, noticeMs } from "../src/ask-rules";
 describe("showing an ask answered on another page", () => {
   const replies = [
     { id: "shape:a", replyTo: "shape:ask" },
@@ -286,6 +319,12 @@ describe("showing an ask answered on another page", () => {
   it("keeps a notice with something to press long enough to press it", () => {
     expect(noticeMs(false)).toBe(3500);
     expect(noticeMs(true)).toBeGreaterThanOrEqual(10000);
+  });
+  it("holds a notice while the person is on it, and gives it its full time again after", () => {
+    expect(noticeDelay(false, true)).toBeNull();
+    expect(noticeDelay(true, true)).toBeNull();
+    expect(noticeDelay(false, false)).toBe(noticeMs(false));
+    expect(noticeDelay(true, false)).toBe(noticeMs(true));
   });
 });
 
