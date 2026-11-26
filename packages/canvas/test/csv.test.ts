@@ -75,6 +75,26 @@ describe("CSV import", () => {
     expect(isCsvFile({ name: "data", type: "text/csv" })).toBe(true);
     expect(isCsvFile({ name: "photo.png", type: "image/png" })).toBe(false);
   });
+
+  it("keeps codes with leading zeros, and hex or binary looking values, as text", () => {
+    const r = parseCsv("store,zip,code,hex,amount\nA,02139,007,0x1A,12\nB,10001,042,0b11,0.5\nC,94105,100,0x2B,-3\n", "codes.csv");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const type = (n: string) => r.dataset.columns.find((c) => c.name === n)?.type;
+    expect([type("zip"), type("code"), type("hex"), type("amount")]).toEqual(["text", "text", "text", "number"]);
+    expect(r.dataset.rows[0]).toMatchObject({ zip: "02139", code: "007", hex: "0x1A", amount: 12 });
+  });
+  it("still reads plain numbers as numbers: zero, decimals, signs and exponents", () => {
+    const r = parseCsv("v\n0\n0.5\n-3\n1e3\n.25\n+7\n", "nums.csv");
+    expect(r.ok && r.dataset.columns[0].type).toBe("number");
+    expect(r.ok && r.dataset.rows.map((x) => x.v)).toEqual([0, 0.5, -3, 1000, 0.25, 7]);
+  });
+  it("types a long malformed cell quickly (no regex backtracking)", () => {
+    const t = performance.now();
+    // Large enough that backtracking would take over a minute, with a limit a busy machine still meets.
+    parseCsv(`v\n${"9".repeat(400_000)}x\n`, "long.csv");
+    expect(performance.now() - t).toBeLessThan(2000);
+  });
 });
 
 // Item 51: the dataset keeps what the file says.

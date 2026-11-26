@@ -12,14 +12,37 @@ export const OPTION_GAP = 20;
 /** Room under the ask for its status line. */
 export const STATUS_ROOM = 46;
 
-/** Where answers go: under the ask, alternatives in one row so they can be compared. */
-export function answerLayout(anchor: { x: number; y: number }, texts: string[]) {
-  const count = texts.length, w = count > 1 ? OPTION_W : ANSWER_W;
-  const cards = Array.from({ length: count }, (_, i) => ({ dx: i * (w + OPTION_GAP), w }));
-  // Roughly how tall the tallest card will be, so the row is placed clear of what is below.
+/** Narrowest an answer card gets on a small window. */
+export const MIN_ANSWER_W = 200;
+/** Screen room the canvas chrome takes beside an answer: the tool strip on the left, a margin on the right. */
+export const ANSWER_CHROME = 104;
+
+/**
+ * How answers fit the room they land in (page units): a card narrows to the room on a phone,
+ * and alternatives go as many to a row as fit, so none lands off screen.
+ */
+export function answerFit(count: number, available: number) {
+  const multi = count > 1, full = multi ? OPTION_W : ANSWER_W;
+  const w = Math.max(MIN_ANSWER_W, Math.min(full, Math.floor(available)));
+  const perRow = multi ? Math.max(1, Math.min(count, Math.floor((available + OPTION_GAP) / (w + OPTION_GAP)))) : 1;
+  return { w, perRow };
+}
+
+/**
+ * Where answers go: under the ask, alternatives side by side so they can be compared, in as
+ * many rows as the room (`available`, page units) needs.
+ */
+export function answerLayout(anchor: { x: number; y: number }, texts: string[], available = Infinity) {
+  const count = texts.length, { w, perRow } = answerFit(count, available);
+  const cards = Array.from({ length: count }, (_, i) => ({ dx: (i % perRow) * (w + OPTION_GAP), row: Math.floor(i / perRow), w }));
+  // Roughly how tall each row's tallest card will be, so the answers are placed clear of what is below.
   const perLine = Math.max(12, Math.floor((w - 40) / 8.6));
-  const h = Math.max(...texts.map((t) => Math.ceil(t.length / perLine) * 23 + 40), 70);
-  return { box: { x: anchor.x, y: anchor.y + STATUS_ROOM, w: count * w + (count - 1) * OPTION_GAP, h }, cards };
+  const tall = (t: string) => Math.max(Math.ceil(t.length / perLine) * 23 + 40, 70);
+  const rows = Math.ceil(count / perRow);
+  const heights = Array.from({ length: rows }, (_, r) => Math.max(...texts.slice(r * perRow, (r + 1) * perRow).map(tall)));
+  const h = heights.reduce((sum, x) => sum + x, 0) + (rows - 1) * OPTION_GAP;
+  const across = Math.min(count, perRow);
+  return { box: { x: anchor.x, y: anchor.y + STATUS_ROOM, w: across * w + (across - 1) * OPTION_GAP, h }, cards };
 }
 
 /** A sensible first question for what is selected: a question is answered, a thought is probed. */
@@ -42,8 +65,9 @@ export function startersFor(selection: readonly { type: string; text: string }[]
   if (!only) return starters;
   // A frame is what the person put together, and its contents are sent with the ask (`inside`).
   if (only.type === "frame") return ["What do these have in common?", "What is missing from this group?", "Which of these matters most?"];
-  // No chart starters yet: an ask about a chart does not send its data, so they would promise
-  // what the agent lacks.
+  // A chart's bars, filter and selection, and a dataset's columns and first rows, go with the ask.
+  if (only.type === "chart") return ["What does this show?", "What stands out here?", "What could explain this?"];
+  if (only.type === "dataset") return ["What is in this data?", "What would be worth charting?", "What looks odd here?"];
   if (/\?\s*$/.test(only.text.trim())) return ["Answer this", "What would change the answer?", "Give me alternatives"];
   return starters;
 }
@@ -109,6 +133,26 @@ export function mergeHistory(entries: HistoryEntry[], targetIds: string[]) {
   });
 }
 
+/** How recent an answer must be to count as landing now (a board loaded later is not "landing"). */
+export const LANDING_MS = 5_000;
+
+/**
+ * Asks whose answer has just landed in this tab: answered, not seen answered before (the key
+ * includes the answer time, so a retry's answer lands again), and answered within LANDING_MS.
+ * Every key is added to `seen`.
+ */
+export function landedAnswers(asks: readonly { id: string; answeredAt?: number }[], seen: Set<string>, now: number) {
+  const landed: string[] = [];
+  for (const a of asks) {
+    if (a.answeredAt === undefined) continue;
+    const key = `${a.id}@${a.answeredAt}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (now - a.answeredAt <= LANDING_MS) landed.push(a.id);
+  }
+  return landed;
+}
+
 /**
  * What to tell the person when an ask on a page they are not looking at is answered or fails:
  * the agent responded, so it must be seen (never silence). Nothing when the ask is on screen,
@@ -123,14 +167,35 @@ export function elsewhereNotice(
   const asked = `“${where.question.length > 40 ? `${where.question.slice(0, 39)}…` : where.question}”`;
   const page = `on the page “${where.pageName}”`;
   if (after.state === "answered") return `✦ ${after.agent ?? "Your agent"} answered ${asked} ${page}.`;
-  if (after.state === "failed") return `Your ask ${asked} ${page} could not be answered. Open that page to retry.`;
+  if (after.state === "failed") return `Your ask ${asked} ${page} could not be answered. Show it to retry.`;
   return undefined;
 }
+
+/**
+ * What Show selects on the ask's page: the answers to the ask (board order, hidden ones left
+ * out), or the ask itself when it failed or its answers are gone, so Retry or the ask's status
+ * is on the selection. Nothing for a state that is not an outcome.
+ */
+export function elsewhereShow(
+  state: string,
+  askId: string,
+  shapes: { id: string; replyTo?: unknown; hidden?: boolean }[],
+): string[] {
+  if (state === "failed") return [askId];
+  if (state !== "answered") return [];
+  const answers = shapes.filter((s) => s.replyTo === askId && !s.hidden).map((s) => s.id);
+  return answers.length ? answers : [askId];
+}
+
+/** How long a notice stays: long enough to read, and to press its button when it has one. */
+export const noticeMs = (hasAction: boolean) => (hasAction ? 12000 : 3500);
 
 /** Gap kept between the selection bar and the window's edges. */
 export const BAR_MARGIN = 8;
 /** Left edge that keeps the bar clear of the tool strip, when the window has room for that. */
 export const TOOLS_CLEAR = 70;
+/** Height of the bar when its buttons fit on one row. */
+export const BAR_ROW = 44;
 
 /**
  * Where the selection bar (or the Ask box) goes, given its real width and the window's width:
@@ -138,16 +203,55 @@ export const TOOLS_CLEAR = 70;
  * window. On a phone it narrows to the window and may cover the tool strip rather than run off
  * screen, because a send button nobody can reach is worse than a strip hidden for a moment.
  */
-export function placeBar(sel: { x: number; y: number; bottom: number }, barWidth: number, viewWidth: number) {
+export function placeBar(sel: { x: number; y: number; bottom: number }, barWidth: number, viewWidth: number, barHeight = BAR_ROW) {
   const width = Math.min(barWidth, viewWidth - 2 * BAR_MARGIN);
   const right = viewWidth - width - BAR_MARGIN;
   const minLeft = right >= TOOLS_CLEAR ? TOOLS_CLEAR : BAR_MARGIN;
   const left = Math.max(minLeft, Math.min(sel.x, right));
-  const top = sel.y - 50 > 52 ? sel.y - 50 : sel.bottom + 12;
+  // A bar whose buttons wrap to a second row (a phone) is taller: it is lifted by its real
+  // height, so it never covers the top of what is selected.
+  const lift = Math.max(BAR_ROW, barHeight) + 6;
+  const top = sel.y - lift > 52 ? sel.y - lift : sel.bottom + 12;
   return { left, top, width };
 }
 
 /** An ask's state line wraps within its card's width (page units): readable, never a long strip. */
 export function statusWidth(cardWidth: number) {
   return Math.min(640, Math.max(260, Math.round(cardWidth)));
+}
+
+/**
+ * What a screen reader is told when an ask's state changes, once per change: sent and
+ * waiting, taken by an agent, answered (and where), or failed (and that Retry is there).
+ * Undefined when nothing changed, so the ticking clock on the state line is never read out.
+ */
+export function askAnnouncement(
+  previous: string | undefined,
+  ask: { state: string; question?: string; agent?: string; note?: string; error?: string },
+  answers: number,
+): string | undefined {
+  if (previous === ask.state) return undefined;
+  const who = ask.agent ?? "An agent";
+  switch (ask.state) {
+    case "waiting":
+      return `Asked “${ask.question ?? ""}”. Waiting for an agent.`;
+    case "working":
+      return `${ask.agent ?? "An agent"} is working on your ask${ask.note ? `: ${ask.note}` : ""}.`;
+    case "answered":
+      return `${who} answered${answers > 1 ? ` with ${answers} options` : ""}, under your ask.`;
+    case "failed":
+      return `Your ask failed${ask.error ? `: ${ask.error}` : ""}. Retry is under the ask.`;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * What the selection bar's first button does for one selected ask: an ask that failed, went
+ * quiet or was not heard is sent again (its state line offers the same), anything else is asked
+ * about. Undefined: Ask as usual.
+ */
+export function retryLabel(line: { tone: string; retry?: boolean }): "Retry" | "Send again" | undefined {
+  if (!line.retry) return undefined;
+  return line.tone === "nobody" ? "Send again" : "Retry";
 }

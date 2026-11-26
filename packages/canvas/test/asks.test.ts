@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { AskDesk, LISTENER_GRACE_MS } from "../server/asks";
-import { answerLayout, askStatusLine, capWords, elsewhereNotice, markOf, mergeHistory, suggestQuestion, OPTION_W } from "../src/ask-rules";
+import { answerLayout, askStatusLine, retryLabel, capWords, elsewhereNotice, markOf, mergeHistory, suggestQuestion, OPTION_W } from "../src/ask-rules";
 import { answerInput, askStatusInput } from "../src/protocol";
 import { buildPrompt, parseReply, readingNote, systemPrompt } from "../tools/resident-prompt";
 import { toolDefs } from "../tools/tool-defs";
@@ -244,7 +244,7 @@ describe("an ask answered on a page the person has left", () => {
   const where = { onScreen: false, question: "Give me options", pageName: "Pricing" };
   it("says who answered and where", () => {
     expect(elsewhereNotice({ state: "working" }, { state: "answered", agent: "Claude" }, where)).toBe("✦ Claude answered “Give me options” on the page “Pricing”.");
-    expect(elsewhereNotice({ state: "working" }, { state: "failed" }, where)).toContain("could not be answered. Open that page to retry.");
+    expect(elsewhereNotice({ state: "working" }, { state: "failed" }, where)).toContain("could not be answered. Show it to retry.");
   });
   it("stays quiet on screen, for other states and for repeats", () => {
     expect(elsewhereNotice({ state: "working" }, { state: "answered" }, { ...where, onScreen: true })).toBeUndefined();
@@ -255,6 +255,34 @@ describe("an ask answered on a page the person has left", () => {
   it("shortens a long question", () => {
     const said = elsewhereNotice({ state: "working" }, { state: "answered" }, { ...where, question: "x".repeat(80) })!;
     expect(said).toContain(`“${"x".repeat(39)}…”`);
+  });
+});
+
+import { elsewhereShow, noticeMs } from "../src/ask-rules";
+describe("showing an ask answered on another page", () => {
+  const replies = [
+    { id: "shape:a", replyTo: "shape:ask" },
+    { id: "shape:b", replyTo: "shape:ask" },
+    { id: "shape:other", replyTo: "shape:elsewhere" },
+    { id: "shape:gone", replyTo: "shape:ask", hidden: true },
+    { id: "shape:plain" },
+  ];
+  it("selects the answers to that ask, in board order, leaving out hidden ones", () => {
+    expect(elsewhereShow("answered", "shape:ask", replies)).toEqual(["shape:a", "shape:b"]);
+  });
+  it("selects the ask itself when it failed, so Retry is on the selection", () => {
+    expect(elsewhereShow("failed", "shape:ask", replies)).toEqual(["shape:ask"]);
+  });
+  it("falls back to the ask when its answers have been deleted or hidden", () => {
+    expect(elsewhereShow("answered", "shape:ask", [{ id: "shape:gone", replyTo: "shape:ask", hidden: true }])).toEqual(["shape:ask"]);
+  });
+  it("offers nothing for other states", () => {
+    expect(elsewhereShow("working", "shape:ask", replies)).toEqual([]);
+    expect(elsewhereShow("waiting", "shape:ask", replies)).toEqual([]);
+  });
+  it("keeps a notice with something to press long enough to press it", () => {
+    expect(noticeMs(false)).toBe(3500);
+    expect(noticeMs(true)).toBeGreaterThanOrEqual(10000);
   });
 });
 
@@ -278,12 +306,32 @@ describe("starters that fit the selection", () => {
   it("offers questions about the group for a frame, whose contents the ask now sends", () => {
     expect(startersFor([{ type: "frame", text: "" }])[0]).toBe("What do these have in common?");
   });
-  it("does not promise chart answers the ask cannot back", () => {
-    // describeAsk sends a chart without its data.
-    expect(startersFor([{ type: "chart", text: "" }])).toEqual(defaultStarters);
+  it("offers questions about what a chart shows, and about a dataset, now that the ask sends them", () => {
+    expect(startersFor([{ type: "chart", text: "" }])[0]).toBe("What does this show?");
+    expect(startersFor([{ type: "dataset", text: "" }])[0]).toBe("What is in this data?");
   });
   it("never offers more than three", () => {
     for (const sel of [[card("a")], [card("a?")], [card("a"), card("b")], [{ type: "frame", text: "" }], [{ type: "chart", text: "" }]])
       expect(startersFor(sel).length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("retryLabel: the selection bar's first button on one selected ask", () => {
+  const ask = (state: string, extra: Record<string, unknown> = {}) => ({ state, attempt: 0, contextIds: [], askedAt: 0, ...extra }) as never;
+  const line = (a: never, listeners: string[] | null = ["Claude"], now = 1000) => askStatusLine(a, { listeners, hosted: false, now, given: "" });
+  it("retries a failed ask", () => {
+    expect(retryLabel(line(ask("failed", { error: "Took too long" })))).toBe("Retry");
+  });
+  it("retries an ask whose agent went quiet", () => {
+    expect(retryLabel(line(ask("working", { startedAt: 0, agent: "Claude" }), ["Claude"], 200_000))).toBe("Retry");
+  });
+  it("sends again an ask nobody heard", () => {
+    const said = retryLabel(line(ask("waiting"), [], 60_000));
+    expect(said).toBe("Send again");
+  });
+  it("keeps Ask for an answered, working or waiting ask", () => {
+    expect(retryLabel(line(ask("answered", { answeredAt: 10, agent: "Claude" })))).toBeUndefined();
+    expect(retryLabel(line(ask("working", { startedAt: 900, agent: "Claude" })))).toBeUndefined();
+    expect(retryLabel(line(ask("waiting")))).toBeUndefined();
   });
 });

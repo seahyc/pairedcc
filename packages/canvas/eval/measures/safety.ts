@@ -1,4 +1,4 @@
-import { check, find, mcpAgent, openCanvas, sleep, type Browser, type Check } from "../lib";
+import { check, find, mcpAgent, openCanvas, ready, savedToAccount, sleep, startServer, type Browser, type Check } from "../lib";
 
 // Scripted races between a person and an agent on shared objects. Each race counts
 // the human edits that did not survive; the target is zero.
@@ -55,6 +55,25 @@ export async function safety(browser: Browser, base: string) {
       if (text(bNow) !== humanB) lost(1);
       if (aNow.props?.color === "green") return "the undone run's change is still applied";
       return aNow.x === humanA && text(bNow) === humanB ? true : "a human edit was undone with the agent's run";
+    });
+
+    await race("Agent rewrite of the person's own words", async (lost) => {
+      // The person writes a note; an agent holding its current revision tries to change the words.
+      const id = await human("(p) => p.create({ kind: 'note', x: 1600, y: 0, text: 'My own words' })");
+      const mine = await get(id as string);
+      let rejected = false;
+      try {
+        await agent.call("canvas_update", { id, expectedRevision: mine.revision, text: "Words the person never wrote" });
+      } catch {
+        rejected = true;
+      }
+      const now = text(await get(id as string));
+      if (now !== text(mine)) lost(1);
+      if (!rejected) return "the agent's rewrite of the person's words was accepted";
+      // The person can still change their own words.
+      const fresh = await get(id as string);
+      await human("(p, a) => p.update({ id: a.id, expectedRevision: a.revision, text: 'My own words, revised' })", { id, revision: fresh.revision });
+      return text(await get(id as string)).includes("My own words, revised") ? true : "the person could not edit their own note";
     });
 
     await race("Agent write to a locked object", async (lost) => {
@@ -171,6 +190,14 @@ export async function safety(browser: Browser, base: string) {
     await context.close();
   }
   await dataRaces(browser, base, race);
+  // The restore race saves to the board store; on a reused EVAL_URL server that is someone's
+  // real board, whose kept history it would prune. It always gets a throwaway server.
+  const own = process.env.EVAL_URL ? await startServer(Number(process.env.EVAL_PORT ?? 5191) + 2, true) : null;
+  try {
+    await restoreRace(browser, own?.base ?? base, race);
+  } finally {
+    own?.stop();
+  }
   return { races, humanEditsLost: races.reduce((n, r) => n + r.humanEditsLost, 0) };
 }
 
@@ -255,5 +282,56 @@ async function dataRaces(browser: Browser, base: string, race: Race) {
   } finally {
     await agent.close();
     await context.close();
+  }
+}
+
+// Restoring an earlier version (Menu → Earlier versions) in a tab that has not seen another
+// browser's newer save: the restore must be refused, and the newer edit must survive.
+async function restoreRace(browser: Browser, base: string, race: Race) {
+  const a = await openCanvas(browser, base);
+  let b: Awaited<ReturnType<typeof openCanvas>> | undefined;
+  const sync = (page: any, js: string) => page.evaluate(`(async (s) => ${js})(window.__pairedBoardSync)`);
+  const server = async () => JSON.stringify((await (await fetch(`${base}/api/canvas/boards/main`)).json()).board?.snapshot ?? {});
+  const shows = (page: any, text: string) => page.evaluate((t: string) => (window as any).__pairedEditor.getCurrentPageShapes().some((s: any) => JSON.stringify(s.props).includes(t)), text);
+  try {
+    await race("Restore an earlier version after another browser saved a newer edit", async (lost) => {
+      if (!(await a.page.evaluate(() => Boolean((window as any).__pairedBoardSync)))) return "no board sync in this tab";
+      if (!(await savedToAccount(a.page))) return "browser A never saved to the board store";
+      await a.page.evaluate(() => (window as any).paired.create({ kind: "note", x: 4000, y: 0, text: "restore race: first version" }));
+      await sleep(1500);
+      await savedToAccount(a.page);
+      const keep = await sync(a.page, "s.status().revision");
+      await a.page.evaluate(() => (window as any).paired.create({ kind: "note", x: 4000, y: 300, text: "restore race: second version" }));
+      await sleep(1500);
+      await savedToAccount(a.page);
+      // Browser B opens the board and saves a newer edit; A has not seen it.
+      b = await openCanvas(browser, base);
+      await savedToAccount(b.page);
+      await b.page.evaluate(() => (window as any).paired.create({ kind: "note", x: 4000, y: 600, text: "restore race: newer edit in B" }));
+      await sleep(1500);
+      if (!(await savedToAccount(b.page))) return "browser B's edit was not saved";
+      if (typeof keep !== "number") return "browser A has no saved revision to restore";
+      // Only the stale-tab refusal counts; a restore that fails for another reason proves nothing.
+      let refused = false, why = "";
+      try {
+        await sync(a.page, `s.restore(${keep})`);
+      } catch (error) {
+        why = String(error);
+        refused = /changed on another tab or device/.test(why);
+      }
+      await sleep(500);
+      const onServer = (await server()).includes("restore race: newer edit in B");
+      await a.page.reload();
+      await ready(a.page);
+      await sleep(2500);
+      const inA = await shows(a.page, "restore race: newer edit in B");
+      if (!onServer || !inA) lost(1);
+      if (!refused) return why ? `the restore failed, but not as a stale-tab refusal: ${why.slice(0, 160)}` : "the restore in the stale tab was accepted";
+      if (!onServer) return "the newer edit is gone from the board store";
+      return inA ? true : "the newer edit is missing from browser A after reload";
+    });
+  } finally {
+    await b?.context.close();
+    await a.context.close();
   }
 }
