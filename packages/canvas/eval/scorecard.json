@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T11:00Z",
-  "commit": "16ce025",
+  "generatedAt": "2026-11-26T11:17Z",
+  "commit": "89daf62",
   "carriedOver": [],
   "table": [
     {
@@ -30,7 +30,7 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 1358 ms, pan 16.7 ms/frame; 10k: load 7135 ms, pan 40 ms/frame",
+      "result": "1k: load 1371 ms, pan 16.7 ms/frame; 10k: load 7575 ms, pan 38.4 ms/frame",
       "status": "reported"
     },
     {
@@ -47,7 +47,7 @@
           "name": "Person imports a dataset by dropping a CSV file",
           "pass": true,
           "detail": "ok",
-          "ms": 1514
+          "ms": 1515
         },
         {
           "name": "Agent imports a dataset over MCP",
@@ -65,43 +65,43 @@
           "name": "Agent charts the selection",
           "pass": true,
           "detail": "ok",
-          "ms": 20
+          "ms": 22
         },
         {
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 826
+          "ms": 828
         },
         {
           "name": "Agent reads that exact chart state",
           "pass": true,
           "detail": "ok",
-          "ms": 4
+          "ms": 7
         },
         {
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 27
+          "ms": 36
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1154
+          "ms": 1166
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": true,
           "detail": "ok",
-          "ms": 920
+          "ms": 928
         },
         {
           "name": "Reload restores everything",
           "pass": true,
           "detail": "ok",
-          "ms": 391
+          "ms": 412
         }
       ],
       "pageErrors": [],
@@ -113,21 +113,21 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 69,
+          "ms": 54,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 134,
+          "ms": 118,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 246,
+          "ms": 242,
           "humanEditsLost": 0
         }
       ],
@@ -142,17 +142,17 @@
     "performance": [
       {
         "objects": 1000,
-        "buildMs": 166,
-        "loadMs": 1358,
+        "buildMs": 255,
+        "loadMs": 1371,
         "panMedianFrameMs": 16.7,
-        "panP95FrameMs": 16.9
+        "panP95FrameMs": 17.3
       },
       {
         "objects": 10000,
-        "buildMs": 1221,
-        "loadMs": 7135,
-        "panMedianFrameMs": 40,
-        "panP95FrameMs": 83.9
+        "buildMs": 1516,
+        "loadMs": 7575,
+        "panMedianFrameMs": 38.4,
+        "panP95FrameMs": 92.9
       }
     ],
     "agentUsability": {
@@ -169,13 +169,13 @@
           "pass": false,
           "summary": ""
         },
+        "canvas": {
+          "pass": true,
+          "summary": "151 passed (151)"
+        },
         "cli": {
           "pass": true,
           "summary": "no test files"
-        },
-        "canvas": {
-          "pass": true,
-          "summary": "150 passed (150)"
         },
         "mcp-server": {
           "pass": true,

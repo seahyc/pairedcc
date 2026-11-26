@@ -73,7 +73,7 @@ Last updated 2026-11-26T11:00Z by the review lane. Branch: `claude/sprint-int`.
 | e2e | needs Postgres and Redis; 1 passed when they are provided, otherwise stops at start |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T11:00Z on `16ce025`:
+Scorecard from `pnpm eval:canvas` at 2026-11-26T11:17Z on `89daf62`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
@@ -81,7 +81,7 @@ Scorecard from `pnpm eval:canvas` at 2026-11-26T11:00Z on `16ce025`:
 | Agent usability | ≥90% of ≥20 tasks | 0 tasks, no recorded attempt | not run |
 | Safety of shared edits | 0 human edits lost | 0 lost; 3/3 races pass | pass |
 | Persistence | identical in a clean profile | identical | pass |
-| Performance | reported, not worse | 1k: load 1358 ms, pan 16.7 ms/frame; 10k: load 7135 ms, pan 40 ms/frame | reported |
+| Performance | reported, not worse | 1k: load 1371 ms, pan 16.7 ms/frame; 10k: load 7575 ms, pan 38.4 ms/frame | reported |
 | Existing product | green | build passes; tests: e2e failing | fail |
 <!-- scorecard:end -->
 
