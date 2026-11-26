@@ -396,7 +396,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     columns, row count and first rows, as text a model can read, from tested pure functions;
     chart starters are offered; checked in a real tab with `?prototype=data`.
 
-62. **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
+62. (PR #85 open, awaiting review.) **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
 
 63. **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
     (comparing beats describing) and "the agent must visibly respond". Sending an ask makes room
@@ -410,9 +410,11 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     any zero-padded value (`0` followed by a digit, before any decimal point) stays text, plain
     numbers (`0`, `0.5`, `-3`, `1e3`) still become numbers, with unit tests and a drop in the page.
 
+65. **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
+
 ## Claims
+65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
 63. Answer lands in view | claude/sprint-answer-view | 2026-11-26T12:38Z
-62. Import keeps what the source and the person said | claude/sprint-import-faithful | 2026-11-26T12:36Z
 61. Ask about a chart or dataset gives what it shows | claude/sprint-ask-chart | 2026-11-26T12:31Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
@@ -638,3 +640,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:31Z | build-A | 60 Key hints in the person's own keys | #83 | Windows browser saw ⌘ on every hint; verify-keys 10/16 → 16/16; 5 unit tests; first screen layout unchanged; scorecard unchanged |
 | 2026-11-26T12:36Z | build-B | 45/59 merges and a review fix | #66 #70 #82 | #66 and #70 merged with #59 and re-checked in two browsers; #82's restore race uses a throwaway server under EVAL_URL (26 fixture writes to a reused board's history before, 0 after) |
 | 2026-11-26T12:38Z | build-B | 64 CSV codes keep leading zeros | #84 | 007 and 02139 stay text, 0x1A no longer becomes 26; plain numbers unchanged; drop in the page and acceptance 10/10 |
+| 2026-11-26T12:39Z | build-A | Review follow-ups on #55 #68; 62 import keeps what was said | #55 #68 #85 | #55: blank cells keep column slots, side by side never overlaps (2 failing-first tests, browser 14/14); #68: unsafe integers in any spelling stay text; #85: quote-aware delimiter, view switch refused after edits and one undo, 2,000-row cap stated, table height derived (browser before 3 pass/6 fail → 9/9). All import branches merged with claude/sprint-int after #46 landed |
