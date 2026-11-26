@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { launch, openCanvas, packageDir, startServer } from "./lib";
 import { acceptance } from "./measures/acceptance";
+import { askLoop } from "./measures/ask-loop";
 import { agentUsability } from "./measures/agent-usability";
 import { performanceMeasure } from "./measures/performance";
 import { persistence } from "./measures/persistence";
@@ -9,7 +10,7 @@ import { safety } from "./measures/safety";
 import { workspace } from "./measures/workspace";
 import { markdown, rows, spliceReport, type Raw } from "./score";
 
-// pnpm eval:canvas [--only=acceptance,safety,persistence,performance,agent,workspace] [--no-write]
+// pnpm eval:canvas [--only=acceptance,askLoop,safety,persistence,performance,agent,workspace] [--no-write]
 // Writes eval/scorecard.json and the scorecard table in SPRINT-REPORT.md.
 
 const args = process.argv.slice(2);
@@ -24,6 +25,15 @@ const raw: Raw & Record<string, unknown> = {};
 const log = (s: string) => process.stderr.write(`${s}\n`);
 
 const server = await startServer();
+async function isolated<T>(run: (base: string) => Promise<T>): Promise<T> {
+  if (!process.env.EVAL_URL) return run(server.base);
+  const own = await startServer(Number(process.env.EVAL_PORT ?? 5191) + 1, true);
+  try {
+    return await run(own.base);
+  } finally {
+    own.stop();
+  }
+}
 const browser = await launch();
 try {
   // Warm up: on a fresh server Vite may optimise dependencies and reload the page once.
@@ -32,6 +42,9 @@ try {
   await warm?.context.close();
   for (const [name, run] of [
     ["acceptance", () => acceptance(browser, server.base)],
+    // The Ask loop always gets a fresh server of its own: on a reused EVAL_URL server a
+    // resident agent could take the fixture's asks and spend a real model on them.
+    ["askLoop", () => isolated((base) => askLoop(browser, base))],
     ["safety", () => safety(browser, server.base)],
     ["persistence", () => persistence(browser, server.base)],
     ["performance", () => performanceMeasure(browser, server.base)],
@@ -60,7 +73,7 @@ if (want("workspace")) {
 // measure that was run but crashed is reported as not run, never carried over.
 const carried: string[] = [];
 const option: Record<string, string> = { agentUsability: "agent" };
-for (const key of ["acceptance", "agentUsability", "safety", "persistence", "performance", "workspace"] as const)
+for (const key of ["acceptance", "askLoop", "agentUsability", "safety", "persistence", "performance", "workspace"] as const)
   if (raw[key] === undefined && !want(option[key] ?? key) && previous?.raw?.[key] !== undefined) {
     (raw as Record<string, unknown>)[key] = previous.raw[key];
     carried.push(key);
@@ -77,6 +90,7 @@ console.log(block);
 const steps = raw.acceptance?.steps ?? [];
 for (const s of steps) console.log(`${s.pass ? "PASS" : "FAIL"} acceptance: ${s.name}${s.pass ? "" : ` — ${s.detail}`}`);
 for (const r of raw.performance ?? []) console.log(`perf: ${JSON.stringify(r)}`);
+for (const s of raw.askLoop?.steps ?? []) console.log(`${s.pass ? "PASS" : "FAIL"} ask loop: ${s.name}${s.pass ? "" : ` — ${s.detail}`}`);
 for (const r of raw.safety?.races ?? []) console.log(`${r.pass ? "PASS" : "FAIL"} safety: ${r.name}${r.pass ? "" : ` — ${r.detail}`}`);
 if (write) {
   writeFileSync(scorecardPath, `${JSON.stringify(scorecard, null, 2)}\n`);

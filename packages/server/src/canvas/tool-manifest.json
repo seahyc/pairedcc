@@ -1007,7 +1007,7 @@
     },
     {
       "name": "canvas_feedback",
-      "description": "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback.",
+      "description": "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback. Answer an item with canvas_reply, not canvas_annotate, so the answer sits under the comment and is listed in the queue; an item with an `ask` field is an Ask: answer it with canvas_answer, which also records the answer on the Ask.",
       "op": "feedback",
       "output": "json",
       "inputSchema": {
@@ -1047,7 +1047,7 @@
     },
     {
       "name": "canvas_reply",
-      "description": "Answer a feedback item in place: your note appears directly under the human's comment (or the picked/rejected object) and is listed as a reply in the queue. The item stays open until you or the human resolve it. The item must be on the open page.",
+      "description": "Answer a feedback item in place (use this instead of canvas_annotate for items in canvas_feedback; for an item with an `ask` field use canvas_answer instead): your note appears directly under the human's comment (or the picked/rejected object) and is listed as a reply in the queue. The item stays open until you or the human resolve it. The item must be on the open page.",
       "op": "reply",
       "output": "json",
       "inputSchema": {

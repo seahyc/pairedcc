@@ -163,7 +163,7 @@ When the human asks about a record, the ask's `targets` are the record's cards, 
 
 ### The feedback queue
 
-Everything the human marks goes into one queue that spans every page: comments (C on a selection, or pinned to a spot on the board), picks (P), rejects (X) and pen ink drawn over an object. The human sees it in the Feedback tab; agents read it in one call.
+Everything the human marks goes into one queue that spans every page: comments (C on a selection, or pinned to a spot on the board), picks (P), rejects (X) and pen ink drawn over an object. The human sees it in the Feedback tab; agents read it in one call. Answer an item with `canvas_reply`, not `canvas_annotate`: a reply sits under the comment and is listed with it in the queue, while `canvas_annotate` starts a new note of your own on an object (a read-back, critique or "Done" report). An item with an `ask` field is an Ask: answer it with `canvas_answer`, which records the answer on the Ask; a reply would leave it waiting.
 
 ```sh
 curl -s http://localhost:5183/api/canvas/command \
