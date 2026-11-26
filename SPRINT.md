@@ -506,6 +506,8 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 
 - (build-B, item 55) Board history keeps the newest 20 revisions, then the newest revision in each older 15-minute wall-clock slot, 50 in all (the storage bound is unchanged). A day of editing then reaches back hours instead of minutes. The dev board store still keeps the newest 50. Alternatives: hour-long slots for older revisions, or a byte budget per account instead of a count.
 
+- (build-B, item 58) Two more optional findings on #78 are left open: matches can end inside a grapheme (`कल` matches `कला`; `かく` matches `かぐ` after normalisation), and `ß` does not fold to `ss` (`STRASSE` misses `Straße`). Fix if non-Latin search matters: compare at grapheme boundaries (`Intl.Segmenter`) and apply full case folding.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
