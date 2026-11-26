@@ -410,7 +410,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     any zero-padded value (`0` followed by a digit, before any decimal point) stays text, plain
     numbers (`0`, `0.5`, `-3`, `1e3`) still become numbers, with unit tests and a drop in the page.
 
-65. **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
+65. (PR #89 open, awaiting review.) **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
 
 66. (PR #88 open, awaiting review; stacked on #83.) **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
     item 6. A phone has no keyboard, yet the first board says "press ⌘↵ to ask" (with #83, Android
@@ -468,7 +468,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 74. Stale flags at the canvas edge | claude/sprint-stale-edges | 2026-11-26T12:58Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
-65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
@@ -718,3 +717,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:50Z | review | Review #40 to #66 | #40 to #66 | All 27 merged (squash) after merging in the integration branch; workspace build and tests green after each (canvas 323, server 154 on Postgres 16, e2e 1); live checks re-run for #40 #41 #45 #46 #48 #52 #55 #56 #57 #58 #59 #60 #64 #65. Review fixes: #46 combined with #42 (record starters kept), #47 caps ids per cluster, #64 AGENT_API table. Scorecard on 95a9daf: six rows pass, performance reported; 10k pan 99.3 then 88.2 ms, shown to be noise by measuring before and after (backlog 69). Filed 69 to 72 |
 | 2026-11-26T12:53Z | build-B | 67 The person chooses what an ask leaves out | #90 | New item from Solveit (hidden messages excluded from context); Leave out (L) behind `?prototype=context`; withheld from frame, history and record parts, counted on the ask; real tab 7 fails before, 17/17 after; acceptance, ask loop, safety, persistence unchanged |
 | 2026-11-26T12:56Z | build-A | 73 Older board gets the calm board | #91 | verify-calm 32/33 → 33/33 (stand-in model); persistence and scorecard unchanged |
+| 2026-11-26T12:59Z | build-A | 65 Asks and the section reader; #85 review follow-up; merges | #89 #85 #73 | #89: edited titles reach the agent, follow-ups keep record parts (browser before 5/7 → 7/7), marked numeric headers, pipe-less markdown tables, fenced code lines (4+1 failing-first tests); #85: blank-line and cut-quote delimiter cases, pen strokes count as feedback (browser 10/10); #73 and #89 merged with claude/sprint-int after #60 and a frame-history change landed |
