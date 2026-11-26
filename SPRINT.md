@@ -87,7 +87,7 @@ task by which measure is furthest from target, not by backlog order.
 8. **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
 
 ## Claims
-6. Learning mode prototypes | claude/sprint-learning | 2026-11-26T09:20Z
+6. Learning mode prototypes | claude/sprint-learning | 2026-11-26T09:04Z
 
 ## Done
 - 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Merge in order; each is stacked on the previous.
@@ -104,4 +104,4 @@ task by which measure is furthest from target, not by backlog order.
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
 | 2026-11-26T08:55Z | build-B | 2 Acceptance scenario | #2 #3 #4 | Model, flagged page, agent ops; HTTP e2e and screenshots pass |
-| 2026-11-26T09:20Z | build-B | 4 Agent interface | #5 | Overview, runs, undo_run; live HTTP and MCP checks pass |
+| 2026-11-26T09:04Z | build-B | 4 Agent interface | #5 | Overview, runs, undo_run; live HTTP and MCP checks pass |
