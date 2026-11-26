@@ -71,8 +71,10 @@ export function frameAround(boxes: { x: number; y: number; w: number; h: number 
 
 export const duplicateInput = z.object({
   objects: targets,
-  offsetX: z.number().finite().default(320),
-  offsetY: z.number().finite().default(0),
+  /** Default: the width of the duplicated objects plus 40, so the copy sits just right of them. */
+  offsetX: z.number().finite().optional(),
+  /** Default 0, or below the originals when a copy beside them would leave its frame. */
+  offsetY: z.number().finite().optional(),
 });
 
 export function layoutPositions(
@@ -90,4 +92,25 @@ export function layoutPositions(
     x: input.x + widths.slice(0, i % columns).reduce((sum, w) => sum + w + input.gap, 0),
     y: input.y + heights.slice(0, Math.floor(i / columns)).reduce((sum, h) => sum + h + input.gap, 0),
   }));
+}
+
+type Rect = { x: number; y: number; w: number; h: number };
+
+/**
+ * The default offset for a copy: beside the originals, else below them, choosing the first
+ * where every copy still fits inside the frame that will hold it (a copy keeps its parent
+ * frame, which clips anything outside it). Null when neither fits.
+ */
+export function chooseDuplicateOffset(items: readonly { box: Rect; container?: Rect }[], gap = 40): { x: number; y: number } | null {
+  if (!items.length) return { x: 320, y: 0 };
+  const boxes = items.map((i) => i.box);
+  const left = Math.min(...boxes.map((b) => b.x)), right = Math.max(...boxes.map((b) => b.x + b.w));
+  const top = Math.min(...boxes.map((b) => b.y)), bottom = Math.max(...boxes.map((b) => b.y + b.h));
+  const candidates = [
+    { x: Math.round(right - left + gap), y: 0 },
+    { x: 0, y: Math.round(bottom - top + gap) },
+  ];
+  const fits = (o: { x: number; y: number }) =>
+    items.every(({ box, container: c }) => !c || (box.x + o.x >= c.x && box.y + o.y >= c.y && box.x + o.x + box.w <= c.x + c.w && box.y + o.y + box.h <= c.y + c.h));
+  return candidates.find(fits) ?? null;
 }

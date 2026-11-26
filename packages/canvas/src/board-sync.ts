@@ -41,7 +41,14 @@ export type LocalBoard = {
   listen(onChange: () => void): () => void;
 };
 /** What this browser last agreed with the account; kept in localStorage. */
-export type SyncMemo = { account: string; boardId: string; revision: number; dirty: boolean };
+export type SyncMemo = {
+  account: string;
+  boardId: string;
+  revision: number;
+  dirty: boolean;
+  /** contentHash of the board as last synced; lets a reload tell a stale local copy from it. */
+  hash?: string;
+};
 export type MemoStore = { get(): SyncMemo | null; set(memo: SyncMemo | null): void };
 
 export type SyncStatus =
@@ -119,6 +126,23 @@ export class SaveRefused extends Error {
   }
 }
 
+/**
+ * A short hash of a board's records, independent of key order, so the same content hashes
+ * the same after a reload. Used only to compare this browser's copy with the last sync.
+ */
+export function contentHash(snapshot: Snapshot) {
+  const canon = (v: unknown): string =>
+    Array.isArray(v)
+      ? `[${v.map(canon).join(",")}]`
+      : v && typeof v === "object"
+        ? `{${Object.keys(v as object).sort().map((k) => `${JSON.stringify(k)}:${canon((v as Record<string, unknown>)[k])}`).join(",")}}`
+        : JSON.stringify(v) ?? "null";
+  const text = canon(snapshot.store);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  return `${(h >>> 0).toString(16).padStart(8, "0")}:${text.length}`;
+}
+
 export function copyId(boardId: string, at: Date) {
   return `${boardId}-browser-${at.toISOString().slice(0, 16).replace(/[-:T]/g, "")}`;
 }
@@ -143,6 +167,12 @@ export function createBoardSync(o: SyncOptions) {
   // start() has decided, and a save whose content matches what was last synced is skipped.
   let started = false;
   let synced = "";
+  let syncedHash = "";
+  /** Record what is now in step with the server (as JSON for quick equality, and as a hash for the memo). */
+  const markSynced = (snapshot: Snapshot, json = JSON.stringify(snapshot)) => {
+    synced = json;
+    syncedHash = contentHash(snapshot);
+  };
   let base: Snapshot | null = null;
   // The board content the server last refused; it is not uploaded again until it changes.
   let refusedJson = "";
@@ -154,7 +184,7 @@ export function createBoardSync(o: SyncOptions) {
     status = s;
     o.onStatus?.(s);
   };
-  const remember = (dirty: boolean) => account && o.memo.set({ account, boardId, revision, dirty });
+  const remember = (dirty: boolean) => account && o.memo.set({ account, boardId, revision, dirty, ...(syncedHash ? { hash: syncedHash } : {}) });
   const markDirty = () => {
     followOtherTab(); // before this tab records its edit under a board another tab left
     const m = o.memo.get();
@@ -165,15 +195,23 @@ export function createBoardSync(o: SyncOptions) {
   };
   const failed = (error: unknown) => {
     if (error instanceof SaveRefused && account) {
-      clearTimer(timer);
+      // No retry is scheduled. A pending timer here is a newer edit's save; leave it to run.
       return emit({ state: "refused", account, code: error.code, error: error.message });
     }
     emit({ state: "offline", ...(account ? { account } : {}), error: error instanceof Error ? error.message : String(error) });
     if (!stopped) timer = setTimer(() => (account ? save() : start()), (retry = Math.min(retry * 2, 30_000)));
   };
 
+  // tldraw reports a load's changes a frame later, after `applying` is cleared. The first
+  // report after a load is that echo if the board still equals what was synced; it must not
+  // mark the memo dirty, or a reload in the save delay would treat the old copy as edits.
+  let echo = false;
   const unlisten = o.local.listen(() => {
     if (applying || stopped || !started) return;
+    if (echo) {
+      echo = false;
+      if (synced && JSON.stringify(o.local.snapshot()) === synced) return;
+    }
     markDirty();
     if (!account) return;
     clearTimer(timer);
@@ -197,10 +235,12 @@ export function createBoardSync(o: SyncOptions) {
     }
     if (result.ok) {
       revision = result.revision;
-      synced = json;
+      markSynced(snapshot, json);
       refusedJson = "";
       base = snapshot;
-      remember(again);
+      // Still dirty if the board changed while this save was in flight, even when that
+      // edit's own save has not started yet.
+      remember(again || JSON.stringify(o.local.snapshot()) !== json);
       retry = 1000;
       emit({ state: "saved", account: account!, revision, at: now().getTime(), ...(note ? { note } : {}) });
       return;
@@ -212,17 +252,20 @@ export function createBoardSync(o: SyncOptions) {
     // version stays in the board's revision history.
     const server = await o.api.get(boardId);
     if (!server) throw new Error("The board was deleted on the server.");
-    revision = server.revision;
     if (!base) {
       // No common version to merge from, so neither side may replace the other: this
       // browser's board is set aside as its own board and the account's board is opened.
+      // The server's revision is adopted only once the copy is safe: if setting aside is
+      // refused (at the board limit), a later save must not land on the account's board.
       const note = await setAside("Another tab or device saved this board first.");
+      revision = server.revision;
       apply(server.snapshot);
       base = server.snapshot;
-      synced = JSON.stringify(o.local.snapshot());
+      markSynced(o.local.snapshot());
       remember(false);
       return emit({ state: "saved", account: account!, revision, at: now().getTime(), note });
     }
+    revision = server.revision;
     const merged = mergeSnapshots(base, o.local.snapshot(), server.snapshot);
     apply(merged.snapshot);
     base = server.snapshot;
@@ -247,6 +290,7 @@ export function createBoardSync(o: SyncOptions) {
     revision = m.revision;
     base = null;
     synced = "";
+    syncedHash = "";
   }
 
   /** Save this browser's board to the account as a separate board, which is never pruned. */
@@ -264,6 +308,7 @@ export function createBoardSync(o: SyncOptions) {
       o.local.load(snapshot);
     } finally {
       applying = false;
+      echo = true;
     }
   }
 
@@ -307,7 +352,22 @@ export function createBoardSync(o: SyncOptions) {
         revision = server.revision;
         base = server.snapshot;
         if (known.dirty) return await push();
-        synced = JSON.stringify(o.local.snapshot());
+        if (known.hash && contentHash(initial) !== known.hash) {
+          // In step by the memo, but the copy this tab opened with is not what was synced:
+          // the tab closed before tldraw stored the board it had just loaded or restored.
+          // The account has it; objects made since this tab opened are carried onto it.
+          const recovered = withNewRecords(initial, o.local.snapshot(), server.snapshot);
+          apply(recovered.snapshot);
+          if (recovered.kept) {
+            started = true;
+            return await push("Kept the changes made while your board was loading.");
+          }
+        } else if (known.hash && contentHash(o.local.snapshot()) !== known.hash) {
+          // The copy was current, and the person edited it while the board was connecting.
+          started = true;
+          return await push();
+        }
+        markSynced(o.local.snapshot());
         remember(false);
         return emit({ state: "saved", account, revision, at: now().getTime() });
       }
@@ -328,7 +388,7 @@ export function createBoardSync(o: SyncOptions) {
         started = true;
         return await push(note ?? "Kept the changes made while your board was loading.");
       }
-      synced = JSON.stringify(o.local.snapshot());
+      markSynced(o.local.snapshot());
       remember(false);
       emit({ state: "saved", account, revision, at: now().getTime(), ...(note ? { note } : {}) });
     } catch (error) {
@@ -371,7 +431,7 @@ export function createBoardSync(o: SyncOptions) {
       }
       revision = result.revision;
       base = old.snapshot;
-      synced = JSON.stringify(o.local.snapshot());
+      markSynced(o.local.snapshot());
       remember(false);
       retry = 1000;
       emit({ state: "saved", account: account!, revision, at: now().getTime(), note: `Restored revision ${target}. The board as it was before is revision ${before} in the history.` });
@@ -412,7 +472,7 @@ export function createBoardSync(o: SyncOptions) {
     boardId = target;
     base = server.snapshot;
     revision = server.revision;
-    synced = JSON.stringify(o.local.snapshot());
+    markSynced(o.local.snapshot());
     remember(false);
     emit({ state: "saved", account, revision, at: now().getTime(), note: `Opened board "${target}". "${previous}" is saved.` });
     return { boardId, previous };
