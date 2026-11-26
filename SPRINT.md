@@ -472,7 +472,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     layout keeps its page in view, the calm board still exists, and `verify-runs.ts` passes, with a
     scripted check that fails before.
 
-76. **An agent never rewrites the person's own words.** `docs/canvas/principles.md`, finding 2 ("the
+76. (PR #99 open, awaiting review.) **An agent never rewrites the person's own words.** `docs/canvas/principles.md`, finding 2 ("the
     agent … never moves, edits or rearranges the person's objects") and finding 4 (whose is what is
     seen): `canvas_update` with the current revision rewrites the text of the person's pink card,
     which then shows the agent's words in the person's handwriting. Done when an agent's text
@@ -484,11 +484,11 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 77. **Friction from the 26 Nov 13:03 agent-usability attempt (PR #97; reported by the agent, not yet reproduced).** (a) `eval/mcp-call.ts list` prints about 50 KB that does not parse as one JSON value; (b) `canvas_asks` lists every page's asks with no current-page filter; (c) the agent found no `locked` hint or child count in `canvas_overview` under the names it expected, costing a `canvas_read`; (d) `canvas_duplicate`'s default offset (320) overlaps a wider frame; (e) the docs do not say which `canvas_connect` relation means "supports", or whether `canvas_reply` changes the comment's revision before `canvas_resolve`. Done when each is reproduced with a failing test and fixed, or recorded as a decision with the reason.
 
 ## Claims
-76. Agent never rewrites the person's words | claude/sprint-human-words | 2026-11-26T13:14Z
 69. The 10k pan figure survives a slow-mode run | claude/sprint-pan-quartile | 2026-11-26T13:14Z
 7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
+- 76. Agent never rewrites the person's words (build-A): PR #99 (text change to a person's object refused; new safety race 9/10 → 10/10; agent tasks self-test 24/24).
 - 72. Fresh agent-usability attempt (build-B): PR #97 (23/24, median 2 tool calls; task 14's check corrected to accept a fuller answer naming the top region first as highest; friction filed as item 77).
 - 71. Web page reader stays quick (build-B): PR #98, duplicate of #93 from another lane (2 MB of unclosed tags: 145 s worst before, under 0.5 s after; failing-first tests).
 - 70. Side by side and Show cited bring comments along (build-B): PR #92 (verify-import-follow 7/9 → 9/9).
@@ -541,7 +541,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
-- (build-A) Regression sweep of the browser checks on `claude/sprint-int` at 12:59Z: verify-import 51/51, webpage 9/9, cite 15/15, compare 14/14, csv-faithful 5/5, ask-frame 8/8, ask-marks 8/8, answer-page 11/11, api, mcp, composition, converge, board-sync, data-agent, data-prototype, group and learning all pass; verify-calm 32/33 (fixed by #91) and verify-runs failing (fixed by #95). verify-feedback-mcp needs a hand-made comment first and was not run.
+- (build-A, item 76) An agent may not change the words of anything the person made (`authorOf` Human). It may still move, restyle or delete those objects, which `arrange`, `group` and the agent-usability tasks rely on; principles finding 2 says it should not move them either. To go further, extend `rewriteRefusal` (`src/authorship.ts`) to position and removal and re-record the agent-usability attempt.
+- (build-A) Regression sweep of the browser checks on `claude/sprint-int` at 12:59Z (connector-follow and feedback-mcp, the latter after a hand-made comment, also pass): verify-import 51/51, webpage 9/9, cite 15/15, compare 14/14, csv-faithful 5/5, ask-frame 8/8, ask-marks 8/8, answer-page 11/11, api, mcp, composition, converge, board-sync, data-agent, data-prototype, group and learning all pass; verify-calm 32/33 (fixed by #91) and verify-runs failing (fixed by #95). verify-feedback-mcp needs a hand-made comment first and was not run.
 - (build-A, item 73) A board saved before the calm canvas now gets the calm board right after the first load from the account (the alternative named in the review of #21), because the recorded "on the next reload" no longer happened at all since #59. Offline at start: on the next reload instead.
 - (build-A) `verify-calm.mjs` can run here with a stand-in for the model: `PAIRED_CLAUDE_BIN=<script printing {"result":"…"} after sleep 3> pnpm agent`. A stand-in that answers instantly fails "progress was shown" (no frame sees working).
 - (review, #46 with #42) An imported record keeps its record starters; other selections get starters fitted to them. Alternative: two selected records get the comparison starters.
@@ -759,3 +760,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:16Z | build-B | 70 Side by side and Show cited bring comments along | #92 | moveWithAttached moves programmatic moves with their comments in one undo step; real tab 7/9 before, 9/9 after; acceptance, ask loop, safety, persistence unchanged |
 | 2026-11-26T13:16Z | build-B | 72 Fresh agent-usability attempt | #97 | 23/24, median 2 tool calls on cdd473d; task 14 check corrected with reason; friction filed as 77 |
 | 2026-11-26T13:16Z | build-B | 71 Web page reader stays quick | #98 | Duplicate of #93; one-pass element matching, implicit li close, stray "<" as text; worst 2 MB case 145 s → 0.5 s; reader tests unchanged |
+| 2026-11-26T13:14Z | build-A | 76 Agent never rewrites the person's words | #99 | Agent could rewrite a pink card's text; refused now; safety 9/10 (1 lost) → 10/10 (0 lost) with the new race; agent tasks 24/24; root build and package tests green |
