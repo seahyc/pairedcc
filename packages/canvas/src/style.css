@@ -965,6 +965,22 @@ p {
 .wide-button.dark { background: #1f1d2c; color: white; border-color: #1f1d2c; }
 .wide-button.dark:hover { background: #3a2fd0; }
 
+/* Learning prompts (prototype, ?prototype=learning). Agent-asked, human-answered. */
+.learn-prompt { pointer-events: all; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; background: #f4f1ff; border: 1.5px dashed #3a2fd0; border-radius: 10px; font-family: 'Shantell Sans', sans-serif; color: #22203a; overflow: hidden; }
+.learn-prompt.is-committed, .learn-prompt.is-skipped { border-style: solid; }
+.learn-kind { font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: #3a2fd0; }
+.learn-question { margin: 0; font-size: 16px; line-height: 1.4; }
+.learn-form { display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
+.learn-form textarea { flex: 1; min-height: 56px; resize: none; padding: 8px 10px; border: 1.5px solid #c8125a; border-radius: 8px; background: #fff0f5; font: 22px/1.2 'Caveat Brush', cursive; color: #a50f4d; }
+.learn-form textarea:focus { outline: 2px solid #f6b5cf; }
+.learn-actions { display: flex; gap: 8px; align-items: center; }
+.learn-commit { pointer-events: all; font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 0; background: #3a2fd0; color: #fff; cursor: pointer; }
+.learn-skip { pointer-events: all; font: inherit; font-size: 13px; background: none; border: 0; color: #55524c; text-decoration: underline; cursor: pointer; }
+.learn-hidden, .learn-error { font-size: 12px; color: #6b66a8; }
+.learn-error { color: #a50f4d; }
+.learn-answer span { font-size: 12px; color: #6b66a8; }
+.learn-answer p { margin: 2px 0 0; font: 24px/1.2 'Caveat Brush', cursive; color: #a50f4d; }
+.learn-answer.skipped { font-size: 13px; color: #55524c; }
 /* Data prototype: dataset and chart objects (behind ?prototype=data). */
 .data-object { pointer-events: all; display: flex; flex-direction: column; background: #fffdf8; border: 1.5px solid #3a2fd0; border-radius: 8px; box-shadow: 0 2px 0 rgba(58, 47, 208, 0.15); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #22203a; overflow: hidden; }
 .data-object.is-stale { border-style: dashed; border-color: #b4540a; }

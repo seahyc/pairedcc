@@ -289,7 +289,7 @@ export function DataLayer() {
     "stale derived objects",
     () =>
       editor.getCurrentPageShapes().flatMap((s) => {
-        if (s.type === "chart") return [];
+        if (s.type === "chart" || editor.isShapeHidden(s)) return [];
         const stale = staleness(editor, s);
         const b = stale.length ? editor.getShapePageBounds(s) : undefined;
         return b ? [{ id: s.id, x: b.x, y: b.y, w: b.w }] : [];

@@ -18,6 +18,15 @@ Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_
 
 Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
 
+### Learning prompts (prototype)
+
+`canvas_learn` is a prototype tool for learning mode. Use it only when the person has asked to understand or learn something. It places a prompt card and hides `hideIds` until the person answers:
+
+- In `predict` mode, the person guesses before the result is shown.
+- In `generate` mode, the person explains in their own words before your explanation is shown.
+
+The person can always skip in one click, and the hidden objects then appear directly. Their layer names are hidden too. Agents cannot answer a prompt. Read its `props.status` (open, committed or skipped) and `props.response`, then compare the answer with the outcome. To try it by hand, open the canvas with `?prototype=learning` and use **Learning prototype page**.
+
 Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
 
 ### Overview, then detail
@@ -133,6 +142,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `scene` | `nodes` with unique keys, optional frame parentKey; optional connections between keys |
 | `arrange` | Guarded objects, row/column/grid, page-space x/y, optional gap/columns |
 | `duplicate` | Guarded objects, optional offsetX/offsetY |
+| `learn` | Prototype: `mode` (predict/generate), `question`, `x`, `y`, optional `width`, `hideIds` |
 | `overview` | Optional `parentId`, `limit`, `cursor`; compact listing of one level |
 | `runs` | Optional `limit`; recent agent runs in this tab |
 | `undo_run` | `runId`; reverses that run only, or fails listing conflicts |

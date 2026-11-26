@@ -274,7 +274,7 @@ export function ScratchbookLayer() {
       );
       return editor.getCurrentPageShapes().flatMap((s) => {
         const b = editor.getShapePageBounds(s);
-        if (!b) return [];
+        if (!b || editor.isShapeHidden(s)) return [];
         const textual = s.type === "card" || s.type === "note" || s.type === "text" || (s.type === "geo" && "richText" in s.props && richTextPlain(s.props.richText));
         const agent = isAgentShape(s) && Boolean(textual);
         const mark = s.meta.mark === "picked" || s.meta.mark === "rejected" ? s.meta.mark : undefined;

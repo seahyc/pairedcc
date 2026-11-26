@@ -23,6 +23,7 @@ import {
   richTextPlain,
   revision,
 } from "./operations";
+import { createPrompt } from "./learning/prompt-shape";
 import { overview } from "./overview";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell } from "./data/agent";
 import { agentStyle, collectMarks, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
@@ -434,6 +435,8 @@ export async function executeCommand(
     }
     case "update":
       return patchObject(editor, command.input);
+    case "learn":
+      return createPrompt(editor, command.input, actor);
     case "dataset":
       return createDataset(editor, command.input, actor);
     case "chart":
