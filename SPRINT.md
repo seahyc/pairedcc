@@ -339,6 +339,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     real tab (failing before, passing after).
 
 ## Claims
+50. Stale checks on shared inputs stay linear | claude/sprint-stale-linear | 2026-11-26T12:02Z
 46. Answer lands on its ask's page | claude/sprint-answer-page | 2026-11-26T11:57Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
