@@ -4,7 +4,7 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { answerLayout, capWords } from "./ask-rules";
+import { answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 
 // An ask is the human's question to an agent, attached to what they selected. It is a
@@ -67,11 +67,28 @@ export function retryAsk(editor: Editor, id: string) {
   if (shape.meta.status === "resolved") resolveMark(editor, editor.getShape(shape.id)!, "open", HUMAN);
 }
 
-type Given = { id: string; type: string; author: string; text: string };
+type Given = { id: string; type: string; author: string; text: string; mark?: AskMark; inside?: Given[]; insideMore?: number };
+/** How many of a selected frame's objects an ask gives, in reading order. */
+export const INSIDE_LIMIT = 20;
 // Imported material is given with its column names and where it came from.
 const given = (s: TLShape, max = 2000): Given => {
-  const source = sourceOf(s);
-  return { id: s.id, type: s.type, author: source ? sourceAuthor(source) : authorOf(s), text: clip(sourceText(s, textOf(s)) || textOf(s) || `(${shapeName(s)}, no text)`, max) };
+  const source = sourceOf(s), mark = markOf(s.meta);
+  return {
+    id: s.id,
+    type: s.type,
+    author: source ? sourceAuthor(source) : authorOf(s),
+    text: clip(sourceText(s, textOf(s)) || textOf(s) || `(${shapeName(s)}, no text)`, max),
+    ...(mark ? { mark } : {}),
+  };
+};
+const said = (editor: Editor, s: TLShape, max: number): HistoryEntry => {
+  const mark = markOf(s.meta);
+  // A frame asked about earlier has no text of its own: say what it held, as the ask did then.
+  const text =
+    s.type === "frame"
+      ? `the frame "${shapeName(s)}", holding: ${inside(editor, s, new Set()).inside.map((o) => o.text).join("; ") || "nothing with text"}`
+      : textOf(s);
+  return { id: s.id, who: authorOf(s), said: clip(text, max), ...(mark ? { mark } : {}) };
 };
 /** A grouped record is given as its parts: the title line, then each field in column order. */
 const parts = (editor: Editor, s: TLShape): TLShape[] => {
@@ -80,18 +97,48 @@ const parts = (editor: Editor, s: TLShape): TLShape[] => {
   return children.length ? children.flatMap((c) => parts(editor, c)) : [s];
 };
 
+/**
+ * What a selected frame holds, nested frames included: the person put these together, so an
+ * ask about the frame is about them. Reading order (top to bottom, then left to right).
+ */
+const media = new Set(["image", "video", "bookmark", "embed"]);
+function inside(editor: Editor, frame: TLShape, skip: Set<string>) {
+  const found: TLShape[] = [];
+  const walk = (id: TLShapeId) => {
+    for (const childId of editor.getSortedChildIdsForParent(id)) {
+      const child = editor.getShape(childId);
+      // Anything a learning prompt still hides stays out of what the agent is given.
+      if (!child || skip.has(child.id) || child.type === "arrow" || askOf(child) || editor.isShapeHidden(child)) continue;
+      if (child.type === "frame" || child.type === "group") walk(child.id);
+      if (textOf(child) || media.has(child.type)) found.push(child);
+    }
+  };
+  walk(frame.id);
+  const at = (s: TLShape) => editor.getShapePageBounds(s) ?? { x: 0, y: 0 };
+  found.sort((a, b) => at(a).y - at(b).y || at(a).x - at(b).x);
+  return { inside: found.slice(0, INSIDE_LIMIT).map((s) => given(s, 400)), more: Math.max(0, found.length - INSIDE_LIMIT) };
+}
+
 /** The exchange that led here, oldest first, when the human asks about an agent's answer. */
-function thread(editor: Editor, shape: TLShape, depth = 0, seen = new Set<string>()): { who: string; said: string }[] {
+function thread(editor: Editor, shape: TLShape, depth = 0, seen = new Set<string>()): HistoryEntry[] {
   if (depth > 4 || seen.has(shape.id)) return [];
   seen.add(shape.id);
   const parent = typeof shape.meta.replyTo === "string" ? editor.getShape(shape.meta.replyTo as TLShapeId) : undefined;
   if (!parent || !askOf(parent)) return [];
   const about = targetsOf(parent).flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
   const earlier = about.flatMap((t) => thread(editor, t, depth + 1, seen));
+  // The other answers to that ask, so an agent asked about option A knows what B and C were
+  // and which of them the person crossed out.
+  const siblings = editor.store
+    .allRecords()
+    .filter((r): r is TLShape => r.typeName === "shape" && (r as TLShape).meta.replyTo === parent.id && r.id !== shape.id && !askOf(r as TLShape) && !editor.isShapeHidden(r as TLShape))
+    .sort((a, b) => a.y - b.y || a.x - b.x);
   return [
     ...earlier,
-    ...about.map((t) => ({ who: authorOf(t), said: clip(textOf(t), 600) })),
-    { who: `${HUMAN} asked`, said: clip(textOf(parent), 600) },
+    ...about.map((t) => said(editor, t, 600)),
+    // The ask card's id keeps two asks with the same words (a starter used twice) apart.
+    { id: parent.id, who: `${HUMAN} asked`, said: clip(textOf(parent), 600) },
+    ...siblings.map((s) => said(editor, s, 600)),
   ];
 }
 
@@ -116,8 +163,12 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     ...(ask.error ? { error: ask.error } : {}),
     pageId: page?.id,
     pageName: page?.name,
-    targets: targets.map((t) => given(t)),
-    history: targets.flatMap((t) => thread(editor, t)),
+    targets: targets.map((t) => {
+      if (t.type !== "frame") return given(t);
+      const held = inside(editor, t, skip);
+      return { ...given(t), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
+    }),
+    history: mergeHistory(targets.flatMap((t) => thread(editor, t)), targets.map((t) => t.id)),
     ...(frame
       ? {
           frame: {
@@ -126,7 +177,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
             objects: editor
               .getSortedChildIdsForParent(frame.id)
               .flatMap((id) => editor.getShape(id) ?? [])
-              .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && textOf(s))
+              .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && textOf(s))
               .slice(0, 12)
               .map((s) => given(s, 400)),
           },

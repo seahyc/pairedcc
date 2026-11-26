@@ -21,6 +21,8 @@ All of these run the same importer. No dialog is shown. A short summary appears 
 | The verdict is yours, on the board | A column that is empty under its header (such as "Check") is not drawn. The import says so, and pick (P), cross out (X) and comment (C) are the verdict. A comment on a card inside a record sits beside the record. | 7 (the next actions are offered), 9 (the judging is the person's work) |
 | Not ten things at once | Records are laid out in one column with clear space between them, most severe first when a column says how severe each is (critical, high, medium, low and similar words; ties keep the source order). The view goes to the heading and the first one or two records. J / K (or ] / [, or the stepper at the bottom) select and zoom to the next and previous record, so a verdict key lands on the record being read. The stepper shows "3 of 10" and how many are judged. | 1, 4 |
 | Moving things is thinking | Everything imported is an ordinary object: it drags, edits, deletes, and can be picked, crossed out, commented on and asked about. A record's cards are grouped, so the cluster moves together; double-click to work on one card. The whole import is one undo step. | 2, 3 |
+| Compare two side by side | Select two records of one import (shift-click the second) and press **Side by side** on the selection bar, which offers it only for two records of one import. The lower record moves up to sit directly under the upper one, lined up, so each column's card sits over the same column's card. The records that were between them slide down, nothing else moves, and it is one undo step. The two stay selected, so an ask is about the pair. | 6 (comparing beats describing), 2 (moving things is thinking) |
+| The source beside the claim | A record's short columns can cite question codes ("Q56 vs Q16/Q49"). When a document whose sections are headed by those codes ("## Q56. Supplier quote") is imported on the same page, selecting the record offers **Show Q56, Q16, Q49** on the selection bar. It moves those sections into one column just right of the record, top-aligned, in the order cited, clear of anything already there, each linked from the record by a reference arrow. One undo step; pressing it again re-gathers them without new arrows. A cited code with no section is named in a notice. | 6 (the claim beside its source), 5 (the concrete text, not a reference to it), 2 |
 | Imported material has its own look | Plain print on off-white paper with a grey edge: not pink handwriting (you) and not lavender (an agent). Severity is the chip on the title line and the weight and colour of the cards' left edge, with a legend under the heading. | 4, 8 (print is finished material; yours stays rough) |
 | Where it came from is recorded | Every imported object carries `meta.source`: `from` (file name, or `pasted`), `at` (time), `kind`, and for records `row`, `column` and the row's `values`. The heading states the source and time. | 4 |
 | Ordinary paste is unchanged | One line or one paragraph of text pastes as it always did (one object). Pasting while typing in a card or a field goes into that text. | 2 |
@@ -35,17 +37,20 @@ Solveit's "the person sees exactly what the AI sees" holds: what the agent is gi
 | Clipboard: HTML table | Works for the shape Google Sheets puts on the clipboard (checked with a synthetic copy of it). Tables copied from Excel, Numbers or a web page go through the same reader but were not tried. |
 | Clipboard: tab-separated or strictly rectangular comma-separated text, markdown table | Works |
 | Clipboard: text of three or more paragraphs or two or more headings (400 characters or more) | Works, as section cards |
+| Clipboard: a stretch copied from a web page | Works, as section cards with the page's headings, when the copied HTML has two or more headings (400 characters or more); the plain text alone would lose them. One copied paragraph still pastes as one object. |
 | `.csv`, `.tsv` (quoted fields, doubled quotes, line breaks in cells; `;` is detected) | Works |
 | `.md`, `.txt` | Works: headings, paragraphs, lists and code blocks; a file that is mostly one pipe table is read as a table |
 | `.json` | Works for an array of objects, or an object holding exactly one such array |
-| `.html` | The first table in the file |
+| `.html` | The first table in the file, if it has one. Otherwise a web page: the content of its `<article>` or `<main>` (else its body) becomes section cards under its top heading or page title, with headings, paragraphs, lists and preformatted text kept, and navigation, scripts, styles, asides, figures, forms, adverts and the footer left out (`src/import-html.ts`). |
 | Images | Works by drop, the file chooser or the existing image paste |
-| `.xlsx`, `.xls`, `.numbers`, `.ods` | Not read. The canvas says so and suggests copying the cells or saving as CSV. No spreadsheet parser is a dependency. |
+| `.xlsx` | Works, by drop or the file chooser: the first sheet's cell values become the same records or table as pasting that range (`src/xlsx.ts`, no dependency: the zip is read with the browser's own decompression). Formulas give their last computed value; dates stay Excel's serial numbers; merged cells are read as their first cell. A workbook with more sheets says only the first was read. A damaged file says it cannot be read. |
+| `.xls`, `.numbers`, `.ods` | Not read. The canvas says only `.xlsx` is, and suggests saving as `.xlsx` or CSV or copying the cells. |
 | PDF, Word, slides | Not read |
 
 ## Not handled yet
 
-- Spreadsheet files (above). Only the first table of an HTML fragment is read; merged cells are read as their first cell.
+- A web page with a data table is read as that table, not as its prose. Pages that build their content with scripts, or mark it up without headings, come out as paragraphs or not at all.
+- Older spreadsheet files (above), and sheets after the first in an `.xlsx` workbook. Only the first table of an HTML fragment is read; merged cells are read as their first cell.
 - A table inside a longer markdown document is not drawn as a table; inline formatting (bold, links) is reduced to plain text.
 - The import is placed below everything already on the board, not at the drop point. Images are placed at the drop point.
 - Clusters are laid out from estimated card heights. Text never leaves its card, but spacing between clusters can be slightly uneven.
@@ -53,5 +58,7 @@ Solveit's "the person sees exactly what the AI sees" holds: what the agent is gi
 - "Show as table instead" replaces the import as a second undo step.
 - The table object is read-only: no sorting, no editing cells, at most 200 rows drawn (2,000 kept).
 - Detection is by column statistics and a fixed list of severity words. A table whose long text is under about 50 characters stays a table until "Show as cards instead" is used.
+- Side by side moves the second record for good (undo takes it back); there is no "put back" once other edits follow, and the stepper still walks the original order.
+- Citations are found only as letter-and-number codes (Q12, A3) in a record's short columns, matched to the code a section heading starts with. Page numbers, clause numbers such as 3.2 and citations inside the long text are not read. Sections move for good (undo takes them back), leaving a gap in the document's reading order.
 - Records cannot yet be regrouped or re-sorted by another column, and a verdict cannot be exported back to the spreadsheet (the feedback queue export lists picks, crosses and comments).
 - Pasted images are not marked with a source. Files over 2 MB are refused.
