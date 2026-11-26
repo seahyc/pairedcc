@@ -71,7 +71,8 @@ export function frameAround(boxes: { x: number; y: number; w: number; h: number 
 
 export const duplicateInput = z.object({
   objects: targets,
-  offsetX: z.number().finite().default(320),
+  /** Default: the width of the duplicated objects plus 40, so the copy sits just right of them. */
+  offsetX: z.number().finite().optional(),
   offsetY: z.number().finite().default(0),
 });
 
@@ -90,4 +91,11 @@ export function layoutPositions(
     x: input.x + widths.slice(0, i % columns).reduce((sum, w) => sum + w + input.gap, 0),
     y: input.y + heights.slice(0, Math.floor(i / columns)).reduce((sum, h) => sum + h + input.gap, 0),
   }));
+}
+
+/** Where a copy goes by default: just right of the originals' combined bounds, with a 40 px gap. */
+export function defaultDuplicateOffset(boxes: readonly { x: number; w: number }[], gap = 40) {
+  if (!boxes.length) return 320;
+  const left = Math.min(...boxes.map((b) => b.x)), right = Math.max(...boxes.map((b) => b.x + b.w));
+  return Math.round(right - left + gap);
 }

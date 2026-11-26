@@ -9,7 +9,7 @@ import {
   type TLShape,
   type TLShapeId,
 } from "tldraw";
-import { sceneInput, orderedScene, arrangeInput, duplicateInput, layoutPositions, groupInput, frameAround } from "./composition";
+import { sceneInput, orderedScene, arrangeInput, duplicateInput, layoutPositions, groupInput, frameAround, defaultDuplicateOffset } from "./composition";
 import { z } from "zod";
 import {
   annotationInput,
@@ -581,7 +581,8 @@ export async function executeCommand(
       const shapes = checkedObjects(editor, input.objects);
       return atomic(editor, "duplicate exploration", () => {
         const before = new Set(editor.getCurrentPageShapeIds());
-        editor.duplicateShapes(shapes, { x: input.offsetX, y: input.offsetY });
+        const offsetX = input.offsetX ?? defaultDuplicateOffset(shapes.flatMap((shape) => editor.getShapePageBounds(shape) ?? []));
+        editor.duplicateShapes(shapes, { x: offsetX, y: input.offsetY });
         const created = editor.getCurrentPageShapes().filter(shape => !before.has(shape.id));
         if (!created.length) throw new Error("Canvas could not create the duplicate objects");
         const feedbackTargets = new Map<string, string>();

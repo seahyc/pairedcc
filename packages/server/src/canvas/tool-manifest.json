@@ -406,7 +406,6 @@
             }
           },
           "offsetX": {
-            "default": 320,
             "type": "number"
           },
           "offsetY": {
