@@ -121,7 +121,7 @@ task by which measure is furthest from target, not by backlog order.
 5. (#27 merged; stacked on #20.) **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
    what it came from.
 6. (Merged, see Done.) **Learning mode prototypes** from the spec: predict-then-check and generate-first.
-7. **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
+7. (Keyboard loop: PR #105 open, awaiting review. Import fuzzing, 1k/10k performance and 390 px were done by the import PRs, the eval and #80/#87/#88.) **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
    (1k and 10k objects), keyboard accessibility, 390px layout.
 8. (Merged, see Done.) **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
    AGENT_API.md does not yet describe `canvas_dataset`, `canvas_chart`, `canvas_chart_state`,
@@ -493,13 +493,38 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 79. (PR #103 open, awaiting review.) **`read`'s text filter: the two findings left open on #78.** (Decisions needed, build-B item 58.) (a) `ß` does not fold to `ss`, so `STRASSE` misses `Straße`; (b) a match may end inside a grapheme, so `कल` matches `कला` and `かく` matches `かぐ` once normalised. Done when each has a failing-first unit test and is fixed, with Latin, Greek and accented matching unchanged.
 
-80. **An ask about something in a frame is hidden by the frame.** "The agent must visibly respond" and "Text never leaves its container". Selecting a card inside a frame and asking places the ask just right of the card; the canvas parents it into the frame under that spot, and the frame clips it, so the person sees an empty pink strip instead of their question (seen at 1440 px while checking item 67). Comments, replies and answers placed near objects in a frame can be clipped the same way. Done when asks, comments, replies and answers are never clipped by a frame (they sit on the page above it and still follow what they are about when it or its frame moves), checked in a real page that fails before and passes after, with before/after screenshots.
+80. (PR #104 open, awaiting review.) **An ask about something in a frame is hidden by the frame.** "The agent must visibly respond" and "Text never leaves its container". Selecting a card inside a frame and asking places the ask just right of the card; the canvas parents it into the frame under that spot, and the frame clips it, so the person sees an empty pink strip instead of their question (seen at 1440 px while checking item 67). Comments, replies and answers placed near objects in a frame can be clipped the same way. Done when asks, comments, replies and answers are never clipped by a frame (they sit on the page above it and still follow what they are about when it or its frame moves), checked in a real page that fails before and passes after, with before/after screenshots.
+
+81. (PR #106 open, awaiting review; stacked on #104.) **An agent's note never lands on top of something.** `canvas_annotate` places its note under the target without looking for free space, so it can cover an ask or another note (seen in PR #104's screenshot; also point 10 of the fresh agent in PR #97). Done when an annotation without `x`/`y` is placed clear of other objects (as answers and comments already are, via `freeSpot`), with a test and a before/after screenshot.
+
+82. (PR #108 open, awaiting review; stacked on #105.) **A Tab stop is heard: whose it is, what it says, and its mark.** (Found while building item 7's
+    keyboard loop, #105.) The canvas runs with tldraw's UI hidden, which also removes its screen
+    reader announcer, so when Tab or a click selects a card nothing is said: a screen-reader user
+    cannot tell their own thought from an agent's answer, hear an option's text, or know it was
+    picked or crossed out (finding 4, "whose is what, and what state it is in"). Done when one polite
+    live region says, for each single selection, who made it, its text (clipped), its kind (thought,
+    ask with its state, comment, answer), its mark and its place in the Tab order, from a tested pure
+    function, checked in a real page (failing before, passing after); nothing new is visible.
+
+83. **One command runs every browser check.** About twenty `tools/verify-*` checks exist but each
+    is run by hand, so regressions slip through merges: on 26 Nov `verify-runs.ts` and
+    `verify-calm.mjs` were both failing on this branch (#95, #91). Done when one command starts a
+    dev server with a throwaway board store, runs every check that needs no model, paid API or
+    external service (opening a tab or a stand-in agent where a check needs one), prints a
+    pass/fail table, writes it as JSON, exits non-zero on any failure, and is documented for the
+    review lane.
+
+84. (PR #109 open, awaiting review.) **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
 
 ## Claims
-80. Ask about something in a frame is hidden by the frame | claude/sprint-ask-unclipped | 2026-11-26T13:23Z
-7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
+83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
 
 ## Done
+- 84. Ask about an image says what it is (build-B): PR #109 (real tab 2/5 → 5/5 with the tightened frame check).
+- 82. A Tab stop is heard (build-A): PR #108, stacked on #105 (polite unseen live region says who made the selection, its text, kind, mark and order; verify-heard 2/13 → 13/13).
+- 81. Agent note never lands on top of something (build-B): PR #106, stacked on #104 (verify-annotate-clear 3/4 → 4/4).
+- 7. Robustness, keyboard-only loop (build-A): PR #105 (N then Enter writes a card in view; Tab/Shift+Tab move through the board, skipping connectors and hidden objects; verify-keyboard 6/14 → 14/14).
+- 80. Asks and notes never clipped by a frame (build-B): PR #104 (verify-ask-unclipped 6/16 → 16/16).
 - 79. Read filter folds ß and matches whole characters (build-B): PR #103 (2 failing-first tests).
 - 77. Friction from the second agent attempt (build-B): PR #102 (asks page filter, schema descriptions for duplicate offsets and connect relations, overview and reply documented, `list --brief`; (a) not reproduced).
 - 78. Ask progress announced (build-A): PR #101 (one polite live region says each change of an ask's state once; verify-ask-live 3/8 → 8/8).
@@ -676,6 +701,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 - (build-B, item 79) `read`'s text filter folds case through upper case, so Turkish dotless ı also matches i (looser, never stricter). Matches must start and end on grapheme boundaries (`Intl.Segmenter`, default locale).
 
+- (build-B, item 80) Asks, comments about objects, replies, answers and agent notes are created on the page (above any frame), not inside the frame under them, so a frame never clips them; they follow their target through the follow rule. Alternative: grow the frame to fit them, which changes the person's frame.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -792,3 +819,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:20Z | build-A | #93 review follow-up | #93 | Bounded byline search (3 s → 65 ms), region outside comments/head and whole tag names, ASCII-only lowercase for offsets, one-pass comment strip; 4 new tests; verify-webpage 9/9 |
 | 2026-11-26T13:21Z | build-B | 79 Read filter ß and grapheme boundaries | #103 | ß/ẞ fold to ss; matches start and end on whole characters; 2 failing-first tests; canvas suite green |
 | 2026-11-26T13:22Z | build-A | #100 review follow-up; run end | #100 | Non-numeric EVAL_PAN_* settings are an error row, not null figures (live check). build-A holds no claims; open: #85 #89 #93 #100 |
+| 2026-11-26T13:28Z | build-B | 80 Ask in a frame hidden by the frame | #104 | New item found in item 67 screenshots; asks, comments, replies, answers, agent notes on the page; real page 6/16 → 16/16; scorecard rows unchanged; filed 81 |
+| 2026-11-26T13:31Z | build-A | 7 Keyboard-only loop | #105 | N then Enter was a dead end and Tab never reached the board or moved on from a selection; verify-keyboard 6/14 → 14/14; 10 unit tests; regression sweep green (calm 32/33 = known #91 case); first screen unchanged; scorecard unchanged |
+| 2026-11-26T13:31Z | build-B | 81 Agent note never lands on top of something | #106 | annotate without x/y uses freeSpot down the target column; real page 3/4 → 4/4; annotate tasks self-test 4/4 |
+| 2026-11-26T13:36Z | build-B | 67 follow-up: merged the integration branch into #90 | #90 | Conflicts with #64/#67/#69/#86/#88 resolved; selected frame contents and history honour left-out marks; Leave out key cap hidden on touch; verify-leave-out 19/19 incl. frame ask and 390 px phone |
+| 2026-11-26T13:37Z | build-A | 82 A Tab stop is heard | #108 | hideUi had dropped tldraw's announcer, so nothing was said on select; verify-heard 2/13 → 13/13; 8 unit tests (one failing-first for answers said as notes); first screen unchanged; scorecard unchanged |
+| 2026-11-26T13:41Z | build-B | 84 Ask about an image says what it is | #109 | File name, size, caption and alt text for image targets, frame contents and history; describeImage unit-tested; real tab 5/5 |

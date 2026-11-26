@@ -69,6 +69,7 @@ import {
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { convergeForPerson, createComment } from "./agent-operations";
 import { prototypeEnabled, canvasReturnTo } from "./prototype-flags";
+import { toggleLeftOut } from "./leave-out";
 import { followConnectors } from "./connector-follow";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
@@ -80,6 +81,7 @@ import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
 import { elsewhereNotice } from "./ask-rules";
 import { askOf } from "./asks";
+import { landedAnswers } from "./ask-rules";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
 import { DataTableShapeUtil } from "./table-shape";
 import { ImportLayer, chooseImportFile } from "./import-ui";
@@ -275,6 +277,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
+      ...(prototypeEnabled("context") ? [["Leave the selection out of asks (again to bring it back)", "L"] as [string, string]] : []),
       ["Open or close the feedback queue", "Shift C"],
       ["Bring in a table or document as cards", keys("⌘ V, or drop a file")],
       ["Next / previous imported record", "J / K"],
@@ -485,6 +488,15 @@ function Shell() {
         return;
       }
       if (event.shiftKey) return;
+      // L leaves the selection out of asks (the context prototype). Capture first so tldraw's own L (line) doesn't fire.
+      if (key === "l" && prototypeEnabled("context")) {
+        const chosen = editor.getSelectedShapes();
+        if (!chosen.length) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) toggleLeftOut(editor, chosen);
+        return;
+      }
       if (key !== "p" && key !== "x") return;
       const picked = editor.getSelectedShapes();
       if (!picked.length) return;
@@ -725,6 +737,32 @@ function Shell() {
     if (box && editor.pageToScreen({ x: box.x, y: box.maxY }).y > window.innerHeight - 60) keepInView(box);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingBottom]);
+  // An answer that lands while the person is looking at its ask is brought wholly into view:
+  // four options in a row are wider than the room made when the ask was sent. Never while they
+  // are typing, dragging or asking about something else, and never if they have looked away.
+  const answeredAsks = useValue("answered asks", () => editor.getCurrentPageShapes().flatMap((s) => {
+    const ask = askOf(s);
+    return ask?.state === "answered" && ask.answeredAt ? [`${s.id}@${ask.answeredAt}`] : [];
+  }).join(","), [editor]);
+  const seenAnswers = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const asks = answeredAsks ? answeredAsks.split(",").map((key) => { const at = key.lastIndexOf("@"); return { id: key.slice(0, at), answeredAt: Number(key.slice(at + 1)) }; }) : [];
+    if (!seenAnswers.current) {
+      // Answers already on the board when this tab opened are not landing now.
+      seenAnswers.current = new Set(asks.map((a) => `${a.id}@${a.answeredAt}`));
+      return;
+    }
+    const landed = landedAnswers(asks, seenAnswers.current, Date.now());
+    if (!landed.length || asking || editor.getEditingShapeId() || !editor.isIn("select.idle")) return;
+    const view = editor.getViewportPageBounds();
+    for (const id of landed) {
+      const ask = editor.getShapePageBounds(id as TLShape["id"]);
+      if (!ask || !view.collides(ask)) continue;
+      const boxes = [ask, ...editor.getCurrentPageShapes().filter((s) => s.meta.replyTo === id).flatMap((s) => editor.getShapePageBounds(s) ?? [])];
+      keepInView({ x: Math.min(...boxes.map((b) => b.x)), y: Math.min(...boxes.map((b) => b.y)), maxX: Math.max(...boxes.map((b) => b.maxX)), maxY: Math.max(...boxes.map((b) => b.maxY)) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answeredAsks]);
   // A result hidden behind a learning prompt must not leak through its layer name.
   function layerName(s: TLShape) {
     return editor.isShapeHidden(s) ? "Hidden until you answer" : shapeName(s);
