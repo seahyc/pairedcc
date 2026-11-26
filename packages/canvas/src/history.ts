@@ -32,3 +32,14 @@ export function historyRows(revisions: RevisionSummary[], now: Date, locale?: st
     current: i === 0,
   }));
 }
+
+/** A person-readable name for a saved board ID: "main" and browser copies get plain names. */
+export function boardLabel(id: string, locale?: string) {
+  if (id === "main") return "Your board";
+  const copy = /^(.+)-browser-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(id);
+  if (!copy) return id;
+  const [, from, y, mo, d, h, mi] = copy;
+  const at = new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi));
+  const when = `${at.toLocaleDateString(locale, { day: "numeric", month: "short" })} ${at.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}`;
+  return `${from === "main" ? "Kept from a browser" : `Kept from a browser (${from})`} · ${when}`;
+}

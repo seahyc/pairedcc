@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "section": "Q12",
+    "topic": "Passenger forecast basis",
+    "objection": "“You forecast 410,000 passengers in year two, yet the only evidence is one summer survey of 300 people at a single pier. Why should anyone believe the winter numbers?”",
+    "severity": "High",
+    "checked": null
+  },
+  {
+    "id": 2,
+    "section": "Q56 vs Q16/Q49",
+    "topic": "Fleet cost inconsistency",
+    "objection": "“Q56 says two vessels cost 9.2m in total, Q16 budgets 8.1m and Q49 mentions a third hull. Which is it, and does the board know the figures disagree?”",
+    "severity": "Critical",
+    "checked": null
+  },
+  {
+    "id": 3,
+    "section": "Q7",
+    "topic": "Safety certification",
+    "objection": "“You say certification is in hand, but name no certifying body, no date and no fallback if the inspection fails. In hand could mean anything.”",
+    "severity": "Critical",
+    "checked": null
+  },
+  {
+    "id": 4,
+    "section": "Q23",
+    "topic": "Fare affordability claim",
+    "objection": "“A 6.50 single fare is called affordable for commuters, with no reference to local wages or to what the bus costs for the same journey.”",
+    "severity": "Medium",
+    "checked": null
+  }
+]
