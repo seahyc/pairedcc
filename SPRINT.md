@@ -263,7 +263,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 37. **`read` reports a card's style.** Agents create notes with `style` (note, heading, quote,
     code) but `read` shows it only as `props.tone`, so checking it took a `canvas_get` (PR #24
     attempt). Done when `read` and `get` report `style` on cards, documented and tested.
-39. **Agent-usability tasks for features merged after #24.** The 21 tasks predate the Ask loop
+39. (PR #57 open, awaiting review.) **Agent-usability tasks for features merged after #24.** The 21 tasks predate the Ask loop
     (#21), comment replies in the queue, and converge (#27). Done when tasks for those exist with
     a passing self-test (check fails on setup, passes after the reference solution), written by a
     lane that did not build them, and the scorecard's task count reflects them.
@@ -285,9 +285,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     0 and 300 ms, kept at 1,000 ms) shows the old board, and the next edit saves it on top. Done
     when a scripted check restores, reloads at once and still sees the restored board, for example
     by recording in the memo what content was synced and re-reading the account when it differs.
+43. **Agent friction found in the 24-task attempt (#57).** A fresh agent reported: feedback items
+    say `kind: "comment"` where read `marks` say `"note"`; `locked` is missing from
+    `canvas_overview`; `canvas_duplicate`'s default offset (320) ignores the object's width, so a
+    600-wide frame's copy overlaps it; `canvas_runs` names the op but not the fields a run changed.
+    Done when each is fixed or documented in AGENT_API.md, with a test for each fix.
 
 ## Claims
-39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
@@ -389,6 +393,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (review, #31) With `?prototype=converge` the person's "Pull into a synthesis" is in Properties, which the calm layout keeps behind the menu (three clicks). Alternative: a flagged entry on the selection bar, next to Ask. The letters on the arrows are small and partly covered by the arrow line.
 
 - (build-B, item 41) The scorecard gains an "Ask loop" row next to the maintainer's measures (target: every step passes). It runs with no resident agent, so step 1 accepts any line that gives a way to an answer ("pnpm …", "chat", "Connect an agent" or "Waiting for …"). Answer cards may sit up to 400 px from their ask.
+- (build-A, item 39) Agent-usability tasks missing from the recorded attempt now count as not completed. Task 14's check (from #24) fails an agent note that names East as highest but also lists the other regions; left unchanged, since loosening another lane's check would weaken the measure.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -447,3 +452,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:35Z | review | Review #29 to #32 | #29 #30 #31 #32 | All four merged (squash) after merging in the integration branch; #29 gained the 403 board-limit case; #30 reproduced against Postgres 16 and Redis; #31 refitted to #27 as merged and the calm layout; #32 driven in a real tab, reload-after-restore gap filed as 42; build and all package tests green after each |
 | 2026-11-26T11:34Z | build-A | 21 follow-up; 28 review fixes | #54 #36 | Sign-in keeps the tab's prototype flags (regression from #20 found in review); #36 services hardened: passwords, loopback, trusted pid file, cleanup on Ctrl+C, real headless-launch probe |
 | 2026-11-26T11:41Z | build-B | 41 Scorecard measures the Ask loop | #56 | New eval row, 5/5 steps in a real page and stdio MCP client; four UI mutations each fail a step; other measures unchanged |
+| 2026-11-26T11:40Z | build-A | 39 Agent-usability tasks for newer features | #57 | Tasks for the Ask loop, threaded replies and converge; self-test 24/24; fresh-agent attempt 23/24, median 3 calls; row counts missing tasks |
