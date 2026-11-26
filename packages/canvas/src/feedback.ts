@@ -62,6 +62,13 @@ function commentTargets(meta: Record<string, unknown>) {
 }
 
 /** Build the queue from board objects. Open items first, then oldest first. */
+/**
+ * Only these objects can be feedback items: a pick or cross-out, a comment, or ink (see
+ * `buildFeedback`). Others only name the items' targets, which a count does not need.
+ */
+export const mayBeFeedback = (s: { type: string; meta: Record<string, unknown> }) =>
+  s.meta.mark === "picked" || s.meta.mark === "rejected" || s.meta.role === "annotation" || s.type === "draw";
+
 export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
   const byId = new Map(sources.map((s) => [s.id, s]));
   const items: FeedbackItem[] = [];

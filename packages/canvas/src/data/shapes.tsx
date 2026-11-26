@@ -295,8 +295,9 @@ export function DataLayer() {
       const selected = new Set<string>(editor.getSelectedShapeIds());
       const viewport = editor.getViewportPageBounds(), zoom = editor.getZoomLevel();
       return editor.getCurrentPageShapes().flatMap((s) => {
-        if (s.type === "chart" || editor.isShapeHidden(s)) return [];
+        if (s.type === "chart") return [];
         const stale = staleness(editor, s);
+        if (!stale.length || editor.isShapeHidden(s)) return [];
         const b = stale.length ? editor.getShapePageBounds(s) : undefined;
         if (!b) return [];
         const nameOf = (id: string) => {

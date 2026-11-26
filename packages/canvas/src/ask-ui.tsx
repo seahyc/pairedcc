@@ -63,6 +63,8 @@ export function AskLayer() {
       // Counting what was kept back reads each ask's whole context, so only on a page that has a left-out object.
       const anyLeftOut = editor.getCurrentPageShapes().some((s) => isLeftOut(s.meta));
       return editor.getCurrentPageShapes().flatMap((s) => {
+        // Most objects are not asks: skip them before parsing or measuring.
+        if (!s.meta.ask) return [];
         const ask = askOf(s), b = editor.getShapePageBounds(s);
         if (!ask || !b) return [];
         const answers = editor.getCurrentPageShapes().filter((r) => r.meta.replyTo === s.id);
