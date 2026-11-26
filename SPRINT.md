@@ -354,7 +354,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     minutes (still at most 50 per board), by one tested pure rule used by both stores, checked
     against real Postgres, with the choice recorded.
 
+56. **A dropped or pasted image arrives at a size that fits beside your thoughts.** Feedback 8
+    ("it should render in a way that's super intuitive") and the calm brief (one obvious thing on
+    screen). An image is placed at its pixel size, so a 3000 px photo covers the whole board and
+    every card on it (seen while checking item 45 (d)). Done when an image the person adds is
+    placed no larger than a set size on its longest side (keeping its shape and its full-resolution
+    asset, and leaving small images alone), agent `canvas_image` sizes are untouched, unit-tested,
+    with before and after screenshots of a dropped photo.
+
 ## Claims
+56. Dropped images fit beside your thoughts | claude/sprint-image-size | 2026-11-26T12:16Z
 55. Board history thinning | claude/sprint-history-thin | 2026-11-26T12:16Z
 54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
 45d. Board sync gap (d): images survive a clean profile | claude/sprint-board-images | 2026-11-26T12:08Z
