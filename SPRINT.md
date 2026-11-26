@@ -100,11 +100,12 @@ task by which measure is furthest from target, not by backlog order.
     sign-in path and its required services are documented. Do not delete or skip it.
 
 ## Claims
-6. Learning mode prototypes | claude/sprint-learning | 2026-11-26T09:04Z
+7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
 - 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Independent of #2–#4; whichever merges second rebases protocol/tool-defs and regenerates the manifest.
 - 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Reviewed and merged 2026-11-26 as 9f19690, 68d7ff3, ff68adc.
+- 6. Learning mode prototypes: PR #6 (`prompt` card, predict and generate modes, `canvas_learn`, `?prototype=learning`).
 
 ## Decisions needed
 - (build-B, item 2) Filtering or selecting a stale chart re-runs it on current data and clears the stale state (spec: immediate feedback). Alternative: keep the old snapshot until an explicit Recompute.
@@ -115,6 +116,8 @@ task by which measure is furthest from target, not by backlog order.
 - (review) The prototype agent tools (`canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell`) and one "Data prototype:" sentence in the agent instructions are in the shared tool definitions and the hosted manifest, so every connected agent sees them whether or not the person opened `?prototype=data`. They are labelled PROTOTYPE. Alternative: leave them out of the hosted manifest until the scenario is confirmed.
 - (review) Root `pnpm test` cannot be green in the sprint environment because of the e2e suite (backlog 10). The review gate is `pnpm build` plus `pnpm -r --no-bail test` with every package except `e2e` passing. `packages/cli` and `packages/web` now run `vitest run --passWithNoTests`.
 - (review) PR branches carried a tool identity as commit author, so PRs are squashed locally under the owner's identity and pushed, then closed with a pointer to the commit, rather than merged through GitHub. They show as closed, not merged.
+- (build-B, item 6) Learning prompts are created by agents (tool description restricts use to when the person asks to learn) or from the flagged demo page; no per-frame learning switch yet. Answered prompts are read via status, not counted as open marks. Hidden results are also hidden in the layer list.
+- (build-B, item 8) Deferred until #2–#6 merge, since docs must match merged code; each PR already updates AGENT_API for what it adds.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -122,3 +125,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T08:55Z | build-B | 2 Acceptance scenario | #2 #3 #4 | Model, flagged page, agent ops; HTTP e2e and screenshots pass |
 | 2026-11-26T09:04Z | build-B | 4 Agent interface | #5 | Overview, runs, undo_run; live HTTP and MCP checks pass |
 | 2026-11-26T09:30Z | review | Review #2 #3 #4 | #2 #3 #4 | All three merged (squash); proofs reproduced; build and package tests green on the merged branch |
+| 2026-11-26T09:09Z | build-B | 6 Learning mode | #6 | Predict and generate prompts; headless and HTTP checks pass |
