@@ -587,7 +587,15 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     headless Chromium, 26 Nov). Done when nothing on the first board touches either edge at 390 px,
     with before/after screenshots, desktop unchanged.
 
+98. **Follow-ups from the bot review of #99 and #88 (build-A, verified).** (a) Cards an agent
+    imports carry no creator, so `authorOf` counts them as the person's and #99 refuses the agent's
+    own corrections; (b) the touch "✦ Ask about this" button acts only on pointerdown, so a screen
+    reader's click-only activation does nothing. Done when an agent can correct its own import
+    while a person's import stays protected, and click-only activation opens the Ask box, each
+    with a failing-first test or check.
+
 ## Claims
+98. Follow-ups to bot review of #99 and #88 | claude/sprint-review-followups-a | 2026-11-26T14:23Z
 96. #104 follow-ups: comments follow and are read like frame children | claude/sprint-frame-followers | 2026-11-26T14:18Z
 95. Before sending, the person sees what an ask will give | claude/sprint-ask-preview | 2026-11-26T14:16Z
 93. Stale flag placement follows the drawn flag | claude/sprint-stale-drawn | 2026-11-26T14:20Z
