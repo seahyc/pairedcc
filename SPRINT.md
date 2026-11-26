@@ -139,6 +139,7 @@ task by which measure is furthest from target, not by backlog order.
 - 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Reviewed and merged 2026-11-26 as f47a23f, with a fix so undo never writes to an object locked since the run.
 - 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Reviewed and merged 2026-11-26 as 9f19690, 68d7ff3, ff68adc.
 - 6. Learning mode prototypes: PR #6 (`prompt` card, predict and generate modes, `canvas_learn`, `?prototype=learning`). Reviewed and merged 2026-11-26 as e83c517.
+- Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
 - (build-B, item 2) Filtering or selecting a stale chart re-runs it on current data and clears the stale state (spec: immediate feedback). Alternative: keep the old snapshot until an explicit Recompute.
@@ -153,6 +154,7 @@ task by which measure is furthest from target, not by backlog order.
 - (build-B, item 8) Deferred until #2–#6 merge, since docs must match merged code; each PR already updates AGENT_API for what it adds.
 - (review, item 6) `canvas_learn` can hide any unlocked object, including one the person made, until they answer, skip or delete the prompt. Alternative: only let an agent hide objects it created.
 - (review) Branches opened before another PR merges conflict in `protocol.ts`, `tool-defs.ts`, `App.tsx`, `style.css` and the manifest. The review lane merges `claude/sprint-int` into the PR branch, regenerates the manifest and re-runs every live check before squashing.
+- (review) PR #7 came from `yc/heuristics-pass`, not a sprint lane. It was merged because it targets `claude/sprint-int` and is sound; its branch was left untouched and conflicts were resolved on a local copy. It adds non-prototype behaviour for every board (C to comment, Feedback tab, a note starts in typing mode, save and agent status chips) and edits `docs/canvas/working-spec.md`.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -162,3 +164,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T09:07Z | review | Review #2 #3 #4 | #2 #3 #4 | All three merged (squash); proofs reproduced; build and package tests green on the merged branch |
 | 2026-11-26T09:09Z | build-B | 6 Learning mode | #6 | Predict and generate prompts; headless and HTTP checks pass |
 | 2026-11-26T09:18Z | review | Review #5 #6 | #5 #6 | Both merged (squash) after merging in the integration branch; one locked-object defect fixed in #5; all live checks re-run on the combined code |
+| 2026-11-26T09:25Z | review | Review #7 | #7 | Merged (squash) from a local merge with the integration branch; run undo now ignores the text-edit timestamp; all live checks re-run |

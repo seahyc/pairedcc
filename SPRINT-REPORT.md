@@ -1,6 +1,6 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-26T09:18Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-26T09:25Z by the review lane. Branch: `claude/sprint-int`.
 
 ## Read first
 - **Root `pnpm test` is not green, and was not before the sprint.** `e2e/tests/editor-collab.spec.ts`
@@ -11,6 +11,10 @@ Last updated 2026-11-26T09:18Z by the review lane. Branch: `claude/sprint-int`.
   agent instructions are in the shared tool definitions and the regenerated hosted manifest
   (`packages/server/src/canvas/tool-manifest.json`). Only the page button is behind
   `?prototype=data` / `?prototype=learning`. Nothing is deployed from this branch.
+- **#7 is the one merge that changes every board, not a flagged prototype.** It came from
+  `yc/heuristics-pass` rather than a sprint lane and was integrated against four other merges;
+  `App.tsx` merged without conflicts but is the file most worth a look. The hosted relay was not
+  exercised for the feedback tools, only the local dev relay.
 - **The scorecard does not exist yet.** `pnpm eval:canvas` (backlog item 0) is claimed but has no
   PR, so no measure in the sprint's scorecard has been produced.
 - Agent-operation behaviour in #4, and the hiding behaviour in #6, are proven by headless scripts,
@@ -24,7 +28,7 @@ Last updated 2026-11-26T09:18Z by the review lane. Branch: `claude/sprint-int`.
 
 | Package | Result |
 |---|---|
-| canvas | 47 passed |
+| canvas | 59 passed |
 | server | 117 passed |
 | sdk | 12 passed |
 | mcp-server | 4 passed |
@@ -39,13 +43,14 @@ Scorecard (`pnpm eval:canvas`): not available yet.
 - [#4](https://github.com/seahyc/pairedcc/pull/4) Prototype agent tools for datasets and charts; `read` reports exact chart state and staleness (ff68adc).
 - [#5](https://github.com/seahyc/pairedcc/pull/5) `canvas_overview` (compact, paginated one-level listing) and per-run undo for agents, `canvas_runs` / `canvas_undo_run` (f47a23f). Review fixed undo writing to an object locked after the run.
 - [#6](https://github.com/seahyc/pairedcc/pull/6) Learning prompts prototype behind `?prototype=learning`: predict-then-check and generate-first, results hidden until commit or skip, `canvas_learn` (e83c517).
+- [#7](https://github.com/seahyc/pairedcc/pull/7) Feedback queue (C to comment, Feedback tab, `canvas_feedback` / `canvas_reply`), save and agent status chips, shortcut sheet, usability audit, from `yc/heuristics-pass` (6c68d68). Review made run undo ignore the new text-edit timestamp.
 - Review lane: `packages/cli` and `packages/web` test scripts pass when there are no test files (a712b50).
 
-For #3 to #6 the review re-ran each PR's committed live check (`tools/verify-data-prototype.cjs`,
-`verify-data-agent.cjs`, `verify-runs.ts`, `verify-learning.cjs`) in headless Chromium against the
-dev server. Output matched the PRs' Proof sections with no page errors, and all four still pass on
+For #3 to #7 the review re-ran each PR's committed live check (`tools/verify-data-prototype.cjs`,
+`verify-data-agent.cjs`, `verify-runs.ts`, `verify-learning.cjs`, `verify-feedback-mcp.ts`) in headless Chromium against the
+dev server. Output matched the PRs' Proof sections with no page errors, and all five still pass on
 the final combined branch. The PRs show as closed rather than merged because they were squashed
-locally to keep the owner's identity on the commits.
+locally to keep the owner's identity on the commits. The agent tool count is now 26.
 
 ## Rejected
 None.
