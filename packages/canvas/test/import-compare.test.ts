@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planSideBySide, type RecordBox } from "../src/import-compare";
+import { fieldSlots, planSideBySide, type RecordBox } from "../src/import-compare";
 
 // Five records of one import, stacked as the importer lays them out: same x, 40 px apart.
 const stack = (heights: number[], importId = "import:a", x = 100): RecordBox[] => {
@@ -63,5 +63,51 @@ describe("planSideBySide", () => {
     const records = [...stack([200, 150, 260]), { id: "elsewhere", importId: "import:a", x: 3000, y: 450, w: 400, h: 100 }];
     const plan = planSideBySide(records, "r0", "r2");
     expect(plan.ok && plan.moves.map((m) => m.id).sort()).toEqual(["r1", "r2"]);
+  });
+});
+
+describe("fieldSlots (review of #55: blank cells must not shift columns)", () => {
+  const records = [
+    { fields: [{ column: "Objection" }, { column: "Fix" }] }, // no Defence
+    { fields: [{ column: "Objection" }, { column: "Defence" }, { column: "Fix" }] },
+  ];
+  it("gives each column one slot for the whole import, in column order", () => {
+    const slots = fieldSlots(records, ["No.", "Objection", "Defence", "Fix", "Severity"]);
+    expect(slots.columns).toEqual(["Objection", "Defence", "Fix"]);
+    expect(slots.place("Fix")).toEqual({ col: 2, row: 0 });
+    expect(slots.place("Defence")).toEqual({ col: 1, row: 0 });
+  });
+  it("wraps every fifth column onto the next row, the same for every record", () => {
+    const wide = [{ fields: ["a", "b", "c", "d", "e"].map((column) => ({ column })) }];
+    const slots = fieldSlots(wide, ["a", "b", "c", "d", "e"]);
+    expect(slots.place("e")).toEqual({ col: 0, row: 1 });
+    expect(slots.perRow).toBe(4);
+  });
+});
+
+describe("planSideBySide never overlaps (review of #55)", () => {
+  it("puts a record dragged beside the other at the same height below it instead of on top", () => {
+    const records: RecordBox[] = [
+      { id: "a", importId: "i", x: 100, y: 200, w: 1200, h: 200 },
+      { id: "b", importId: "i", x: 1400, y: 200, w: 1200, h: 150 },
+      { id: "c", importId: "i", x: 100, y: 440, w: 1200, h: 100 },
+    ];
+    const after = apply(records, planSideBySide(records, "a", "b"));
+    const byId = Object.fromEntries(after.map((r) => [r.id, r]));
+    expect(byId.b.x).toBe(100);
+    expect(byId.b.y).toBeGreaterThanOrEqual(400);
+    for (const p of after) for (const q of after) if (p !== q) expect(overlaps(p, q)).toBe(false);
+  });
+
+  it("with uneven gaps, the records that slide down never land on the next one", () => {
+    const records: RecordBox[] = [
+      { id: "r0", importId: "i", x: 0, y: 0, w: 1000, h: 100 },
+      { id: "r1", importId: "i", x: 0, y: 400, w: 1000, h: 100 },
+      { id: "r2", importId: "i", x: 0, y: 520, w: 1000, h: 100 },
+      { id: "r3", importId: "i", x: 0, y: 850, w: 1000, h: 300 },
+    ];
+    const after = apply(records, planSideBySide(records, "r0", "r2"));
+    expect([...after].sort((p, q) => p.y - q.y).map((r) => r.id)).toEqual(["r0", "r2", "r1", "r3"]);
+    for (const p of after) for (const q of after) if (p !== q) expect(overlaps(p, q)).toBe(false);
   });
 });

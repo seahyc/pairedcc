@@ -91,6 +91,21 @@ await p.waitForTimeout(600);
 objs = await objects();
 const undone = records(objs);
 check('one undo puts every record back', before.every(b => { const r = undone.find(u => u.id === b.id); return r && Math.abs(r.y - b.y) < 1 && Math.abs(r.x - b.x) < 1; }), before.map(b => { const r = undone.find(u => u.id === b.id); return r ? `${Math.round(b.y)}→${Math.round(r.y)}` : 'gone'; }).join(' '));
+// A record with a blank cell keeps every other card in its column's place.
+const long = (s) => `${s} ${'with enough words to read as a sentence of prose rather than a label. '.repeat(2)}`;
+const tsv = ['ID\tObjection\tDefence\tFix', `A1\t${long('First objection')}\t\t${long('First fix')}`, `A2\t${long('Second objection')}\t${long('Second defence')}\t${long('Second fix')}`].join('\n');
+await p.keyboard.press('Escape');
+await p.mouse.click(1000, 620);
+await p.evaluate(async (t) => { await navigator.clipboard.write([new ClipboardItem({ 'text/plain': new Blob([t], { type: 'text/plain' }) })]); }, tsv);
+await p.keyboard.press('ControlOrMeta+v'); await p.waitForTimeout(1500);
+objs = await objects();
+const blanks = records(objs.filter(o => o.meta.source?.kind === 'record' && o.meta.source.values?.ID?.startsWith('A')));
+await p.evaluate((ids) => window.paired.select(ids), blanks.map(r => r.id)); await p.waitForTimeout(300);
+if (await button().count()) { await button().click(); await p.waitForTimeout(600); }
+objs = await objects();
+const fixOf = (id) => objs.find(o => o.parentId === id && o.meta.source?.column === 'Fix');
+check('a blank cell does not shift the next card into its column', blanks.length === 2 && Math.abs(fixOf(blanks[0].id).x - fixOf(blanks[1].id).x) < 1, blanks.map(r => Math.round(fixOf(r.id)?.x)).join(' vs '));
+await shot('03-blank-cell-aligned');
 check('no errors in the page', errs.length === 0, errs.join(' | '));
 await ctx.close();
 console.log(`\n${results.filter(Boolean).length} of ${results.length} checks passed`);
