@@ -387,7 +387,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested function, with a headless check under a Windows platform finding no ⌘ on the first
     screen or the selection bar, and screenshots.
 
+61. **An ask about a chart or dataset gives what it shows.** The acceptance scenario's "agent
+    reads that exact state" holds for MCP agents (`canvas_chart_state`, `read`'s `widget`), but an
+    ask carries only `"(Chart, no text)"`, and the resident agent answers with no tools, so "what
+    does this chart show?" is answered blind. `startersFor` withholds chart starters for that
+    reason. Done when an ask's chart target carries what the chart shows (measure, grouping,
+    filter, rows in view, each bar, the selection, stale state) and a dataset target its title,
+    columns, row count and first rows, as text a model can read, from tested pure functions;
+    chart starters are offered; checked in a real tab with `?prototype=data`.
+
 ## Claims
+61. Ask about a chart or dataset gives what it shows | claude/sprint-ask-chart | 2026-11-26T12:31Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
