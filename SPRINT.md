@@ -617,15 +617,15 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     and an agent arriving later answers both. (d) The bar keeps "Ask" after a selected working ask
     goes quiet, while its state line offers Retry. Done when each fails a check first and passes after.
 
-102. **A notice stays while the person is on it.** (Follow-up to #119.) Notices disappear on a timer (3.5 s, or 12 s with Show), even while the pointer is over one or its Show button has keyboard focus, so a slow reader or a keyboard user reaching Show can lose it mid-press (WCAG 2.2.1, timing adjustable; "the agent must visibly respond"). Done when the timer pauses while the pointer is over the notice or focus is inside it and restarts when they leave, from a tested pure function, checked in a real page (failing before, passing after).
+102. (PR #128 open, awaiting review.) **A notice stays while the person is on it.** (Follow-up to #119.) Notices disappear on a timer (3.5 s, or 12 s with Show), even while the pointer is over one or its Show button has keyboard focus, so a slow reader or a keyboard user reaching Show can lose it mid-press (WCAG 2.2.1, timing adjustable; "the agent must visibly respond"). Done when the timer pauses while the pointer is over the notice or focus is inside it and restarts when they leave, from a tested pure function, checked in a real page (failing before, passing after).
 
 ## Claims
-102. A notice stays while the person is on it | claude/sprint-notice-hold | 2026-11-26T14:32Z
 102. Review follow-ups to #115 and #118 | claude/sprint-keys-followup | 2026-11-26T14:32Z
 101. Agent-usability tasks for #99 and #51, and a fresh attempt | claude/sprint-agent-tasks-3 | 2026-11-26T14:30Z
 99. The first board keeps a margin on a phone | claude/sprint-phone-margin | 2026-11-26T14:29Z
 
 ## Done
+- 102. A notice stays while the person is on it (build-B): PR #128 (timer pauses on pointer or focus, full time after; the notice body now takes the pointer; verify-notice-hold 5/9 → 9/9).
 - 94. Moving one object on a big board stays quick (build-A): PR #127 (10k board, one-object move 534/498 → 81/83 ms unselected/selected; hidden layers panel no longer built; 10k load 9.9 s → 6.1 s on this container).
 - 98 (a). Agent may correct its own import (build-A): PR #125 (`canvas_import` records the agent as `createdBy`; a person's paste stays protected; verify-import-author 3/4 → 4/4).
 - 97. verify-answer-page's frame step after #104 (build-B): PR #126 (the check now asserts #104's recorded choice, on the page and following the frame; 10/11 → 12/12).
@@ -985,3 +985,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:28Z | build-A | 98 (a) and bot-review triage | #125 #113 | Agent's own imports correctable, person's protected (3/4 → 4/4); #113 merged up, converge and data prototype now PASS/FAIL in verify-all; seven unreproduced bot findings on #87 #91 #101 filed as 100 |
 | 2026-11-26T14:30Z | build-A | 94 Big-board edits; merges of #105/#108/#115/#118 | #127 | One-object move on 10k 534 → 81 ms (selected 498 → 83); layers panel only while open; open-marks count from candidates (3 unit tests); #108's announcement no longer walks reading order per step; 10k load 6.1 s vs 9.9 s committed; pan profile: our code <1%; scorecard 26/26 |
 | 2026-11-26T14:32Z | build-B | Review of #122 | #122 | Red finding variant reproduced (a comment about a left-out card was given with its frame) and fixed; arrange now owns its followers with the drag follower paused (two optional findings); failing first 30/32, after 32/32; merged integration branch; 551 tests; scorecard rows unchanged |
+| 2026-11-26T14:37Z | build-B | 102 Notice stays while the person is on it | #128 | noticeDelay (failing-first test); notice body took no pointer (chrome passes it through), fixed; verify-notice-hold 5/9 → 9/9; verify-answer-show 17/17 |
