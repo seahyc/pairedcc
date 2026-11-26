@@ -11,6 +11,7 @@ import { toggleMark } from "./scratchbook";
 import { isLeftOut, leftOutLabel, toggleLeftOut } from "./leave-out";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
+import { checkable, startCheck } from "./learning/check-ui";
 
 /** A key cap, left out on a touch screen where it names a key nobody has. */
 const Kbd = ({ children }: { children: string }) => (TOUCH ? null : <kbd>{children}</kbd>);
@@ -244,6 +245,8 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         question: Boolean(only && writtenByPerson(only) && (isQuestion(textOf(only)) || only.meta.askWhenWritten === true)),
         mine: shapes.some((s) => writtenByPerson(s) && textOf(s) && !sourceOf(s)),
         asked: shapes.some((s) => writtenByPerson(s) && Boolean(askOf(s))),
+        // One agent answer: the person can ask to be checked on it (explain it, then compare).
+        check: Boolean(checkable(editor)),
         // One record that cites sections of an imported document: they can be brought beside it.
         cites: (() => {
           const records = selectedRecords(editor);
@@ -375,6 +378,11 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       <button onClick={onComment} title="Comment on it (C)">
         Comment <Kbd>C</Kbd>
       </button>
+      {state.check && (
+        <button onClick={() => startCheck(editor, onNotice, keepInView)} title="Check me: put the answer away, explain it from memory, then compare (E; one undo)">
+          Check me <Kbd>E</Kbd>
+        </button>
+      )}
       {prototypeEnabled("context") && (
         <button
           className={state.leftOut ? "on" : ""}

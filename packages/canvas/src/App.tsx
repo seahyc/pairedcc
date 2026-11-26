@@ -79,6 +79,7 @@ import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
+import { checkable, startCheck } from "./learning/check-ui";
 import { AskLayer, AutoAsk, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
@@ -282,6 +283,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
+      ["Check me on an agent's answer: explain it from memory, then compare", "E"],
       ...(prototypeEnabled("context") ? [["Leave the selection out of asks (again to bring it back)", "L"] as [string, string]] : []),
       ["Open or close the feedback queue", "Shift C"],
       ["Bring in a table or document as cards", keys("⌘ V, or drop a file")],
@@ -621,6 +623,13 @@ function Shell() {
         event.preventDefault();
         event.stopImmediatePropagation();
         if (!event.repeat) toggleLeftOut(editor, chosen);
+        return;
+      }
+      // E checks the person on a selected agent answer. Only then: otherwise E stays tldraw's.
+      if (key === "e" && checkable(editor)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) startCheck(editor, setNotice, keepInView);
         return;
       }
       if (key !== "p" && key !== "x") return;
