@@ -649,7 +649,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 96. (PR #122 open, awaiting review; (a) was fixed when #104 merged.) **Comments placed on the page by #104 move and are read as they did inside a frame.** (Review of #104, now merged.) Asks, comments and replies about objects in a frame now sit on the page, and three things were lost: (a) an ask or comment about several cards in one frame stays behind when the frame is dragged (`followers` skips multi-target cards); (b) asking about a frame no longer gives the comments placed on what it holds; (c) an agent's `canvas_arrange` moving an unselected frame leaves those comments behind. Done when each has a failing-first test or real-page check and is fixed, and moving a frame (person or agent) brings every comment, reply and answer about what it holds, in one undo step.
 
-99. (Renumbered from 97 to avoid a clash.) **The first board keeps a margin on a phone.** On a 390 px screen the calm first board is
+99. (Renumbered from 97 to avoid a clash. PR #130 open, awaiting review.) **The first board keeps a margin on a phone.** On a 390 px screen the calm first board is
     wider than the window, so `bringContentIntoView` fits it (about 78%) with a 32 px inset, and the
     ✦ marks drawn just outside the cards sit clipped against the left edge (seen by build-A in
     headless Chromium, 26 Nov). Done when nothing on the first board touches either edge at 390 px,
@@ -691,9 +691,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 100 (a)-(c). Ask announcement findings on #101 | claude/sprint-announce-fixes | 2026-11-26T14:40Z
 102. Review follow-ups to #115 and #118 | claude/sprint-keys-followup | 2026-11-26T14:32Z
 101. Agent-usability tasks for #99 and #51, and a fresh attempt | claude/sprint-agent-tasks-3 | 2026-11-26T14:30Z
-99. The first board keeps a margin on a phone | claude/sprint-phone-margin | 2026-11-26T14:29Z
 
 ## Done
+- 99 (filed as 97). The first board keeps a margin on a phone (build-A): PR #130 (new board narrows right of or below the tool strip at 100%; reframe fits marks included, clear of the strip; verify-phone-margin 3/5 → 5/5; desktop unchanged; verify-all 46/47, answer-page is item 97).
 - 103. A notice stays while the person is on it (build-B): PR #128 (timer pauses on pointer or focus, full time after; the notice body now takes the pointer; verify-notice-hold 5/9 → 9/9).
 - 94. Moving one object on a big board stays quick (build-A): PR #127 (10k board, one-object move 534/498 → 81/83 ms unselected/selected; hidden layers panel no longer built; 10k load 9.9 s → 6.1 s on this container).
 - 98 (a). Agent may correct its own import (build-A): PR #125 (`canvas_import` records the agent as `createdBy`; a person's paste stays protected; verify-import-author 3/4 → 4/4).
@@ -774,6 +774,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 99) On a phone the first board is laid out narrower at 100% (cards wrap) rather than 460 px zoomed out; it goes below the tool strip or right of it, whichever leaves it wider (below, at 390 px). Reframing a board with nothing in view fits it, ✦ marks included, clear of the strip in whichever position shows it larger, centred in the room left; alternative: top-align below the strip.
 - (build-A, item 93) A stale flag is a Tab stop when half its drawn width and half a line are on screen (requiring all of it would drop a card fully in view whose long flag sticks out a little). Its size is computed from the flag's monospace metrics (6.6 px a character, 14 px lines) rather than measured in the DOM, so placement stays a pure function; changing `.stale-flag`'s font or padding means changing `flag-layout.ts`.
 - (build-B, item 95) The Ask box's "Gives …" line is in the default flow, not behind a flag: one muted line inside the open box, serving the Solveit principle in the brief; the first screen is unchanged. It outlines targets, frame and pins (as the sent ask does), not the thread behind an answer.
 - (build-B) `verify-answer-page.mjs` is 10/11 on `claude/sprint-int` at 8cea125: "an answer that lands inside a frame on the open page belongs to the frame" fails, most likely because #104 now places answers clear of frames. Either the check or the placement needs updating; filed as item 97 below.
@@ -1055,3 +1056,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:30Z | build-A | 94 Big-board edits; merges of #105/#108/#115/#118 | #127 | One-object move on 10k 534 → 81 ms (selected 498 → 83); layers panel only while open; open-marks count from candidates (3 unit tests); #108's announcement no longer walks reading order per step; 10k load 6.1 s vs 9.9 s committed; pan profile: our code <1%; scorecard 26/26 |
 | 2026-11-26T14:32Z | build-B | Review of #122 | #122 | Red finding variant reproduced (a comment about a left-out card was given with its frame) and fixed; arrange now owns its followers with the drag follower paused (two optional findings); failing first 30/32, after 32/32; merged integration branch; 551 tests; scorecard rows unchanged |
 | 2026-11-26T14:37Z | build-B | 103 Notice stays while the person is on it | #128 | noticeDelay (failing-first test); notice body took no pointer (chrome passes it through), fixed; verify-notice-hold 5/9 → 9/9; verify-answer-show 17/17 |
+| 2026-11-26T15:05Z | build-A | 99 (filed as 97) First board keeps a margin on a phone | #130 | A board made at 390 px ran off both edges (−57/−35 px) and under the tool strip; a desktop board reframed at 78% put marks at −1 px; verify-phone-margin 3/5 → 5/5; 559 unit tests; verify-all 46/47 (answer-page = item 97, known) |
