@@ -205,12 +205,14 @@ export function setAskStatus(editor: Editor, value: unknown, actor: string) {
  */
 export function answerAsk(editor: Editor, value: unknown, actor: string) {
   const input = answerInput.parse(value), { shape, ask } = findAsk(editor, input.id);
-  if (editor.getAncestorPageId(shape) !== editor.getCurrentPageId())
-    throw new Error("That ask is on another page. Open its page, then retry.");
+  // The answer goes on the ask's page, whichever page the person has open now: they may
+  // have moved on while waiting, and the answer is about what is on the ask's page.
+  const pageId = editor.getAncestorPageId(shape);
+  if (!pageId) throw new Error("Ask is not on a page");
   const anchor = editor.getShapePageBounds(shape);
   if (!anchor) throw new Error("Ask has no bounds");
-  const earlier = editor
-    .getCurrentPageShapes()
+  const earlier = [...editor.getPageShapeIds(pageId)]
+    .flatMap((id) => editor.getShape(id) ?? [])
     .filter((s) => s.meta.replyTo === shape.id)
     .flatMap((s) => editor.getShapePageBounds(s) ?? []);
   const bottom = Math.max(anchor.maxY, ...earlier.map((b) => b.maxY));
@@ -218,7 +220,7 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     ? input.alternatives.map((text, i) => `${"ABCD"[i]} · ${capWords(text, 60)}`)
     : [capWords(input.text ?? "", 90)];
   const layout = answerLayout({ x: anchor.x, y: bottom }, texts);
-  const spot = freeSpot(editor, layout.box, new Set([shape.id]));
+  const spot = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
   const ids = atomic(editor, "answer", () => {
     const made = texts.map((text, i) =>
       createCard(editor, { x: spot.x + layout.cards[i].dx, y: spot.y, width: layout.cards[i].w, text }, actor, {
@@ -229,7 +231,7 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         targetId: shape.id,
         replyTo: shape.id,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
-      }),
+      }, pageId),
     );
     setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt: Date.now(), read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.

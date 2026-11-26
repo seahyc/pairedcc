@@ -72,6 +72,8 @@ import { boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog } from "./history-dialog";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
+import { elsewhereNotice } from "./ask-rules";
+import { askOf } from "./asks";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
 import { PromptShapeUtil, createLearningPrototypePage, learningPrototypeEnabled, learningVisibility } from "./learning/prompt-shape";
 import { ChartShapeUtil, DataLayer, DatasetShapeUtil, createDataPrototypePage, dataPrototypeEnabled } from "./data/shapes";
@@ -580,6 +582,26 @@ function Shell() {
     window.addEventListener("drop", onDrop, true);
     return () => window.removeEventListener("drop", onDrop, true);
   }, [editor]);
+  // An ask answered (or failed) on a page the person has left: say so where they are now.
+  useEffect(
+    () =>
+      editor.store.listen(
+        ({ changes }) => {
+          for (const [before, after] of Object.values(changes.updated)) {
+            if (after.typeName !== "shape") continue;
+            const shape = after as TLShape, pageId = editor.getAncestorPageId(shape);
+            const said = elsewhereNotice(askOf(before as TLShape), askOf(shape), {
+              onScreen: pageId === editor.getCurrentPageId(),
+              question: "richText" in shape.props ? richTextPlain(shape.props.richText).trim() : "",
+              pageName: (pageId && editor.getPage(pageId)?.name) || "another page",
+            });
+            if (said) setNotice(said);
+          }
+        },
+        { scope: "document" },
+      ),
+    [editor],
+  );
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(""), 3500);
