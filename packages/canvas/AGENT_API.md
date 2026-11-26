@@ -27,13 +27,15 @@ Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
 - In `predict` mode, the person guesses before the result is shown.
 - In `generate` mode, the person explains in their own words before your explanation is shown.
 
-The person can always skip in one click, and the hidden objects then appear directly. Their layer names are hidden too. Agents cannot answer a prompt. Read its `props.status` (open, committed or skipped) and `props.response`, then compare the answer with the outcome. To try it by hand, open the canvas with `?prototype=learning` and use **Learning prototype page**.
+Only objects an agent made can be hidden; the person's own work is refused. The person can always skip in one click, and the hidden objects then appear directly. Their layer names are hidden too. Agents cannot answer a prompt. Read its `props.status` (open, committed or skipped) and `props.response`, then compare the answer with the outcome. To try it by hand, open the canvas with `?prototype=learning` and use **Learning prototype page**.
 
 Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
 
 Data prototype tools: `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` (see [Data prototype](#data-prototype)).
 
-Prototype tools (`canvas_learn` and the data tools) are flagged `prototype` in `tools/tool-defs.ts`. The local stdio server always offers them. The hosted endpoint offers them while `hostedPrototypeTools` is true (the default); set it to false and run `pnpm --filter @pairedcc/canvas manifest` to leave them, and their guidance in the instructions, out of the hosted manifest.
+Converge prototype tool: `canvas_converge` (see [Converge](#converge-prototype)).
+
+Prototype tools (`canvas_learn`, `canvas_converge` and the data tools) are flagged `prototype` in `tools/tool-defs.ts`. The local stdio server always offers them. The hosted endpoint offers them while `hostedPrototypeTools` is true (the default); set it to false and run `pnpm --filter @pairedcc/canvas manifest` to leave them, and their guidance in the instructions, out of the hosted manifest.
 
 ### Overview, then detail
 
@@ -61,13 +63,30 @@ When a chart is stale, `widget` still describes what the person sees: the older 
 
 Suggested loop: read the chart's `widget`, cite `summary` and the selected values in your explanation, create it with `inputs: [chartId]`, and re-read when the person changes something. If your note is stale, revise it rather than repeating it.
 
+### Converge (prototype)
+
+`canvas_converge` pulls several alternatives, branches or hypotheses into one synthesis. It runs only in a tab opened with `?prototype=converge`. Pass `sourceIds` (2 to 20 objects on the open page, each once, none hidden) and `text` (what they add up to and where they still disagree). Optionally pass a `name` and an `x`, `y` position; by default the card goes 80 px right of the sources, aligned with their top.
+
+It creates one agent card with `meta.role: "synthesis"`, `meta.convergedFrom` (the source IDs) and `meta.inputs` (each source's version at that moment), plus a derived-from arrow from each source. The result is `{ synthesis, sources, connections }`. Because the sources are recorded as inputs, `read` reports the synthesis as `stale` once any source changes, and the board flags it. Revise it then. The sources are never moved or deleted, and the whole operation is one run, so `canvas_undo_run` removes the card and arrows together.
+### Relationships, sources and transformations (prototype)
+
+`canvas_get` adds three read-only fields from the working spec's proposed primitives. They are derived from what the board already records, so they never disagree with it:
+
+| Field | Meaning |
+|---|---|
+| `relationships` | `outgoing` and `incoming` lists for this object on its page. Each has `kind` (`alternative`, `reference`, `derived-from`, `feedback`, `depends-on`, `annotates`, or `decorative` for a hand-drawn arrow with no meaning), `from`, `to`, `via` (`arrow`, `inputs`, `chart` or `annotation`), and `arrowId`, `label` and `author` where they apply. |
+| `source` | Datasets and images: `origin` (a dataset's source note) or `url`, a dataset's content `version`, and `generated`, true when an agent made it without naming an origin. |
+| `transformation` | Charts: `name: "aggregate"`, the dataset and the version used as `inputs`, and the chart state as `parameters`. Objects created with `inputs`: `name: "derive"` and those inputs. |
+
+Use `relationships` to see what an object depends on and what depends on it before you change or remove it.
+
 ### Undo one agent operation
 
-Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists recent runs, newest first, with the object IDs each run created, updated and removed. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
+Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists your own recent runs, newest first, with the object IDs each run created, updated and removed. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
 
-The undo is all-or-nothing. If the human or a later run has changed a field the run set, edited an object the run created, deleted an object the run changed, or locked one, nothing is changed and the error names each conflicting object and field. Undo the later run first, or leave it. The canvas's own derived values (the revision counter, the text-edit timestamp and auto-sized card height) do not count as conflicts.
+The undo is all-or-nothing. If the human or a later run has changed a field the run set, edited an object the run created, deleted an object the run changed, or locked one, or if something the run deleted can no longer go back (its frame or page, or the other end of its arrow, was deleted since), nothing is changed and the error names each conflicting object and field. Undo the later run first, or leave it. The canvas's own derived values (the revision counter, the text-edit timestamp and auto-sized card height) do not count as conflicts.
 
-The run ledger lives in the open tab's memory. It holds the last 100 runs and is cleared on reload. An agent undo is also a step in the shared tldraw history, so the human's Cmd+Z straight after it re-applies the run.
+Runs belong to the agent that made them: `canvas_runs` lists and `canvas_undo_run` accepts only your own. Ownership follows the actor label, which is not authenticated; local MCP agents are all "MCP agent" unless you set `PAIRED_ACTOR` for each, and agents sharing a label share runs. The run ledger lives in the open tab's memory. It holds the last 100 runs and is cleared on reload. An agent undo is also a step in the shared tldraw history, so the human's Cmd+Z straight after it re-applies the run.
 
 ### Scratchbook conventions
 
@@ -117,7 +136,7 @@ An ask carries everything the human sees as its context, and nothing else needs 
 
 Asks are also items in the feedback queue (`ask` holds the state), so nothing is lost if no agent was waiting. Keep answers to one step: the human does the thinking and judges each answer before asking again. See `docs/canvas/principles.md`.
 
-Presence is known only on the local server. On paired.cc the three operations work, but there is no wait endpoint and tabs cannot tell whether an agent is listening; read `canvas_asks` when the human tells you they asked.
+On paired.cc the three operations work over MCP, but MCP clients have no wait endpoint and are not shown as listening; read `canvas_asks` when the human tells you they asked. The one exception is the site's resident agent, described in the README: it holds a server secret, long-polls `POST /api/canvas/asks/wait` and may only call `ask_status` and `answer`, and only for accounts on the server's allowlist. Those accounts see whether it is listening; every other account sees that no agent is listening for it.
 
 ### The feedback queue
 
@@ -229,7 +248,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `op` | `input` |
 |---|---|
 | `read` | Optional `ids`; returns page, selection, objects (with `author`, and `dataset`, `widget` or `stale` where they apply), annotations, open/resolved human `marks` and arrow bindings |
-| `get` | `id`, optional `includeAsset`; a dataset's `dataset` includes its `rows` |
+| `get` | `id`, optional `includeAsset`; a dataset's `dataset` includes its `rows`; prototype `relationships`, `source` and `transformation` (see below) |
 | `create` | `kind` (frame, rectangle, ellipse, text, note), `x`, `y`, optional dimensions, text, color, name, note `style` (note, heading, quote, code), `inputs` (IDs it was derived from) |
 | `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name |
 | `image` | `src` (base64 image data URL), `x`, `y`, `width`, `height`, optional name, sourceUrl, isAnimated, caption |
@@ -253,6 +272,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `overview` | Optional `parentId`, `limit`, `cursor`; compact listing of one level |
 | `runs` | Optional `limit`; recent agent runs in this tab |
 | `undo_run` | `runId`; reverses that run only, or fails listing conflicts |
+| `converge` | Prototype: `sourceIds`, `text`, optional `name`, `x`, `y`; synthesis card with derived-from arrows |
 | `dataset` | Prototype: `x`, `y`, optional size; `synthetic: "orders"` or `columns`, `rows`, `title`, `source` |
 | `chart` | Prototype: `x`, `y`, optional size, `datasetId`, `state` (x, y, aggregate, filter, selected) |
 | `chart_state` | Prototype: `id`, `expectedRevision`, partial `state`; recomputes on current data |

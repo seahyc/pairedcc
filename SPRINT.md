@@ -157,7 +157,7 @@ task by which measure is furthest from target, not by backlog order.
 16. (Merged, see Done; panning a full 10k board is still slow.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
     Done when the performance measure reports 10k load and pan numbers (raise the limit or
     decide another way and record it).
-20. (Renumbered from 17 to avoid a clash; likely covered by the `yc/calm-canvas` rework for playtest 1, so check that PR before starting.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
+20. (PR #40 open, awaiting review. The calm first board has no overlap; the tour board did.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
     out loud, with an agent beside you." wraps onto the shortcut hint line beneath it (seen at
     1440x900 in headless Chromium; `docs/canvas/screenshots/reload-late-fonts-*.png` runs show the
     page). Done when the header lines never overlap at 1440 and 390 px widths, with screenshots.
@@ -166,7 +166,7 @@ task by which measure is furthest from target, not by backlog order.
     `packages/canvas/eval/tasks/`, each with a machine-checked end state, a runner that sets each
     one up in a real tab, and a recorded attempt by a fresh agent that has only `AGENT_API.md` and
     the tools. Done when the scorecard reports a completion rate and median tool calls.
-19. **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
+19. (PRs #32, #35, #39, stacked in that order, open and awaiting review: restore from Menu → Earlier versions, open from Menu → Saved boards. Complete once all three merge.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
     their boards, open one, and restore an earlier revision from the canvas.
 21. (Merged, see Done.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
@@ -187,20 +187,60 @@ task by which measure is furthest from target, not by backlog order.
 26. (PR #28 open, awaiting review.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
     Done when the server enforces a per-account limit with a test and the choice is recorded.
 
-27. **Group objects through a structured operation.** The spec's agent interface asks for
+27. (PR #33 open, awaiting review.) **Group objects through a structured operation.** The spec's agent interface asks for
     "create, update, connect, group, arrange and annotate" as structured operations; there is no
     group operation. Done when `canvas_group` wraps revision-guarded objects in a named frame that
     keeps their page positions, rejects the whole call on a stale or locked object, is one undoable
     run, and is tested at editor level and live over HTTP and MCP.
 
+29. (PR #34 open, awaiting review.) **Say why something is stale.** The board flags a stale derived object with just "stale";
+    the person cannot tell which input changed (read reports it, the board does not). Done when
+    the flag names the changed input (and the upstream cause for transitive staleness) in words a
+    person can act on, is readable by assistive technology, with before/after screenshots.
+
+30. (PR #38 open, awaiting review.) **A board opened on another device can show nothing.** A board created on a 1440 px screen
+    and opened on a 390 px phone (board sync) opens on an empty view: its cards sit where the first
+    screen's viewport was. Done when opening a board with no object in view frames its objects
+    (never zooming past 100%), tested, with a 390 px screenshot before and after.
+
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
+28. (PR #36 open, awaiting review.) **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
+    fails only because `pnpm eval:canvas` runs the e2e suite without Postgres, Redis or a matching
+    Chromium; with them it passes. Done when the workspace measure uses `DATABASE_URL`/`REDIS_URL`
+    when set, otherwise starts throwaway services when the binaries exist, points Playwright at a
+    preinstalled Chromium when needed, cleans up, and reports why when it cannot.
+31. **Stable performance numbers.** Back-to-back runs of the same code measure the 10k pan median
+    at 35.7 and 69.1 ms, so the scorecard's 25% "worse" flag fires on noise. Done when the
+    performance measure repeats its pan sample and reports a figure whose spread across three
+    back-to-back runs on one commit is under the flag threshold, with the spread recorded.
+32. **An ask says "no agent" while the person's agent is connected.** When nothing long-polls for
+    asks (every paired.cc account the resident agent does not serve, and any local board without
+    `pnpm agent`), an ask reads "No agent is listening for this account. Connect yours" even while
+    an MCP agent is connected and acting on the board, so the person reconnects instead of asking
+    their agent. Done when an ask names the agent that recently acted on the tab and says the
+    one thing to do (ask it in your chat to read your asks), the no-agent wording stays when no
+    agent has acted, and both cases are unit-tested and shown in a headless screenshot.
+
+32. (Done by the review lane, 2026-11-26: 21/21, median 2 calls, task 14 passed.) **Record the agent-usability attempt again on the calm canvas.** The 20/21 in the scorecard was
+    recorded before #21 merged and before the ask, converge and group tools existed. Done when
+    `eval/agent-runs/latest.json` holds an attempt by a fresh agent against the current branch
+    (`tsx eval/agent-tasks.ts attempt`), with board evidence kept for any failure, and task 14's
+    check is either confirmed or corrected with the reason given.
+
+33. **Agent tools never offer authorship.** `canvas_annotate` advertised an `author` field
+    defaulting to "Human" (found by the agent-usability attempt, PR #24). The canvas ignores it and
+    attributes the note to the caller, but the schema invites an agent to claim the person's voice.
+    Done when no agent-facing tool schema has an authorship field, checked by a test.
 
 ## Claims
-19. Board picker and history (part 1: restore and revisions API, no UI) | claude/sprint-board-history | 2026-11-26T11:04Z
-27. Group operation | claude/sprint-group | 2026-11-26T11:00Z
+33. Agent tools never offer authorship | claude/sprint-annotate-author | 2026-11-26T11:20Z
+32. Ask names the connected agent | claude/sprint-ask-recent-agent | 2026-11-26T11:17Z
+Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
+31. Stable performance numbers | claude/sprint-perf-stable | 2026-11-26T11:13Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- Reviewed and merged 2026-11-26 by the review lane: #22 as 2b33d8c, #23 as 8daf8d3, #25 as a7c8505, #26 as 5f9f355, #27 as 12abf62, #28 as eb63f9b. Agent-usability attempt re-recorded on the calm canvas (21/21).
 - 5. Converge, part 2 (build-A): PR #31, built on build-B's #27: the person's own synthesis from a selection (empty card in typing mode), claims citing sources by arrow letter, placement that keeps arrows clear of sources.
 - Calm canvas (maintainer branch `yc/calm-canvas`, playtest 1 rework): PR #21, merged 2026-11-26 as a local squash combined with the sprint work (15 conflicted files resolved on a copy; the branch itself was not touched). **Build on this layout from now on.**
 - 18. Agent-usability tasks: PR #24 (21 tasks, self-test proves every check fails before and passes after a reference solution; first attempt by a fresh agent 20/21, median 3 tool calls).
@@ -222,6 +262,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (review, #26) `canvas_get`'s prototype fields (relationships, source, transformation) are not behind a flag; they are read-only and add nothing to the board.
 - (build-A, item 5) The person's synthesis card starts empty so the conclusion is theirs (augmentation principle); alternative: prefill an agent draft to edit. build-A had built converge in parallel before seeing #27; rather than open a competing PR it rebuilt its additions on #27 as #31.
 - (review, #21) How the calm canvas was combined with the sprint work: the calm layout, menu and first board win wherever the two disagreed; the legacy welcome-board swap is dropped (an older board is kept as its own page, as #21 does); board sync starts after the calm first board is laid out; the prototype page buttons stay in the pages list, which is now behind Menu → Show layers and pages, so with a prototype flag on they are two clicks away. Alternative: a flagged entry in the menu itself.
 - (review, #21) The resident agent calls the local Claude Code CLI, which the sprint may not spend on, so the Ask loop was verified with a stand-in program that returns a fixed reply. A real model has not answered an ask on this branch.
@@ -270,6 +311,18 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-B, item 25) A save refused with 400 or 413 gets its own sync state, `refused`. The chip reads "Too large to save · kept on this device" (413) or "Save refused · kept on this device" (400), with the server's reason in the tooltip. No retry is scheduled, and the same board is not uploaded again. Any change to the board tries once more. 401 and 5xx still count as offline and retry. Alternative: a visible prompt that offers to export the board.
 - (build-A, item 24) `PAIRED_SERVER_URL` proxies the dev canvas's `/auth` and `/api/canvas/boards` to a real server (a production build needs a tldraw licence key). `verify:sync-server` runs on demand with throwaway Postgres and Redis, not in `test:canvas` or the eval. Alternative: fold it into the Persistence measure when `DATABASE_URL` is set. Found and fixed on the way: the dev relay answered `/api/canvas/boards`, hiding the proxy.
 
+- (build-B, item 19) Restoring an earlier revision saves pending edits first, then saves the old snapshot as the newest revision. Nothing is overwritten, and a restore is undone by restoring the revision it replaced. The UI entry point is deferred until #21 (calm canvas) merges, so it goes behind that menu rather than adding chrome to the default view.
+- (build-B, item 27) `canvas_group` wraps objects in a frame (the canvas's grouping unit) rather than a tldraw group, keeps page positions, needs a shared parent, and refuses when the frame would cover an object outside the group, so grouping never hides anything. No ungroup operation; `canvas_undo_run` takes a group back.
+- (build-A, item 28) The eval's workspace measure gives e2e `DATABASE_URL`/`REDIS_URL` from the environment, else starts throwaway Postgres and Redis when installed (Postgres as `nobody` under root), else reports "had no database". Existing product fail→pass in this sandbox. The 10k pan median swings 36–74 ms between back-to-back runs here, so the 25% regression flag fires on noise; threshold left unchanged.
+
+- (build-B, item 19) "Saved boards" shows in the Menu only when the account holds more than one server board, so most people never see it. Opening a board saves the current one first, and the browser remembers which board is open (the sync memo's `boardId`), so a reload reopens it. Board names are derived from IDs ("Your board", "Kept from a browser · date"), and boards cannot be renamed or deleted from the canvas yet.
+- (review, #21) The first combination of #21 used the branch before its last commit, so the hosted resident-agent channel was added afterwards (ed4fda1). Its secret check now guards only `/api/canvas/asks/wait` and `/api/canvas/command`; the PR guarded all of `/api/canvas/*`, which would shadow the board API if route order changed.
+- (review, #21) Not changed, for the maintainer: a clean browser that loads an account board saved before the calm canvas shows that board as it was, and only on the next reload adds the "Thinking" page and switches to it. Alternative: lay out the calm board right after the first load from the account.
+- (review, #24) The recorded attempt (20/21) predates the calm canvas and the tools added since. It is kept as the scorecard's figure until it is recorded again (backlog 32).
+- (review) Two review runs overlapped on 26 Nov (10:55Z to 11:15Z) and both combined #21. A review run should fetch and re-read the open PR list and the Log before each merge, not only at the start.
+- (build-B, item 30) A board that opens with none of its objects in view is framed (never past 100%), at startup and after sync loads the account's board; a view with anything in it is never moved.
+- (build-B, item 20) Seeded text with a layout-chosen width carries `meta.fixedWidth` and is exempt from the 460 px reading-width rule from #21; all other text, pasted text included, still wraps. On phones the zoom bar sits right of undo rather than leaving room for the desktop panel.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -301,3 +354,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T11:00Z | review | Review #21 | #21 | Merged as a local squash with the sprint work; 150 canvas tests, scorecard 10/10 acceptance, calm check 33/33 with a stand-in model, data, learning, run-undo and board-sync live checks pass; board sync no longer logs a 404 on first open |
 | 2026-11-26T11:01Z | build-A | 24 Sync against the real server | #30 | Dev canvas proxies to a real server; scripted check signs in by magic link, saves, clean browser opens it, other account isolated, 401 signed out; relay path bug fixed |
 | 2026-11-26T11:02Z | build-A | 5 Converge part 2 | #31 | Person's synthesis, cited claims, clear placement on top of #27; headless check and screenshots; scorecard unchanged |
+| 2026-11-26T11:03Z | build-B | 19 Board history, part 1 | #32 | `restore(revision)` without losing work; dev store serves revisions; checked in a real tab and a clean profile |
+| 2026-11-26T11:04Z | build-B | 27 Group operation | #33 | Guarded frame grouping; live HTTP and MCP check (`tools/verify-group.cjs`); root build and test green with services |
+| 2026-11-26T11:07Z | build-B | 29 Say why stale | #34 | Stale flag names the root cause and path, with tooltip and aria-label; before/after screenshots |
+| 2026-11-26T11:08Z | build-B | 19 Board history, part 2 | #35 | Menu → Earlier versions lists and restores revisions; first screen unchanged except the clock; checked at 1440 and 390 px |
+| 2026-11-26T11:10Z | build-A | 28 Existing product runs e2e | #36 | e2e runs against throwaway services in the eval; Existing product fail→pass; 10k pan flag shown to be noise (base 69.1 vs branch 35.7 ms back to back) |
+| 2026-11-26T11:13Z | build-B | 19 Board picker, part 3 | #39 | Menu → Saved boards opens another server board, saving first; reload reopens it; item 19 complete with #32 #35 |
+| 2026-11-26T11:08Z | review | Rest of #21 | #21 | The hosted resident-agent channel (the PR's last commit, missed by the first combination) added as ed4fda1; secret check narrowed to its two paths with a test; 143 server and 163 canvas tests, e2e, calm check 33/33 and the no-agent state by hand |
+| 2026-11-26T11:15Z | review | Review #24 | #24 | Merged (squash) as 984374b after merging in the integration branch; self-test 21/21 once the task tab opens with ?prototype=data; scorecard on 984374b: acceptance 10/10, agent usability 20/21, safety 9/9, persistence pass, existing product pass, 10k pan flagged (noise) |
+| 2026-11-26T11:20Z | review | Review #22 to #28 | #22 #23 #25 #26 #27 #28 | Six merged (squash) on the calm canvas, each re-run on the combined branch; agent-usability attempt re-recorded with a fresh agent: 21/21, median 2 calls; safety 9/9 |
+| 2026-11-26T11:17Z | build-B | 30 Board opens empty on a phone | #38 | Desktop-then-phone first board showed 0 text shapes at 390 px, now 3; screenshots |
+| 2026-11-26T11:17Z | build-B | 20 Header and phone controls | #40 | Tour header and 390 px undo/zoom overlaps measured before (overlap) and after (none) |

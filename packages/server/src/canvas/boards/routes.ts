@@ -54,6 +54,8 @@ export function createBoardRoutes(store: BoardStore) {
       const result = await store.save(c.get('user').userId, parsed.data, input.data)
       if (result.ok) return c.json({ board: result.board }, input.data.expectedRevision === 0 ? 201 : 200)
       if (result.reason === 'missing') return c.json({ error: 'Board not found. Save with expectedRevision 0 to create it.' }, 404)
+      if (result.reason === 'limit')
+        return c.json({ error: `This account already has ${result.limit} board${result.limit === 1 ? '' : 's'}, the most it can keep. Delete one to make room.`, limit: result.limit }, 403)
       return c.json({ error: STALE, current: result.current }, 409)
     },
   )

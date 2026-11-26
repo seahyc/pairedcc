@@ -24,7 +24,7 @@ describe("prototype tool switch", () => {
 
   it("flags exactly the tools whose descriptions say PROTOTYPE", () => {
     expect(prototypes).toEqual(toolDefs.filter((t) => t.description.includes("PROTOTYPE")).map((t) => t.name));
-    expect(prototypes).toEqual(["canvas_learn", "canvas_dataset", "canvas_chart", "canvas_chart_state", "canvas_cell"]);
+    expect(prototypes).toEqual(["canvas_learn", "canvas_dataset", "canvas_chart", "canvas_chart_state", "canvas_cell", "canvas_converge"]);
   });
 
   it("keeps today's behaviour by default: the hosted manifest offers every tool", () => {
