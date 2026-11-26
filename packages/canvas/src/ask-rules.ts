@@ -167,9 +167,28 @@ export function elsewhereNotice(
   const asked = `“${where.question.length > 40 ? `${where.question.slice(0, 39)}…` : where.question}”`;
   const page = `on the page “${where.pageName}”`;
   if (after.state === "answered") return `✦ ${after.agent ?? "Your agent"} answered ${asked} ${page}.`;
-  if (after.state === "failed") return `Your ask ${asked} ${page} could not be answered. Open that page to retry.`;
+  if (after.state === "failed") return `Your ask ${asked} ${page} could not be answered. Show it to retry.`;
   return undefined;
 }
+
+/**
+ * What Show selects on the ask's page: the answers to the ask (board order, hidden ones left
+ * out), or the ask itself when it failed or its answers are gone, so Retry or the ask's status
+ * is on the selection. Nothing for a state that is not an outcome.
+ */
+export function elsewhereShow(
+  state: string,
+  askId: string,
+  shapes: { id: string; replyTo?: unknown; hidden?: boolean }[],
+): string[] {
+  if (state === "failed") return [askId];
+  if (state !== "answered") return [];
+  const answers = shapes.filter((s) => s.replyTo === askId && !s.hidden).map((s) => s.id);
+  return answers.length ? answers : [askId];
+}
+
+/** How long a notice stays: long enough to read, and to press its button when it has one. */
+export const noticeMs = (hasAction: boolean) => (hasAction ? 12000 : 3500);
 
 /** Gap kept between the selection bar and the window's edges. */
 export const BAR_MARGIN = 8;
@@ -199,6 +218,42 @@ export function placeBar(sel: { x: number; y: number; bottom: number }, barWidth
 /** An ask's state line wraps within its card's width (page units): readable, never a long strip. */
 export function statusWidth(cardWidth: number) {
   return Math.min(640, Math.max(260, Math.round(cardWidth)));
+}
+
+/**
+ * What a screen reader is told when an ask's state changes, once per change: sent and
+ * waiting, taken by an agent, answered (and where), or failed (and that Retry is there).
+ * Undefined when nothing changed, so the ticking clock on the state line is never read out.
+ */
+export function askAnnouncement(
+  previous: string | undefined,
+  ask: { state: string; question?: string; agent?: string; note?: string; error?: string },
+  answers: number,
+): string | undefined {
+  if (previous === ask.state) return undefined;
+  const who = ask.agent ?? "An agent";
+  switch (ask.state) {
+    case "waiting":
+      return `Asked “${ask.question ?? ""}”. Waiting for an agent.`;
+    case "working":
+      return `${ask.agent ?? "An agent"} is working on your ask${ask.note ? `: ${ask.note}` : ""}.`;
+    case "answered":
+      return `${who} answered${answers > 1 ? ` with ${answers} options` : ""}, under your ask.`;
+    case "failed":
+      return `Your ask failed${ask.error ? `: ${ask.error}` : ""}. Retry is under the ask.`;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * What the selection bar's first button does for one selected ask: an ask that failed, went
+ * quiet or was not heard is sent again (its state line offers the same), anything else is asked
+ * about. Undefined: Ask as usual.
+ */
+export function retryLabel(line: { tone: string; retry?: boolean }): "Retry" | "Send again" | undefined {
+  if (!line.retry) return undefined;
+  return line.tone === "nobody" ? "Send again" : "Retry";
 }
 
 /**
