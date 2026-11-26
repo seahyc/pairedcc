@@ -396,7 +396,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     columns, row count and first rows, as text a model can read, from tested pure functions;
     chart starters are offered; checked in a real tab with `?prototype=data`.
 
+62. **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
+
 ## Claims
+62. Import keeps what the source and the person said | claude/sprint-import-faithful | 2026-11-26T12:36Z
 61. Ask about a chart or dataset gives what it shows | claude/sprint-ask-chart | 2026-11-26T12:31Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
