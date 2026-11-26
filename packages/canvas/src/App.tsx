@@ -55,6 +55,7 @@ import {
   FilePlus2,
   Map as MapIcon,
   History,
+  FolderOpen,
 } from "lucide-react";
 import {
   createObject,
@@ -67,8 +68,8 @@ import {
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { createComment } from "./agent-operations";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
-import { boardSync, startBoardSync } from "./board-sync-browser";
-import { HistoryDialog } from "./history-dialog";
+import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
+import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
@@ -329,9 +330,20 @@ function Shell() {
   const [asking, setAsking] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [boardsOpen, setBoardsOpen] = useState(false);
   const sync = useValue("board sync", () => boardSync.get(), []);
   // Versions are kept only for boards saved to an account (or the local dev server).
   const historyWhere = sync.state === "local" ? null : "account" in sync && sync.account === "local" ? "the local server" : "your account";
+  // "Saved boards" appears only when the account holds more than one board.
+  const [savedBoards, setSavedBoards] = useState(0);
+  useEffect(() => {
+    if (!menuOpen || !historyWhere) return;
+    let live = true;
+    boardHistory.boards().then((list) => live && setSavedBoards(list?.length ?? 0), () => live && setSavedBoards(0));
+    return () => {
+      live = false;
+    };
+  }, [menuOpen, historyWhere]);
   const openCount = useValue("open feedback", () => collectFeedback(editor).filter((i) => i.status === "open").length, [editor]);
   const link = useValue("agent link", () => agentLink.get(), []);
   const listeners = useValue("agent listeners", () => agentListeners.get(), []);
@@ -812,6 +824,11 @@ function Shell() {
               <Keyboard size={14} /> Shortcuts <kbd>?</kbd>
             </button>
             <div className="menu-rule" />
+            {historyWhere && savedBoards > 1 && (
+              <button role="menuitem" onClick={() => { setBoardsOpen(true); setMenuOpen(false); }}>
+                <FolderOpen size={14} /> Saved boards
+              </button>
+            )}
             {historyWhere && (
               <button role="menuitem" onClick={() => { setHistoryOpen(true); setMenuOpen(false); }}>
                 <History size={14} /> Earlier versions
@@ -1303,6 +1320,7 @@ function Shell() {
       )}
       {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
       {historyOpen && historyWhere && <HistoryDialog where={historyWhere} onClose={() => setHistoryOpen(false)} />}
+      {boardsOpen && historyWhere && <SavedBoardsDialog where={historyWhere} onClose={() => setBoardsOpen(false)} />}
       {agentOpen && (
         <div className="modal-backdrop" onClick={() => setAgentOpen(false)}>
           <section

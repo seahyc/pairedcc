@@ -21,12 +21,15 @@ export type BoardApi = {
   account(): Promise<string | null>;
   get(id: string): Promise<ServerBoard | null>;
   put(id: string, expectedRevision: number, snapshot: Snapshot): Promise<PutResult>;
+  /** The account's boards, newest first, without snapshots. */
+  list?(): Promise<BoardSummary[]>;
   /** Kept revisions of a board, newest first, or null if it does not exist. */
   revisions?(id: string): Promise<RevisionSummary[] | null>;
   /** One kept revision's snapshot, or null if it was pruned or never existed. */
   revision?(id: string, revision: number): Promise<ServerBoard | null>;
 };
 export type RevisionSummary = { revision: number; sizeBytes: number; savedAt: string };
+export type BoardSummary = { id: string; name: string; revision: number; sizeBytes: number; updatedAt: string };
 export type LocalBoard = {
   snapshot(): Snapshot;
   load(snapshot: Snapshot): void;
@@ -109,7 +112,9 @@ export function copyId(boardId: string, at: Date) {
 }
 
 export function createBoardSync(o: SyncOptions) {
-  const boardId = o.boardId ?? "main";
+  // The board this tab saves to. It starts as the one this browser last had open for the
+  // account (open() changes it), and is "main" for a new browser.
+  let boardId = o.boardId ?? "main";
   const now = o.now ?? (() => new Date());
   const setTimer = o.setTimer ?? ((fn, ms) => setTimeout(fn, ms));
   const clearTimer = o.clearTimer ?? ((h) => clearTimeout(h as ReturnType<typeof setTimeout>));
@@ -245,6 +250,7 @@ export function createBoardSync(o: SyncOptions) {
         account = null;
         return emit({ state: "local", note: "This browser has unsaved work from another account. Sign in as that account to save it." });
       }
+      if (!o.boardId && memo?.account === account && memo.boardId) boardId = memo.boardId;
       const known = memo && memo.account === account && memo.boardId === boardId ? memo : null;
       const localWork = memo ? memo.dirty : o.hadLocalWork;
       const server = await o.api.get(boardId);
@@ -313,10 +319,37 @@ export function createBoardSync(o: SyncOptions) {
     return { revision, restoredFrom: target };
   }
 
+  /**
+   * Open another of the account's boards in this tab and save to it from now on. This
+   * board's unsaved edits are saved first, so leaving it never loses work.
+   */
+  async function open(target: string): Promise<{ boardId: string; previous: string }> {
+    if (!account) throw new Error("Boards are kept only for an account.");
+    const previous = boardId;
+    if (target === previous) return { boardId, previous };
+    await save();
+    while (saving) await saving;
+    if (status.state !== "saved") throw new Error("Save this board before opening another.");
+    const server = await o.api.get(target);
+    if (!server) throw new Error(`Board "${target}" was not found in your account.`);
+    clearTimer(timer);
+    apply(server.snapshot);
+    boardId = target;
+    base = server.snapshot;
+    revision = server.revision;
+    synced = JSON.stringify(o.local.snapshot());
+    remember(false);
+    emit({ state: "saved", account, revision, at: now().getTime(), note: `Opened board "${target}". "${previous}" is saved.` });
+    return { boardId, previous };
+  }
+
   return {
     start,
     save,
     restore,
+    open,
+    boardId: () => boardId,
+    boards: () => (account && o.api.list ? o.api.list() : Promise.resolve(null)),
     revisions: () => (account && o.api.revisions ? o.api.revisions(boardId) : Promise.resolve(null)),
     status: () => status,
     stop() {

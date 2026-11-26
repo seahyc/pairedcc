@@ -32,6 +32,9 @@ function server(signedIn: string | null = "alice") {
       b.history.push(structuredClone(snapshot));
       return { ok: true, revision: b.revision };
     },
+    async list() {
+      return [...boards].map(([id, b]) => ({ id, name: "Untitled exploration", revision: b.revision, sizeBytes: 1, updatedAt: "" }));
+    },
     async revisions(id) {
       const b = boards.get(id);
       return b ? b.history.map((_, i) => ({ revision: i + 1, sizeBytes: 1, savedAt: "" })).reverse() : null;
@@ -418,6 +421,53 @@ describe("withNewRecords", () => {
     await out.s.start();
     await expect(out.s.restore(1)).rejects.toThrow(/account/);
     expect(await out.s.revisions()).toBeNull();
+  });
+
+  it("opens another saved board, saving this one first, and keeps saving to the opened one", async () => {
+    const srv = server();
+    await srv.api.put("main-browser-202611260900", 0, snap("kept from an old browser"));
+    const b = browser(snap("main work"));
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    expect(s.boardId()).toBe("main");
+    expect((await s.boards())?.map((x) => x.id).sort()).toEqual(["main", "main-browser-202611260900"]);
+    b.edit("main, edited"); // not saved yet
+    expect(await s.open("main-browser-202611260900")).toEqual({ boardId: "main-browser-202611260900", previous: "main" });
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main, edited"); // saved before leaving
+    expect(text(b.doc)).toBe("kept from an old browser");
+    expect(last()).toMatchObject({ state: "saved", revision: 1, note: expect.stringContaining('"main" is saved') });
+    expect(b.stored.memo).toEqual({ account: "alice", boardId: "main-browser-202611260900", revision: 1, dirty: false });
+    b.edit("old work, continued");
+    await b.flush();
+    expect(text(srv.boards.get("main-browser-202611260900")!.snapshot)).toBe("old work, continued");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main, edited");
+  });
+
+  it("reopens the board this browser last had open after a reload", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("main"));
+    await srv.api.put("other", 0, snap("other board"));
+    // tldraw kept the opened board in this browser, so that is what reopens locally.
+    const b = browser(snap("other board"), { account: "alice", boardId: "other", revision: 1, dirty: false });
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    expect(s.boardId()).toBe("other");
+    expect(text(b.doc)).toBe("other board");
+    expect(last()).toMatchObject({ state: "saved", revision: 1 });
+    expect([...srv.boards.keys()].sort()).toEqual(["main", "other"]); // nothing set aside
+    b.edit("other, edited");
+    await b.flush();
+    expect(text(srv.boards.get("other")!.snapshot)).toBe("other, edited");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main");
+  });
+
+  it("refuses to open a board that does not exist, leaving this one open", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    await expect(s.open("nope")).rejects.toThrow(/not found/);
+    expect(s.boardId()).toBe("main");
+    expect(text(b.doc)).toBe("v1");
   });
 });
 
