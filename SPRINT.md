@@ -268,7 +268,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     a passing self-test (check fails on setup, passes after the reference solution), written by a
     lane that did not build them, and the scorecard's task count reflects them.
 
+40. **Say which tool answers feedback.** The PR #24 agent could not tell whether to answer the
+    person's comment with `canvas_reply` or `canvas_annotate`. Done when the tool descriptions and
+    AGENT_API say which to use, checked by a test.
+
 ## Claims
+40. Say which tool answers feedback | claude/sprint-reply-guidance | 2026-11-26T11:31Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 36. Comments move with their target | claude/sprint-follow | 2026-11-26T11:24Z
