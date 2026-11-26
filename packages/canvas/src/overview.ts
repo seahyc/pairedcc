@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Editor, TLShape } from "tldraw";
 import { revision, richTextPlain, shapeName } from "./operations";
 import { authorOf, collectMarks } from "./scratchbook";
+import { clusters } from "./clusters";
 
 // Overview-then-detail: a compact, paginated listing of one level of the board, so an
 // agent can find what matters and then canvas_read/canvas_get only those IDs.
@@ -54,9 +55,18 @@ export function overview(editor: Editor, value: unknown = {}) {
         revision: revision(s),
         bounds: b ? { x: round(b.x), y: round(b.y), w: round(b.w), h: round(b.h) } : undefined,
         ...(childCount.get(s.id) ? { children: childCount.get(s.id) } : {}),
+        // A child of a locked frame is locked too: agents cannot change it.
+        ...(editor.isShapeOrAncestorLocked(s) ? { locked: true } : {}),
         ...(snippet(s) ? { text: snippet(s) } : {}),
       };
     }),
+    // Piles the person made at this level (edges within 60 px, chained), largest first.
+    clusters: clusters(
+      level.flatMap((s) => {
+        const b = s.type === "arrow" ? undefined : editor.getShapePageBounds(s);
+        return b ? [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
+      }),
+    ),
     ...(next < level.length ? { nextCursor: String(next) } : {}),
   };
 }

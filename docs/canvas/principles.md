@@ -22,6 +22,10 @@ Write a thought (pink, handwritten, yours) → select what you mean → Ask → 
 | 8. Rough means unfinished | Thoughts and drafts look open to change. | Handwriting, marker arrows, hand-drawn ink, dot-grid paper. Agent answers are plain cards that can be edited, crossed out or deleted like anything else. No added chrome. | Nothing marks an idea as settled, so "rough" has no opposite yet. |
 | 9. Understanding needs effort and repetition | Do not hand over a finished answer when the person should be doing the thinking. | The person writes first; the agent answers one step in about 60 words (cut at 90) and stops. A long answer cannot be placed through the answer operation. | No learning mode: no predict-then-check, retrieval or spaced return. Not built on purpose in this pass. |
 
+## Bringing material in
+
+Tables, documents and images arrive by paste, drop or an agent, and are laid out by rule: rows of prose become one cluster of cards per row, grids of numbers stay tables, prose becomes one card per section. The rules, which finding each serves and what is not handled are in [`import.md`](import.md). This is the first answer to finding 5's gap (data and examples could not be pulled onto the board) and part of finding 1's (one record in view at a time, with a stepper).
+
 ## What produces understanding
 
 Reading an explanation creates familiarity, not understanding; the learner has to do the work (see the table in `working-spec.md`). Working is the default and must be seamless, so the effortful mechanisms stay opt-in and are not built. What this pass guarantees is the floor: the default flow never returns a long finished answer, the agent asks one short question back when an ask is ambiguous, and contrast cases (alternatives side by side) are a first-class kind of answer.
@@ -44,7 +48,7 @@ Not borrowed yet: pinning or hiding objects from context, token counts, learning
 
 ## Not done in this pass
 
-- Asks are answered only on a computer running the resident agent or another agent that waits for asks. On paired.cc an ask waits until a connected agent reads it; the hosted relay does not report who is listening.
+- Asks are answered only on a computer running the resident agent or another agent that waits for asks. On paired.cc the relay reports who is listening only for accounts the resident agent serves; for any other account an ask says no agent is listening for it and waits until a connected agent reads it.
 - The resident agent sees text only: no images, drawings or the look of the board.
 - Answers arrive whole after about three seconds; they are not streamed.
-- One ask is about one selection on one page. An ask on a page that is not open fails with a message and a retry.
+- One ask is about one selection on one page. An answer goes under its ask on that page even when the person has opened another page; they are told who answered and on which page, but the board does not take them there.
