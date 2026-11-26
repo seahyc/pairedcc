@@ -221,7 +221,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     one thing to do (ask it in your chat to read your asks), the no-agent wording stays when no
     agent has acted, and both cases are unit-tested and shown in a headless screenshot.
 
-32. **Record the agent-usability attempt again on the calm canvas.** The 20/21 in the scorecard was
+32. (Done by the review lane, 2026-11-26: 21/21, median 2 calls, task 14 passed.) **Record the agent-usability attempt again on the calm canvas.** The 20/21 in the scorecard was
     recorded before #21 merged and before the ask, converge and group tools existed. Done when
     `eval/agent-runs/latest.json` holds an attempt by a fresh agent against the current branch
     (`tsx eval/agent-tasks.ts attempt`), with board evidence kept for any failure, and task 14's
@@ -242,6 +242,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- Reviewed and merged 2026-11-26 by the review lane: #22 as 2b33d8c, #23 as 8daf8d3, #25 as a7c8505, #26 as 5f9f355, #27 as 12abf62, #28 as eb63f9b. Agent-usability attempt re-recorded on the calm canvas (21/21).
 - 5. Converge, part 2 (build-A): PR #31, built on build-B's #27: the person's own synthesis from a selection (empty card in typing mode), claims citing sources by arrow letter, placement that keeps arrows clear of sources.
 - Calm canvas (maintainer branch `yc/calm-canvas`, playtest 1 rework): PR #21, merged 2026-11-26 as a local squash combined with the sprint work (15 conflicted files resolved on a copy; the branch itself was not touched). **Build on this layout from now on.**
 - 18. Agent-usability tasks: PR #24 (21 tasks, self-test proves every check fails before and passes after a reference solution; first attempt by a fresh agent 20/21, median 3 tool calls).
@@ -263,6 +264,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (review, #26) `canvas_get`'s prototype fields (relationships, source, transformation) are not behind a flag; they are read-only and add nothing to the board.
 - (build-A, item 5) The person's synthesis card starts empty so the conclusion is theirs (augmentation principle); alternative: prefill an agent draft to edit. build-A had built converge in parallel before seeing #27; rather than open a competing PR it rebuilt its additions on #27 as #31.
 - (review, #21) How the calm canvas was combined with the sprint work: the calm layout, menu and first board win wherever the two disagreed; the legacy welcome-board swap is dropped (an older board is kept as its own page, as #21 does); board sync starts after the calm first board is laid out; the prototype page buttons stay in the pages list, which is now behind Menu → Show layers and pages, so with a prototype flag on they are two clicks away. Alternative: a flagged entry in the menu itself.
 - (review, #21) The resident agent calls the local Claude Code CLI, which the sprint may not spend on, so the Ask loop was verified with a stand-in program that returns a fixed reply. A real model has not answered an ask on this branch.
@@ -360,3 +362,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:13Z | build-B | 19 Board picker, part 3 | #39 | Menu → Saved boards opens another server board, saving first; reload reopens it; item 19 complete with #32 #35 |
 | 2026-11-26T11:08Z | review | Rest of #21 | #21 | The hosted resident-agent channel (the PR's last commit, missed by the first combination) added as ed4fda1; secret check narrowed to its two paths with a test; 143 server and 163 canvas tests, e2e, calm check 33/33 and the no-agent state by hand |
 | 2026-11-26T11:15Z | review | Review #24 | #24 | Merged (squash) as 984374b after merging in the integration branch; self-test 21/21 once the task tab opens with ?prototype=data; scorecard on 984374b: acceptance 10/10, agent usability 20/21, safety 9/9, persistence pass, existing product pass, 10k pan flagged (noise) |
+| 2026-11-26T11:20Z | review | Review #22 to #28 | #22 #23 #25 #26 #27 #28 | Six merged (squash) on the calm canvas, each re-run on the combined branch; agent-usability attempt re-recorded with a fresh agent: 21/21, median 2 calls; safety 9/9 |

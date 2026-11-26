@@ -1,7 +1,13 @@
 {
-  "generatedAt": "2026-11-26T11:13Z",
-  "commit": "984374b",
-  "carriedOver": [],
+  "generatedAt": "2026-11-26T11:15Z",
+  "commit": "a3beb52 with uncommitted changes",
+  "carriedOver": [
+    "acceptance",
+    "safety",
+    "persistence",
+    "performance",
+    "workspace"
+  ],
   "table": [
     {
       "measure": "Acceptance scenario",
@@ -12,7 +18,7 @@
     {
       "measure": "Agent usability",
       "target": "≥90% of ≥20 tasks",
-      "result": "20/21 (95%), median 3 tool calls",
+      "result": "21/21 (100%), median 2 tool calls",
       "status": "pass"
     },
     {
@@ -30,8 +36,8 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 1529 ms, pan 16.7 ms/frame; 10k: load 7620 ms, pan 76.6 ms/frame (worse: 10000 panMedianFrameMs 40 → 76.6)",
-      "status": "regressed"
+      "result": "1k: load 1529 ms, pan 16.7 ms/frame; 10k: load 7620 ms, pan 76.6 ms/frame",
+      "status": "reported"
     },
     {
       "measure": "Existing product",
@@ -41,6 +47,13 @@
     }
   ],
   "raw": {
+    "agentUsability": {
+      "tasks": 21,
+      "attempted": 21,
+      "completed": 21,
+      "medianToolCalls": 2,
+      "recordedAt": "2026-11-26T11:10:54.082Z"
+    },
     "acceptance": {
       "steps": [
         {
@@ -197,13 +210,6 @@
         "panP95FrameMs": 89.2
       }
     ],
-    "agentUsability": {
-      "tasks": 21,
-      "attempted": 21,
-      "completed": 20,
-      "medianToolCalls": 3,
-      "recordedAt": "2026-11-26T10:44:31.300Z"
-    },
     "workspace": {
       "build": true,
       "packages": {
