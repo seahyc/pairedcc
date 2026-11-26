@@ -344,7 +344,11 @@ function StopAnnouncer() {
       const ids = editor.getSelectedShapeIds();
       const shape = ids.length === 1 ? editor.getShape(ids[0]) : undefined;
       if (!shape) return ids.join(",");
-      return JSON.stringify([shape.id, "richText" in shape.props ? shape.props.richText : null, shape.meta.mark, shape.meta.ask, shape.meta.name, editor.isShapeHidden(shape)]);
+      // While a drag is under way the place in the order is not said; it is worked out again
+      // when the drag ends, and whenever objects are added or removed (an answer lands).
+      const dragging = editor.isIn("select.translating");
+      const count = editor.getCurrentPageShapeIds().size;
+      return JSON.stringify([shape.id, "richText" in shape.props ? shape.props.richText : null, shape.meta.mark, shape.meta.ask, shape.meta.name, editor.isShapeHidden(shape), dragging, dragging ? 0 : count]);
     },
     [editor],
   );
