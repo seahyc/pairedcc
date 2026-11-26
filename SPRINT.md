@@ -231,7 +231,7 @@ task by which measure is furthest from target, not by backlog order.
     as text. (b) A one-column file drops rows whose value is a quoted empty string. (c) A
     Windows-1252 file imports with replacement characters: decode strictly and say to re-export as
     UTF-8. Done when each has a failing-first test and is fixed.
-52. **Stale flags never spoil a hidden answer, and are readable by keyboard.** (From an automated
+52. (PR #72 open, awaiting review.) **Stale flags never spoil a hidden answer, and are readable by keyboard.** (From an automated
     review of #34.) The stale reason quotes an input's name even when that input is hidden behind
     a learning prompt; and the full reason is only in a hover tooltip. Done when hidden inputs are
     unnamed in the flag and the full reason is reachable without a pointer.
@@ -340,12 +340,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 45d. Board sync gap (d): images survive a clean profile | claude/sprint-board-images | 2026-11-26T12:08Z
-52. Stale flags never spoil a hidden answer | claude/sprint-stale-hidden | 2026-11-26T12:00Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 52. Stale flags readable without a pointer (build-B): PR #72 ((a) was already true as #34 merged; now pinned by tests).
 - 46. Answer lands on its ask's page (build-B): PR #69, stacked on #64 and #67.
 - 47. Ask about a frame gives its contents (build-B): PR #67, stacked on #64.
 - 44. Asks carry picks and cross-outs (build-B): PR #64.
@@ -378,6 +378,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B, item 52) A stale flag opens its whole reason when its object is selected (under the object, clear of the selection bar) or when the flag is focused with Tab (growing upward). Unselected, it stays one line. Part (a), never naming a hidden input, was already in #34 as merged; it is now pinned by unit tests rather than changed.
 - (build-B, item 46) An answer to an ask on another page is placed on the ask's page, and the person sees a toast naming who answered and on which page. The board never switches their page for them, because moving their view uninvited would undo their own navigation. Alternative: a "Go there" button in the toast.
 - (build-B, item 47) A selected frame's contents go to the agent as `inside` on that target: up to 20 objects in reading order, with nested frames walked into and `insideMore` counting the rest. Objects with neither text nor media (ink strokes, empty shapes) are left out, as `frame.objects` already does.
 - (build-B, item 44) An ask gives the person's marks on every object it hands over, and an ask about one option also gives that answer's other options (each object once). The resident prompt tells the model to build on picks and not re-offer crossed-out ideas. Marks are not a filter: crossed-out objects are still sent, labelled, because the board still shows them.
@@ -529,3 +530,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:08Z | build-B | 45 Board sync gap (e) | #70 | Edits to existing objects made while the account's board loads are kept, field by field (reproduced with a delayed GET in two browsers); derived fields and welcome boards never carried |
 | 2026-11-26T12:05Z | build-A | 50 Stale checks stay linear | #71 | Memoised per object, repeated causes by reference; 16-round read 1772 ms/28 MB → 8 ms/93 KB, 18 rounds no longer hangs; 3 failing-first tests; scorecard unchanged |
 | 2026-11-26T12:16Z | build-B | 45 review fixes | #66 | Colliding keys refused with 400 (no silent column loss); tab applies the server's repair before saving so a deletion survives a merge; restore clears undo and redo; names clipped without splitting a character |
+| 2026-11-26T12:10Z | build-B | 52 Stale flags readable without a pointer | #72 | Full reason on select and on keyboard focus; hidden-input rule pinned by tests; real tab 5/8 before, 8/8 after; first screen unchanged; scorecard unchanged |
