@@ -81,6 +81,8 @@ import "./style.css";
 declare global {
   interface Window {
     paired?: CanvasBridge;
+    /** Development builds only: the editor, for `pnpm eval:canvas` fixtures and timing. */
+    __pairedEditor?: Editor;
   }
 }
 const tools = [
@@ -1282,6 +1284,7 @@ function App() {
       return { ...next, meta: { ...next.meta, updatedAt: Date.now() } };
     });
     window.paired = createBridge(editor);
+    if (import.meta.env.DEV) window.__pairedEditor = editor;
     setAgentEditor(editor);
     const page = editor.getCurrentPage();
     const fresh = editor.getCurrentPageShapes().length === 0 && editor.getPages().length === 1 && !page.meta.seeded;
@@ -1306,6 +1309,7 @@ function App() {
     setReady(true);
     return () => {
       delete window.paired;
+      delete window.__pairedEditor;
     };
   }
   return (

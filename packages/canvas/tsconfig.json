@@ -12,5 +12,5 @@
     "esModuleInterop": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["src", "server", "tools", "test", "vite.config.ts"]
+  "include": ["src", "server", "tools", "test", "eval", "vite.config.ts"]
 }
