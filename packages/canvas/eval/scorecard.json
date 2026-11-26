@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T11:15Z",
-  "commit": "a3beb52 with uncommitted changes",
+  "generatedAt": "2026-11-26T11:39Z",
+  "commit": "991d50f with uncommitted changes",
   "carriedOver": [
     "acceptance",
     "safety",
@@ -18,7 +18,7 @@
     {
       "measure": "Agent usability",
       "target": "≥90% of ≥20 tasks",
-      "result": "21/21 (100%), median 2 tool calls",
+      "result": "23/24 (96%), median 3 tool calls",
       "status": "pass"
     },
     {
@@ -48,11 +48,11 @@
   ],
   "raw": {
     "agentUsability": {
-      "tasks": 21,
-      "attempted": 21,
-      "completed": 21,
-      "medianToolCalls": 2,
-      "recordedAt": "2026-11-26T11:10:54.082Z"
+      "tasks": 24,
+      "attempted": 24,
+      "completed": 23,
+      "medianToolCalls": 3,
+      "recordedAt": "2026-11-26T11:39:22.588Z"
     },
     "acceptance": {
       "steps": [
