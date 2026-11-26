@@ -1746,3 +1746,21 @@ kbd {
   font-size: 12px;
   gap: 5px;
 }
+
+/* Phones: the zoom bar sits just right of undo instead of leaving room for the desktop
+   panel, which pushed it over the undo button. The licence watermark stays uncovered. */
+@media (max-width: 520px) {
+  .zoom-controls,
+  .right-closed .zoom-controls {
+    left: 92px;
+    right: auto;
+  }
+}
+
+/* Below 800 px the side panel is hidden, so the canvas keeps the full width even when the
+   panel is "shown" (it otherwise kept 264 px for a panel nobody could see). */
+@media (max-width: 800px) {
+  .app .canvas-stage {
+    right: 0;
+  }
+}
