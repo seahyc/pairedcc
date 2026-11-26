@@ -60,6 +60,7 @@ import {
 import { agentLink, connectAgentAccess } from "./agent-client";
 import { createComment } from "./agent-operations";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
+import { startBoardSync } from "./board-sync-browser";
 import { isLegacySeed, seed } from "./seed";
 import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
 import { PromptShapeUtil, createLearningPrototypePage, learningPrototypeEnabled, learningVisibility } from "./learning/prompt-shape";
@@ -1295,7 +1296,7 @@ function App() {
       ["16px 'Shantell Sans'", "bold 30px 'Shantell Sans'", "27px 'Caveat Brush'", "italic 19px Newsreader", "13px 'JetBrains Mono'"].map((f) => document.fonts.load(f)),
     );
     const timeout = new Promise((done) => setTimeout(done, 2500));
-    void Promise.race([fonts, timeout]).catch(() => undefined).then(() => {
+    const prepare = () => {
       refitCards(editor);
       if (!(fresh || legacy) || editor.getCurrentPage().meta.seeded === 2) return;
       if (legacy) editor.deleteShapes([...editor.getCurrentPageShapeIds()]);
@@ -1304,9 +1305,18 @@ function App() {
       // Mark the welcome board's own objects, so its text is never mistaken for the human's notes.
       editor.updateShapes(editor.getCurrentPageShapes().map((s) => ({ id: s.id, type: s.type, meta: { ...s.meta, seed: true } })));
       editor.updatePage({ id: page.id, meta: { ...editor.getCurrentPage().meta, seeded: 2 } });
+    };
+    let disposed = false;
+    let stopSync: (() => void) | undefined;
+    void Promise.race([fonts, timeout]).catch(() => undefined).then(() => {
+      prepare();
+      // Then keep the board saved to the account; a brand-new board holds no work of its own.
+      if (!disposed) stopSync = startBoardSync(editor, !fresh);
     });
     setReady(true);
     return () => {
+      disposed = true;
+      stopSync?.();
       delete window.paired;
       delete window.__pairedEditor;
     };

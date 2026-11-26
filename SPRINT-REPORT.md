@@ -36,15 +36,15 @@ Last updated 2026-11-26T09:25Z by the review lane. Branch: `claude/sprint-int`.
 | e2e | fails, pre-existing (see above) |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T09:47Z on `4bc11fb`:
+Scorecard from `pnpm eval:canvas` at 2026-11-26T10:21Z on `f017203`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
 | Acceptance scenario | every step passes | 7/10 steps | fail |
 | Agent usability | ≥90% of ≥20 tasks | 0 tasks, no recorded attempt | not run |
 | Safety of shared edits | 0 human edits lost | 0 lost; 3/3 races pass | pass |
-| Persistence | identical in a clean profile | differs: the saved page does not exist in a clean profile (boards are stored only in this browser) | fail |
-| Performance | reported, not worse | 1k: load 2514 ms, pan 16.7 ms/frame; 10k: error | fail |
+| Persistence | identical in a clean profile | identical | pass |
+| Performance | reported, not worse | 1k: load 2432 ms, pan 16.7 ms/frame; 10k: error | fail |
 | Existing product | green | build passes; tests: e2e failing | fail |
 <!-- scorecard:end -->
 

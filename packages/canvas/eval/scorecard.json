@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T09:47Z",
-  "commit": "4bc11fb",
+  "generatedAt": "2026-11-26T10:21Z",
+  "commit": "f017203",
   "carriedOver": [],
   "table": [
     {
@@ -24,13 +24,13 @@
     {
       "measure": "Persistence",
       "target": "identical in a clean profile",
-      "result": "differs: the saved page does not exist in a clean profile (boards are stored only in this browser)",
-      "status": "fail"
+      "result": "identical",
+      "status": "pass"
     },
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 2514 ms, pan 16.7 ms/frame; 10k: error",
+      "result": "1k: load 2432 ms, pan 16.7 ms/frame; 10k: error",
       "status": "fail"
     },
     {
@@ -53,25 +53,25 @@
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 36
+          "ms": 38
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 481
+          "ms": 497
         },
         {
           "name": "Agent charts the selection",
           "pass": true,
           "detail": "ok",
-          "ms": 36
+          "ms": 38
         },
         {
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 856
+          "ms": 855
         },
         {
           "name": "Agent reads that exact chart state",
@@ -83,25 +83,25 @@
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 39
+          "ms": 44
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1752
+          "ms": 1755
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": false,
           "detail": "a result derived from the chart is not marked stale when the chart's dataset changes",
-          "ms": 959
+          "ms": 963
         },
         {
           "name": "Reload restores everything",
           "pass": false,
           "detail": "1 of 5 objects differ after reload: card revision/props/meta (props h); 5 objects now",
-          "ms": 582
+          "ms": 555
         }
       ],
       "pageErrors": [],
@@ -113,21 +113,21 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 83,
+          "ms": 85,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 208,
+          "ms": 218,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 272,
+          "ms": 276,
           "humanEditsLost": 0
         }
       ],
@@ -135,17 +135,17 @@
     },
     "persistence": {
       "objects": 4,
-      "sameProfileReload": false,
-      "cleanProfile": false,
-      "detail": "the saved page does not exist in a clean profile (boards are stored only in this browser)"
+      "sameProfileReload": true,
+      "cleanProfile": true,
+      "detail": "identical"
     },
     "performance": [
       {
         "objects": 1000,
-        "buildMs": 478,
-        "loadMs": 2514,
+        "buildMs": 432,
+        "loadMs": 2432,
         "panMedianFrameMs": 16.7,
-        "panP95FrameMs": 16.8
+        "panP95FrameMs": 17.8
       },
       {
         "objects": 10000,
@@ -168,7 +168,7 @@
         },
         "canvas": {
           "pass": true,
-          "summary": "71 passed (71)"
+          "summary": "103 passed (103)"
         },
         "cli": {
           "pass": true,
