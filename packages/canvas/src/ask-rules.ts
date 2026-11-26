@@ -175,6 +175,8 @@ export function elsewhereNotice(
 export const BAR_MARGIN = 8;
 /** Left edge that keeps the bar clear of the tool strip, when the window has room for that. */
 export const TOOLS_CLEAR = 70;
+/** Height of the bar when its buttons fit on one row. */
+export const BAR_ROW = 44;
 
 /**
  * Where the selection bar (or the Ask box) goes, given its real width and the window's width:
@@ -182,12 +184,15 @@ export const TOOLS_CLEAR = 70;
  * window. On a phone it narrows to the window and may cover the tool strip rather than run off
  * screen, because a send button nobody can reach is worse than a strip hidden for a moment.
  */
-export function placeBar(sel: { x: number; y: number; bottom: number }, barWidth: number, viewWidth: number) {
+export function placeBar(sel: { x: number; y: number; bottom: number }, barWidth: number, viewWidth: number, barHeight = BAR_ROW) {
   const width = Math.min(barWidth, viewWidth - 2 * BAR_MARGIN);
   const right = viewWidth - width - BAR_MARGIN;
   const minLeft = right >= TOOLS_CLEAR ? TOOLS_CLEAR : BAR_MARGIN;
   const left = Math.max(minLeft, Math.min(sel.x, right));
-  const top = sel.y - 50 > 52 ? sel.y - 50 : sel.bottom + 12;
+  // A bar whose buttons wrap to a second row (a phone) is taller: it is lifted by its real
+  // height, so it never covers the top of what is selected.
+  const lift = Math.max(BAR_ROW, barHeight) + 6;
+  const top = sel.y - lift > 52 ? sel.y - lift : sel.bottom + 12;
   return { left, top, width };
 }
 
