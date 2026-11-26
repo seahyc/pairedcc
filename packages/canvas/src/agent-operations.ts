@@ -1,4 +1,5 @@
 import { relationships, relationshipsOf, sourceOf, transformationOf, type ArrowEnd, type PrimitiveRecord } from "./primitives";
+import { followers } from "./follow";
 import { prototypeRefusal } from "./prototype-flags";
 import {
   AssetRecordType,
@@ -570,12 +571,25 @@ export async function executeCommand(
       });
       const positions = layoutPositions(boxes, input);
       return atomic(editor, "arrange objects", () => {
+        // Comments, notes and replies about what moves come along, as with the person's own drag.
+        // A selected object's are moved by the drag follower in App, so they are left to it.
+        const selected = new Set<string>(editor.getSelectedShapeIds());
+        const moving = new Set<string>([...editor.getShapeAndDescendantIds(shapes.map((s) => s.id)), ...selected]);
+        const page = editor.getCurrentPageShapes();
         editor.run(() => shapes.forEach((shape, i) => {
           const bounds = boxes[i], target = positions[i];
           const transform = editor.getShapePageTransform(shape);
           const origin = transform.applyToPoint({ x: 0, y: 0 });
           const point = editor.getPointInParentSpace(shape, { x: origin.x + target.x - bounds.x, y: origin.y + target.y - bounds.y });
           editor.updateShape({ id: shape.id, type: shape.type, x: point.x, y: point.y });
+          if (selected.has(shape.id)) return;
+          const dx = target.x - bounds.x, dy = target.y - bounds.y;
+          if (!dx && !dy) return;
+          const attached = followers([...editor.getShapeAndDescendantIds([shape.id])], page, moving);
+          editor.updateShapes(attached.flatMap((id) => {
+            const s = editor.getShape(id as TLShape["id"]);
+            return s && !editor.isShapeOrAncestorLocked(s) ? [{ id: s.id, type: s.type, x: s.x + dx, y: s.y + dy }] : [];
+          }));
         }));
         return { objects: shapes.map(shape => describeObject(editor, shape.id)) };
       });

@@ -7,6 +7,7 @@ import { atomic, createCard, createComment, freeSpot } from "./agent-operations"
 import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { keepForAgent } from "./leave-out";
+import { followers } from "./follow";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -132,6 +133,22 @@ type Keep = (shapes: TLShape[]) => TLShape[];
  */
 // Objects worth giving with no text of their own: media, and data the ask can describe.
 const media = new Set(["image", "video", "bookmark", "embed", "chart", "dataset"]);
+/**
+ * Comments, agent notes, replies and answers about what a frame holds. They sit on the page, not
+ * in the frame (so it never clips them), but they belong with its contents, as when the drag
+ * follower moves them with it (follow.ts). Asks are left out, as frame children always were.
+ */
+function attachedTo(editor: Editor, frame: TLShape) {
+  const pageId = editor.getAncestorPageId(frame);
+  if (!pageId) return [];
+  const page = [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []);
+  const subtree = [...editor.getShapeAndDescendantIds([frame.id])] as string[];
+  const within = new Set(subtree);
+  return followers(subtree, page, new Set())
+    .flatMap((id) => editor.getShape(id as TLShapeId) ?? [])
+    .filter((s) => !within.has(s.id) && !askOf(s) && !editor.isShapeHidden(s) && textOf(s));
+}
+
 function inside(editor: Editor, frame: TLShape, skip: Set<string>, keep: Keep = (x) => x) {
   const found: TLShape[] = [];
   const walk = (id: TLShapeId) => {
@@ -146,6 +163,7 @@ function inside(editor: Editor, frame: TLShape, skip: Set<string>, keep: Keep = 
     }
   };
   walk(frame.id);
+  for (const s of keep(attachedTo(editor, frame).filter((a) => !skip.has(a.id)))) found.push(s);
   const at = (s: TLShape) => editor.getShapePageBounds(s) ?? { x: 0, y: 0 };
   found.sort((a, b) => at(a).y - at(b).y || at(a).x - at(b).x);
   return { inside: found.slice(0, INSIDE_LIMIT).map((s) => given(editor, s, 400)), more: Math.max(0, found.length - INSIDE_LIMIT) };
@@ -219,7 +237,8 @@ export function describeAsk(editor: Editor, shape: TLShape) {
               editor
                 .getSortedChildIdsForParent(frame.id)
                 .flatMap((id) => editor.getShape(id) ?? [])
-                .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset")),
+                .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset"))
+                .concat(attachedTo(editor, frame).filter((a) => !skip.has(a.id))),
             )
               .slice(0, 12)
               .map((s) => given(editor, s, 400)),

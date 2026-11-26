@@ -1,4 +1,4 @@
-// Browser check for item 80: an ask (and comments, replies, answers and agent notes) about
+// Browser check for items 80 and 96: an ask (and comments, replies, answers and agent notes) about
 // something in a frame is never clipped by the frame. Two cards are grouped into a frame; the
 // person asks about one, comments on the other; an agent answers the ask, replies to the comment
 // and annotates a card. None may be clipped (tldraw gives a clipped shape a mask), each sits on
@@ -90,6 +90,54 @@ await p.waitForTimeout(300);
 for (const [name, id] of Object.entries(all)) {
   const s = await state(id), b = before[name];
   check(`the ${name} moves with the frame`, Math.abs(s.x - b.x - 60) < 1 && Math.abs(s.y - b.y - 40) < 1, `${Math.round(s.x - b.x)},${Math.round(s.y - b.y)}`);
+}
+// Item 96 (follow-ups to #104). (b) An ask about the frame gives the comment and reply about what it holds.
+const aboutFrame = await (async () => {
+  await select([frame]);
+  await p.locator('.selection-bar button.primary').click();
+  await p.locator('.selection-bar.asking input').fill('What does this frame add up to?');
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(500);
+  return (await command('asks', { state: 'all' })).asks.find((a) => a.question === 'What does this frame add up to?');
+})();
+const held = (aboutFrame?.targets?.[0]?.inside ?? []).map((o) => o.text).join(' | ');
+check('an ask about the frame gives the comment and the reply on its cards', held.includes('Too vague') && held.includes('Say per what'), held);
+// (a) An ask about both cards follows the frame.
+await select([seat, usage]);
+await p.locator('.selection-bar button.primary').click();
+await p.locator('.selection-bar.asking input').fill('Compare these two');
+await p.keyboard.press('Enter');
+await p.waitForTimeout(500);
+const both = (await objects()).find((o) => o.text === 'Compare these two').id;
+// (c) An agent arranges the frame while nothing is selected: everything about its cards comes along.
+const tracked = { ...all, 'ask about both cards': both };
+await select([]);
+const pre = Object.fromEntries(await Promise.all(Object.entries(tracked).map(async ([k, id]) => [k, await state(id)])));
+const framePre = await state(frame);
+const frev = await p.evaluate((id) => window.paired.read().objects.find((o) => o.id === id).revision, frame);
+await command('arrange', { objects: [{ id: frame, expectedRevision: frev }], layout: 'row', x: framePre.x + 200, y: framePre.y + 100 });
+await p.waitForTimeout(300);
+const frameNow = await state(frame), fdx = frameNow.x - framePre.x, fdy = frameNow.y - framePre.y;
+for (const [name, id] of Object.entries(tracked)) {
+  const s2 = await state(id), b = pre[name];
+  check(`the ${name} moves with the frame when an agent arranges it`, Math.abs(s2.x - b.x - fdx) < 1 && Math.abs(s2.y - b.y - fdy) < 1, `${Math.round(s2.x - b.x)},${Math.round(s2.y - b.y)} vs ${Math.round(fdx)},${Math.round(fdy)}`);
+}
+// One undo takes the agent's arrange back, comments included.
+await p.evaluate(() => { window.__pairedEditor.undo(); });
+await p.waitForTimeout(300);
+const undone = await Promise.all(Object.entries(tracked).map(async ([k, id]) => { const s4 = await state(id), b = pre[k]; return Math.abs(s4.x - b.x) < 1 && Math.abs(s4.y - b.y) < 1; }));
+check('one undo puts the frame and everything about it back', undone.every(Boolean) && Math.abs((await state(frame)).x - framePre.x) < 1);
+await p.evaluate(() => { window.__pairedEditor.redo(); });
+await p.waitForTimeout(300);
+// The same with the frame selected moves each of them once, not twice.
+await select([frame]);
+const pre2 = Object.fromEntries(await Promise.all(Object.entries(tracked).map(async ([k, id]) => [k, await state(id)])));
+const frev2 = await p.evaluate((id) => window.paired.read().objects.find((o) => o.id === id).revision, frame);
+await command('arrange', { objects: [{ id: frame, expectedRevision: frev2 }], layout: 'row', x: frameNow.x - 100, y: frameNow.y });
+await p.waitForTimeout(300);
+for (const [name, id] of Object.entries(tracked)) {
+  const s3 = await state(id), b = pre2[name];
+  check(`the ${name} moves once when the arranged frame is selected`, Math.abs(s3.x - b.x + 100) < 1 && Math.abs(s3.y - b.y) < 1, `${Math.round(s3.x - b.x)},${Math.round(s3.y - b.y)}`);
 }
 check('no page errors', errors.length === 0, errors.join(' | '));
 await browser.close();
