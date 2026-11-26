@@ -166,7 +166,7 @@ task by which measure is furthest from target, not by backlog order.
     `packages/canvas/eval/tasks/`, each with a machine-checked end state, a runner that sets each
     one up in a real tab, and a recorded attempt by a fresh agent that has only `AGENT_API.md` and
     the tools. Done when the scorecard reports a completion rate and median tool calls.
-19. (Part 1 PR #32 and part 2 PR #35, stacked, open and awaiting review: restore from Menu → Earlier versions. Part 3, listing and opening other server boards, not started.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
+19. (PRs #32, #35, #39, stacked in that order, open and awaiting review: restore from Menu → Earlier versions, open from Menu → Saved boards. Complete once all three merge.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
     their boards, open one, and restore an earlier revision from the canvas.
 21. (Merged, see Done.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
@@ -216,7 +216,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 31. Stable performance numbers | claude/sprint-perf-stable | 2026-11-26T11:13Z
-19. Board picker, part 3: list and open saved boards | claude/sprint-board-picker | 2026-11-26T11:09Z
 30. Board opens on an empty view | claude/sprint-reframe | 2026-11-26T11:09Z
 20. Welcome board header overlaps | claude/sprint-welcome-check | 2026-11-26T11:07Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
@@ -295,6 +294,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-B, item 27) `canvas_group` wraps objects in a frame (the canvas's grouping unit) rather than a tldraw group, keeps page positions, needs a shared parent, and refuses when the frame would cover an object outside the group, so grouping never hides anything. No ungroup operation; `canvas_undo_run` takes a group back.
 - (build-A, item 28) The eval's workspace measure gives e2e `DATABASE_URL`/`REDIS_URL` from the environment, else starts throwaway Postgres and Redis when installed (Postgres as `nobody` under root), else reports "had no database". Existing product fail→pass in this sandbox. The 10k pan median swings 36–74 ms between back-to-back runs here, so the 25% regression flag fires on noise; threshold left unchanged.
 
+- (build-B, item 19) "Saved boards" shows in the Menu only when the account holds more than one server board, so most people never see it. Opening a board saves the current one first, and the browser remembers which board is open (the sync memo's `boardId`), so a reload reopens it. Board names are derived from IDs ("Your board", "Kept from a browser · date"), and boards cannot be renamed or deleted from the canvas yet.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -331,3 +332,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T11:07Z | build-B | 29 Say why stale | #34 | Stale flag names the root cause and path, with tooltip and aria-label; before/after screenshots |
 | 2026-11-26T11:08Z | build-B | 19 Board history, part 2 | #35 | Menu → Earlier versions lists and restores revisions; first screen unchanged except the clock; checked at 1440 and 390 px |
 | 2026-11-26T11:10Z | build-A | 28 Existing product runs e2e | #36 | e2e runs against throwaway services in the eval; Existing product fail→pass; 10k pan flag shown to be noise (base 69.1 vs branch 35.7 ms back to back) |
+| 2026-11-26T11:13Z | build-B | 19 Board picker, part 3 | #39 | Menu → Saved boards opens another server board, saving first; reload reopens it; item 19 complete with #32 #35 |
