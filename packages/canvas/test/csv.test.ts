@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCsvFile, parseCsv } from "../src/data/csv";
+import { decodeCsv, isCsvFile, parseCsv } from "../src/data/csv";
 import { datasetSchema } from "../src/data/model";
 
 const ok = (text: string, name = "readings.csv") => {
@@ -74,5 +74,75 @@ describe("CSV import", () => {
     expect(isCsvFile({ name: "X.CSV", type: "application/octet-stream" })).toBe(true);
     expect(isCsvFile({ name: "data", type: "text/csv" })).toBe(true);
     expect(isCsvFile({ name: "photo.png", type: "image/png" })).toBe(false);
+  });
+
+  it("keeps codes with leading zeros, and hex or binary looking values, as text", () => {
+    const r = parseCsv("store,zip,code,hex,amount\nA,02139,007,0x1A,12\nB,10001,042,0b11,0.5\nC,94105,100,0x2B,-3\n", "codes.csv");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const type = (n: string) => r.dataset.columns.find((c) => c.name === n)?.type;
+    expect([type("zip"), type("code"), type("hex"), type("amount")]).toEqual(["text", "text", "text", "number"]);
+    expect(r.dataset.rows[0]).toMatchObject({ zip: "02139", code: "007", hex: "0x1A", amount: 12 });
+  });
+  it("still reads plain numbers as numbers: zero, decimals, signs and exponents", () => {
+    const r = parseCsv("v\n0\n0.5\n-3\n1e3\n.25\n+7\n", "nums.csv");
+    expect(r.ok && r.dataset.columns[0].type).toBe("number");
+    expect(r.ok && r.dataset.rows.map((x) => x.v)).toEqual([0, 0.5, -3, 1000, 0.25, 7]);
+  });
+  it("types a long malformed cell quickly (no regex backtracking)", () => {
+    const t = performance.now();
+    parseCsv(`v\n${"9".repeat(40_000)}x\n`, "long.csv");
+    expect(performance.now() - t).toBeLessThan(200);
+  });
+});
+
+// Item 51: the dataset keeps what the file says.
+describe("CSV import keeps what the file says", () => {
+  it("(a) keeps integers beyond 2^53 as text, so long IDs stay distinct", () => {
+    const result = parseCsv("id,amount\n9007199254740993,1\n9007199254740992,2\n", "ids.csv");
+    if (!result.ok) throw new Error(result.errors.join("; "));
+    expect(result.dataset.columns).toEqual([{ name: "id", type: "text" }, { name: "amount", type: "number" }]);
+    expect(result.dataset.rows.map((r) => r.id)).toEqual(["9007199254740993", "9007199254740992"]);
+  });
+
+  it("(a) keeps a decimal with more digits than a number holds as text", () => {
+    const result = parseCsv("code\n0.12345678901234567890\n1.5\n", "codes.csv");
+    if (!result.ok) throw new Error(result.errors.join("; "));
+    expect(result.dataset.columns[0].type).toBe("text");
+    expect(result.dataset.rows[0].code).toBe("0.12345678901234567890");
+  });
+
+  it("(a) still reads ordinary numbers, including safe large integers and exponents, as numbers", () => {
+    const result = parseCsv("n\n9007199254740991\n-12.5\n1e3\n", "n.csv");
+    if (!result.ok) throw new Error(result.errors.join("; "));
+    expect(result.dataset.columns[0].type).toBe("number");
+    expect(result.dataset.rows.map((r) => r.n)).toEqual([9007199254740991, -12.5, 1000]);
+  });
+
+  it("(b) keeps a row whose only value is a quoted empty string; a blank line is still skipped", () => {
+    const result = parseCsv('note\nfirst\n""\n\nlast\n', "notes.csv");
+    if (!result.ok) throw new Error(result.errors.join("; "));
+    expect(result.dataset.rows.map((r) => r.note)).toEqual(["first", "", "last"]);
+  });
+
+  it("(c) refuses a file that is not UTF-8 and says how to fix it, instead of importing replacement characters", () => {
+    const windows1252 = new Uint8Array([...new TextEncoder().encode("name\ncaf"), 0xe9, 0x0a]);
+    const decoded = decodeCsv(windows1252);
+    expect(decoded).toEqual({ ok: false, errors: ["It is not UTF-8 text (an accented letter or symbol near line 2 cannot be read). Save it again as “CSV UTF-8” and drop it again."] });
+  });
+
+  it("(c) decodes UTF-8, with or without a byte-order mark", () => {
+    const utf8 = new TextEncoder().encode("name\ncafé\n");
+    expect(decodeCsv(utf8)).toEqual({ ok: true, text: "name\ncafé\n" });
+    expect(decodeCsv(new Uint8Array([0xef, 0xbb, 0xbf, ...utf8]))).toEqual({ ok: true, text: "name\ncafé\n" });
+  });
+});
+
+describe("CSV import keeps what the file says (review of #68)", () => {
+  it("keeps an integer beyond 2^53 written in scientific notation as text, so sums stay exact", () => {
+    const result = parseCsv("category,amount\na,1.00000000000001e18\na,-1e18\n", "big.csv");
+    if (!result.ok) throw new Error(result.errors.join("; "));
+    expect(result.dataset.columns[1].type).toBe("text");
+    expect(result.dataset.rows.map((r) => r.amount)).toEqual(["1.00000000000001e18", "-1e18"]);
   });
 });
