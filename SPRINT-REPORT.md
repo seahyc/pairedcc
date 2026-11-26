@@ -1,6 +1,6 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-26T11:15Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-26T11:35Z by the review lane. Branch: `claude/sprint-int`.
 
 ## Read first
 - **The calm-canvas rework (#21) is merged, combined by the review lane with 16 sprint PRs.** It
@@ -37,6 +37,14 @@ Last updated 2026-11-26T11:15Z by the review lane. Branch: `claude/sprint-int`.
 - **The scorecard flags Performance as regressed** (10k pan 40 to 76.6 ms a frame). The same code
   measured 39 to 84 ms across runs on this container, so this is the known spread, not a change;
   backlog 31 (stable performance numbers) is claimed.
+- **Restoring an earlier version (#32) can be lost by a reload within about a second.** The board
+  shows the restored version and the server holds it, but this browser's own copy is written a
+  moment later; a reload before that brings back the board as it was, and the next edit saves that
+  on top. Nothing is deleted (every version stays in history). Found by the review with a script
+  (reload 0 ms and 300 ms after restore: lost; 1,000 ms: kept). Filed as backlog 42; the same gap
+  exists for any board just loaded from the account.
+- **Review lag.** Build lanes opened PRs #33 to #52 while #21 to #32 were reviewed; they are not
+  on this branch and nothing in this report covers them.
 - **#15 changes how every signed-in board is saved, and is the merge most worth reading**
   (`packages/canvas/src/board-sync.ts`). The board is uploaded to the account 1.2 s after each
   change and a clean browser opens the account's board. Review found and fixed two defects before
@@ -137,6 +145,10 @@ MCP. Agent usability reports the attempt recorded with #24.
 - [#25](https://github.com/seahyc/pairedcc/pull/25) Data agent write rules unit-tested; three data races and stricter acceptance checks in the eval (a7c8505). Safety races 6 to 9.
 - [#27](https://github.com/seahyc/pairedcc/pull/27) Converge prototype behind `?prototype=converge`: a synthesis card with an arrow from each source that goes stale when one changes; checked live (12abf62).
 - [#28](https://github.com/seahyc/pairedcc/pull/28) At most 50 boards per account; creating one more is refused with 403; 25 of 25 board tests pass on Postgres 16 (eb63f9b).
+- [#29](https://github.com/seahyc/pairedcc/pull/29) A save the server refuses is no longer shown as Offline and re-uploaded for ever: the chip says why and waits for a change (2a36db5). Review added the 403 from #28's board limit, which was still treated as Offline. Reproduced in a tab for 413, 403 and 500.
+- [#30](https://github.com/seahyc/pairedcc/pull/30) Board sync checked in a real browser against the real server: `PAIRED_SERVER_URL` makes the dev canvas proxy sign-in and boards (e8b3218). Reproduced with Postgres 16 and Redis: saved, opened in a clean browser on the same account, hidden from another account, 401 signed out.
+- [#31](https://github.com/seahyc/pairedcc/pull/31) Converge prototype, part 2 (`?prototype=converge`): lettered arrows, claims that cite their sources, and a person's own synthesis from Properties (66678b5). Review fitted it to #27 as merged and to the calm layout, where Properties is behind the menu.
+- [#32](https://github.com/seahyc/pairedcc/pull/32) `restore(revision)` in board sync and history routes in the dev board store; no screen yet (b8b30a3). Driven in a real tab: restore, undo of the restore, missing revision. See Read first for the reload gap.
 - Review lane: `packages/cli` and `packages/web` test scripts pass with no test files (a712b50).
 
 How each was checked: the branch was merged with the integration branch, built and tested; every
@@ -179,6 +191,6 @@ None.
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-Open and not yet reviewed: #29 (refused save is not "Offline") and later PRs (board history,
+Open and not yet reviewed: #33 to #52 (board history screens,
 board picker, group operation, stale reason, eval services, saved boards). PR descriptions #9 to
 #20 carry a tool footer written before the brief ruled it out; commits do not.
