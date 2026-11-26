@@ -123,7 +123,7 @@ Answering is three steps, the same for the resident agent (`pnpm --filter @paire
 
 2. **Say you have it.** `ask_status` with `{ id, state: "working", note: "reading 2 cards" }`. The note appears on the ask. If you cannot answer, send `state: "failed"` with a plain `error`; the human gets a Retry button, and a retry reaches the wait endpoint as a new attempt.
 
-3. **Answer.** `answer` with `{ id, text }` for one short card (about 60 words; over 90 is cut, over 700 characters is rejected), or `{ id, alternatives: [..] }` with two to four short options, which are lettered and placed side by side for the human to pick (P) or cross out (X). Add `read` to say what you read, and `question: true` when your text is a clarifying question back (the ask then stays open in the queue). The cards go under the ask, on the ask's page even if the human has since opened another page (they are told who answered and where); the human's objects are never moved.
+3. **Answer.** `answer` with `{ id, text }` for one short card (about 60 words; over 90 is cut, over 700 characters is rejected), or `{ id, alternatives: [..] }` with two to four short options, which are lettered and placed side by side for the human to pick (P) or cross out (X); on a window too narrow for one row (a phone) they wrap into rows that fit, and a card narrows to the window. If the person is looking at the ask when the answer lands, their view pans to show all of it. Add `read` to say what you read, and `question: true` when your text is a clarifying question back (the ask then stays open in the queue). The cards go under the ask, on the ask's page even if the human has since opened another page (they are told who answered and where, with a Show button that takes them to it); the human's objects are never moved.
 
 An ask carries everything the human sees as its context, and nothing else needs to be read to answer it:
 
@@ -132,12 +132,15 @@ An ask carries everything the human sees as its context, and nothing else needs 
 | `id`, `revision`, `attempt` | The ask card. `attempt` rises on each retry. |
 | `question` | What the human asked |
 | `state`, `agent`, `note`, `error` | Where it stands and who has it |
-| `targets` | The selected objects: `id`, `type`, `author`, `text`, and `mark` when the person judged it. A selected frame also has `inside`: the objects it holds (nested frames included), in reading order, up to 20, with `insideMore` counting the rest |
+| `targets` | The selected objects: `id`, `type`, `author`, `text`, and `mark` when the person judged it. A chart's `text` says what it shows (measure, grouping, filter, rows in view, each bar, the selection, and "Out of date: …" with the bars still drawn when it is stale), and a dataset's gives its title, source, columns, row count and first five rows, so an agent with no tools can answer about them. A selected frame also has `inside`: the objects it holds (nested frames included), in reading order, up to 20, with `insideMore` counting the rest |
 | `frame` | The frame the selection sits in, with `name` and the text of up to 12 other objects in it (each with its `mark`) |
 | `history` | When the ask is about an agent's answer: the exchange that led to it, oldest first, then the other answers to that ask (an option's siblings). Entries are `who`, `said`, and for objects `id` and `mark`. Each object appears once, and never when it is already in `targets` |
+| `leftOut` | Present when the person left nearby objects out of this ask: how many were withheld from `frame`, `history` and a selected record's parts. Absent otherwise |
 | `pageId`, `pageName`, `askedAt` | Where and when |
 
 `mark` is `picked` (the person boxed it with Pick, P) or `rejected` (struck through with Cross out, X), and is absent otherwise. It is the person's judgement, shown on the board: build on what they picked, and do not offer a crossed-out idea again. Asked to take option A further after crossing out B, an agent sees A in `targets` with `mark: "picked"` and B in `history` with `mark: "rejected"`.
+
+The person can leave objects out of asks (Solveit's hidden messages; a prototype, set only in a tab opened with `?prototype=context`, with **Leave out** on the selection bar or L). A left-out object is never given through an ask's `frame`, `history` or record parts, and a left-out frame is not given at all; an object the person selected for the ask is still given, because choosing it is choosing to share it. The ask says how many were withheld (`leftOut`), never what. The mark is the person's alone: it is `meta.leftOut: true` in `canvas_read` and `canvas_get`, agents cannot set or clear it, and the board shows it as "left out of asks". Do not go and read a left-out object to answer an ask.
 
 Asks are also items in the feedback queue (`ask` holds the state), so nothing is lost if no agent was waiting. Keep answers to one step: the human does the thinking and judges each answer before asking again. See `docs/canvas/principles.md`.
 
@@ -277,7 +280,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `read` | Optional `ids`; returns page, selection, objects (with `author`, `style` on cards, and `dataset`, `widget` or `stale` where they apply), annotations, open/resolved human `marks` and arrow bindings |
 | `get` | `id`, optional `includeAsset`; cards report `style` (note, heading, quote, code, handwriting for the person, caption); a dataset's `dataset` includes its `rows`; prototype `relationships`, `source` and `transformation` (see below) |
 | `create` | `kind` (frame, rectangle, ellipse, text, note), `x`, `y`, optional dimensions, text, color, name, note `style` (note, heading, quote, code), `inputs` (IDs it was derived from) |
-| `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name |
+| `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name. Changing the `text` of something the person wrote (`author: "Human"`) is refused, because their words stay theirs: comment on it with `annotate`, or answer beside it. The same holds for imported source text, which reads as `author: "Human"` whoever imported it, and for an agent's copy of the person's card, which keeps their hand |
 | `image` | `src` (base64 image data URL), `x`, `y`, `width`, `height`, optional name, sourceUrl, isAnimated, caption |
 | `connect` | `fromId`, `toId`, optional relation (reference: supports, cites or is evidence for, so use it with a label for "supports"; alternative: options for the same thing; derived-from, the default: made from, drawn from the source; feedback), label |
 | `annotate` | `targetId`, `text`, optional position; creates a targeted note and bound connector |

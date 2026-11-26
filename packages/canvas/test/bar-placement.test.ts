@@ -3,6 +3,18 @@ import { BAR_MARGIN, TOOLS_CLEAR, placeBar, statusWidth } from "../src/ask-rules
 
 const sel = { x: 400, y: 300, bottom: 420 };
 
+describe("placeBar: a bar that wraps to two rows", () => {
+  it("is lifted by its real height, so it never covers the top of the selection", () => {
+    const sel = { x: 75, y: 594, bottom: 794 };
+    // One row: as before. Two rows (80 px tall on a 390 px phone): its bottom stays above the selection.
+    expect(placeBar(sel, 373, 390).top).toBe(544);
+    const wrapped = placeBar(sel, 373, 390, 80);
+    expect(wrapped.top + 80).toBeLessThanOrEqual(sel.y);
+    // No room above for the taller bar: it goes below the selection.
+    expect(placeBar({ x: 75, y: 120, bottom: 300 }, 373, 390, 80).top).toBe(312);
+  });
+});
+
 describe("placeBar: the selection bar and Ask box stay inside the window", () => {
   it("sits at the selection's left edge when there is room", () => {
     expect(placeBar(sel, 373, 1440)).toEqual({ left: 400, top: 250, width: 373 });

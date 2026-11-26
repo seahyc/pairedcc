@@ -123,7 +123,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_update",
     op: "update",
     description:
-      "Update a specific object. Read it first and provide its current expectedRevision; stale updates are rejected.",
+      "Update a specific object. Read it first and provide its current expectedRevision; stale updates are rejected. You cannot change the words of something the person wrote (author \"Human\"): comment on it with canvas_annotate, or answer beside it, instead.",
     input: patchInput.shape,
     output: "json",
   },

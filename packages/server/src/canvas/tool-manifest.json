@@ -710,7 +710,7 @@
     },
     {
       "name": "canvas_update",
-      "description": "Update a specific object. Read it first and provide its current expectedRevision; stale updates are rejected.",
+      "description": "Update a specific object. Read it first and provide its current expectedRevision; stale updates are rejected. You cannot change the words of something the person wrote (author \"Human\"): comment on it with canvas_annotate, or answer beside it, instead.",
       "op": "update",
       "output": "json",
       "inputSchema": {
