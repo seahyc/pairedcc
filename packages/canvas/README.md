@@ -88,6 +88,8 @@ pnpm build:canvas   # from the repository root: type check and production build
 pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents every tool
 ```
 
+`tools/verify-pdf.mjs <screenshot dir> [origin]` checks a PDF (`test/fixtures/notes.pdf`, the synthetic notes printed by Chromium with `test/fixtures/build-pdf.cjs`).
+
 `tools/verify-cite.mjs <screenshot dir> [origin]` checks bringing cited sections beside a record (the synthetic `test/fixtures/pack.md` is the document the review cites).
 
 `tools/verify-compare.mjs <screenshot dir> [origin]` checks Side by side on two pasted records (alignment, order kept, one undo).
