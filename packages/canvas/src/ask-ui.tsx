@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
-import { askStatusLine, retryLabel, BAR_MARGIN, placeBar, startersFor, statusWidth, suggestQuestion } from "./ask-rules";
+import { askAnnouncement, askStatusLine, retryLabel, BAR_MARGIN, placeBar, startersFor, statusWidth, suggestQuestion } from "./ask-rules";
 import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
@@ -75,11 +76,27 @@ export function AskLayer() {
           : [];
         // What the person kept back from this ask, as an agent reading it now would be given it.
         const kept = anyLeftOut ? leftOutLabel(describeAsk(editor, s).leftOut ?? 0) : "";
-        return [{ id: s.id, ask, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds)}${kept ? ` · ${kept}` : ""}`, outlines }];
+        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds)}${kept ? ` · ${kept}` : ""}`, outlines }];
       });
     },
     [editor],
   );
+  // Each change of an ask's state is said once in a polite live region; the state lines tick
+  // every second, so they are not live themselves. Asks already there when this page opened
+  // (or when the person changes page) are the baseline, not news.
+  const pageId = useValue("ask page", () => editor.getCurrentPageId(), [editor]);
+  const heard = useRef<{ page: string; states: Map<string, string> } | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+  useEffect(() => {
+    const states = new Map(asks.map((a) => [a.id, a.ask.state]));
+    if (!heard.current || heard.current.page !== pageId) {
+      heard.current = { page: pageId, states };
+      return;
+    }
+    const said = asks.flatMap((a) => askAnnouncement(heard.current!.states.get(a.id), { ...a.ask, question: a.question }, a.answers) ?? []);
+    heard.current.states = states;
+    if (said.length) setAnnouncement(said.join(" "));
+  }, [asks, pageId]);
   const active = asks.some((a) => a.ask.state === "waiting" || a.ask.state === "working");
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -89,6 +106,12 @@ export function AskLayer() {
   }, [active]);
   return (
     <div className="scratch-layer ask-layer">
+      {createPortal(
+        <div className="visually-hidden" role="status" aria-live="polite" data-ask-announcer>
+          {announcement}
+        </div>,
+        document.body,
+      )}
       {asks.map((a) => {
         const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given, recent });
         return (
