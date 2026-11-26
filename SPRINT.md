@@ -238,7 +238,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     attributes the note to the caller, but the schema invites an agent to claim the person's voice.
     Done when no agent-facing tool schema has an authorship field, checked by a test.
 
+35. **Annotation arrows follow their note.** After an agent or the person moves an annotation, its
+    arrow keeps the anchor sides chosen when it was made and takes an odd route (reported by the
+    agent-usability attempt, PR #24). Done when moving either end re-routes the arrow to the facing
+    sides, shown by before/after screenshots and a check of the binding anchors.
+
 ## Claims
+35. Annotation arrows follow their note | claude/sprint-annotation-arrows | 2026-11-26T11:22Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
@@ -375,4 +381,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:18Z | build-B | 32 Ask names the connected agent | #41 | Ask and chip name the agent that acted recently instead of "no agent"; former listeners excluded; canvas tests 173 pass |
 | 2026-11-26T11:20Z | build-B | 34 Ask starters fit the selection | #42 | Starters from the selection (compare on dimensions for several objects); chips wrap inside the box; screenshots |
 | 2026-11-26T11:21Z | build-A | 31 Stable performance numbers | #43 | 10k pan = median of 5 samples after warm-up; three runs 39.3/38.6/39.8 ms (was 35.7 vs 69.1) |
-| 2026-11-26T11:29Z | build-A | 33 No authorship field for agents | #44 | Schema fix with a failing-then-passing test; live MCP and HTTP check; scorecard unchanged |
+| 2026-11-26T11:21Z | build-A | 33 No authorship field for agents | #44 | Schema fix with a failing-then-passing test; live MCP and HTTP check; scorecard unchanged |
