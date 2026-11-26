@@ -4,6 +4,7 @@ import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivit
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
 import { askStatusLine, startersFor, suggestQuestion } from "./ask-rules";
 import { sourceOf } from "./import-meta";
+import { selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
 
@@ -121,12 +122,17 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
         text: only ? textOf(only) : "",
-                blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
+        blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
         // An imported record keeps its own starters; anything else gets ones that fit the selection.
         starters: startersFor(
           shapes.map((s) => ({ type: s.type, text: textOf(s) })),
           shapes.some((s) => ["record", "title", "field"].includes(sourceOf(s)?.kind ?? "")),
         ).join("\n"),
+        // Exactly two records of one import: they can be put side by side to compare.
+        pair: (() => {
+          const records = selectedRecords(editor);
+          return records.length === 2 && sourceOf(records[0])?.importId === sourceOf(records[1])?.importId;
+        })(),
       };
     },
     [editor],
@@ -164,10 +170,18 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
 
   const width = asking ? 430 : 330;
   const left = Math.max(70, Math.min(state.x, window.innerWidth - width - 16));
-  const top = state.y - 50 > 52 ? state.y - 50 : state.bottom + 12;
+  // Above the selection, else below it; a selection taller than the screen (two records far
+  // apart) keeps the bar on screen instead of pushing it out of reach.
+  const top = Math.max(52, Math.min(state.y - 50 > 52 ? state.y - 50 : state.bottom + 12, window.innerHeight - 64));
   // Keys keep working after a click: the board takes the keyboard back.
   const judge = (mark: "picked" | "rejected") => {
     toggleMark(editor, editor.getSelectedShapes(), mark);
+    editor.focus();
+  };
+  const compare = () => {
+    const [a, b] = selectedRecords(editor);
+    const result = a && b ? sideBySide(editor, a, b) : { ok: false as const, reason: "Select two records to see them side by side." };
+    if (!result.ok) onNotice(result.reason);
     editor.focus();
   };
   if (state.editing)
@@ -230,6 +244,11 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       <button onClick={onComment} title="Comment on it (C)">
         Comment <kbd>C</kbd>
       </button>
+      {state.pair && (
+        <button onClick={compare} title="Put these two records next to each other, the same columns lined up (one undo)">
+          Side by side
+        </button>
+      )}
     </div>
   );
 }
