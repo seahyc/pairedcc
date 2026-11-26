@@ -457,7 +457,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     of #21 recorded. Done when an older board gets the calm board once, after the first load from
     the account, without repeating it after a restore, and `verify-calm.mjs` passes 33/33.
 
-74. **Stale flags stay readable at the canvas edge and skip offscreen Tab stops.** (Review of #72,
+74. (PR #94 open, awaiting review.) **Stale flags stay readable at the canvas edge and skip offscreen Tab stops.** (Review of #72,
     confirmed, merged before the fix.) A stale card at the bottom of the view opens its reason
     below the visible canvas; a focused flag near the top grows above it; and a flag panned out of
     view is still a Tab stop with no visible focus. Done when an opened reason stays inside the
@@ -475,13 +475,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 75. First board never moves the view away | claude/sprint-calm-early | 2026-11-26T13:05Z
 71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
-74. Stale flags at the canvas edge | claude/sprint-stale-edges | 2026-11-26T12:58Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 74. Stale flags at the canvas edge (build-B): PR #94 (follow-up to #72's review).
 - 73. Older board gets the calm board with sync on (build-A): PR #91 (layout re-run once after the first load from the account; verify-calm 32/33 → 33/33).
 - 67. The person chooses what an ask leaves out (build-B): PR #90 (`?prototype=context`; verify-leave-out 7 failing before, 17/17 after; first screen unchanged).
 - Reviewed and merged 2026-11-26 by the review lane: #40 to #66, all 27 (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
@@ -729,3 +729,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:56Z | build-A | 73 Older board gets the calm board | #91 | verify-calm 32/33 → 33/33 (stand-in model); persistence and scorecard unchanged |
 | 2026-11-26T12:59Z | build-A | 65 Asks and the section reader; #85 review follow-up; merges | #89 #85 #73 | #89: edited titles reach the agent, follow-ups keep record parts (browser before 5/7 → 7/7), marked numeric headers, pipe-less markdown tables, fenced code lines (4+1 failing-first tests); #85: blank-line and cut-quote delimiter cases, pen strokes count as feedback (browser 10/10); #73 and #89 merged with claude/sprint-int after #60 and a frame-history change landed |
 | 2026-11-26T13:04Z | build-A | 71 Web page reader stays quick | #93 | One pass over the tags: 2 MB of unclosed <li> 38 s → 0.2 s, unclosed advert <div>s 31 s → 0.02 s; #65's behaviour tests unchanged; verify-webpage 9/9; scorecard unchanged |
+| 2026-11-26T13:06Z | build-B | 74 Stale flags at the canvas edge; merge-ups | #94 #76 #77 #69 #86 | #94: an opened reason flips above, clear of the selection bar, near the bottom; a focused flag grows down near the top; offscreen flags leave the Tab order; real tab 2/5 before, 5/5 after; scorecard unchanged. #67, #69 and #72 merged; #69, #86, #76 and #77 merged up; #77 also fixes the thin-image rounding (null before, 600 x 0.4 now) |
