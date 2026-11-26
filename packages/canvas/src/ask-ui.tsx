@@ -4,6 +4,7 @@ import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivit
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
 import { askStatusLine, startersFor, suggestQuestion } from "./ask-rules";
 import { sourceOf } from "./import-meta";
+import { selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
 
@@ -121,12 +122,17 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
         text: only ? textOf(only) : "",
-                blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
+        blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
         // An imported record keeps its own starters; anything else gets ones that fit the selection.
         starters: startersFor(
           shapes.map((s) => ({ type: s.type, text: textOf(s) })),
           shapes.some((s) => ["record", "title", "field"].includes(sourceOf(s)?.kind ?? "")),
         ).join("\n"),
+        // Exactly two records of one import: they can be put side by side to compare.
+        pair: (() => {
+          const records = selectedRecords(editor);
+          return records.length === 2 && sourceOf(records[0])?.importId === sourceOf(records[1])?.importId;
+        })(),
       };
     },
     [editor],

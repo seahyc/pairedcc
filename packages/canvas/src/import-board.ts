@@ -4,6 +4,7 @@ import { atomic } from "./agent-operations";
 import { planImport, parseImport, summarise, type ImportAs, type ImportFormat, type ImportPlan } from "./import-parse";
 import { sourceOf, type SourceMeta } from "./import-meta";
 import { tableLayout } from "./table-shape";
+import { planSideBySide, type RecordBox } from "./import-compare";
 
 // Putting an import on the board. Everything made here is an ordinary object: it moves,
 // can be edited, picked, crossed out, commented on and asked about. One import is one undo step.
@@ -258,4 +259,52 @@ export function importForAgent(editor: Editor, value: unknown, actor: string) {
       return { id, name: typeof shape?.meta.name === "string" ? shape.meta.name : "", row: sourceOf(shape)?.row };
     }),
   };
+}
+/** The record an object belongs to: the record itself, or the record its title or field card sits in. */
+export function recordOf(editor: Editor, shape: TLShape | undefined): TLShape | undefined {
+  const kind = sourceOf(shape)?.kind;
+  if (!shape || !kind) return undefined;
+  if (kind === "record") return shape;
+  if (kind !== "title" && kind !== "field") return undefined;
+  const parent = editor.getShape(shape.parentId as TLShapeId);
+  return sourceOf(parent)?.kind === "record" ? parent : undefined;
+}
+
+/** The distinct records the selection touches, in selection order. */
+export function selectedRecords(editor: Editor): TLShape[] {
+  const seen = new Map<string, TLShape>();
+  for (const shape of editor.getSelectedShapes()) {
+    const record = recordOf(editor, shape);
+    if (record && !seen.has(record.id)) seen.set(record.id, record);
+  }
+  return [...seen.values()];
+}
+
+/**
+ * Put two records of one import next to each other, the same columns lined up, as one undo
+ * step; then select both and bring them into view. Returns why not when it cannot.
+ */
+export function sideBySide(editor: Editor, a: TLShape, b: TLShape): { ok: true } | { ok: false; reason: string } {
+  const importId = sourceOf(a)?.importId;
+  const boxes: RecordBox[] = editor.getCurrentPageShapes().flatMap((shape) => {
+    const source = sourceOf(shape), bounds = editor.getShapePageBounds(shape);
+    return source?.kind === "record" && bounds && source.importId === importId
+      ? [{ id: shape.id, importId: source.importId, x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h }]
+      : [];
+  });
+  if (sourceOf(b)?.importId !== importId) boxes.push({ id: b.id, importId: sourceOf(b)?.importId ?? "", x: 0, y: 0, w: 0, h: 0 });
+  const plan = planSideBySide(boxes, a.id, b.id);
+  if (!plan.ok) return plan;
+  const ids = [plan.upper, plan.lower] as TLShapeId[];
+  // One step: the moves and the selection squash into a single undo entry.
+  atomic(editor, "side by side", () => {
+    for (const move of plan.moves) {
+      const shape = editor.getShape(move.id as TLShapeId);
+      if (shape) editor.updateShape({ id: shape.id, type: shape.type, x: shape.x + move.dx, y: shape.y + move.dy });
+    }
+    editor.select(...ids);
+  });
+  const box = editor.getSelectionPageBounds();
+  if (box) showBox(editor, { x: box.x, y: box.y, w: box.w, h: box.h });
+  return { ok: true };
 }
