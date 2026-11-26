@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLShape } from "tldraw";
+import { clip } from "./text";
 
 const color = z.enum(DefaultColorStyle.values);
 const point = { x: z.number().finite(), y: z.number().finite() };
@@ -67,7 +68,7 @@ export function shapeName(shape: TLShape) {
     return shape.props.name;
   if ("richText" in shape.props) {
     const text = richTextPlain(shape.props.richText);
-    if (text) return text.split("\n")[0].slice(0, 48);
+    if (text) return clip(text.split("\n")[0], 48);
   }
   if (shape.type === "geo")
     return shape.props.geo === "ellipse" ? "Ellipse" : "Rectangle";

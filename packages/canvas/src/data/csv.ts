@@ -1,6 +1,7 @@
 import { createShapeId, type Editor, type TLShapeId } from "tldraw";
 import { datasetSchema, type Dataset, type Row } from "./model";
 import type { DatasetShape } from "./shapes";
+import { clip } from "../text";
 
 // PROTOTYPE: a person drops a CSV file on the canvas to create a dataset object
 // (working spec, first acceptance scenario: "Import a non-confidential dataset").
@@ -68,8 +69,8 @@ export function parseCsv(text: string, fileName: string): CsvResult {
   const types = names.map((_, c) => (body.every((r) => numeric(r.cells[c])) ? "number" : "text") as "number" | "text");
   const rows: Row[] = body.map((r) => Object.fromEntries(names.map((n, c) => [n, types[c] === "number" ? Number(r.cells[c]) : r.cells[c]])));
   const result = datasetSchema.safeParse({
-    title: fileName.replace(/\.csv$/i, "").slice(0, 200) || "Dataset",
-    source: `Imported from ${fileName}`.slice(0, 500),
+    title: clip(fileName.replace(/\.csv$/i, ""), 200) || "Dataset",
+    source: clip(`Imported from ${fileName}`, 500),
     columns: names.map((name, c) => ({ name, type: types[c] })),
     rows,
     version: 0,

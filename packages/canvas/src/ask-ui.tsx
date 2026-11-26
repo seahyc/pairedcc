@@ -4,7 +4,7 @@ import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivit
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
 import { askStatusLine, startersFor, suggestQuestion } from "./ask-rules";
 import { sourceOf } from "./import-meta";
-import { selectedRecords, sideBySide } from "./import-board";
+import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
 import { keys } from "./keys";
@@ -129,6 +129,11 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
           shapes.map((s) => ({ type: s.type, text: textOf(s) })),
           shapes.some((s) => ["record", "title", "field"].includes(sourceOf(s)?.kind ?? "")),
         ).join("\n"),
+        // One record that cites sections of an imported document: they can be brought beside it.
+        cites: (() => {
+          const records = selectedRecords(editor);
+          return records.length === 1 ? citedBy(editor, records[0]).found : [];
+        })().join(" "),
         // Exactly two records of one import: they can be put side by side to compare.
         pair: (() => {
           const records = selectedRecords(editor);
@@ -177,6 +182,13 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
   // Keys keep working after a click: the board takes the keyboard back.
   const judge = (mark: "picked" | "rejected") => {
     toggleMark(editor, editor.getSelectedShapes(), mark);
+    editor.focus();
+  };
+  const bringSources = () => {
+    const [record] = selectedRecords(editor);
+    const result = record ? bringCited(editor, record) : { ok: false as const, reason: "Select one record." };
+    if (!result.ok) onNotice(result.reason);
+    else if (result.missing.length) onNotice(`Not on this page: ${result.missing.join(", ")}`);
     editor.focus();
   };
   const compare = () => {
@@ -245,6 +257,11 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       <button onClick={onComment} title="Comment on it (C)">
         Comment <kbd>C</kbd>
       </button>
+      {state.cites && (
+        <button onClick={bringSources} title={`Bring the sections this record cites (${state.cites.split(" ").join(", ")}) beside it, linked by arrows (one undo)`}>
+          Show {state.cites.split(" ").join(", ")}
+        </button>
+      )}
       {state.pair && (
         <button onClick={compare} title="Put these two records next to each other, the same columns lined up (one undo)">
           Side by side
