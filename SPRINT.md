@@ -597,6 +597,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 97. **verify-answer-page's frame step after #104.** On `claude/sprint-int` at 8cea125, `tools/verify-answer-page.mjs` fails "an answer that lands inside a frame on the open page belongs to the frame" (10/11); #104 made answers land clear of frames so they are never clipped. Done when the product choice (answer inside the frame, unclipped, or beside it) is recorded and the check asserts that choice, passing on the branch.
 
 ## Claims
+97. verify-answer-page's frame step after #104 | claude/sprint-answer-page-frame | 2026-11-26T14:27Z
 98. Follow-ups to bot review of #99 and #88 | claude/sprint-review-followups-a | 2026-11-26T14:23Z
 93. Stale flag placement follows the drawn flag | claude/sprint-stale-drawn | 2026-11-26T14:20Z
 94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
