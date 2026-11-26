@@ -136,25 +136,18 @@ function useAutoHeight(editor: Editor, shape: CardShape, chrome: number) {
       if (!shape || Math.abs(shape.props.h - h) < 1) return;
       editor.run(() => editor.updateShape<CardShape>({ id, type: "card", props: { h } }), { history: "ignore" });
     };
-    sync();
-    const observer = new ResizeObserver(sync);
+    // Measuring before the board's fonts arrive would size the card for a fallback face.
+    let live = true;
+    if (document.fonts.status === "loaded") sync();
+    else void document.fonts.ready.then(() => live && sync());
+    const observer = new ResizeObserver(() => document.fonts.status === "loaded" && sync());
     observer.observe(text);
-    return () => observer.disconnect();
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
   }, [editor, id, chrome, height, w, richText]);
   return ref;
-}
-
-/** Re-measure every card, e.g. once web fonts have loaded or the type has changed. */
-export function refitCards(editor: Editor) {
-  const util = editor.getShapeUtil("card") as CardShapeUtil;
-  // Every page, not just the open one, so switching pages never shows stale heights.
-  const updates = editor.store
-    .allRecords()
-    .filter((r): r is CardShape => r.typeName === "shape" && r.type === "card")
-    .map((s) => ({ before: s, after: util.fit(s) }))
-    .filter(({ before, after }) => before.props.h !== after.props.h)
-    .map(({ after }) => ({ id: after.id, type: "card" as const, props: { h: after.props.h } }));
-  if (updates.length) editor.run(() => editor.updateShapes(updates), { history: "ignore" });
 }
 
 /** Note tool: drag or click to drop a pink handwritten card. */
