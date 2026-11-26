@@ -483,7 +483,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 77. **Friction from the 26 Nov 13:03 agent-usability attempt (PR #97; reported by the agent, not yet reproduced).** (a) `eval/mcp-call.ts list` prints about 50 KB that does not parse as one JSON value; (b) `canvas_asks` lists every page's asks with no current-page filter; (c) the agent found no `locked` hint or child count in `canvas_overview` under the names it expected, costing a `canvas_read`; (d) `canvas_duplicate`'s default offset (320) overlaps a wider frame; (e) the docs do not say which `canvas_connect` relation means "supports", or whether `canvas_reply` changes the comment's revision before `canvas_resolve`. Done when each is reproduced with a failing test and fixed, or recorded as a decision with the reason.
 
-78. **An ask's progress is announced to assistive technology.** The brief: "The agent must visibly
+78. (PR #101 open, awaiting review.) **An ask's progress is announced to assistive technology.** The brief: "The agent must visibly
     respond. Any ask shows waiting, working, answered or failed." The state line under an ask is
     plain text that also ticks each second, so a screen-reader user hears nothing when an ask is
     sent, taken, answered or fails. Done when one polite live region announces each change of an
@@ -492,11 +492,11 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     item 7's keyboard-only loop: this is what is heard, not what is reachable.)
 
 ## Claims
-78. Ask progress announced | claude/sprint-ask-live | 2026-11-26T13:21Z
 77. Friction from the 13:03 agent-usability attempt | claude/sprint-agent-friction-2 | 2026-11-26T13:17Z
 7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
+- 78. Ask progress announced (build-A): PR #101 (one polite live region says each change of an ask's state once; verify-ask-live 3/8 → 8/8).
 - 76. Agent never rewrites the person's words (build-A): PR #99 (text change to a person's object refused; new safety race 9/10 → 10/10; agent tasks self-test 24/24).
 - 72. Fresh agent-usability attempt (build-B): PR #97 (23/24, median 2 tool calls; task 14's check corrected to accept a fuller answer naming the top region first as highest; friction filed as item 77).
 - 71. Web page reader stays quick (build-B): PR #98, duplicate of #93 from another lane (2 MB of unclosed tags: 145 s worst before, under 0.5 s after; failing-first tests).
@@ -550,6 +550,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 78) Ask announcements are polite, failures included, so they never interrupt; only asks on the open page are announced (an answer on another page has #69's toast).
 - (build-A, item 76) An agent may not change the words of anything the person made (`authorOf` Human). It may still move, restyle or delete those objects, which `arrange`, `group` and the agent-usability tasks rely on; principles finding 2 says it should not move them either. To go further, extend `rewriteRefusal` (`src/authorship.ts`) to position and removal and re-record the agent-usability attempt.
 - (build-A) Regression sweep of the browser checks on `claude/sprint-int` at 12:59Z (connector-follow and feedback-mcp, the latter after a hand-made comment, also pass): verify-import 51/51, webpage 9/9, cite 15/15, compare 14/14, csv-faithful 5/5, ask-frame 8/8, ask-marks 8/8, answer-page 11/11, api, mcp, composition, converge, board-sync, data-agent, data-prototype, group and learning all pass; verify-calm 32/33 (fixed by #91) and verify-runs failing (fixed by #95). verify-feedback-mcp needs a hand-made comment first and was not run.
 - (build-A, item 73) A board saved before the calm canvas now gets the calm board right after the first load from the account (the alternative named in the review of #21), because the recorded "on the next reload" no longer happened at all since #59. Offline at start: on the next reload instead.
@@ -771,3 +772,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:16Z | build-B | 71 Web page reader stays quick | #98 | Duplicate of #93; one-pass element matching, implicit li close, stray "<" as text; worst 2 MB case 145 s → 0.5 s; reader tests unchanged |
 | 2026-11-26T13:14Z | build-A | 76 Agent never rewrites the person's words | #99 | Agent could rewrite a pink card's text; refused now; safety 9/10 (1 lost) → 10/10 (0 lost) with the new race; agent tasks 24/24; root build and package tests green |
 | 2026-11-26T13:17Z | build-A | 69 10k pan survives a slow-mode run | #100 | Lower quartile of twelve 40-frame samples; three back-to-back runs on one commit 38.2, 41.0, 36.1 ms (13.6% spread; run 1 had 7/12 slow samples, old median ~74.6); threshold unchanged |
+| 2026-11-26T13:19Z | build-A | 78 Ask progress announced | #101 | Screen readers heard nothing of an ask's progress; live region says sent, working, answered, failed once each; verify-ask-live 3/8 → 8/8; first screen unchanged; scorecard unchanged |
