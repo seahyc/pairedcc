@@ -1,10 +1,10 @@
 // Browser check for item 82: what a screen reader hears when the selection moves.
 //
-// On a fresh profile at 1440 x 900, keyboard only: write a thought (N, Enter, type, Esc), ask
-// for options, let an agent answer with three over HTTP, Tab through the answer, pick one and
-// comment on another. After each step one polite live region, never seen, must say who made
-// the selected object, its text, its kind (thought, ask with its state, comment, answer), its
-// mark and its place in the Tab order.
+// On a fresh profile at 1440 x 900, keyboard only: write a thought (N, Enter, type, Esc), send it
+// with Ctrl/⌘+Enter (the card is the question), let an agent answer with three over HTTP, Tab
+// through the answer, pick one and comment on another. After each step one polite live region,
+// never seen, must say who made the selected object, its text, its kind (thought, ask with its
+// state, comment, answer), its mark and its place in the Tab order.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-heard.mjs <screenshot dir>
 //
@@ -64,20 +64,19 @@ check('a polite live region for the selection is on the page, unseen and silent 
 // The person's thought.
 await press('n');
 await press('Enter', 500);
-await p.keyboard.type('How should we price the team plan?', { delay: 0 });
+// No question mark: finishing a question sends it at once, and this step is about a thought.
+await p.keyboard.type('How should we price the team plan', { delay: 0 });
 await p.waitForTimeout(300);
 let h = await heard();
 check('nothing is said while typing', h?.text === '', h?.text);
 await press('Escape', 500);
 h = await heard();
-check("the person's selected thought is said as theirs, with its place in the order", /^You wrote: How should we price the team plan\? \d+ of \d+\.$/.test(h?.text ?? ''), h?.text);
+check("the person's selected thought is said as theirs, with its place in the order", /^You wrote: How should we price the team plan\. \d+ of \d+\.$/.test(h?.text ?? ''), h?.text);
 
-// Ask, and the agent answers with three options.
-await press(`${mod}+Enter`, 500);
-await p.keyboard.press(`${mod}+a`);
-await p.keyboard.type('Give me options', { delay: 0 });
-await press('Enter', 800);
-const ask = (await command('asks', {})).asks.find((a) => a.question === 'Give me options');
+// Ask (the card is the question: Ctrl/⌘+Enter sends it), and the agent answers with three options.
+const thoughtId = await selectedId();
+await press(`${mod}+Enter`, 800);
+const ask = (await command('asks', {})).asks.find((a) => a.id === thoughtId);
 check('the ask was sent', Boolean(ask));
 const options = ask ? (await command('answer', { id: ask.id, alternatives: ['Per seat, so cost tracks team size', 'Per post, so cost tracks use', 'One flat price for any team'] })).answers.map((o) => o.id) : [];
 await p.waitForTimeout(800);
@@ -90,7 +89,7 @@ for (let i = 0; i < 12 && (await selectedId()) !== options[0]; i++) {
   if (id === ask?.id) askSaid = (await heard())?.text ?? '';
 }
 optionSaid = (await heard())?.text ?? '';
-check('an ask is said as the person\'s, with who answered it', /^Your ask: Give me options\. Answered by Verifier\. \d+ of \d+\.$/.test(askSaid), askSaid);
+check('an ask is said as the person\'s, with who answered it', /^Your ask: How should we price the team plan\. Answered by Verifier\. \d+ of \d+\.$/.test(askSaid), askSaid);
 check("an answer is said as the agent's, with its text", /^Verifier answered: A · Per seat, so cost tracks team size\. \d+ of \d+\.$/.test(optionSaid), optionSaid);
 await press('p');
 h = await heard();
