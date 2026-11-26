@@ -141,7 +141,8 @@ export function createPrompt(editor: Editor, value: unknown, actor: string) {
   const shapes = input.hideIds.map((id) => {
     const s = editor.getCurrentPageShapes().find((s) => s.id === id);
     if (!s) throw new Error(`Object not found: ${id}`);
-    const refusal = hideRefusal(s);
+    const descendants = [...editor.getShapeAndDescendantIds([s.id])].filter((d) => d !== s.id).flatMap((d) => editor.getShape(d) ?? []);
+    const refusal = hideRefusal(s, descendants);
     if (refusal) throw new Error(refusal);
     return s;
   });
