@@ -579,7 +579,24 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 95. **Before sending, the person sees what an ask will give.** Solveit (brief): "the context the agent sees is visible and chosen by the person." Today what an ask gives is shown only after it is sent (the ask's line and outline), so the person learns that the frame, a pinned card or a withheld card went along, or did not, too late to change it. Done when, while the Ask box is open, the board outlines exactly what the ask would give and the box says it in one muted line ("Gives “Charge per seat” + frame “Pricing”", with "+ N pinned" and "· N left out" where they apply), computed by the same code that builds the ask so the preview cannot differ from what is sent (unit-tested against the sent ask), checked in a real page (failing before, passing after), with before/after screenshots of the Ask box; the first screen is unchanged.
 
+96. **Comments placed on the page by #104 move and are read as they did inside a frame.** (Review of #104, now merged.) Asks, comments and replies about objects in a frame now sit on the page, and three things were lost: (a) an ask or comment about several cards in one frame stays behind when the frame is dragged (`followers` skips multi-target cards); (b) asking about a frame no longer gives the comments placed on what it holds; (c) an agent's `canvas_arrange` moving an unselected frame leaves those comments behind. Done when each has a failing-first test or real-page check and is fixed, and moving a frame (person or agent) brings every comment, reply and answer about what it holds, in one undo step.
+
+97. **The first board keeps a margin on a phone.** On a 390 px screen the calm first board is
+    wider than the window, so `bringContentIntoView` fits it (about 78%) with a 32 px inset, and the
+    ✦ marks drawn just outside the cards sit clipped against the left edge (seen by build-A in
+    headless Chromium, 26 Nov). Done when nothing on the first board touches either edge at 390 px,
+    with before/after screenshots, desktop unchanged.
+
+98. **Follow-ups from the bot review of #99 and #88 (build-A, verified).** (a) Cards an agent
+    imports carry no creator, so `authorOf` counts them as the person's and #99 refuses the agent's
+    own corrections; (b) the touch "✦ Ask about this" button acts only on pointerdown, so a screen
+    reader's click-only activation does nothing. Done when an agent can correct its own import
+    while a person's import stays protected, and click-only activation opens the Ask box, each
+    with a failing-first test or check.
+
 ## Claims
+98. Follow-ups to bot review of #99 and #88 | claude/sprint-review-followups-a | 2026-11-26T14:23Z
+96. #104 follow-ups: comments follow and are read like frame children | claude/sprint-frame-followers | 2026-11-26T14:18Z
 95. Before sending, the person sees what an ask will give | claude/sprint-ask-preview | 2026-11-26T14:16Z
 93. Stale flag placement follows the drawn flag | claude/sprint-stale-drawn | 2026-11-26T14:20Z
 94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
@@ -927,3 +944,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:03Z | build-B | 86 Principles status table | #117 | Six rows brought up to date with merged PRs (#6 #42 #47 #55 #64 #67 #83 #86 #88); nothing unmerged claimed |
 | 2026-11-26T14:11Z | build-A | 92 Each answer stays with its own ask | #120 | Three asks on one card: answers piled under the last ask; now beside their own; verify-answer-beside 3/6 → 6/6; answer-view 14/14, answer-page 11/11, calm 33/33; scorecard unchanged |
 | 2026-11-26T14:13Z | build-B | 90 Pin into every ask (context prototype) | #121 | Pin (I) on the selection bar; asks give `pinned`; fence, outline and "+ N pinned"; resident prompt names it; 8 failing-first unit tests; verify-pin-context 7/18 → 18/18; leave-out 19/19, ask-frame/marks/chart 8/8, ask-record 7/7, answer-page 11/11; first screen unchanged |
+| 2026-11-26T14:20Z | build-A | Upkeep of open PRs | #95 #99 #101 #113 #114 #116 #120 | Integration branch merged into each (conflicts with #69, #91 and the Retry button resolved); each re-verified with its own check; #95 now reuses only the tab's own empty first page (with #91 the layout also runs after an account load); filed 97 |
