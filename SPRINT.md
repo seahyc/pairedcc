@@ -21,6 +21,9 @@ defensible option, record the choice and the reason under Decisions needed, and 
   on its own page, with the product choice written under Decisions needed.
 - Use synthetic or openly licensed data only.
 - Commit messages and PR text describe the change only; never mention an AI assistant or tool.
+- Commit as the repository owner, not as a tool. Before your first commit in a run:
+  `git config user.name "$(git log -1 --format=%an 3ee3f06)" && git config user.email "$(git log -1 --format=%ae 3ee3f06)"`.
+  No `Co-Authored-By` or other trailers.
 - `pnpm install --frozen-lockfile && pnpm build:canvas && pnpm test:canvas` must pass before every
   push, and `pnpm build && pnpm test` when you touch anything outside `packages/canvas`. Paste the
   real output in the PR.
