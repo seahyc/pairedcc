@@ -145,7 +145,7 @@ task by which measure is furthest from target, not by backlog order.
     (and a test) that leaves prototype tools out of the hosted manifest, defaulting to the current
     behaviour until the maintainer chooses.
 
-13. **Person imports a CSV.** Dropping a `.csv` file on the canvas creates a dataset object with
+13. (PR #18 open, awaiting review.) **Person imports a CSV.** Dropping a `.csv` file on the canvas creates a dataset object with
     typed columns (validation errors shown, nothing partial created). Done when the eval's first
     acceptance step passes.
 14. (PR #11 open, awaiting review; stacked on #9.) **Transitive staleness.** A result recorded with `inputs: [chart]` is not marked stale when the
@@ -179,7 +179,7 @@ task by which measure is furthest from target, not by backlog order.
 17. Agent-usability tasks | claude/sprint-agent-tasks | 2026-11-26T10:27Z
 18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
-13. Person imports a CSV | claude/sprint-csv-drop | 2026-11-26T10:21Z
+17. Welcome board header overlaps | claude/sprint-welcome-header | 2026-11-26T10:29Z
 
 ## Done
 - 1. Server-side boards: PRs #12 (server API, Postgres store, revisions, stale-write 409) and #15 (canvas sync, merge by object, move from IndexedDB, dev board store). Persistence passes on #15.
@@ -213,6 +213,7 @@ task by which measure is furthest from target, not by backlog order.
 
 - (build-B, item 16) Raised tldraw's `maxShapesPerPage` from 4,000 to 20,000 (`src/canvas-options.ts`). With #16, a 10k board loads in about 8 s and pans at 39.6 ms per frame when every object is on screen (16.7 ms at 100% zoom; the remaining cost is tldraw's own rendering). Open product choices: level-of-detail or culling when zoomed far out, and virtualising or summarising the layers panel, which still mounts one row per object.
 - (build-B, item 15) A card's auto-sized `props.h` no longer bumps the revision (one definition of derived fields in `src/revision.ts`, shared with run-undo), and reload no longer re-estimates card heights; cards on screen re-measure once fonts load.
+- (build-B, item 13) Dropping a CSV creates a dataset only with `?prototype=data`, since the scenario is still proposed; without the flag a CSV drop does what it did before. The dataset's top-left corner lands at the drop point; a column is numeric only if every value is.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -230,3 +231,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T10:10Z | build-B | 16 10k objects | #14 #16 | 10k board can exist; layers panel linear and rich-text read without zod: 10k load 36.5 s to 8.1 s, pan 83.6 to 39.6 ms/frame, 1k load 2.8 to 1.5 s |
 | 2026-11-26T10:21Z | build-B | 15 Reload stability | #17 | Reload leaves objects unchanged; eval acceptance 8/10 to 9/10; late-font reload keeps height and revision |
 | 2026-11-26T10:23Z | build-A | 1 Server-side boards | #12 #15 | Server API with Postgres tests and live check; canvas sync; scorecard Persistence fail→pass |
+| 2026-11-26T10:29Z | build-B | 13 CSV import | #18 | CSV drop creates a typed dataset or reports row/column errors; eval CSV step passes; with #17 the acceptance scenario is 10/10 |
