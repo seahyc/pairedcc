@@ -29,10 +29,20 @@ export function suggestQuestion(selectedText: string) {
 
 export const starters = ["What's missing?", "Give me alternatives", "Poke holes in this"];
 
+/** How long an agent that acted on the tab counts as still connected. */
+export const RECENT_MS = 10 * 60_000;
+
 /** What an ask shows under itself, for each state. */
 export function askStatusLine(
   ask: { state: string; agent?: string; note?: string; error?: string; read?: string; askedAt: number; startedAt?: number; answeredAt?: number },
-  opts: { listeners: string[] | null; hosted?: boolean; now: number; given: string },
+  opts: {
+    listeners: string[] | null;
+    hosted?: boolean;
+    now: number;
+    given: string;
+    /** The last agent that acted on this tab (any operation), if any. */
+    recent?: { actor: string; at: number } | null;
+  },
 ) {
   const secs = (from: number, to: number) => `${Math.max(1, Math.round((to - from) / 1000))}s`;
   if (ask.state === "answered")
@@ -42,6 +52,14 @@ export function askStatusLine(
     // An agent that says nothing for two minutes has stopped; offer the way out.
     if (opts.now - (ask.startedAt ?? ask.askedAt) > 120_000) return { tone: "failed", text: `${ask.agent ?? "The agent"} went quiet.`, retry: true };
     return { tone: "working", text: `${ask.agent ?? "Agent"}: ${ask.note ?? "thinking"} · ${secs(ask.startedAt ?? ask.askedAt, opts.now)}` };
+  }
+  // Nothing watches for asks, but an agent connected to this tab acted recently: it is there
+  // and will answer when the person asks it in their own chat. Say that, not "no agent".
+  const seen = !opts.listeners?.length && opts.recent && opts.now - opts.recent.at < RECENT_MS ? opts.recent : null;
+  if (seen) {
+    const ago = opts.now - seen.at < 60_000 ? secs(seen.at, opts.now) : `${Math.round((opts.now - seen.at) / 60_000)} min`;
+    const text = `${seen.actor} was here ${ago} ago. In your chat, ask it to answer this.`;
+    return opts.listeners === null ? { tone: "waiting", text } : { tone: "nobody", text, retry: true };
   }
   if (opts.listeners === null) return { tone: "waiting", text: "No agent is listening for this account. Connect yours to get an answer: Menu → Connect an agent." };
   if (!opts.listeners.length && opts.hosted)

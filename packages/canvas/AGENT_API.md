@@ -290,6 +290,8 @@ Mutations operate on the browser's current page. Read before changing objects; i
 
 Keep the same `requestId` and request content when retrying an HTTP operation. Within one development-server run, identical retries reuse the original result; changed content with the same ID is rejected. The ledger holds the newest 1,000 requests and is in memory. Restarting the server resets it. This is not durable exactly-once execution across server restarts.
 
+An optional `"via": "mcp"` marks a request from an MCP client, a chat agent the person talks to; the bundled MCP server sends it. When no agent is listening for asks, an ask names the last such agent and tells the person to ask it in their chat. Scripts leave `via` out, so they are never offered that way.
+
 Updates/removals require the object's current revision. A stale revision fails without applying that operation. If a request times out or the browser disconnects before acknowledgement, its outcome may be unknown: read the canvas before issuing a new mutation. All connected agents are trusted local processes; the actor label is attribution, not authenticated identity. The API rejects remote and cross-origin requests. No secrets or paid providers are configured.
 
 ## Demo and verification
