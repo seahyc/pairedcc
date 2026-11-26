@@ -157,7 +157,7 @@ task by which measure is furthest from target, not by backlog order.
 16. (PRs #14 #16 open, awaiting review; #16 stacked on #14.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
     Done when the performance measure reports 10k load and pan numbers (raise the limit or
     decide another way and record it).
-17. **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
+20. (Renumbered from 17 to avoid a clash; likely covered by the `yc/calm-canvas` rework for playtest 1, so check that PR before starting.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
     out loud, with an agent beside you." wraps onto the shortcut hint line beneath it (seen at
     1440x900 in headless Chromium; `docs/canvas/screenshots/reload-late-fonts-*.png` runs show the
     page). Done when the header lines never overlap at 1440 and 390 px widths, with screenshots.
@@ -179,7 +179,7 @@ task by which measure is furthest from target, not by backlog order.
 17. Agent-usability tasks | claude/sprint-agent-tasks | 2026-11-26T10:27Z
 18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
-17. Welcome board header overlaps | claude/sprint-welcome-header | 2026-11-26T10:29Z
+10. Repair e2e editor-collab spec | claude/sprint-e2e-collab | 2026-11-26T10:30Z
 
 ## Done
 - 1. Server-side boards: PRs #12 (server API, Postgres store, revisions, stale-write 409) and #15 (canvas sync, merge by object, move from IndexedDB, dev board store). Persistence passes on #15.
