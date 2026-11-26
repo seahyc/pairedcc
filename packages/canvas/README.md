@@ -65,7 +65,7 @@ The dev server is managed by user LaunchAgent `com.paired.canvas.dev` (plist in 
 - The Ask loop: asks are cards that show waiting, working, answered or failed with retry, and what the agent was given.
 - Text stays in its container: cards wrap and grow downward, plain text wraps at 460 px instead of growing sideways, pasted text is brought to the same width.
 - Infinite pan/zoom, selection, snapping, dragging and native resize handles.
-- Frames, rectangles, ellipses, freehand paths, rich text, notes, arrows and image import.
+- Frames, rectangles, ellipses, freehand paths, rich text, notes, arrows and image import. Imported images are kept inside the board (photos over 1.5 MB are scaled to 2048 px), so a board saved to an account opens with its images in a clean browser; images added before this lived only in that browser and move into the board the next time it opens there.
 - Pages, nested layers, collapse/expand, multiselection, alignment/grouping and object properties.
 - Undo/redo, keyboard tool shortcuts and duplicate/delete.
 - Local IndexedDB persistence, JSON file export and validated import.
