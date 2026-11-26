@@ -450,7 +450,15 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     `eval/agent-runs/latest.json` holds an attempt against the current branch and task 14's check
     is confirmed or corrected with the reason given.
 
+73. **A board saved before the calm canvas gets the calm board, with sync on.** `verify-calm.mjs`
+    fails "an older saved board gets the calm board beside it" on this branch (32/33 with a stand-in
+    model): the first board is laid out before board sync loads the account's board, and the load
+    replaces it, so the "Thinking" page never appears, not even after the extra reload the review
+    of #21 recorded. Done when an older board gets the calm board once, after the first load from
+    the account, without repeating it after a restore, and `verify-calm.mjs` passes 33/33.
+
 ## Claims
+73. Older board gets the calm board with sync on | claude/sprint-calm-older | 2026-11-26T12:58Z
 67. The person chooses what an ask leaves out | claude/sprint-context-leave-out | 2026-11-26T12:50Z
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
