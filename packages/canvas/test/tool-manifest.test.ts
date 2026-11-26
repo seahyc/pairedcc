@@ -3,6 +3,14 @@ import { describe, expect, it } from "vitest";
 import { hostedPrototypeTools, instructions, manifestJson, toolDefs, toolManifest } from "../tools/tool-defs";
 
 describe("hosted tool manifest", () => {
+  it("tells agents to answer the person's feedback with canvas_reply, not canvas_annotate", () => {
+    const describe = (name: string) => toolDefs.find((t) => t.name === name)?.description ?? "";
+    for (const name of ["canvas_feedback", "canvas_reply"]) expect(describe(name), name).toMatch(/canvas_reply[^.]*not canvas_annotate|instead of canvas_annotate/);
+    expect(readFileSync(new URL("../AGENT_API.md", import.meta.url), "utf8")).toMatch(/answer[^.]*with `canvas_reply`[^.]*not `canvas_annotate`/i);
+    // Asks are queue items too, but only canvas_answer records the answer on the Ask.
+    for (const name of ["canvas_feedback", "canvas_reply"]) expect(describe(name), name).toMatch(/`ask` field[^.;]*canvas_answer/);
+    expect(readFileSync(new URL("../AGENT_API.md", import.meta.url), "utf8")).toMatch(/`ask` field[^.]*`canvas_answer`/);
+  });
   it("never offers an agent a field that sets authorship (the canvas attributes every write to the caller)", () => {
     const manifest = JSON.parse(manifestJson());
     for (const tool of manifest.tools) expect(Object.keys(tool.inputSchema.properties ?? {}), tool.name).not.toContain("author");
