@@ -46,13 +46,15 @@ function where(issue: { path: PropertyKey[]; message: string }) {
 }
 
 /**
- * A value counts as a number only if a number can hold it exactly enough: an integer must be a
- * safe integer (long IDs beyond 2^53 would round and merge), and a decimal at most 15
+ * A value counts as a number only if a number can hold it exactly enough: its size must be within
+ * the safe-integer range (in any spelling, including 1e18), an integer must be a safe integer (long IDs beyond 2^53 would round and merge), and a decimal at most 15
  * significant digits. Anything else stays text, as the file wrote it.
  */
 const numeric = (v: string) => {
   const t = v.trim();
   if (t === "" || !Number.isFinite(Number(t))) return false;
+  // Beyond 2^53 a number no longer holds every integer, however the value is spelled (1e18 too).
+  if (Math.abs(Number(t)) > Number.MAX_SAFE_INTEGER) return false;
   if (/^[-+]?\d+$/.test(t)) return Number.isSafeInteger(Number(t));
   const mantissa = /^[-+]?(\d*)\.?(\d*)(?:e[-+]?\d+)?$/i.exec(t);
   if (!mantissa) return true; // hex, binary and similar notations: see Decisions needed (item 13)

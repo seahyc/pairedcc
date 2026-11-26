@@ -118,3 +118,12 @@ describe("CSV import keeps what the file says", () => {
     expect(decodeCsv(new Uint8Array([0xef, 0xbb, 0xbf, ...utf8]))).toEqual({ ok: true, text: "name\ncafé\n" });
   });
 });
+
+describe("CSV import keeps what the file says (review of #68)", () => {
+  it("keeps an integer beyond 2^53 written in scientific notation as text, so sums stay exact", () => {
+    const result = parseCsv("category,amount\na,1.00000000000001e18\na,-1e18\n", "big.csv");
+    if (!result.ok) throw new Error(result.errors.join("; "));
+    expect(result.dataset.columns[1].type).toBe("text");
+    expect(result.dataset.rows.map((r) => r.amount)).toEqual(["1.00000000000001e18", "-1e18"]);
+  });
+});
