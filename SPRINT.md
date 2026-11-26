@@ -458,6 +458,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     the account, without repeating it after a restore, and `verify-calm.mjs` passes 33/33.
 
 ## Claims
+70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
