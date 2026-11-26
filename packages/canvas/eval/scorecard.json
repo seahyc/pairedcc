@@ -1,0 +1,197 @@
+{
+  "generatedAt": "2026-11-26T09:40Z",
+  "commit": "bfdd655",
+  "carriedOver": [],
+  "table": [
+    {
+      "measure": "Acceptance scenario",
+      "target": "every step passes",
+      "result": "7/10 steps",
+      "status": "fail"
+    },
+    {
+      "measure": "Agent usability",
+      "target": "≥90% of ≥20 tasks",
+      "result": "0 tasks, no recorded attempt",
+      "status": "not run"
+    },
+    {
+      "measure": "Safety of shared edits",
+      "target": "0 human edits lost",
+      "result": "0 lost; 2/3 races pass",
+      "status": "fail"
+    },
+    {
+      "measure": "Persistence",
+      "target": "identical in a clean profile",
+      "result": "differs: the saved page does not exist in a clean profile (boards are stored only in this browser)",
+      "status": "fail"
+    },
+    {
+      "measure": "Performance",
+      "target": "reported, not worse",
+      "result": "1k: load 1192 ms, pan 16.7 ms/frame; 10k: error",
+      "status": "fail"
+    },
+    {
+      "measure": "Existing product",
+      "target": "green",
+      "result": "build passes; tests: e2e failing",
+      "status": "fail"
+    }
+  ],
+  "raw": {
+    "acceptance": {
+      "steps": [
+        {
+          "name": "Person imports a dataset by dropping a CSV file",
+          "pass": false,
+          "detail": "no dataset object after the drop (0 other objects added)",
+          "ms": 1517
+        },
+        {
+          "name": "Agent imports a dataset over MCP",
+          "pass": true,
+          "detail": "ok",
+          "ms": 20
+        },
+        {
+          "name": "Person selects a subset of the board and the agent sees it",
+          "pass": true,
+          "detail": "ok",
+          "ms": 504
+        },
+        {
+          "name": "Agent charts the selection",
+          "pass": true,
+          "detail": "ok",
+          "ms": 30
+        },
+        {
+          "name": "Person filters the chart directly",
+          "pass": true,
+          "detail": "ok",
+          "ms": 830
+        },
+        {
+          "name": "Agent reads that exact chart state",
+          "pass": true,
+          "detail": "ok",
+          "ms": 6
+        },
+        {
+          "name": "Agent adds a result next to the chart",
+          "pass": true,
+          "detail": "ok",
+          "ms": 28
+        },
+        {
+          "name": "A manual annotation survives an agent revision",
+          "pass": true,
+          "detail": "ok",
+          "ms": 1529
+        },
+        {
+          "name": "Changing an input marks its dependents stale",
+          "pass": false,
+          "detail": "a result derived from the chart is not marked stale when the chart's dataset changes",
+          "ms": 948
+        },
+        {
+          "name": "Reload restores everything",
+          "pass": false,
+          "detail": "1 of 5 objects differ after reload: card revision/props/meta (props h); 5 objects now",
+          "ms": 450
+        }
+      ],
+      "pageErrors": [],
+      "toolCalls": 28
+    },
+    "safety": {
+      "races": [
+        {
+          "name": "Stale agent write against a newer human edit",
+          "pass": true,
+          "detail": "ok",
+          "ms": 50,
+          "humanEditsLost": 0
+        },
+        {
+          "name": "Agent undo with interleaved human edits",
+          "pass": false,
+          "detail": "no agent undo operation (canvas_undo_run) is available",
+          "ms": 10,
+          "humanEditsLost": 0
+        },
+        {
+          "name": "Agent write to a locked object",
+          "pass": true,
+          "detail": "ok",
+          "ms": 245,
+          "humanEditsLost": 0
+        }
+      ],
+      "humanEditsLost": 0
+    },
+    "persistence": {
+      "objects": 4,
+      "sameProfileReload": false,
+      "cleanProfile": false,
+      "detail": "the saved page does not exist in a clean profile (boards are stored only in this browser)"
+    },
+    "performance": [
+      {
+        "objects": 1000,
+        "buildMs": 325,
+        "loadMs": 1192,
+        "panMedianFrameMs": 16.7,
+        "panP95FrameMs": 17
+      },
+      {
+        "objects": 10000,
+        "error": "only 0 of 10000 objects could be created on one page (tldraw's default maxShapesPerPage is 4,000)"
+      }
+    ],
+    "agentUsability": {
+      "tasks": 0,
+      "attempted": 0,
+      "completed": 0,
+      "medianToolCalls": null,
+      "recordedAt": null
+    },
+    "workspace": {
+      "build": true,
+      "packages": {
+        "e2e": {
+          "pass": false,
+          "summary": ""
+        },
+        "canvas": {
+          "pass": true,
+          "summary": "44 passed (44)"
+        },
+        "cli": {
+          "pass": true,
+          "summary": "no test files"
+        },
+        "mcp-server": {
+          "pass": true,
+          "summary": "4 passed (4)"
+        },
+        "sdk": {
+          "pass": true,
+          "summary": "12 passed (12)"
+        },
+        "server": {
+          "pass": true,
+          "summary": "117 passed (117)"
+        },
+        "web": {
+          "pass": true,
+          "summary": "no test files"
+        }
+      },
+      "testExit": 1
+    }
+  }
+}
