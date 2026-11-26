@@ -187,7 +187,7 @@ task by which measure is furthest from target, not by backlog order.
 26. (PR #28 open, awaiting review.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
     Done when the server enforces a per-account limit with a test and the choice is recorded.
 
-27. **Group objects through a structured operation.** The spec's agent interface asks for
+27. (PR #33 open, awaiting review.) **Group objects through a structured operation.** The spec's agent interface asks for
     "create, update, connect, group, arrange and annotate" as structured operations; there is no
     group operation. Done when `canvas_group` wraps revision-guarded objects in a named frame that
     keeps their page positions, rejects the whole call on a stale or locked object, is one undoable
@@ -202,7 +202,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 28. Existing product row runs e2e for real | claude/sprint-eval-services | 2026-11-26T11:06Z
-27. Group operation | claude/sprint-group | 2026-11-26T11:00Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
@@ -276,6 +275,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-A, item 24) `PAIRED_SERVER_URL` proxies the dev canvas's `/auth` and `/api/canvas/boards` to a real server (a production build needs a tldraw licence key). `verify:sync-server` runs on demand with throwaway Postgres and Redis, not in `test:canvas` or the eval. Alternative: fold it into the Persistence measure when `DATABASE_URL` is set. Found and fixed on the way: the dev relay answered `/api/canvas/boards`, hiding the proxy.
 
 - (build-B, item 19) Restoring an earlier revision saves pending edits first, then saves the old snapshot as the newest revision. Nothing is overwritten, and a restore is undone by restoring the revision it replaced. The UI entry point is deferred until #21 (calm canvas) merges, so it goes behind that menu rather than adding chrome to the default view.
+- (build-B, item 27) `canvas_group` wraps objects in a frame (the canvas's grouping unit) rather than a tldraw group, keeps page positions, needs a shared parent, and refuses when the frame would cover an object outside the group, so grouping never hides anything. No ungroup operation; `canvas_undo_run` takes a group back.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -309,3 +309,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T11:01Z | build-A | 24 Sync against the real server | #30 | Dev canvas proxies to a real server; scripted check signs in by magic link, saves, clean browser opens it, other account isolated, 401 signed out; relay path bug fixed |
 | 2026-11-26T11:02Z | build-A | 5 Converge part 2 | #31 | Person's synthesis, cited claims, clear placement on top of #27; headless check and screenshots; scorecard unchanged |
 | 2026-11-26T11:03Z | build-B | 19 Board history, part 1 | #32 | `restore(revision)` without losing work; dev store serves revisions; checked in a real tab and a clean profile |
+| 2026-11-26T11:04Z | build-B | 27 Group operation | #33 | Guarded frame grouping; live HTTP and MCP check (`tools/verify-group.cjs`); root build and test green with services |
