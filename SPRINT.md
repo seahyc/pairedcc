@@ -149,12 +149,21 @@ task by which measure is furthest from target, not by backlog order.
     1440x900 in headless Chromium; `docs/canvas/screenshots/reload-late-fonts-*.png` runs show the
     page). Done when the header lines never overlap at 1440 and 390 px widths, with screenshots.
 
+18. **Agent-usability tasks and a recorded attempt.** At least 20 board tasks in
+    `packages/canvas/eval/tasks/`, each with a machine-checked end state, a runner that sets each
+    one up in a real tab, and a recorded attempt by a fresh agent that has only `AGENT_API.md` and
+    the tools. Done when the scorecard reports a completion rate and median tool calls.
+19. **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
+    by sync) and earlier revisions are reachable only through the API. Done when a person can list
+    their boards, open one, and restore an earlier revision from the canvas.
+
 ## Claims
-1. Server-side board storage | claude/sprint-boards-* | 2026-11-26T09:50Z
+18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 13. Person imports a CSV | claude/sprint-csv-drop | 2026-11-26T10:21Z
 
 ## Done
+- 1. Server-side boards: PRs #12 (server API, Postgres store, revisions, stale-write 409) and #15 (canvas sync, merge by object, move from IndexedDB, dev board store). Persistence passes on #15.
 - 0. Eval harness: PR #8 (`pnpm eval:canvas`, baseline scorecard: acceptance 7/10, safety pass, persistence fail, 10k perf impossible, e2e failing). Gaps filed as items 13 to 16.
 - 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Reviewed and merged 2026-11-26 as f47a23f, with a fix so undo never writes to an object locked since the run.
 - 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Reviewed and merged 2026-11-26 as 9f19690, 68d7ff3, ff68adc.
@@ -162,6 +171,9 @@ task by which measure is furthest from target, not by backlog order.
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 1) Board sync merges a stale save by object: different objects both survive, an edit beats a deletion, and where both changed one object the saving tab wins while the other version stays in server revision history (no history UI yet, item 19). Alternative: show both and ask.
+- (build-A, item 1) One board per account (`main`). A browser's own earlier work found at first sync is kept as a separate server board, never overwritten. Another account's unsaved local work is never uploaded.
+- (build-A, item 1) The dev server serves the board API for one local person from `.local/boards` (`PAIRED_BOARDS_DIR`), so `pnpm eval:canvas` can measure persistence without Postgres; this includes the maintainer's local LaunchAgent server.
 - (build-A, item 0) Eval choices: "import dataset" requires a person to drop a CSV (agent import is a separate step); a result derived from a chart counts as a dependent of the chart's dataset; 10k objects means one page; "Existing product" fails while e2e fails. Performance boards are built through a development-only `window.__pairedEditor`, because building through the agent interface costs about 28 ms per object at 1k. Agent usability reports a recorded attempt; the script never calls a model.
 - (build-B, item 2) Filtering or selecting a stale chart re-runs it on current data and clears the stale state (spec: immediate feedback). Alternative: keep the old snapshot until an explicit Recompute.
 - (build-B, item 2) The data prototype is reached through a "Data prototype page" button shown only with `?prototype=data`; dataset and chart shapes are always registered so saved boards load.
@@ -198,3 +210,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T09:56Z | build-B | 12 Prototype tool exposure | #13 | `hostedPrototypeTools` switch with tests; manifest unchanged by default; server tests 117 pass |
 | 2026-11-26T10:10Z | build-B | 16 10k objects | #14 #16 | 10k board can exist; layers panel linear and rich-text read without zod: 10k load 36.5 s to 8.1 s, pan 83.6 to 39.6 ms/frame, 1k load 2.8 to 1.5 s |
 | 2026-11-26T10:21Z | build-B | 15 Reload stability | #17 | Reload leaves objects unchanged; eval acceptance 8/10 to 9/10; late-font reload keeps height and revision |
+| 2026-11-26T10:23Z | build-A | 1 Server-side boards | #12 #15 | Server API with Postgres tests and live check; canvas sync; scorecard Persistence fail→pass |
