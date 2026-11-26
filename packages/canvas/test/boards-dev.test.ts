@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -27,5 +27,18 @@ describe("development board store history", () => {
     expect(list[0].revision).toBe(55);
     expect(store.revision("main", 5)).toBeNull();
     expect(store.revision("main", 6)).toMatchObject({ snapshot: doc(6) });
+  });
+});
+
+describe("development board store folder", () => {
+  it("answers empty and recreates its folder on the next save when the folder is removed", () => {
+    const dir = join(mkdtempSync(join(tmpdir(), "paired-boards-test-")), "boards");
+    const store = devBoardStore(dir);
+    store.save("main", 0, doc(1));
+    rmSync(dir, { recursive: true, force: true });
+    expect(store.list()).toEqual([]);
+    expect(store.get("main")).toBeNull();
+    expect(store.save("main", 0, doc(2)).status).toBe(201);
+    expect(store.list().map((b) => b.id)).toEqual(["main"]);
   });
 });

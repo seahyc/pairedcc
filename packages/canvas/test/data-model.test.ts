@@ -173,3 +173,17 @@ describe("why stale, when one input has several upstream causes", () => {
     expect(staleReason(stale, nameOf)).toBe("“Orders” changed (via “Revenue”), and 1 more input");
   });
 });
+
+describe("why stale, when an input is hidden behind a learning prompt", () => {
+  // The board passes a nameOf that returns nothing for hidden objects (DataLayer in data/shapes.tsx).
+  const visible: Record<string, string> = { "shape:chart": "Revenue" };
+  const nameOf = (id: string) => visible[id];
+  it("never names a hidden root cause, changed or deleted", () => {
+    expect(staleReason([{ id: "shape:secret", recorded: 1, current: 2 }], nameOf)).toBe("an input changed");
+    expect(staleReason([{ id: "shape:secret", recorded: 1, current: null }], nameOf)).toBe("an input was deleted");
+  });
+  it("leaves a hidden object out of the path and still names what is visible", () => {
+    const stale = [{ id: "shape:secret", recorded: 1, current: 1, upstream: [{ id: "shape:chart", recorded: 0, current: 1 }] }];
+    expect(staleReason(stale, nameOf)).toBe("“Revenue” changed");
+  });
+});
