@@ -33,6 +33,8 @@ export type BoardSummary = { id: string; name: string; revision: number; sizeByt
 export type LocalBoard = {
   snapshot(): Snapshot;
   load(snapshot: Snapshot): void;
+  /** Forget undo history, after the document is replaced by another board. */
+  reset?(): void;
   /** Calls back on every document change made in this tab; returns an unsubscribe. */
   listen(onChange: () => void): () => void;
 };
@@ -142,9 +144,12 @@ export function createBoardSync(o: SyncOptions) {
   };
   const remember = (dirty: boolean) => account && o.memo.set({ account, boardId, revision, dirty });
   const markDirty = () => {
+    followOtherTab(); // before this tab records its edit under a board another tab left
     const m = o.memo.get();
     if (account) remember(true);
-    else if (!m?.dirty) o.memo.set({ account: m?.account ?? "", boardId, revision: m?.revision ?? 0, dirty: true });
+    // Before the account is known (offline), keep the board the memo names: this tab may be
+    // showing a board other than the one it will settle on once it reconnects.
+    else if (!m?.dirty) o.memo.set({ account: m?.account ?? "", boardId: m?.boardId || boardId, revision: m?.revision ?? 0, dirty: true });
   };
   const failed = (error: unknown) => {
     emit({ state: "offline", ...(account ? { account } : {}), error: error instanceof Error ? error.message : String(error) });
@@ -161,6 +166,7 @@ export function createBoardSync(o: SyncOptions) {
 
   /** Put this browser's board on top of whatever revision the server has now. */
   async function push(note?: string, attempt = 0): Promise<void> {
+    followOtherTab();
     const snapshot = o.local.snapshot(), json = JSON.stringify(snapshot);
     if (json === synced && attempt === 0 && !note) {
       remember(false);
@@ -204,6 +210,21 @@ export function createBoardSync(o: SyncOptions) {
         : "Merged changes from another tab or device.",
       attempt + 1,
     );
+  }
+
+  /**
+   * Tabs of one browser share the board tldraw keeps locally, so when another tab opens a
+   * different board this tab's document becomes that board too. The shared memo says which
+   * board that is; save there, never over the board this tab started on. Without a known
+   * common version, a stale save sets this board aside instead of merging.
+   */
+  function followOtherTab() {
+    const m = o.memo.get();
+    if (!account || !m || m.account !== account || !m.boardId || m.boardId === boardId) return;
+    boardId = m.boardId;
+    revision = m.revision;
+    base = null;
+    synced = "";
   }
 
   /** Save this browser's board to the account as a separate board, which is never pruned. */
@@ -353,13 +374,18 @@ export function createBoardSync(o: SyncOptions) {
     if (!account) throw new Error("Boards are kept only for an account.");
     const previous = boardId;
     if (target === previous) return { boardId, previous };
-    await save();
-    while (saving) await saving;
-    if (status.state !== "saved") throw new Error("Save this board before opening another.");
     const server = await o.api.get(target);
     if (!server) throw new Error(`Board "${target}" was not found in your account.`);
+    // Save every edit to this board, including any made while the other one was loading.
+    for (let i = 0; ; i++) {
+      await settle();
+      // Nothing can run between this check and the switch below: it is all synchronous.
+      if (JSON.stringify(o.local.snapshot()) === synced) break;
+      if (i >= 3) throw new Error("The board keeps changing; try again in a moment.");
+    }
     clearTimer(timer);
     apply(server.snapshot);
+    o.local.reset?.(); // undo must not bring the previous board back into this one
     boardId = target;
     base = server.snapshot;
     revision = server.revision;
@@ -374,7 +400,7 @@ export function createBoardSync(o: SyncOptions) {
     for (let i = 0; i < 5; i++) {
       await save();
       while (saving) await saving;
-      if (status.state !== "saved") throw new Error("Save the board before restoring an earlier version.");
+      if (status.state !== "saved") throw new Error("Save this board first: it could not be saved just now.");
       if (JSON.stringify(o.local.snapshot()) === synced) return;
     }
     throw new Error("The board keeps changing; try again in a moment.");

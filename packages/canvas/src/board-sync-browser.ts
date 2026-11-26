@@ -119,6 +119,7 @@ export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
         loadSnapshot(editor.store, { document: snapshot as never });
         if (editor.getPage(page)) editor.setCurrentPage(page);
       },
+      reset: () => editor.clearHistory(),
       listen: (fn) => editor.store.listen(fn, { scope: "document", source: "user" }),
     },
   });

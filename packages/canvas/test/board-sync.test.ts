@@ -9,7 +9,7 @@ function server(signedIn: string | null = "alice", keep = 50) {
   // history[i] is revision first + i; the oldest are pruned beyond `keep`, as on the server.
   const boards = new Map<string, { revision: number; snapshot: Snapshot; history: Snapshot[]; first: number }>();
   let down = false;
-  const hooks: { beforeRevision?: () => Promise<void> } = {};
+  const hooks: { beforeRevision?: () => Promise<void>; beforeGet?: () => Promise<void> } = {};
   const api: BoardApi = {
     async account() {
       if (down) throw new Error("offline");
@@ -17,6 +17,7 @@ function server(signedIn: string | null = "alice", keep = 50) {
     },
     async get(id) {
       if (down) throw new Error("offline");
+      await hooks.beforeGet?.();
       const b = boards.get(id);
       return b ? { revision: b.revision, snapshot: structuredClone(b.snapshot) } : null;
     },
@@ -55,10 +56,11 @@ function server(signedIn: string | null = "alice", keep = 50) {
   return { api, boards, hooks, setDown: (v: boolean) => (down = v) };
 }
 
-function browser(initial: Snapshot, memo: SyncMemo | null = null) {
+function browser(initial: Snapshot, memo: SyncMemo | null = null, shared?: { memo: SyncMemo | null }) {
   let doc = structuredClone(initial);
+  let resets = 0;
   const listeners = new Set<() => void>();
-  const stored = { memo };
+  const stored = shared ?? { memo };
   const timers: (() => void)[] = [];
   return {
     get doc() {
@@ -68,11 +70,21 @@ function browser(initial: Snapshot, memo: SyncMemo | null = null) {
       doc = snap(t);
       for (const l of listeners) l();
     },
+    /** A change from another tab of this browser (tldraw's broadcast): no listener fires. */
+    remote(s: Snapshot) {
+      doc = structuredClone(s);
+    },
+    get resets() {
+      return resets;
+    },
     local: {
       snapshot: () => structuredClone(doc),
       load(s: Snapshot) {
         doc = structuredClone(s);
         for (const l of listeners) l();
+      },
+      reset() {
+        resets++;
       },
       listen(fn: () => void) {
         listeners.add(fn);
@@ -524,6 +536,68 @@ describe("withNewRecords", () => {
     await restoring;
     expect(text(b.doc)).toBe("v1");
     expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "v2", "typed during the download", "v1"]);
+  });
+
+  it("forgets undo history when another board is opened", async () => {
+    const srv = server();
+    await srv.api.put("other", 0, snap("other board"));
+    const b = browser(snap("main work"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    await s.open("other");
+    expect(b.resets).toBe(1);
+  });
+
+  it("keeps an edit made while the other board is loading", async () => {
+    const srv = server();
+    await srv.api.put("other", 0, snap("other board"));
+    const b = browser(snap("main work"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    let release!: () => void;
+    srv.hooks.beforeGet = () => new Promise<void>((done) => (release = done));
+    const opening = s.open("other");
+    await Promise.resolve();
+    b.edit("typed while opening");
+    release();
+    srv.hooks.beforeGet = undefined;
+    await opening;
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("typed while opening");
+    expect(text(b.doc)).toBe("other board");
+  });
+
+  it("saves to the board another tab of this browser opened, never over the one this tab started on", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("main"));
+    await srv.api.put("other", 0, snap("other board"));
+    const shared = { memo: { account: "alice", boardId: "main", revision: 1, dirty: false } as SyncMemo | null };
+    const a = browser(snap("main"), null, shared), b = browser(snap("main"), null, shared);
+    const tabA = sync(srv, a, true), tabB = sync(srv, b, true);
+    await tabA.s.start();
+    await tabB.s.start();
+    await tabA.s.open("other");
+    b.remote(a.doc); // tldraw broadcasts the switch to tab B's store
+    b.edit("edited in tab B");
+    await b.flush();
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main");
+    expect(text(srv.boards.get("other")!.snapshot)).toBe("edited in tab B");
+    expect(tabB.s.boardId()).toBe("other");
+  });
+
+  it("keeps the open board when edited offline after a reload, and saves to it on reconnect", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("main"));
+    await srv.api.put("other", 0, snap("other board"));
+    const b = browser(snap("other board"), { account: "alice", boardId: "other", revision: 1, dirty: false });
+    const { s } = sync(srv, b, true);
+    srv.setDown(true);
+    await s.start();
+    b.edit("other, edited offline");
+    expect(b.stored.memo).toMatchObject({ boardId: "other", revision: 1, dirty: true });
+    srv.setDown(false);
+    await b.flush();
+    expect(text(srv.boards.get("other")!.snapshot)).toBe("other, edited offline");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("main");
   });
 });
 
