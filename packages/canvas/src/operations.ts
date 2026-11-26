@@ -25,6 +25,11 @@ export const createInput = z.object({
     .enum(["note", "heading", "quote", "code"])
     .optional()
     .describe("Agent notes only: note (default, casual typed card), heading (large, no card), quote (serif italic, for sourced excerpts) or code (monospace, for data, numbers and code)."),
+  inputs: z
+    .array(z.string().startsWith("shape:"))
+    .max(50)
+    .optional()
+    .describe("Objects this result was derived from (e.g. a chart you are explaining). Their current versions are recorded; the result shows as stale when one changes."),
 });
 export const patchInput = z.object({
   ...styles,

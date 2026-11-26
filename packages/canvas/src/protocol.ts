@@ -59,6 +59,10 @@ export const commandSchema = z.object({
     "scene",
     "arrange",
     "duplicate",
+    "dataset",
+    "chart",
+    "chart_state",
+    "cell",
   ]),
   input: z.record(z.string(), z.unknown()).optional(),
 });
