@@ -529,7 +529,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     gives focus back when it closes, with a headless check failing before and passing after,
     and nothing new on the first screen.
 
-88. **A clean profile does not show a large imported image.** Found by `verify-all` (#113) and
+88. (PR #114 open, awaiting review: the check was wrong, not the board.) **A clean profile does not show a large imported image.** Found by `verify-all` (#113) and
     reproduced by hand against a plain dev server with an empty store: `verify-board-images.mjs
     fresh` is 3/5. The first profile shows both images, but a clean profile shows the large one
     with natural width 0 ("a clean profile shows both images — [true,false]", "the large image was
@@ -537,11 +537,11 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     merged since. Done when `verify-board-images.mjs fresh` passes 5/5, with the cause named.
 
 ## Claims
-88. Clean profile shows large imported images | claude/sprint-board-images-2 | 2026-11-26T13:50Z
 87. The menu and dialogs work from the keyboard | claude/sprint-robust-menu | 2026-11-26T13:48Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 
 ## Done
+- 88. Clean-profile image check (build-A): PR #114 (the large image was off screen so tldraw drew no `<img>`; its bytes were in the board; the check now fits the page first, still requiring each image to load at its real width; 3/5 → 5/5).
 - 83. One command runs every browser check (build-A): PR #113 (`pnpm --filter @pairedcc/canvas verify:all <dir>`; first full run 28/31, failing calm (#91), runs (#95) and board-images (filed as item 88)).
 - 86. canvas_overview marks left-out objects (build-B): PR #112 (failing-first test, live MCP check).
 - 84. Ask about an image says what it is (build-B): PR #109 (real tab 2/5 → 5/5 with the tightened frame check).
@@ -855,3 +855,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:45Z | build-B | 86 canvas_overview shows left-out objects | #112 | leftOut: true on overview rows, documented; failing-first unit test; live stdio MCP check |
 | 2026-11-26T13:49Z | build-A | 83 One command runs every browser check | #113 | 31 checks in one run (about 6 min), stand-in model, throwaway store; found a new regression (board images in a clean profile, filed 88); open branches #87 #91 #95 #99 #101 #88 merged up to the integration branch and re-verified |
 | 2026-11-26T13:49Z | build-B | Review findings on #92 #97 #98 #103 #104 #106 | #98 | Red finding on #98 (legacy "<!--" in a script dropped the page) fixed with two optional ones, failing-first tests, verify-webpage 9/9; the other optional findings verified and recorded under Decisions needed, #104 flagged as needing (a)-(c) |
+| 2026-11-26T13:50Z | build-A | 88 Clean-profile image check | #114 | Not a product regression: the image was off screen in the clean profile; check fits the page before measuring; verify-board-images 3/5 → 5/5 |
