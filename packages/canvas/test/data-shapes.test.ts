@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { TLShape } from "tldraw";
-import { contentVersion, dataPrototypeEnabled, recordedInputs } from "../src/data/shapes";
+import type { Editor, TLShape } from "tldraw";
+import { contentVersion, dataPrototypeEnabled, recordedInputs, staleness } from "../src/data/shapes";
 import { syntheticOrders } from "../src/data/model";
 
 const shape = (s: { type: string; props?: object; meta?: object }) => ({ meta: {}, props: {}, ...s }) as unknown as TLShape;
@@ -25,5 +25,20 @@ describe("content versions and recorded inputs", () => {
     expect(recordedInputs(shape({ type: "chart", props: { datasetId: "", inputVersion: 0 } }))).toEqual([]);
     expect(recordedInputs(shape({ type: "card", meta: { inputs: [{ id: "shape:c", version: 1 }] } }))).toEqual([{ id: "shape:c", version: 1 }]);
     expect(recordedInputs(shape({ type: "card", meta: { inputs: "nope" } }))).toEqual([]);
+  });
+});
+
+describe("staleness on the board", () => {
+  const board = (shapes: TLShape[]) => ({ getShape: (id: string) => shapes.find((s) => (s as { id: string }).id === id) }) as unknown as Editor;
+  const dataset = (version: number) => shape({ id: "shape:d", type: "dataset", props: { data: { ...syntheticOrders(), version } } } as never);
+  const chart = shape({ id: "shape:c", type: "chart", props: { datasetId: "shape:d", inputVersion: 0, version: 3 } } as never);
+  const note = shape({ id: "shape:n", type: "card", meta: { inputs: [{ id: "shape:c", version: 3 }] } } as never);
+
+  it("marks a note derived from a chart stale when the chart's dataset changes, before any recompute", () => {
+    expect(staleness(board([dataset(0), chart, note]), note)).toEqual([]);
+    expect(staleness(board([dataset(1), chart, note]), chart)).toEqual([{ id: "shape:d", recorded: 0, current: 1 }]);
+    expect(staleness(board([dataset(1), chart, note]), note)).toEqual([
+      { id: "shape:c", recorded: 3, current: 3, upstream: [{ id: "shape:d", recorded: 0, current: 1 }] },
+    ]);
   });
 });

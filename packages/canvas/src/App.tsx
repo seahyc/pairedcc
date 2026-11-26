@@ -76,12 +76,15 @@ import {
 } from "./scratchbook";
 import { richTextPlain } from "./operations";
 import { canvasOptions } from "./canvas-options";
+import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
 
 declare global {
   interface Window {
     paired?: CanvasBridge;
+    /** Development builds only: the editor, for `pnpm eval:canvas` fixtures and timing. */
+    __pairedEditor?: Editor;
   }
 }
 const tools = [
@@ -1160,10 +1163,7 @@ function Shell() {
               your edits.
             </p>
             <CopyBlock
-              text={JSON.stringify({ mcpServers: { paired: { command: "node", args: [
-                "/Users/yingcong/Code/tools/pairedcc/packages/canvas/node_modules/tsx/dist/cli.mjs",
-                "/Users/yingcong/Code/tools/pairedcc/packages/canvas/tools/mcp.ts",
-              ], env: { PAIRED_SESSION: sessionStorage.getItem("picabird-agent-session") ?? "" } } } }, null, 2)}
+              text={JSON.stringify(localMcpConfig(__CANVAS_DIR__, sessionStorage.getItem("picabird-agent-session") ?? ""), null, 2)}
               onCopied={setNotice}
             />
             <p className="inspector-help">
@@ -1283,6 +1283,7 @@ function App() {
       return { ...next, meta: { ...next.meta, updatedAt: Date.now() } };
     });
     window.paired = createBridge(editor);
+    if (import.meta.env.DEV) window.__pairedEditor = editor;
     setAgentEditor(editor);
     const page = editor.getCurrentPage();
     const fresh = editor.getCurrentPageShapes().length === 0 && editor.getPages().length === 1 && !page.meta.seeded;
@@ -1307,6 +1308,7 @@ function App() {
     setReady(true);
     return () => {
       delete window.paired;
+      delete window.__pairedEditor;
     };
   }
   return (
