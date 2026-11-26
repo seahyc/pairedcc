@@ -271,8 +271,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 40. **Say which tool answers feedback.** The PR #24 agent could not tell whether to answer the
     person's comment with `canvas_reply` or `canvas_annotate`. Done when the tool descriptions and
     AGENT_API say which to use, checked by a test.
+41. **The scorecard measures the Ask loop.** The calm canvas's core loop (write, select, Ask, see
+    the agent respond) has no eval measure; the scorecard checks only the data scenario. Done when
+    `pnpm eval:canvas` has an "Ask loop" row whose steps run in a real page and a real stdio MCP
+    client: a person's ask shows a waiting state that names who can answer; an external agent finds
+    it with `canvas_asks`, reports progress (the page shows working) and answers with
+    `canvas_answer`; the page shows answered with the agent's name; the answer sits beside the ask
+    and its text stays inside its card; a failed ask offers Retry. Unit tests cover the new row.
 
 ## Claims
+41. Scorecard measures the Ask loop | claude/sprint-eval-ask | 2026-11-26T11:33Z
 40. Say which tool answers feedback | claude/sprint-reply-guidance | 2026-11-26T11:31Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
