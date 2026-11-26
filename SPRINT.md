@@ -464,7 +464,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     view (flipping above or below as there is room), only flags in view are in the Tab order,
     with a headless check of each case.
 
-75. **The first board never moves the view away from work done in the first seconds.** On a new
+75. (PR #95 open, awaiting review.) **The first board never moves the view away from work done in the first seconds.** On a new
     board, the calm first board waits for fonts (up to 2.5 s). If an agent acts in that window (an
     agent waiting for the tab to connect), the layout makes a "Thinking" page and switches to it,
     so the agent's objects are on a page that is no longer open and its next reads miss them;
@@ -473,7 +473,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     scripted check that fails before.
 
 ## Claims
-75. First board never moves the view away | claude/sprint-calm-early | 2026-11-26T13:05Z
 71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
@@ -481,6 +480,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 75. First board never moves the view away (build-A): PR #95 (work done before the calm layout keeps its page; verify-early-agent 4/6 → 6/6; verify-runs fail → pass).
 - 74. Stale flags at the canvas edge (build-B): PR #94 (follow-up to #72's review).
 - 73. Older board gets the calm board with sync on (build-A): PR #91 (layout re-run once after the first load from the account; verify-calm 32/33 → 33/33).
 - 67. The person chooses what an ask leaves out (build-B): PR #90 (`?prototype=context`; verify-leave-out 7 failing before, 17/17 after; first screen unchanged).
@@ -526,6 +526,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A) Regression sweep of the browser checks on `claude/sprint-int` at 12:59Z: verify-import 51/51, webpage 9/9, cite 15/15, compare 14/14, csv-faithful 5/5, ask-frame 8/8, ask-marks 8/8, answer-page 11/11, api, mcp, composition, converge, board-sync, data-agent, data-prototype, group and learning all pass; verify-calm 32/33 (fixed by #91) and verify-runs failing (fixed by #95). verify-feedback-mcp needs a hand-made comment first and was not run.
 - (build-A, item 73) A board saved before the calm canvas now gets the calm board right after the first load from the account (the alternative named in the review of #21), because the recorded "on the next reload" no longer happened at all since #59. Offline at start: on the next reload instead.
 - (build-A) `verify-calm.mjs` can run here with a stand-in for the model: `PAIRED_CLAUDE_BIN=<script printing {"result":"…"} after sleep 3> pnpm agent`. A stand-in that answers instantly fails "progress was shown" (no frame sees working).
 - (review, #46 with #42) An imported record keeps its record starters; other selections get starters fitted to them. Alternative: two selected records get the comparison starters.
@@ -730,3 +731,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:59Z | build-A | 65 Asks and the section reader; #85 review follow-up; merges | #89 #85 #73 | #89: edited titles reach the agent, follow-ups keep record parts (browser before 5/7 → 7/7), marked numeric headers, pipe-less markdown tables, fenced code lines (4+1 failing-first tests); #85: blank-line and cut-quote delimiter cases, pen strokes count as feedback (browser 10/10); #73 and #89 merged with claude/sprint-int after #60 and a frame-history change landed |
 | 2026-11-26T13:04Z | build-A | 71 Web page reader stays quick | #93 | One pass over the tags: 2 MB of unclosed <li> 38 s → 0.2 s, unclosed advert <div>s 31 s → 0.02 s; #65's behaviour tests unchanged; verify-webpage 9/9; scorecard unchanged |
 | 2026-11-26T13:06Z | build-B | 74 Stale flags at the canvas edge; merge-ups | #94 #76 #77 #69 #86 | #94: an opened reason flips above, clear of the selection bar, near the bottom; a focused flag grows down near the top; offscreen flags leave the Tab order; real tab 2/5 before, 5/5 after; scorecard unchanged. #67, #69 and #72 merged; #69, #86, #76 and #77 merged up; #77 also fixes the thin-image rounding (null before, 600 x 0.4 now) |
+| 2026-11-26T13:08Z | build-A | 75 First board never moves the view away | #95 | verify-runs failed on the branch: an agent acting before the calm layout lost its page; verify-early-agent 4/6 → 6/6, verify-runs passes; scorecard unchanged |
