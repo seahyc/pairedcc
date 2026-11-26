@@ -89,6 +89,7 @@ export const commandSchema = z.object({
     "scene",
     "arrange",
     "duplicate",
+    "group",
     "feedback",
     "reply",
     "asks",

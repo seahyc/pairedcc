@@ -212,16 +212,26 @@ export function SaveState() {
     // Signed in (or the development board store): the account copy is what counts.
     const busy = sync.state === "loading" || sync.state === "saving" || state.saving;
     const offline = sync.state === "offline";
+    // The server refused this board itself (too large, invalid): saying "offline" would be wrong.
+    const refused = sync.state === "refused";
     // The development server keeps boards for one local person, not an account.
     const where = "account" in sync && sync.account === "local" ? "the local server" : "your account";
-    const label = offline
+    const label = refused
+      ? sync.code === 413
+        ? "Too large to save · kept on this device"
+        : "Save refused · kept on this device"
+      : offline
       ? "Offline · saved on this device"
       : busy
         ? sync.state === "loading"
           ? "Loading your board…"
           : "Saving…"
         : `Saved to ${where}${sync.state === "saved" ? ` · ${clock(sync.at)}` : ""}`;
-    const title = offline
+    const title = refused
+      ? `${where === "your account" ? "Your account" : "The local server"} refused this board: ${sync.error.replace(/\.$/, "")}. ${
+          sync.code === 413 ? "Remove large images or objects to save it there. " : ""
+        }Your work is safe in this browser; saving is tried again when the board changes.`
+      : offline
       ? `Could not reach the server (${sync.error}). Your work is safe in this browser and is saved to your account when the connection returns.`
       : sync.state === "saved" && sync.note
         ? sync.note
@@ -229,7 +239,7 @@ export function SaveState() {
           ? "Saved to your account and in this browser. Open it from any browser where you are signed in."
           : "Saved to the development server's board store (.local/boards) and in this browser.";
     return (
-      <span className={`save-state${busy ? " saving" : ""}${offline ? " offline" : ""}`} role="status" title={title}>
+      <span className={`save-state${busy ? " saving" : ""}${offline || refused ? " offline" : ""}`} role="status" title={title}>
         {busy ? <span className="save-dot" /> : <Check size={12} />}
         {label}
       </span>
