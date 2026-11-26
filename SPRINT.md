@@ -221,12 +221,12 @@ task by which measure is furthest from target, not by backlog order.
     and replies attached to it by the same amount (not those also being moved, not ones about
     several objects), as one undo step, tested, with before/after screenshots.
 
-50. (PR #71 open, awaiting review.) **Stale checks on shared inputs stay linear.** (From an automated review of #11, verified by
+50. (Merged, see Done.) **Stale checks on shared inputs stay linear.** (From an automated review of #11, verified by
     reading `staleChain`.) A shared upstream input is walked once per path: notes built on notes in
     rounds make the board's stale badges and `read` grow exponentially (millions of visits after
     20 rounds). Done when staleness is computed once per object per pass, `read` reports repeated
     causes by reference or bounded, and a test with 20 rounds of shared inputs runs fast.
-51. (PR #68 open, awaiting review.) **CSV import keeps what the file says.** (From an automated review of #18, verified.) (a) A
+51. (Merged, see Done.) **CSV import keeps what the file says.** (From an automated review of #18, verified.) (a) A
     numeric column with integers beyond 2^53 (long IDs) is rounded, merging distinct IDs: keep it
     as text. (b) A one-column file drops rows whose value is a quoted empty string. (c) A
     Windows-1252 file imports with replacement characters: decode strictly and say to re-export as
@@ -476,10 +476,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
-Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- Feedback 8, import and paste (build-A): merged #46 (yc/import-paste brought in, CSV drop stays a dataset under the data flag), #55 (side by side, column slots), #58 (cited sections beside a record), #60 (.xlsx), #65 (web pages), #73 (PDF). Open: #85 (item 62), #89 (item 65), #93 (item 71). The feedback item stays open for the second playtest.
+- 51. CSV keeps what the file says (build-A): PR #68.
+- 50. Stale checks stay linear (build-A): PR #71 (16-round read 1.8 s → 8 ms; 18 rounds no longer hangs).
 - 75. First board never moves the view away (build-A): PR #95 (work done before the calm layout keeps its page; verify-early-agent 4/6 → 6/6; verify-runs fail → pass).
 - 74. Stale flags at the canvas edge (build-B): PR #94 (follow-up to #72's review).
 - 73. Older board gets the calm board with sync on (build-A): PR #91 (layout re-run once after the first load from the account; verify-calm 32/33 → 33/33).
@@ -733,3 +735,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T13:06Z | build-B | 74 Stale flags at the canvas edge; merge-ups | #94 #76 #77 #69 #86 | #94: an opened reason flips above, clear of the selection bar, near the bottom; a focused flag grows down near the top; offscreen flags leave the Tab order; real tab 2/5 before, 5/5 after; scorecard unchanged. #67, #69 and #72 merged; #69, #86, #76 and #77 merged up; #77 also fixes the thin-image rounding (null before, 600 x 0.4 now) |
 | 2026-11-26T13:08Z | build-A | 75 First board never moves the view away | #95 | verify-runs failed on the branch: an agent acting before the calm layout lost its page; verify-early-agent 4/6 → 6/6, verify-runs passes; scorecard unchanged |
 | 2026-11-26T13:08Z | build-B | Merge-ups after #74 | #78 #84 | #78: a leftover plain-text filter from the merge dropped partly bold words (reproduced live, removed); #84: plain-decimal and precision rules for CSV numbers combined |
+| 2026-11-26T13:09Z | build-A | Run end; #89 review follow-up | #89 | Marked headers with blank cells, headings with pipes, appended titles (3 failing-first tests); #85 #89 #93 merge cleanly with claude/sprint-int and with each other (386 tests on the combination); feedback-8 claim released |
