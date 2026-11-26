@@ -82,6 +82,18 @@ export const boardApi: BoardApi = {
   },
 };
 
+type Sync = ReturnType<typeof createBoardSync>;
+let active: Sync | null = null;
+
+/** The open board's history, for the "Earlier versions" dialog; null until sync has started. */
+export const boardHistory = {
+  revisions: () => (active ? active.revisions() : Promise.resolve(null)),
+  restore: (revision: number) => {
+    if (!active) return Promise.reject(new Error("This board is not saved to an account yet."));
+    return active.restore(revision);
+  },
+};
+
 /** Start keeping this editor's board saved to the account. Returns a stop function. */
 export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
   const sync = createBoardSync({
@@ -101,6 +113,10 @@ export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
   });
   // Development only, like window.__pairedEditor: lets headless checks drive history.
   if (import.meta.env.DEV) (window as unknown as { __pairedBoardSync?: typeof sync }).__pairedBoardSync = sync;
+  active = sync;
   void sync.start();
-  return () => sync.stop();
+  return () => {
+    if (active === sync) active = null;
+    sync.stop();
+  };
 }

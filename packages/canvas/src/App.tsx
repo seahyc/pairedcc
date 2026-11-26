@@ -54,6 +54,7 @@ import {
   Layers,
   FilePlus2,
   Map as MapIcon,
+  History,
 } from "lucide-react";
 import {
   createObject,
@@ -66,7 +67,8 @@ import {
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { createComment } from "./agent-operations";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
-import { startBoardSync } from "./board-sync-browser";
+import { boardSync, startBoardSync } from "./board-sync-browser";
+import { HistoryDialog } from "./history-dialog";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
@@ -326,6 +328,10 @@ function Shell() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [asking, setAsking] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const sync = useValue("board sync", () => boardSync.get(), []);
+  // Versions are kept only for boards saved to an account (or the local dev server).
+  const historyWhere = sync.state === "local" ? null : "account" in sync && sync.account === "local" ? "the local server" : "your account";
   const openCount = useValue("open feedback", () => collectFeedback(editor).filter((i) => i.status === "open").length, [editor]);
   const link = useValue("agent link", () => agentLink.get(), []);
   const listeners = useValue("agent listeners", () => agentListeners.get(), []);
@@ -806,6 +812,11 @@ function Shell() {
               <Keyboard size={14} /> Shortcuts <kbd>?</kbd>
             </button>
             <div className="menu-rule" />
+            {historyWhere && (
+              <button role="menuitem" onClick={() => { setHistoryOpen(true); setMenuOpen(false); }}>
+                <History size={14} /> Earlier versions
+              </button>
+            )}
             <button role="menuitem" onClick={() => { void exportFile(); setMenuOpen(false); }}>
               <Download size={14} /> Export board file
             </button>
@@ -1291,6 +1302,7 @@ function Shell() {
         </div>
       )}
       {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
+      {historyOpen && historyWhere && <HistoryDialog where={historyWhere} onClose={() => setHistoryOpen(false)} />}
       {agentOpen && (
         <div className="modal-backdrop" onClick={() => setAgentOpen(false)}>
           <section
