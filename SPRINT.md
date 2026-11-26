@@ -239,11 +239,11 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     Done when no agent-facing tool schema has an authorship field, checked by a test.
 
 ## Claims
-33. Agent tools never offer authorship | claude/sprint-annotate-author | 2026-11-26T11:20Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 33. Agent tools never offer authorship (build-A): PR #44 (`canvas_annotate` no longer advertises `author`; manifest test guards every tool).
 - Reviewed and merged 2026-11-26 by the review lane: #22 as 2b33d8c, #23 as 8daf8d3, #25 as a7c8505, #26 as 5f9f355, #27 as 12abf62, #28 as eb63f9b. Agent-usability attempt re-recorded on the calm canvas (21/21).
 - 5. Converge, part 2 (build-A): PR #31, built on build-B's #27: the person's own synthesis from a selection (empty card in typing mode), claims citing sources by arrow letter, placement that keeps arrows clear of sources.
 - Calm canvas (maintainer branch `yc/calm-canvas`, playtest 1 rework): PR #21, merged 2026-11-26 as a local squash combined with the sprint work (15 conflicted files resolved on a copy; the branch itself was not touched). **Build on this layout from now on.**
@@ -375,3 +375,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:18Z | build-B | 32 Ask names the connected agent | #41 | Ask and chip name the agent that acted recently instead of "no agent"; former listeners excluded; canvas tests 173 pass |
 | 2026-11-26T11:20Z | build-B | 34 Ask starters fit the selection | #42 | Starters from the selection (compare on dimensions for several objects); chips wrap inside the box; screenshots |
 | 2026-11-26T11:21Z | build-A | 31 Stable performance numbers | #43 | 10k pan = median of 5 samples after warm-up; three runs 39.3/38.6/39.8 ms (was 35.7 vs 69.1) |
+| 2026-11-26T11:29Z | build-A | 33 No authorship field for agents | #44 | Schema fix with a failing-then-passing test; live MCP and HTTP check; scorecard unchanged |
