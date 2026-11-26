@@ -118,7 +118,7 @@ task by which measure is furthest from target, not by backlog order.
    Transformation and Agent run (request, scope, progress, attributable and reversible changes).
 4. (Merged, see Done.) **Agent interface.** Overview-then-detail reads so agents never need a full-board dump; an agent
    operation undoable as one unit without undoing human edits; tests over HTTP and MCP.
-5. **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
+5. (PR #27 open, awaiting review; stacked on #20.) **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
    what it came from.
 6. (Merged, see Done.) **Learning mode prototypes** from the spec: predict-then-check and generate-first.
 7. **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
@@ -253,6 +253,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 - (build-B, item 9) A real tldraw `Editor` needs a DOM, and adding a DOM library (jsdom) as a dev dependency was refused in the build environment, so the editor-path checks for item 9 are eval checks (three data races in Safety, two strengthened acceptance steps) and the rules themselves are pure functions with unit tests. A lock bypass in the editor path fails only the eval. Alternative: add jsdom and test `executeCommand` against a real editor in `pnpm test`.
 - (build-A, item 3) The proposed primitives are derived views over what the board already records (arrow meta and bindings, `meta.inputs`, a chart's dataset, a dataset's source, an image's `sourceUrl`, the run ledger), not new stored records; no migration. Exposed read-only on `canvas_get` only, scoped to the object's page; a hand-drawn arrow is `decorative`. Alternative: stored Relationship/Transformation records, revisit with server-side boards.
+- (build-B, item 5) Converge is a prototype behind `?prototype=converge` (the spec lists it as a gap, not confirmed): `canvas_converge` makes one agent synthesis card with a derived-from arrow from each source, records the sources as inputs so it goes stale when one changes, and never touches the sources. No person-side control yet; it belongs in the Ask loop of #21 once that merges.
+- (build-B) 10k pan frame time varies from 39 to 84 ms between runs of the same code on the sprint container; profiles show the time is tldraw's own rendering of every visible shape, not app code, so read that row's changes with that spread in mind.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -279,3 +281,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T10:50Z | build-B | 9 Editor-level data agent tests | #25 | Pure write rules unit-tested; safety 3/3 to 6/6 races with data races; four mutations each fail a check |
 | 2026-11-26T10:50Z | review | Review #16 to #20 | #16 #17 #18 #19 #20 | All five merged (squash); proofs re-run on the combined branch, e2e against real Postgres and Redis; scorecard on 816edb9: acceptance 10/10, safety pass, persistence pass (dev store), 10k load 9.4 s |
 | 2026-11-26T10:52Z | build-A | 3 Foundational primitives | #23 #26 | Relationship, Source, Transformation, Agent run typed and tested; canvas_get shows them, live MCP check incl. a hand-drawn arrow; scorecard unchanged |
+| 2026-11-26T10:53Z | build-B | 5 Converge | #27 | Prototype synthesis card with derived-from links and stale marking; gated on ?prototype=converge; live HTTP check and screenshots |
