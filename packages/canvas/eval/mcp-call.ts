@@ -1,10 +1,12 @@
 import { appendFileSync, readFileSync } from "node:fs";
+import { briefListing } from "./brief";
 import { mcpAgent } from "./lib";
 
 // Command-line MCP client for agent-usability attempts. The agent under test calls tools
 // only through this: it connects to the task's tab with the real stdio MCP server and
 // counts every call. The task runner writes the connection details to <dir>/current.json.
-//   tsx eval/mcp-call.ts list                   tool names, descriptions and input schemas
+//   tsx eval/mcp-call.ts list                   tool names, descriptions and input schemas (one JSON value)
+//   tsx eval/mcp-call.ts list --brief           one line per tool: name(param, optional?)
 //   tsx eval/mcp-call.ts <tool> '<json args>'   call one tool; prints its JSON result
 
 const dir = process.env.AGENT_TASK_DIR ?? `${process.cwd()}/eval/agent-runs/work`;
@@ -17,7 +19,8 @@ if (!tool) {
 const agent = await mcpAgent(current.base, current.session);
 try {
   if (tool === "list") {
-    console.log(JSON.stringify(await agent.describe(), null, 1));
+    const listing = await agent.describe();
+    console.log(raw === "--brief" ? briefListing(listing.tools) : JSON.stringify(listing, null, 1));
   } else {
     appendFileSync(`${dir}/calls-${current.task}.log`, `${JSON.stringify({ tool, at: new Date().toISOString() })}\n`);
     const result = await agent.call(tool, raw ? JSON.parse(raw) : {});

@@ -1,7 +1,7 @@
 // Browser check: each answer stays with its own ask.
 //
-// Starts its own dev server of this checkout with an empty board store. The person asks three
-// questions about one card (the asks stack under each other); an agent answers them out of
+// Starts its own dev server of this checkout with an empty board store. The person writes three
+// questions under one card and sends each (the asks stack under each other); an agent answers them out of
 // order with three options each. Every answer row must sit right next to its own ask, directly
 // under it or beside it, and no cards may overlap. A lone ask still gets its answer underneath.
 //
@@ -59,14 +59,20 @@ try {
     await p.waitForTimeout(300);
     return p.evaluate(() => window.paired.read().objects.filter((o) => o.type === 'card').at(-1).id);
   };
+  // The card is the question: the person writes each question as a card of their own, stacked
+  // under the card it is about, and sends it with Ctrl+Enter (there is no question box).
   const ask = async (cardId, question) => {
-    await p.evaluate((id) => window.paired.select([id]), cardId);
+    const id = await p.evaluate(([cardId, question]) => {
+      const ed = window.__pairedEditor;
+      const below = ed.getCurrentPageShapes().filter((s) => s.type !== 'arrow' && s.type !== 'frame').map((s) => ed.getShapePageBounds(s)).filter((b) => b.x < ed.getShapePageBounds(cardId).maxX && b.maxX > ed.getShapePageBounds(cardId).x);
+      const y = Math.max(...below.map((b) => b.maxY)) + 24;
+      const made = window.paired.create({ kind: 'note', x: ed.getShapePageBounds(cardId).x, y, width: 300, text: question });
+      return typeof made === 'string' ? made : made.id;
+    }, [cardId, question]);
+    await p.evaluate((id) => window.paired.select([id]), id);
     await p.waitForTimeout(200);
-    await p.keyboard.press('Control+Enter');
-    await p.waitForSelector('.selection-bar.asking input');
-    await p.fill('.selection-bar.asking input', question);
     const waiting = post('/asks/wait', { agent: 'Check agent', waitMs: 10000 });
-    await p.press('.selection-bar.asking input', 'Enter');
+    await p.keyboard.press('Control+Enter');
     const got = await waiting;
     await p.waitForTimeout(300);
     return got;
@@ -75,7 +81,7 @@ try {
   const layout = () => p.evaluate(() => {
     const ed = window.__pairedEditor;
     const box = (s) => { const b = ed.getShapePageBounds(s); return { x: Math.round(b.x), y: Math.round(b.y), r: Math.round(b.maxX), b: Math.round(b.maxY) }; };
-    const cards = ed.getCurrentPageShapes().filter((s) => s.type === 'card');
+    const cards = ed.getCurrentPageShapes().filter((s) => s.type !== 'arrow' && s.type !== 'frame');
     return {
       all: cards.map((s) => ({ id: s.id, name: s.meta.name, replyTo: s.meta.replyTo, ...box(s) })),
     };
@@ -89,7 +95,7 @@ try {
   const overlaps = (cards) => cards.flatMap((a, i) => cards.slice(i + 1).filter((c) => a.x < c.r && c.x < a.r && a.y < c.b && c.y < a.b).map((c) => `${a.name} × ${c.name}`));
 
   // 1. Three asks about one card, answered out of order.
-  const card = await write(300, 300, 'Charge per seat or per workspace?');
+  const card = await write(300, 300, 'Charge per seat or per workspace');
   const asks = [];
   for (const q of ['Which is simpler?', 'Which earns more?', 'Which do teams prefer?']) asks.push(await ask(card, q));
   for (const g of [asks[1], asks[2], asks[0]]) await answer(g, { alternatives: ['Option one is short', 'Option two is a little longer than one', 'Three'] });
@@ -111,7 +117,7 @@ try {
   // 2. A lone ask on a fresh stretch of board: its answer goes underneath, as before.
   await p.evaluate(() => { const ed = window.__pairedEditor; ed.selectNone(); ed.setCamera({ x: -3000, y: 0, z: 1 }); });
   await p.waitForTimeout(300);
-  const lone = await write(300, 300, 'Who pays: the team or the company?');
+  const lone = await write(300, 300, 'Who pays: the team or the company');
   const g = await ask(lone, 'Which is more common?');
   await answer(g, { text: 'The team, at first: whoever made the board.' });
   await p.waitForTimeout(800);

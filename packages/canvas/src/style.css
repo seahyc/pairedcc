@@ -1662,6 +1662,16 @@ kbd {
   background: #3a2fd0;
   animation: save-pulse 0.9s ease-in-out infinite;
 }
+/* The group an ask's card sits in, given to the agent with it: softer than what was selected. */
+.ask-group {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 1.5px dotted #b7b0ee;
+  border-radius: 22px;
+  background: rgba(143, 134, 227, 0.04);
+  box-sizing: border-box;
+}
 .ask-given {
   position: absolute;
   left: 0;
@@ -2020,4 +2030,17 @@ kbd {
   color: #77736a;
   padding-left: 6px;
   border-left: 1px solid #dedfe4;
+}
+
+/* Read by screen readers, never seen: an ask's changes of state are announced here. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
