@@ -79,7 +79,7 @@ import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
-import { AskLayer, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
+import { AskLayer, AutoAsk, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
 import { elsewhereNotice, elsewhereShow, markOf, noticeMs } from "./ask-rules";
@@ -278,7 +278,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
     title: "Think",
     rows: [
       ["Write a thought", "N, then click or Enter; or double-click the board"],
-      ["Ask your agent about the selection, or send a failed ask again", keys("⌘ ↵")],
+      ["Ask: write a question and finish, or send any card; also resends a failed ask", keys("end with ?, or ⌘ ↵")],
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
@@ -399,7 +399,7 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
           </IconButton>
         </div>
         <p>
-          Pink handwriting is you, lavender with ✦ is your agent. Write a thought, select it and ask. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
+          Pink handwriting is you, lavender with ✦ is your agent. Write a question and it is asked when you finish; any other card is asked with ⌘↵. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
         </p>
         <div className="shortcut-grid">
           {shortcutGroups.map((group) => (
@@ -579,7 +579,7 @@ function Shell() {
         event.stopImmediatePropagation();
         // The canvas starts editing a selected card when Enter is released; this Enter is ours.
         swallowEnterUp = true;
-        if (!event.repeat) askAboutSelection({ resendFailed: true });
+        if (!event.repeat) askAboutSelection();
         return;
       }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -768,12 +768,8 @@ function Shell() {
     );
     (backwards ? controls[controls.length - 1] : controls[0])?.focus();
   }
-  /**
-   * Ask: finish typing if a card is being written, then open the question box on the selection.
-   * From the keyboard (Ctrl/⌘+Enter) a failed or unheard ask is sent again instead; the toolbar's
-   * Ask button always opens the question box.
-   */
-  function askAboutSelection({ resendFailed = false }: { resendFailed?: boolean } = {}) {
+  /** Ask: finish typing if a card is being written, then open the question box on the selection. */
+  function askAboutSelection() {
     const editing = editor.getEditingShapeId();
     if (editing) {
       editor.complete();
@@ -785,7 +781,7 @@ function Shell() {
       return;
     }
     // A failed or unheard ask is sent again rather than asked about.
-    const retry = editing || !resendFailed ? undefined : selectedRetry(editor);
+    const retry = editing ? undefined : selectedRetry(editor);
     if (retry) {
       resendAsk(editor, retry.id);
       return;
@@ -1250,7 +1246,7 @@ function Shell() {
             <span>{t.name}</span>
           </button>
         ))}
-        <button type="button" className="tool-button ask" title={keys("Ask your agent about the selection (⌘↵)")} onClick={() => askAboutSelection()}>
+        <button type="button" className="tool-button ask" title={keys("Send what you wrote to your agent (⌘↵)")} onClick={askAboutSelection}>
           <Sparkles size={18} strokeWidth={1.6} />
           <span>Ask</span>
         </button>
@@ -1289,6 +1285,7 @@ function Shell() {
       <ImportLayer onNotice={setNotice} />
       <StopAnnouncer />
       <SelectionBar asking={asking} setAsking={setAsking} onComment={addComment} onNotice={setNotice} keepInView={keepInView} />
+      <AutoAsk keepInView={keepInView} />
       <aside className="right-panel">
         <div className="panel-tabs right-tabs" role="tablist">
           <button role="tab" aria-selected={rightTab === "properties"} className={rightTab === "properties" ? "tab-current" : "tab-other"} onClick={() => setRightTab("properties")}>
