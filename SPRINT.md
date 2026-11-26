@@ -398,7 +398,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 62. **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
 
+63. **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
+    (comparing beats describing) and "the agent must visibly respond". Sending an ask makes room
+    for one 340 px answer, but four options in a row are about 1,060 px: at 1440 px option D lands
+    off the right edge, and on a 390 px phone only A is visible, and nothing brings them into view.
+    Done when an answer that lands while the person is looking at its ask (not typing or dragging)
+    is brought wholly into view, options wrap into rows that fit the window when one row cannot,
+    unit-tested, and checked in a real page at 1440 and 390 px (failing before, passing after).
+
 ## Claims
+63. Answer lands in view | claude/sprint-answer-view | 2026-11-26T12:38Z
 62. Import keeps what the source and the person said | claude/sprint-import-faithful | 2026-11-26T12:36Z
 61. Ask about a chart or dataset gives what it shows | claude/sprint-ask-chart | 2026-11-26T12:31Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
