@@ -1697,7 +1697,7 @@ kbd {
 @media (max-width: 520px) {
   .zoom-controls,
   .right-closed .zoom-controls {
-    left: 72px;
+    left: 92px;
     right: auto;
   }
 }
