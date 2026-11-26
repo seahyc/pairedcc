@@ -12,14 +12,37 @@ export const OPTION_GAP = 20;
 /** Room under the ask for its status line. */
 export const STATUS_ROOM = 46;
 
-/** Where answers go: under the ask, alternatives in one row so they can be compared. */
-export function answerLayout(anchor: { x: number; y: number }, texts: string[]) {
-  const count = texts.length, w = count > 1 ? OPTION_W : ANSWER_W;
-  const cards = Array.from({ length: count }, (_, i) => ({ dx: i * (w + OPTION_GAP), w }));
-  // Roughly how tall the tallest card will be, so the row is placed clear of what is below.
+/** Narrowest an answer card gets on a small window. */
+export const MIN_ANSWER_W = 200;
+/** Screen room the canvas chrome takes beside an answer: the tool strip on the left, a margin on the right. */
+export const ANSWER_CHROME = 104;
+
+/**
+ * How answers fit the room they land in (page units): a card narrows to the room on a phone,
+ * and alternatives go as many to a row as fit, so none lands off screen.
+ */
+export function answerFit(count: number, available: number) {
+  const multi = count > 1, full = multi ? OPTION_W : ANSWER_W;
+  const w = Math.max(MIN_ANSWER_W, Math.min(full, Math.floor(available)));
+  const perRow = multi ? Math.max(1, Math.min(count, Math.floor((available + OPTION_GAP) / (w + OPTION_GAP)))) : 1;
+  return { w, perRow };
+}
+
+/**
+ * Where answers go: under the ask, alternatives side by side so they can be compared, in as
+ * many rows as the room (`available`, page units) needs.
+ */
+export function answerLayout(anchor: { x: number; y: number }, texts: string[], available = Infinity) {
+  const count = texts.length, { w, perRow } = answerFit(count, available);
+  const cards = Array.from({ length: count }, (_, i) => ({ dx: (i % perRow) * (w + OPTION_GAP), row: Math.floor(i / perRow), w }));
+  // Roughly how tall each row's tallest card will be, so the answers are placed clear of what is below.
   const perLine = Math.max(12, Math.floor((w - 40) / 8.6));
-  const h = Math.max(...texts.map((t) => Math.ceil(t.length / perLine) * 23 + 40), 70);
-  return { box: { x: anchor.x, y: anchor.y + STATUS_ROOM, w: count * w + (count - 1) * OPTION_GAP, h }, cards };
+  const tall = (t: string) => Math.max(Math.ceil(t.length / perLine) * 23 + 40, 70);
+  const rows = Math.ceil(count / perRow);
+  const heights = Array.from({ length: rows }, (_, r) => Math.max(...texts.slice(r * perRow, (r + 1) * perRow).map(tall)));
+  const h = heights.reduce((sum, x) => sum + x, 0) + (rows - 1) * OPTION_GAP;
+  const across = Math.min(count, perRow);
+  return { box: { x: anchor.x, y: anchor.y + STATUS_ROOM, w: across * w + (across - 1) * OPTION_GAP, h }, cards };
 }
 
 /** A sensible first question for what is selected: a question is answered, a thought is probed. */
@@ -105,4 +128,24 @@ export function mergeHistory(entries: HistoryEntry[], targetIds: string[]) {
     seen.add(key);
     return true;
   });
+}
+
+/** How recent an answer must be to count as landing now (a board loaded later is not "landing"). */
+export const LANDING_MS = 5_000;
+
+/**
+ * Asks whose answer has just landed in this tab: answered, not seen answered before (the key
+ * includes the answer time, so a retry's answer lands again), and answered within LANDING_MS.
+ * Every key is added to `seen`.
+ */
+export function landedAnswers(asks: readonly { id: string; answeredAt?: number }[], seen: Set<string>, now: number) {
+  const landed: string[] = [];
+  for (const a of asks) {
+    if (a.answeredAt === undefined) continue;
+    const key = `${a.id}@${a.answeredAt}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (now - a.answeredAt <= LANDING_MS) landed.push(a.id);
+  }
+  return landed;
 }
