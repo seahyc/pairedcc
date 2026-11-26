@@ -3,7 +3,7 @@
 // that would put a prototype object on the board, so a default board never gains one.
 // Their shapes stay registered so saved boards that contain them still load.
 
-export type Prototype = "data" | "learning" | "converge";
+export type Prototype = "data" | "learning" | "converge" | "context";
 
 export const PROTOTYPE_OPS: Record<string, Prototype> = {
   dataset: "data",

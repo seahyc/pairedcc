@@ -310,11 +310,14 @@ async function restoreRace(browser: Browser, base: string, race: Race) {
       await b.page.evaluate(() => (window as any).paired.create({ kind: "note", x: 4000, y: 600, text: "restore race: newer edit in B" }));
       await sleep(1500);
       if (!(await savedToAccount(b.page))) return "browser B's edit was not saved";
-      let refused = false;
+      if (typeof keep !== "number") return "browser A has no saved revision to restore";
+      // Only the stale-tab refusal counts; a restore that fails for another reason proves nothing.
+      let refused = false, why = "";
       try {
         await sync(a.page, `s.restore(${keep})`);
-      } catch {
-        refused = true;
+      } catch (error) {
+        why = String(error);
+        refused = /changed on another tab or device/.test(why);
       }
       await sleep(500);
       const onServer = (await server()).includes("restore race: newer edit in B");
@@ -323,7 +326,7 @@ async function restoreRace(browser: Browser, base: string, race: Race) {
       await sleep(2500);
       const inA = await shows(a.page, "restore race: newer edit in B");
       if (!onServer || !inA) lost(1);
-      if (!refused) return "the restore in the stale tab was accepted";
+      if (!refused) return why ? `the restore failed, but not as a stale-tab refusal: ${why.slice(0, 160)}` : "the restore in the stale tab was accepted";
       if (!onServer) return "the newer edit is gone from the board store";
       return inA ? true : "the newer edit is missing from browser A after reload";
     });
