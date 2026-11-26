@@ -245,3 +245,13 @@ export function askAnnouncement(
       return undefined;
   }
 }
+
+/**
+ * What the selection bar's first button does for one selected ask: an ask that failed, went
+ * quiet or was not heard is sent again (its state line offers the same), anything else is asked
+ * about. Undefined: Ask as usual.
+ */
+export function retryLabel(line: { tone: string; retry?: boolean }): "Retry" | "Send again" | undefined {
+  if (!line.retry) return undefined;
+  return line.tone === "nobody" ? "Send again" : "Retry";
+}

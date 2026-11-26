@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
-import { askAnnouncement, askStatusLine, BAR_MARGIN, placeBar, startersFor, statusWidth, suggestQuestion } from "./ask-rules";
+import { askAnnouncement, askStatusLine, retryLabel, BAR_MARGIN, placeBar, startersFor, statusWidth, suggestQuestion } from "./ask-rules";
 import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
@@ -29,6 +29,26 @@ function givenLabel(editor: Editor, ids: string[]) {
 export function sendAsk(editor: Editor, id: string) {
   const shape = editor.getShape(id as TLShapeId);
   if (shape) announceAsk(describeAsk(editor, shape));
+}
+
+/**
+ * The one selected ask that can be sent again (failed, went quiet, or not heard), with the
+ * word its state line uses: Retry or Send again. Reads the same signals as the state line.
+ */
+export function selectedRetry(editor: Editor): { id: string; label: "Retry" | "Send again" } | undefined {
+  const shapes = editor.getSelectedShapes().filter((s) => s.type !== "arrow");
+  const ask = shapes.length === 1 ? askOf(shapes[0]) : undefined;
+  if (!ask) return undefined;
+  const listeners = agentListeners.get(), hosted = agentLink.get().mode === "hosted";
+  const line = askStatusLine(ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Date.now(), given: "", recent: chatAgentActivity(agentActivity.get()) });
+  const label = retryLabel(line);
+  return label ? { id: shapes[0].id, label } : undefined;
+}
+
+/** Send an ask again as a new attempt. */
+export function resendAsk(editor: Editor, id: string) {
+  retryAsk(editor, id);
+  sendAsk(editor, id);
 }
 
 /** Page-space layer: each ask's state under it, and an outline around what the agent was given. */
@@ -111,8 +131,7 @@ export function AskLayer() {
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
-                    retryAsk(editor, a.id);
-                    sendAsk(editor, a.id);
+                    resendAsk(editor, a.id);
                   }}
                 >
                   {line.tone === "nobody" ? "Send again" : "Retry"}
@@ -147,6 +166,8 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       const from = editor.pageToScreen({ x: box.x, y: box.y }), to = editor.pageToScreen({ x: box.maxX, y: box.maxY });
       const only = shapes.length === 1 ? shapes[0] : undefined;
       return {
+        // A failed or unheard ask: the first button sends it again.
+        retry: selectedRetry(editor)?.label ?? "",
         ids: shapes.map((s) => s.id).join(","),
         x: Math.round(from.x),
         y: Math.round(from.y),
@@ -331,9 +352,23 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     );
   return (
     <div ref={setBar} className="selection-bar" style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }} role="toolbar" aria-label="What next">
-      <button className="primary" onClick={() => setAsking(true)} title={keys("Ask your agent about the selection (⌘↵)")}>
-        ✦ Ask <Kbd>{keys("⌘↵")}</Kbd>
-      </button>
+      {state.retry ? (
+        <button
+          className="primary"
+          onClick={() => {
+            const retry = selectedRetry(editor);
+            if (retry) resendAsk(editor, retry.id);
+            editor.focus();
+          }}
+          title={keys(`${state.retry}: send this ask to your agent again (⌘↵)`)}
+        >
+          ↻ {state.retry} <Kbd>{keys("⌘↵")}</Kbd>
+        </button>
+      ) : (
+        <button className="primary" onClick={() => setAsking(true)} title={keys("Ask your agent about the selection (⌘↵)")}>
+          ✦ Ask <Kbd>{keys("⌘↵")}</Kbd>
+        </button>
+      )}
       <button className={state.picked ? "on" : ""} onClick={() => judge("picked")} title="Pick: this one (P)">
         Pick <Kbd>P</Kbd>
       </button>
