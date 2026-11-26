@@ -14,9 +14,14 @@ async function cmd(sessionId, op, input) {
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
   const errors = []; p.on('pageerror', e => errors.push(e.message));
+  // Without the flag the tab refuses data operations and changes nothing.
   await p.goto(base + '/canvas/'); await p.waitForTimeout(2000); await p.reload(); await p.waitForTimeout(3500);
-  const sessions = await (await fetch(base + '/api/canvas/sessions')).json();
-  const sid = sessions.sessions[0].id;
+  let sid = (await (await fetch(base + '/api/canvas/sessions')).json()).sessions[0].id;
+  const countBefore = (await cmd(sid, 'read', {})).objects.length;
+  const refused = await cmd(sid, 'dataset', { x: 0, y: 0, synthetic: 'orders' }).then(() => 'created', e => e.message);
+  console.log('without ?prototype=data:', refused, '| objects', countBefore, '->', (await cmd(sid, 'read', {})).objects.length);
+  await p.goto(base + '/canvas/?prototype=data'); await p.waitForTimeout(3500);
+  sid = (await (await fetch(base + '/api/canvas/sessions')).json()).sessions[0].id;
   await cmd(sid, 'page', { name: 'Agent data check' });
   const ds = await cmd(sid, 'dataset', { x: 0, y: 0, synthetic: 'orders' });
   console.log('dataset:', ds.dataset.title, ds.dataset.rowCount, 'rows, v' + ds.dataset.version, 'rows in result:', 'rows' in ds.dataset);

@@ -22,7 +22,7 @@ Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
 
 ### Learning prompts (prototype)
 
-`canvas_learn` is a prototype tool for learning mode. Use it only when the person has asked to understand or learn something. It places a prompt card and hides `hideIds` until the person answers:
+`canvas_learn` is a prototype tool for learning mode. Use it only when the person has asked to understand or learn something. It runs only in a tab opened with `?prototype=learning`; other tabs refuse it and change nothing. It places a prompt card and hides `hideIds` until the person answers:
 
 - In `predict` mode, the person guesses before the result is shown.
 - In `generate` mode, the person explains in their own words before your explanation is shown.
@@ -41,7 +41,7 @@ Prototype tools (`canvas_learn` and the data tools) are flagged `prototype` in `
 
 ### Data prototype
 
-A prototype of the working spec's first acceptance scenario: a dataset, a bar chart over it that the person filters by clicking, an exact read of what the chart shows, and stale marking when an input changes. These tools are labelled PROTOTYPE in their descriptions and, today, every connected agent sees them. To try it by hand, open the canvas with `?prototype=data` and use **Data prototype page**. Use synthetic or openly licensed data only.
+A prototype of the working spec's first acceptance scenario: a dataset, a bar chart over it that the person filters by clicking, an exact read of what the chart shows, and stale marking when an input changes. These tools are labelled PROTOTYPE in their descriptions and, today, every connected agent sees them, but a tab runs them only when it was opened with `?prototype=data`. Any other tab refuses `canvas_dataset`, `canvas_chart`, `canvas_chart_state` and `canvas_cell` with an error that says so, and changes nothing; ask the person to open the canvas with the flag. Datasets and charts already on a saved board still show in every tab. To try it by hand, open the canvas with `?prototype=data` and use **Data prototype page**. Use synthetic or openly licensed data only.
 
 - `canvas_dataset` places a table. Pass `synthetic: "orders"` for the built-in synthetic café orders (48 rows: `month`, `region`, `product`, `orders`), or supply `columns` (`name`, `type` text or number) and `rows` (at most 5,000), with a `title` and a `source` that says where the data came from. Every row must have every column with the right type; unknown columns are rejected.
 - `canvas_chart` places a bar chart over a dataset on the current page: `datasetId` and a `state` of `x` (category column), `y` (numeric column, ignored by count), `aggregate` (`sum`, `mean` or `count`, default sum), `filter` (`{column: [values]}`, keeping rows whose value is listed) and `selected` (bar keys). The person toggles filter chips and selects bars by clicking; both change this same state.
