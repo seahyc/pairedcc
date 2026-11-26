@@ -65,6 +65,7 @@ import {
 } from "./operations";
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { createComment } from "./agent-operations";
+import { followConnectors } from "./connector-follow";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { startBoardSync } from "./board-sync-browser";
 import { calmSeed, seed } from "./seed";
@@ -1457,6 +1458,7 @@ function App() {
         editor.updateShape({ id: shape.id, type: "text", props: { w: TEXT_WRAP } });
     });
     editor.sideEffects.registerAfterChangeHandler("shape", (_previous, next) => wrapText(next));
+    followConnectors(editor);
     // Double-click the empty board to write a thought: a pink card, already in typing mode.
     const writeOnDoubleClick = (info: { type: string; name?: string; phase?: string; target?: string }) => {
       if (info.type !== "click" || info.name !== "double_click" || info.phase !== "up" || info.target !== "canvas") return;
