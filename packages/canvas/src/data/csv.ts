@@ -50,7 +50,7 @@ function where(issue: { path: PropertyKey[]; message: string }) {
  */
 const numeric = (v: string) => {
   const t = v.trim();
-  return /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(t) && !/^[+-]?0\d/.test(t) && Number.isFinite(Number(t));
+  return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(t) && !/^[+-]?0\d/.test(t) && Number.isFinite(Number(t));
 };
 
 export function parseCsv(text: string, fileName: string): CsvResult {

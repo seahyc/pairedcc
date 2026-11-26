@@ -89,5 +89,10 @@ describe("CSV import", () => {
     expect(r.ok && r.dataset.columns[0].type).toBe("number");
     expect(r.ok && r.dataset.rows.map((x) => x.v)).toEqual([0, 0.5, -3, 1000, 0.25, 7]);
   });
+  it("types a long malformed cell quickly (no regex backtracking)", () => {
+    const t = performance.now();
+    parseCsv(`v\n${"9".repeat(40_000)}x\n`, "long.csv");
+    expect(performance.now() - t).toBeLessThan(200);
+  });
 });
 
