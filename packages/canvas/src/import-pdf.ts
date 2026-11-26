@@ -8,10 +8,18 @@ import { ImportError } from "./import-parse";
 // scans (no text), protected files, or cross-reference streams' compressed object streams.
 
 const NOT_A_PDF = "This is not a PDF that can be read. Copy its text and paste it here instead.";
+const TOO_BIG = "This PDF is too large to lay out as cards. Copy the part you need and paste it here instead.";
 const MAX_STREAM = 20_000_000;
+// Across the whole file: bytes inflated plus content bytes read (a stream shared by many pages
+// counts each time it is read), and glyph mappings kept. A small file cannot ask for more.
+const MAX_TOTAL = 60_000_000, MAX_GLYPHS = 2_000_000;
+type Budget = { bytes: number; glyphs: number };
+const spend = (budget: Budget, kind: keyof Budget, n: number) => {
+  if ((budget[kind] -= n) < 0) throw new ImportError(TOO_BIG);
+};
 
 type Dict = string;
-type Obj = { dict: Dict; stream?: Uint8Array };
+type Obj = { dict: Dict; data?: { start: number; end: number; fallback: number; length?: number; lengthRef?: number; filter: "none" | "flate" | "other" }; stream?: Uint8Array };
 type Run = { page: number; x: number; y: number; size: number; bold: boolean; text: string };
 
 const latin1 = (bytes: Uint8Array) => {
@@ -20,7 +28,7 @@ const latin1 = (bytes: Uint8Array) => {
   return s;
 };
 
-async function inflate(data: Uint8Array): Promise<Uint8Array> {
+async function inflate(data: Uint8Array, budget: Budget): Promise<Uint8Array> {
   const reader = new Blob([data as BlobPart]).stream().pipeThrough(new DecompressionStream("deflate")).getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -28,10 +36,9 @@ async function inflate(data: Uint8Array): Promise<Uint8Array> {
     const { done, value } = await reader.read();
     if (done) break;
     total += value.length;
-    if (total > MAX_STREAM) {
-      await reader.cancel();
-      throw new ImportError(NOT_A_PDF);
-    }
+    if (total > MAX_STREAM || budget.bytes < value.length) await reader.cancel();
+    if (total > MAX_STREAM) throw new ImportError(TOO_BIG);
+    spend(budget, "bytes", value.length);
     chunks.push(value);
   }
   const out = new Uint8Array(total);
@@ -40,10 +47,11 @@ async function inflate(data: Uint8Array): Promise<Uint8Array> {
   return out;
 }
 
-/** Every `n 0 obj … endobj` in the file, with its stream decoded when it is Flate or plain. */
-async function objects(bytes: Uint8Array, text: string): Promise<Map<number, Obj>> {
+/** Every `n 0 obj … endobj` in the file. Streams are located here and decoded only when read (`streamOf`). */
+function objects(bytes: Uint8Array, text: string): Map<number, Obj> {
   const found = new Map<number, Obj>();
-  const pattern = /(\d+)\s+(\d+)\s+obj\b/g;
+  // Bounded digit runs: an unbounded `\d+` here backtracks quadratically over a long run of digits.
+  const pattern = /(\d{1,10})\s+(\d{1,5})\s+obj\b/g;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(text))) {
     const start = match.index + match[0].length;
@@ -55,17 +63,49 @@ async function objects(bytes: Uint8Array, text: string): Promise<Map<number, Obj
     const obj: Obj = { dict };
     if (streamAt >= 0) {
       const dataStart = start + streamAt + (body.slice(streamAt).match(/^stream\r?\n/)?.[0].length ?? 7);
-      const length = Number(/\/Length\s+(\d+)(?!\s+\d+\s+R)/.exec(dict)?.[1]);
-      const stop = Number.isFinite(length) && length > 0 && dataStart + length <= end + start ? dataStart + length : start + body.lastIndexOf("endstream");
-      let data = bytes.subarray(dataStart, Math.max(dataStart, stop));
-      if (/\/Filter\s*\/FlateDecode|\/Filter\s*\[\s*\/FlateDecode\s*\]/.test(dict)) data = await inflate(data);
-      else if (/\/Filter/.test(dict)) data = new Uint8Array(0); // images and other encodings carry no text we read
-      obj.stream = data;
+      // /Length is a number here, or a reference to an object holding it (resolved when the stream is read).
+      const direct = /\/Length\s+(\d+)\b(?!\s+\d+\s+R)/.exec(dict)?.[1];
+      const lengthRef = /\/Length\s+(\d+)\s+\d+\s+R/.exec(dict)?.[1];
+      // Without a usable length the data runs to `endstream`, less the line end the format puts before it.
+      let fallback = Math.max(dataStart, start + body.lastIndexOf("endstream"));
+      if (fallback > dataStart && bytes[fallback - 1] === 10) fallback--;
+      if (fallback > dataStart && bytes[fallback - 1] === 13) fallback--;
+      const filter = /\/Filter\s*\/FlateDecode|\/Filter\s*\[\s*\/FlateDecode\s*\]/.test(dict) ? "flate" : /\/Filter/.test(dict) ? "other" : "none";
+      obj.data = { start: dataStart, end, fallback, length: direct ? Number(direct) : undefined, lengthRef: lengthRef ? Number(lengthRef) : undefined, filter };
     }
     found.set(Number(match[1]), obj);
     pattern.lastIndex = end;
   }
   return found;
+}
+
+/** A stream's bytes, inflated when it is Flate. Images and other encodings carry no text we read. */
+async function streamOf(o: Obj | undefined, objs: Map<number, Obj>, bytes: Uint8Array, budget: Budget): Promise<Uint8Array | undefined> {
+  if (!o?.data) return undefined;
+  if (o.stream) return o.stream;
+  const d = o.data;
+  const length = d.length ?? Number(/^\s*(\d+)\s*$/.exec(objs.get(d.lengthRef ?? -1)?.dict ?? "")?.[1]);
+  const stop = Number.isFinite(length) && length > 0 && d.start + length <= d.end ? d.start + length : d.fallback;
+  const raw = bytes.subarray(d.start, Math.max(d.start, stop));
+  return (o.stream = d.filter === "flate" ? await inflate(raw, budget) : d.filter === "none" ? raw : new Uint8Array(0));
+}
+
+/** The inside of `[ … ]` after a key. */
+function arrayAfter(dict: Dict, key: string) {
+  const open = new RegExp(`/${key}\\s*\\[`).exec(dict);
+  const close = open ? dict.indexOf("]", open.index) : -1;
+  return open && close >= 0 ? dict.slice(open.index + open[0].length, close) : undefined;
+}
+/** Each stretch between a `begin…` and its `end…` keyword. */
+function blocks(text: string, begin: string, end: string) {
+  const out: string[] = [];
+  for (let at = text.indexOf(begin); at >= 0; ) {
+    const stop = text.indexOf(end, at);
+    if (stop < 0) break;
+    out.push(text.slice(at + begin.length, stop));
+    at = text.indexOf(begin, stop);
+  }
+  return out;
 }
 
 const ref = (dict: Dict, key: string) => Number(new RegExp(`/${key}\\s+(\\d+)\\s+\\d+\\s+R`).exec(dict)?.[1] ?? NaN);
@@ -95,7 +135,7 @@ function pages(objs: Map<number, Obj>, trailer: string): number[] {
     if (!node || depth > 50 || out.length > 2000 || visited.has(id)) return;
     visited.add(id);
     if (/\/Type\s*\/Page\b(?!s)/.test(node.dict)) return void out.push(id);
-    const kids = /\/Kids\s*\[([^\]]*)\]/.exec(node.dict)?.[1] ?? "";
+    const kids = arrayAfter(node.dict, "Kids") ?? "";
     for (const k of kids.matchAll(/(\d+)\s+\d+\s+R/g)) visit(Number(k[1]), depth + 1);
   };
   if (root) visit(ref(root.dict, "Pages"), 0);
@@ -115,23 +155,25 @@ const utf16 = (hex: string) => {
   return String.fromCharCode(...units);
 };
 
-function font(dict: Dict, objs: Map<number, Obj>): Font {
+function font(dict: Dict, objs: Map<number, Obj>, budget: Budget): Font {
   const map = new Map<number, string>();
+  const put = (code: number, value: string) => (spend(budget, "glyphs", 1), map.set(code, value));
   let width = /\/Subtype\s*\/Type0/.test(dict) ? 2 : 1;
   const cmap = objs.get(ref(dict, "ToUnicode"))?.stream;
   if (cmap) {
     const text = latin1(cmap);
     const space = /begincodespacerange\s*<([0-9a-f]+)>/i.exec(text);
     if (space) width = Math.max(1, Math.min(4, space[1].length / 2));
-    for (const block of text.matchAll(/beginbfchar([\s\S]*?)endbfchar/g))
-      for (const m of block[1].matchAll(/<([0-9a-f]+)>\s*<([0-9a-f]+)>/gi)) map.set(parseInt(m[1], 16), utf16(m[2]));
-    for (const block of text.matchAll(/beginbfrange([\s\S]*?)endbfrange/g))
-      for (const m of block[1].matchAll(/<([0-9a-f]+)>\s*<([0-9a-f]+)>\s*(<[0-9a-f]+>|\[[^\]]*\])/gi)) {
+    for (const block of blocks(text, "beginbfchar", "endbfchar"))
+      for (const m of block.matchAll(/<([0-9a-f]{1,8})>\s*<([0-9a-f]+)>/gi)) put(parseInt(m[1], 16), utf16(m[2]));
+    for (const block of blocks(text, "beginbfrange", "endbfrange"))
+      // Codes are at most four bytes: a longer one would be a number too large to count up from.
+      for (const m of block.matchAll(/<([0-9a-f]{1,8})>\s*<([0-9a-f]{1,8})>\s*(<[0-9a-f]+>|\[[^\][]*\])/gi)) {
         const lo = parseInt(m[1], 16), hi = Math.min(parseInt(m[2], 16), lo + 65535);
-        if (m[3].startsWith("[")) [...m[3].matchAll(/<([0-9a-f]+)>/gi)].forEach((d, k) => lo + k <= hi && map.set(lo + k, utf16(d[1])));
+        if (m[3].startsWith("[")) [...m[3].matchAll(/<([0-9a-f]+)>/gi)].forEach((d, k) => lo + k <= hi && put(lo + k, utf16(d[1])));
         else {
           const base = utf16(m[3].slice(1, -1));
-          for (let c = lo; c <= hi; c++) map.set(c, base.slice(0, -1) + String.fromCharCode(base.charCodeAt(base.length - 1) + c - lo));
+          for (let c = lo; c <= hi; c++) put(c, base.slice(0, -1) + String.fromCharCode(base.charCodeAt(base.length - 1) + c - lo));
         }
       }
   }
@@ -347,7 +389,9 @@ export async function readPdf(bytes: Uint8Array): Promise<string> {
     const trailer = text.slice(text.lastIndexOf("trailer"));
     if (/\/Encrypt\b/.test(trailer) || /\/Encrypt\s+\d+\s+\d+\s+R/.test(text.slice(-4096)))
       throw new ImportError("This PDF is protected, so its text cannot be read. Open it, copy the text and paste it here instead.");
-    const objs = await objects(bytes, text);
+    const objs = objects(bytes, text);
+    const budget: Budget = { bytes: MAX_TOTAL, glyphs: MAX_GLYPHS };
+    const fontCache = new Map<number, Font>();
     const order = pages(objs, trailer.includes("/Root") ? trailer : text.slice(-4096));
     if (!order.length) throw new ImportError(NOT_A_PDF);
     const all: Run[] = [];
@@ -358,10 +402,22 @@ export async function readPdf(bytes: Uint8Array): Promise<string> {
       const fonts = new Map<string, Font>();
       for (const m of fontDict.matchAll(/\/([^\s/]+)\s+(\d+)\s+\d+\s+R/g)) {
         const f = objs.get(Number(m[2]));
-        if (f) fonts.set(m[1], font(f.dict, objs));
+        if (!f) continue;
+        // A font is read once, however many pages use it.
+        if (!fontCache.has(Number(m[2]))) {
+          await streamOf(objs.get(ref(f.dict, "ToUnicode")), objs, bytes, budget);
+          fontCache.set(Number(m[2]), font(f.dict, objs, budget));
+        }
+        fonts.set(m[1], fontCache.get(Number(m[2]))!);
       }
-      const contents = /\/Contents\s*\[([^\]]*)\]/.exec(page.dict)?.[1] ?? /\/Contents\s+(\d+\s+\d+\s+R)/.exec(page.dict)?.[1] ?? "";
-      const streams = [...contents.matchAll(/(\d+)\s+\d+\s+R/g)].map((m) => objs.get(Number(m[1]))?.stream).filter((s): s is Uint8Array => Boolean(s));
+      const contents = arrayAfter(page.dict, "Contents") ?? /\/Contents\s+(\d+\s+\d+\s+R)/.exec(page.dict)?.[1] ?? "";
+      const streams: Uint8Array[] = [];
+      for (const m of contents.matchAll(/(\d+)\s+\d+\s+R/g)) {
+        const stream = await streamOf(objs.get(Number(m[1])), objs, bytes, budget);
+        if (!stream) continue;
+        spend(budget, "bytes", stream.length);
+        streams.push(stream);
+      }
       runs(streams.map(latin1).join("\n"), fonts, index, all);
     }
     const markdown = layout(all);

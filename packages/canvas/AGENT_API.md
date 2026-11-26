@@ -39,7 +39,7 @@ Prototype tools (`canvas_learn`, `canvas_converge` and the data tools) are flagg
 
 ### Overview, then detail
 
-`canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count, `locked: true` when the object or a frame around it is locked, and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. It also returns `clusters`: piles of nearby objects at that level, each with `ids` (the first 50 members), `count` and `bounds`, largest first (at most 50 clusters). Objects are in one cluster when their edges are within 60 px of a neighbour's, in chains, and arrows are left out. Arrangement is often how the person groups ideas without drawing a frame, so treat a cluster as a likely group and ask before acting on it. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects. To find objects by their words, pass `text` to `canvas_read`: only objects whose text or name contains it (ignoring case and accents) are returned, and it combines with `ids`. Marks and annotations are still listed in full.
+`canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, `children` (how many objects it holds, present only when it holds any), `locked: true` (present only when the object or a frame around it is locked; agents cannot change it, so check this before moving or editing), and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. It also returns `clusters`: piles of nearby objects at that level, each with `ids` (the first 50 members), `count` and `bounds`, largest first (at most 50 clusters). Objects are in one cluster when their edges are within 60 px of a neighbour's, in chains, and arrows are left out. Arrangement is often how the person groups ideas without drawing a frame, so treat a cluster as a likely group and ask before acting on it. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects. To find objects by their words, pass `text` to `canvas_read`: only objects whose text or name contains it (ignoring case and accents) are returned, and it combines with `ids`. Marks and annotations are still listed in full.
 
 ### Data prototype
 
@@ -119,11 +119,11 @@ Answering is three steps, the same for the resident agent (`pnpm --filter @paire
      -H 'Content-Type: application/json' -d '{"agent":"My agent","waitMs":25000}'
    ```
 
-   The reply is `{ "sessionId": "...", "ask": { ... } }`. Over MCP, or to see asks you did not receive this way, `asks` (`canvas_asks`) lists them: `state` is `waiting` (default), `working`, `answered`, `failed` or `all`.
+   The reply is `{ "sessionId": "...", "ask": { ... } }`. Over MCP, or to see asks you did not receive this way, `asks` (`canvas_asks`) lists them: `state` is `waiting` (default), `working`, `answered`, `failed` or `all`. Asks on every page are listed, each with `pageName`; pass `page: "current"` for only the page open in the tab.
 
 2. **Say you have it.** `ask_status` with `{ id, state: "working", note: "reading 2 cards" }`. The note appears on the ask. If you cannot answer, send `state: "failed"` with a plain `error`; the human gets a Retry button, and a retry reaches the wait endpoint as a new attempt.
 
-3. **Answer.** `answer` with `{ id, text }` for one short card (about 60 words; over 90 is cut, over 700 characters is rejected), or `{ id, alternatives: [..] }` with two to four short options, which are lettered and placed side by side for the human to pick (P) or cross out (X); on a window too narrow for one row (a phone) they wrap into rows that fit, and a card narrows to the window. If the person is looking at the ask when the answer lands, their view pans to show all of it. Add `read` to say what you read, and `question: true` when your text is a clarifying question back (the ask then stays open in the queue). The cards go under the ask, on the ask's page even if the human has since opened another page (they are told who answered and where); the human's objects are never moved.
+3. **Answer.** `answer` with `{ id, text }` for one short card (about 60 words; over 90 is cut, over 700 characters is rejected), or `{ id, alternatives: [..] }` with two to four short options, which are lettered and placed side by side for the human to pick (P) or cross out (X); on a window too narrow for one row (a phone) they wrap into rows that fit, and a card narrows to the window. If the person is looking at the ask when the answer lands, their view pans to show all of it. Add `read` to say what you read, and `question: true` when your text is a clarifying question back (the ask then stays open in the queue). The cards go under the ask, on the ask's page even if the human has since opened another page (they are told who answered and where, with a Show button that takes them to it); the human's objects are never moved.
 
 An ask carries everything the human sees as its context, and nothing else needs to be read to answer it:
 
@@ -193,7 +193,7 @@ curl -s http://localhost:5183/api/canvas/command \
 
 `notes` lists other things the human wrote on the board (plain notes and text) since timestamps were recorded, so nothing typed during a session is missed.
 
-`reply` (`id`, `text`) puts your answer directly under the item and threads it in the queue. The item must be on the open page. `resolve` closes an item on any page and records who closed it; the human can reopen it. Use a fresh `requestId` for every read: a repeated ID returns the earlier result.
+`reply` (`id`, `text`) puts your answer directly under the item and threads it in the queue. The item must be on the open page. Replying does not change the item or its revision, so `resolve` it afterwards with the revision you read. `resolve` closes an item on any page and records who closed it; the human can reopen it. Use a fresh `requestId` for every read: a repeated ID returns the earlier result.
 
 To print the queue from every open tab without writing a request:
 
@@ -280,14 +280,14 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `read` | Optional `ids`; returns page, selection, objects (with `author`, `style` on cards, and `dataset`, `widget` or `stale` where they apply), annotations, open/resolved human `marks` and arrow bindings |
 | `get` | `id`, optional `includeAsset`; cards report `style` (note, heading, quote, code, handwriting for the person, caption); a dataset's `dataset` includes its `rows`; prototype `relationships`, `source` and `transformation` (see below) |
 | `create` | `kind` (frame, rectangle, ellipse, text, note), `x`, `y`, optional dimensions, text, color, name, note `style` (note, heading, quote, code), `inputs` (IDs it was derived from) |
-| `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name |
+| `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name. Changing the `text` of something the person wrote (`author: "Human"`) is refused, because their words stay theirs: comment on it with `annotate`, or answer beside it. The same holds for imported source text, which reads as `author: "Human"` whoever imported it, and for an agent's copy of the person's card, which keeps their hand |
 | `image` | `src` (base64 image data URL), `x`, `y`, `width`, `height`, optional name, sourceUrl, isAnimated, caption |
-| `connect` | `fromId`, `toId`, optional relation (reference, alternative, derived-from, feedback), label |
+| `connect` | `fromId`, `toId`, optional relation (reference: supports, cites or is evidence for, so use it with a label for "supports"; alternative: options for the same thing; derived-from, the default: made from, drawn from the source; feedback), label |
 | `annotate` | `targetId`, `text`, optional position; creates a targeted note and bound connector |
 | `resolve` | Mark `id` (feedback note, picked/rejected object or ink stroke), `expectedRevision`, `status` (open or resolved); works on any page |
 | `feedback` | Optional `status`, `allPages`, `format`; returns the board-wide feedback queue with replies |
 | `reply` | Feedback item `id`, `text`; places an agent answer under the item |
-| `asks` | Optional `state`; lists the human's asks with their context |
+| `asks` | Optional `state`, and `page` ("all", the default, or "current" for the open page only); lists the human's asks with their context |
 | `ask_status` | Ask `id`, `state` (working, failed, waiting), optional `note`, `error` |
 | `answer` | Ask `id` and either `text` or 2 to 4 `alternatives`; optional `read`, `question` |
 | `import` | `content`, optional `format`, `name`, `as`, `focus`; lays a table or document out as source material |
