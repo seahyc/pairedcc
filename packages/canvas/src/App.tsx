@@ -97,7 +97,7 @@ import {
   toggleMark,
   authorOf,
   humanStyle,
-  collectFeedback,
+  openFeedbackCount,
   HUMAN,
 } from "./scratchbook";
 import { richTextPlain } from "./operations";
@@ -340,8 +340,24 @@ function tabStops(editor: Editor) {
  */
 function StopAnnouncer() {
   const editor = useEditor();
-  const said = useValue(
-    "selection announcement",
+  // What is said depends on the selection and the selected object's words, mark and ask, not
+  // on where it is: dragging it must not walk a big board's reading order on every step.
+  const key = useValue(
+    "selection announcement key",
+    () => {
+      if (editor.getEditingShapeId()) return "editing";
+      const ids = editor.getSelectedShapeIds();
+      const shape = ids.length === 1 ? editor.getShape(ids[0]) : undefined;
+      if (!shape) return ids.join(",");
+      // While a drag is under way the place in the order is not said; it is worked out again
+      // when the drag ends, and whenever objects are added or removed (an answer lands).
+      const dragging = editor.isIn("select.translating");
+      const count = editor.getCurrentPageShapeIds().size;
+      return JSON.stringify([shape.id, "richText" in shape.props ? shape.props.richText : null, shape.meta.mark, shape.meta.ask, shape.meta.name, editor.isShapeHidden(shape), dragging, dragging ? 0 : count]);
+    },
+    [editor],
+  );
+  const said = useMemo(
     () => {
       if (editor.getEditingShapeId()) return "";
       const ids = editor.getSelectedShapeIds();
@@ -371,7 +387,8 @@ function StopAnnouncer() {
         ...(index ? { index, total: order.length } : {}),
       });
     },
-    [editor],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editor, key],
   );
   return createPortal(
     <div role="status" aria-live="polite" data-stop-announcer style={{ position: "absolute", width: 1, height: 1, margin: -1, padding: 0, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }}>
@@ -426,6 +443,101 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
   );
 }
 
+/**
+ * The layers panel's object list. Its own component, mounted only while the panel is open:
+ * it follows every shape on the page, and in the shell that cost a row per object, and a
+ * re-render of the whole shell, on every change even with the panel hidden.
+ */
+function LayerList({ pageId, collapsed, setCollapsed }: { pageId: string; collapsed: Set<string>; setCollapsed: React.Dispatch<React.SetStateAction<Set<string>>> }) {
+  const editor = useEditor();
+  const shapes = useValue("layers", () => editor.getCurrentPageShapesSorted(), [editor]);
+  const selectedIds = useValue("layer selection", () => new Set<string>(editor.getSelectedShapeIds()), [editor]);
+  const tree = useMemo(() => layerTree(shapes), [shapes]);
+  // A result hidden behind a learning prompt must not leak through its layer name.
+  function layerName(s: TLShape) {
+    return editor.isShapeHidden(s) ? "Hidden until you answer" : shapeName(s);
+  }
+  function layerRows(parentId: string, depth = 0): React.ReactNode {
+    return tree
+      .childrenOf(parentId)
+      .map((s) => {
+        const children = tree.hasChildren(s.id),
+          isCollapsed = collapsed.has(s.id);
+        return (
+          <React.Fragment key={s.id}>
+            <div
+              className={`layer ${selectedIds.has(s.id) ? "selected" : ""}`}
+              style={{ paddingLeft: 12 + depth * 16 }}
+            >
+              {children ? (
+                <button
+                  className="disclosure"
+                  aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${layerName(s)}`}
+                  onClick={() =>
+                    setCollapsed((prev) => {
+                      const n = new Set(prev);
+                      if (n.has(s.id)) n.delete(s.id);
+                      else n.add(s.id);
+                      return n;
+                    })
+                  }
+                >
+                  {isCollapsed ? (
+                    <ChevronRight size={12} />
+                  ) : (
+                    <ChevronDown size={12} />
+                  )}
+                </button>
+              ) : (
+                <span className="disclosure-space" />
+              )}
+              <button
+                className="layer-target"
+                onClick={(e) => {
+                  editor.setCurrentTool("select");
+                  if (e.shiftKey)
+                    editor.select(
+                      ...new Set([...editor.getSelectedShapeIds(), s.id]),
+                    );
+                  else editor.select(s.id);
+                  editor.focus();
+                }}
+                onDoubleClick={() =>
+                  editor.zoomToSelection({ animation: { duration: 180 } })
+                }
+                aria-label={`Select ${layerName(s)}`}
+                disabled={editor.isShapeHidden(s)}
+              >
+                <ShapeIcon shape={s} />
+                <span>{layerName(s)}</span>
+                {s.isLocked && <LockKeyhole size={11} />}
+              </button>
+            </div>
+            {!isCollapsed && layerRows(s.id, depth + 1)}
+          </React.Fragment>
+        );
+      });
+  }
+  return (
+    <>
+      <div className="section-heading border-top">
+        <span>Objects</span>
+        <span>{shapes.length}</span>
+      </div>
+      <div className="layer-list">
+        {layerRows(pageId)}
+        {shapes.length === 0 && (
+          <p className="empty-layers">
+            Your first thought starts here.
+            <br />
+            Choose a tool and draw.
+          </p>
+        )}
+      </div>
+    </>
+  );
+}
+
 function Shell() {
   const editor = useEditor();
   const [panel, setPanel] = useState<"properties" | "feedback" | null>(null);
@@ -454,16 +566,13 @@ function Shell() {
       live = false;
     };
   }, [menuOpen, historyWhere]);
-  const openCount = useValue("open feedback", () => collectFeedback(editor).filter((i) => i.status === "open").length, [editor]);
+  const openCount = useValue("open feedback", () => openFeedbackCount(editor), [editor]);
   const link = useValue("agent link", () => agentLink.get(), []);
   const listeners = useValue("agent listeners", () => agentListeners.get(), []);
   const editingId = useValue("editing", () => editor.getEditingShapeId(), [editor]);
   const pointer = useRef<{ x: number; y: number } | null>(null);
   // The object last selected: a card written from the keyboard goes under it.
   const lastSelected = useRef<TLShapeId | null>(null);
-  const shapes = useValue("layers", () => editor.getCurrentPageShapesSorted(), [
-    editor,
-  ]);
   const selected = useValue("selection", () => editor.getSelectedShapes(), [
     editor,
   ]);
@@ -493,8 +602,6 @@ function Shell() {
   const importRef = useRef<HTMLInputElement>(null),
     imageRef = useRef<HTMLInputElement>(null);
   const shape = selected.length === 1 ? selected[0] : undefined;
-  const tree = useMemo(() => layerTree(shapes), [shapes]);
-  const selectedIds = useMemo(() => new Set(selected.map((s) => s.id)), [selected]);
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       const target = event.target;
@@ -1010,71 +1117,6 @@ function Shell() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answeredAsks]);
-  // A result hidden behind a learning prompt must not leak through its layer name.
-  function layerName(s: TLShape) {
-    return editor.isShapeHidden(s) ? "Hidden until you answer" : shapeName(s);
-  }
-  function layerRows(parentId: string, depth = 0): React.ReactNode {
-    return tree
-      .childrenOf(parentId)
-      .map((s) => {
-        const children = tree.hasChildren(s.id),
-          isCollapsed = collapsed.has(s.id);
-        return (
-          <React.Fragment key={s.id}>
-            <div
-              className={`layer ${selectedIds.has(s.id) ? "selected" : ""}`}
-              style={{ paddingLeft: 12 + depth * 16 }}
-            >
-              {children ? (
-                <button
-                  className="disclosure"
-                  aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${layerName(s)}`}
-                  onClick={() =>
-                    setCollapsed((prev) => {
-                      const n = new Set(prev);
-                      if (n.has(s.id)) n.delete(s.id);
-                      else n.add(s.id);
-                      return n;
-                    })
-                  }
-                >
-                  {isCollapsed ? (
-                    <ChevronRight size={12} />
-                  ) : (
-                    <ChevronDown size={12} />
-                  )}
-                </button>
-              ) : (
-                <span className="disclosure-space" />
-              )}
-              <button
-                className="layer-target"
-                onClick={(e) => {
-                  editor.setCurrentTool("select");
-                  if (e.shiftKey)
-                    editor.select(
-                      ...new Set([...editor.getSelectedShapeIds(), s.id]),
-                    );
-                  else editor.select(s.id);
-                  editor.focus();
-                }}
-                onDoubleClick={() =>
-                  editor.zoomToSelection({ animation: { duration: 180 } })
-                }
-                aria-label={`Select ${layerName(s)}`}
-                disabled={editor.isShapeHidden(s)}
-              >
-                <ShapeIcon shape={s} />
-                <span>{layerName(s)}</span>
-                {s.isLocked && <LockKeyhole size={11} />}
-              </button>
-            </div>
-            {!isCollapsed && layerRows(s.id, depth + 1)}
-          </React.Fragment>
-        );
-      });
-  }
   return (
     <div className={`editor-chrome ${!leftOpen ? "left-closed" : ""} ${panel ? "" : "right-closed"}`}>
       <header className="topbar">
@@ -1163,6 +1205,7 @@ function Shell() {
           }}
         />
       </header>
+      {leftOpen && (
       <aside className="left-panel">
         <div className="panel-tabs">
           <span className="tab-current">Layers</span>
@@ -1215,20 +1258,7 @@ function Shell() {
             </div>
           ))}
         </div>
-        <div className="section-heading border-top">
-          <span>Objects</span>
-          <span>{shapes.length}</span>
-        </div>
-        <div className="layer-list">
-          {layerRows(page.id)}
-          {shapes.length === 0 && (
-            <p className="empty-layers">
-              Your first thought starts here.
-              <br />
-              Choose a tool and draw.
-            </p>
-          )}
-        </div>
+        <LayerList pageId={page.id} collapsed={collapsed} setCollapsed={setCollapsed} />
         <footer className="left-footer">
           <span className="small-bird">
             <Bird size={14} />
@@ -1236,6 +1266,7 @@ function Shell() {
           A place to think.
         </footer>
       </aside>
+      )}
       <nav className="tool-strip" aria-label="Canvas tools">
         {mainTools.map((t) => (
           <button

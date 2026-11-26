@@ -5,6 +5,7 @@ import {
   feedbackMarkdown,
   feedbackTitle,
   filterFeedback,
+  mayBeFeedback,
   type FeedbackSource,
 } from "../src/feedback";
 import { commandSchema, feedbackInput, replyInput } from "../src/protocol";
@@ -142,5 +143,32 @@ describe("feedback operations boundary", () => {
   it("accepts the feedback and reply commands", () => {
     expect(commandSchema.safeParse({ op: "feedback" }).success).toBe(true);
     expect(commandSchema.safeParse({ op: "reply", input: { id: "shape:x", text: "ok" } }).success).toBe(true);
+  });
+});
+
+describe("counting open items from the objects that can be items", () => {
+  const open = (sources: FeedbackSource[]) => buildFeedback(sources).filter((i) => i.status === "open").length;
+  const board: FeedbackSource[] = [
+    source("thought", { text: "How should we price it?" }),
+    source("agent-card", { author: "Claude", text: "Per seat" }),
+    source("picked", { author: "Claude", meta: { mark: "picked", markStatus: "open", markedAt: t0 } }),
+    source("crossed", { meta: { mark: "rejected", markStatus: "resolved", markedAt: t0 } }),
+    comment("c1", "Too vague", { targetId: "shape:thought" }),
+    comment("c2", "Done", { targetId: "shape:thought", status: "resolved" }),
+    source("reply", { author: "Claude", text: "Fixed", meta: { role: "annotation", replyTo: "shape:c1", author: "Claude" } }),
+    source("ink", { type: "draw", inkTargets: ["shape:thought"], meta: { createdAt: t0 } }),
+    source("stray-ink", { type: "draw", inkTargets: [], meta: {} }),
+    comment("both", "Picked and said why", { mark: "picked", markStatus: "open" }),
+    ...Array.from({ length: 50 }, (_, i) => source(`plain-${i}`, { type: i % 2 ? "geo" : "text" })),
+  ];
+  it("is the same count as from every object", () => {
+    expect(open(board)).toBe(5);
+    expect(open(board.filter(mayBeFeedback))).toBe(open(board));
+  });
+  it("leaves out plain objects, agent cards and text", () => {
+    expect(board.filter(mayBeFeedback).map((s) => s.id.slice(6))).toEqual(["picked", "crossed", "c1", "c2", "reply", "ink", "stray-ink", "both"]);
+  });
+  it("is zero on a board with no marks, comments or ink", () => {
+    expect(board.filter((s) => s.id.includes("plain")).filter(mayBeFeedback)).toEqual([]);
   });
 });
