@@ -121,6 +121,8 @@ Key hints are written with Apple's symbols and shown in the person's own keys (`
 
 On a touch screen with no mouse or trackpad (`(hover: none) and (pointer: coarse)` without `(any-pointer: fine)`), nothing names a key: the first board says to double-tap or tap Write, and to tap ✦ Ask; the selection bar drops its key caps; and while a card is being written the hint is a button, "✦ Ask about this". `tools/verify-touch.mjs <screenshot dir>` checks that as an Android phone, and that a desktop is unchanged.
 
+`tools/verify-import-author.mjs` (run from a directory with Playwright; starts its own dev server) checks that an agent may correct cards it imported over `canvas_import`, which carry its name as `createdBy`, while cards the person pasted stay protected from agent rewrites.
+
 Live checks against a running dev server are listed at the end of [AGENT_API.md](AGENT_API.md).
 
 Browser checks performed 17 Nov 2026: native object dragging, pen drawing, text editing, inspector width/color edits, pan/zoom controls, keyboard undo, revision-aware object operations, stale-write rejection, local reload persistence, export and re-import of the exported document. The 390px layout was checked for horizontal overflow. No quantified latency or frame-rate benchmark was run.
