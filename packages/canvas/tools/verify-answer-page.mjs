@@ -55,13 +55,25 @@ const firstPage = await p.evaluate(() => window.paired.read().page.id);
 const askId = (await command('asks', {})).asks.find((a) => a.question === 'What would change if it were flat?').id;
 await command('page', { name: 'Elsewhere' });
 await p.waitForTimeout(300);
+// The person works on the other page before the answer lands.
+const mine = await p.evaluate(() => window.paired.create({ kind: 'note', x: 200, y: 200, width: 260, text: 'My work here' }));
+const mineId = typeof mine === 'string' ? mine : mine.id;
+await p.evaluate((id) => { const ed = window.__pairedEditor; ed.markHistoryStoppingPoint('edit'); window.paired.update({ id, expectedRevision: ed.getShape(id).meta.revision ?? 0, text: 'My work here, edited' }); }, mineId);
 let answered, error = '';
 try { answered = await command('answer', { id: askId, text: 'Take a ten-person team: flat price is the same as five seats today.' }); } catch (e) { error = String(e.message).slice(0, 160); }
 check('the answer is accepted while another page is open', Boolean(answered), error);
+check('the agent gets the new card ids back', Array.isArray(answered?.answers) && answered.answers.length === 1 && Boolean(answered.answers[0]?.id), JSON.stringify(answered?.answers));
 const toast = await p.locator('.toast').textContent({ timeout: 2000 }).catch(() => '');
 check('the person is told who answered and where', /Verifier answered .* on the page/.test(toast ?? ''), toast ?? '');
 await p.screenshot({ path: `${out}/answer-page-elsewhere.png` });
-check('nothing was added to the page on screen', (await p.evaluate(() => window.paired.read().objects.length)) === 0);
+check('nothing was added to the page on screen', (await p.evaluate(() => window.paired.read().objects.length)) === 1);
+// Undo on this page undoes the person's own edit, not the answer they cannot see.
+await p.evaluate(() => void window.paired.undo());
+await p.waitForTimeout(200);
+const afterUndo = await p.evaluate((id) => window.paired.read().objects.find((o) => o.id === id)?.text, mineId);
+check('undo here undoes the edit here', afterUndo === 'My work here', afterUndo);
+const replyId = answered?.answers?.[0]?.id;
+check('and leaves the answer on the other page', await p.evaluate((id) => Boolean(window.__pairedEditor.getShape(id)), replyId));
 await p.evaluate((id) => void window.__pairedEditor.setCurrentPage(id), firstPage);
 await p.waitForTimeout(500);
 const objs = await p.evaluate(() => window.paired.read().objects);
@@ -70,6 +82,16 @@ check('the answer is on the ask\'s page', Boolean(reply), reply?.text);
 check('it sits under the ask', reply && askObj && reply.bounds.y >= askObj.bounds.y + askObj.bounds.h && Math.abs(reply.bounds.x - askObj.bounds.x) < 400, JSON.stringify({ ask: askObj?.bounds, answer: reply?.bounds }));
 check('the ask says answered', askObj?.meta.ask?.state === 'answered', askObj?.meta.ask?.state);
 await p.screenshot({ path: `${out}/answer-page-back.png` });
+// On the open page, an answer that lands inside a frame belongs to it (moves with it).
+const frame = await command('create', { kind: 'frame', x: 1400, y: 300, width: 1100, height: 900, name: 'Room' });
+const inner = await p.evaluate((x) => window.paired.create({ kind: 'note', x, y: 340, width: 260, text: 'Inside the room' }), 1440);
+const innerId = typeof inner === 'string' ? inner : inner.id;
+await p.evaluate(([id, fid]) => void window.__pairedEditor.reparentShapes([id], fid), [innerId, frame.id]);
+await ask([innerId], 'Anything here?');
+const roomAsk = (await command('asks', {})).asks.find((a) => a.question === 'Anything here?');
+const roomAnswer = await command('answer', { id: roomAsk.id, text: 'Just this one card so far.' });
+const parent = await p.evaluate((id) => window.__pairedEditor.getShape(id)?.parentId, roomAnswer.answers[0].id);
+check('an answer that lands inside a frame on the open page belongs to the frame', parent === frame.id, parent);
 check('no page errors', errors.length === 0, errors.join(' | '));
 await ctx.close();
 const passed = results.filter(Boolean).length;

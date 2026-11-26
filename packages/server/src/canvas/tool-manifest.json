@@ -406,11 +406,9 @@
             }
           },
           "offsetX": {
-            "default": 320,
             "type": "number"
           },
           "offsetY": {
-            "default": 0,
             "type": "number"
           }
         },

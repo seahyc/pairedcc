@@ -22,7 +22,7 @@ const ctx = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), 'a
 const p = ctx.pages()[0] ?? await ctx.newPage();
 const errors = [];
 p.on('pageerror', (e) => errors.push(e.message.slice(0, 200)));
-await p.goto(`${BASE}/canvas/`);
+await p.goto(`${BASE}/canvas/?prototype=learning`);
 await p.waitForFunction(() => window.paired?.read().objects.length >= 3, null, { timeout: 20000 });
 await p.waitForTimeout(800);
 
@@ -50,8 +50,11 @@ async function ask(ids, question) {
 
 const made = async (text, x, y) => command('create', { kind: 'note', x, y, width: 220, text });
 const seat = await made('Per seat', 140, 620), post = await made('Per post', 420, 620), flat = await made('One flat price', 760, 620);
+// A result the person has not yet earned: inside the frame, hidden behind a learning prompt.
+const secret = await made('Answer: per seat wins', 760, 760);
 const inner = await command('group', { name: 'Seats or posts', objects: [seat, post].map((o) => ({ id: o.id, expectedRevision: o.revision })) });
-const outer = await command('group', { name: 'Pricing', objects: [inner.frame, flat].map((o) => ({ id: o.id, expectedRevision: o.revision })) });
+const outer = await command('group', { name: 'Pricing', objects: [inner.frame, flat, secret].map((o) => ({ id: o.id, expectedRevision: o.revision })) });
+await command('learn', { mode: 'predict', question: 'Which plan wins?', x: 1200, y: 620, hideIds: [secret.id] });
 await p.evaluate((id) => window.paired.select([id]), post.id);
 await p.locator('.selection-bar button[title^="Cross out"]').click();
 await ask([outer.frame.id], 'What do these have in common?');
@@ -68,6 +71,13 @@ check('it gives the cards inside, nested frame included, in reading order', held
 check('the crossed-out card says so', held.find((o) => o.id === post.id)?.mark === 'rejected');
 check('the nested frame itself is not listed as an object', !held.some((o) => o.type === 'frame'));
 check('nothing is left out', mine?.targets?.[0]?.insideMore === undefined);
+check('a result hidden by a learning prompt is not sent', !held.some((o) => o.id === secret.id));
+// A follow-up on the answer to the frame ask still says what the frame held.
+const answered = await command('answer', { id: mine.id, text: 'Each is a way to charge.' });
+await ask([answered.answers[0].id], 'Which is simplest?');
+const follow = (await command('asks', {})).asks.find((x) => x.question === 'Which is simplest?');
+const framed = follow?.history?.find((h) => h.id === outer.frame.id);
+check('a follow-up on that answer says what the frame held', /holding: Per seat; Per post; One flat price/.test(framed?.said ?? ''), framed?.said);
 check('no page errors', errors.length === 0, errors.join(' | '));
 await ctx.close();
 const passed = results.filter(Boolean).length;
