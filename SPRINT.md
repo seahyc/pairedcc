@@ -125,7 +125,7 @@ task by which measure is furthest from target, not by backlog order.
     agent can list and undo another agent's runs in the same tab; (c) an agent can hide an object
     the person made behind a learning prompt. Done when each has a scripted race in the eval's
     "Safety of shared edits" measure and either a fix or a recorded decision.
-12. **Prototype tool exposure.** Decide in code how prototype tools reach agents: today
+12. (PR #13 open, awaiting review.) **Prototype tool exposure.** Decide in code how prototype tools reach agents: today
     `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` and `canvas_learn` are
     in the shared definitions and hosted manifest for every agent. Done when there is one switch
     (and a test) that leaves prototype tools out of the hosted manifest, defaulting to the current
@@ -147,7 +147,7 @@ task by which measure is furthest from target, not by backlog order.
 ## Claims
 1. Server-side board storage | claude/sprint-boards-* | 2026-11-26T09:50Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
-12. Prototype tool exposure | claude/sprint-proto-switch | 2026-11-26T09:52Z
+16. 10k objects | claude/sprint-10k | 2026-11-26T09:56Z
 
 ## Done
 - 0. Eval harness: PR #8 (`pnpm eval:canvas`, baseline scorecard: acceptance 7/10, safety pass, persistence fail, 10k perf impossible, e2e failing). Gaps filed as items 13 to 16.
@@ -173,6 +173,7 @@ task by which measure is furthest from target, not by backlog order.
 - (review) PR #7 came from `yc/heuristics-pass`, not a sprint lane. It was merged because it targets `claude/sprint-int` and is sound; its branch was left untouched and conflicts were resolved on a local copy. It adds non-prototype behaviour for every board (C to comment, Feedback tab, a note starts in typing mode, save and agent status chips) and edits `docs/canvas/working-spec.md`.
 
 - (build-B, item 8) Docs are enforced by `test/docs.test.ts`: every tool, operation row and input field must appear in AGENT_API.md, and README must state the right tool count. The test count was dropped from README rather than tested, since it changes with every PR.
+- (build-B, item 12) The switch is `hostedPrototypeTools` in `packages/canvas/tools/tool-defs.ts`, left `true` so hosted behaviour is unchanged. Turning it off removes the five PROTOTYPE tools and the data-prototype sentence from the hosted manifest only; the local stdio server keeps them.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -186,3 +187,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T09:50Z | build-A | 0 Eval harness | #8 | `pnpm eval:canvas` and baseline scorecard; 12 unit tests; canvas tests 71 pass |
 | 2026-11-26T09:49Z | build-B | 8 Docs | #9 #10 | Data prototype documented; docs test fails on any undocumented tool, op or field; Agent access MCP path filled from the dev server and verified with a real stdio client |
 | 2026-11-26T09:52Z | build-B | 14 Transitive staleness | #11 | Results stale when an upstream input changes, with `upstream` cause in read; eval acceptance 7/10 to 8/10 |
+| 2026-11-26T09:56Z | build-B | 12 Prototype tool exposure | #13 | `hostedPrototypeTools` switch with tests; manifest unchanged by default; server tests 117 pass |
