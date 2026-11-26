@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Box, useEditor, useValue, type Editor, type TLShapeId } from "tldraw";
 import { Check, CircleCheck, Download, MessageCircle, PenLine, RotateCcw, X, ClipboardCopy } from "lucide-react";
 import { agentActivity, agentLink } from "./agent-client";
+import { boardSync } from "./board-sync-browser";
 import { collectFeedback, collectLooseNotes, resolveMark, HUMAN } from "./scratchbook";
 import {
   feedbackCounts,
@@ -203,9 +204,38 @@ export function SaveState() {
       clearTimeout(timer);
     };
   }, [editor]);
-  const time = state.at ? new Date(state.at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
+  const sync = useValue("board sync", () => boardSync.get(), []);
+  const clock = (at?: number) => (at ? new Date(at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "");
+  if (sync.state !== "local") {
+    // Signed in (or the development board store): the account copy is what counts.
+    const busy = sync.state === "loading" || sync.state === "saving" || state.saving;
+    const offline = sync.state === "offline";
+    // The development server keeps boards for one local person, not an account.
+    const where = "account" in sync && sync.account === "local" ? "the local server" : "your account";
+    const label = offline
+      ? "Offline · saved on this device"
+      : busy
+        ? sync.state === "loading"
+          ? "Loading your board…"
+          : "Saving…"
+        : `Saved to ${where}${sync.state === "saved" ? ` · ${clock(sync.at)}` : ""}`;
+    const title = offline
+      ? `Could not reach the server (${sync.error}). Your work is safe in this browser and is saved to your account when the connection returns.`
+      : sync.state === "saved" && sync.note
+        ? sync.note
+        : where === "your account"
+          ? "Saved to your account and in this browser. Open it from any browser where you are signed in."
+          : "Saved to the development server's board store (.local/boards) and in this browser.";
+    return (
+      <span className={`save-state${busy ? " saving" : ""}${offline ? " offline" : ""}`} role="status" title={title}>
+        {busy ? <span className="save-dot" /> : <Check size={12} />}
+        {label}
+      </span>
+    );
+  }
+  const time = clock(state.at);
   return (
-    <span className={state.saving ? "save-state saving" : "save-state"} role="status" title="This board is saved in this browser only. Export to move it.">
+    <span className={state.saving ? "save-state saving" : "save-state"} role="status" title={sync.note ?? "This board is saved in this browser only. Sign in to keep it in your account, or export it to move it."}>
       {state.saving ? <span className="save-dot" /> : <Check size={12} />}
       {state.saving ? "Saving…" : time ? `Saved on this device · ${time}` : "Saved on this device"}
     </span>
