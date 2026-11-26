@@ -92,6 +92,11 @@ const line = await p.locator('.ask-status').last().innerText();
 check('the ask line says 1 left out', line.includes('1 left out'), line);
 await p.screenshot({ path: `${out}/leave-out-ask.png` });
 
+const frameId = grouped.frame?.id ?? grouped.frameId;
+const aboutFrame = await ask(p, [frameId], 'What does this group add up to?');
+const held = aboutFrame?.targets?.[0]?.inside?.map((o) => o.text) ?? [];
+check('an ask about the frame lists what it holds, without the left-out card', held.includes('Usage based, per post') && !JSON.stringify(aboutFrame ?? {}).includes('not sure I trust') && aboutFrame?.leftOut === 1, held.join(' | '));
+
 const direct = await ask(p, [aside], 'Is this worry fair?');
 check('an object the person selects is still given', direct?.targets?.[0]?.text?.includes('not sure I trust'), direct?.targets?.[0]?.text);
 
@@ -109,6 +114,20 @@ const again = await ask(p, [seat], 'And now?');
 check('brought back, it is given again', JSON.stringify(again?.frame ?? {}).includes('not sure I trust') && again?.leftOut === undefined);
 check('no page errors (flagged tab)', errors.length === 0, errors.join(' | '));
 await ctx.close();
+
+// --- A phone with the flag: the bar, Leave out included, stays inside the window ---
+const phoneCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+const phone = await phoneCtx.newPage();
+await phone.goto(`${BASE}/canvas/?prototype=context`);
+await phone.waitForFunction(() => window.paired?.read().objects.length >= 3, null, { timeout: 20000 });
+await phone.waitForTimeout(800);
+const thought = await phone.evaluate(() => window.paired.create({ kind: 'note', x: 40, y: 500, width: 240, text: 'A thought' })).then((r) => (typeof r === 'string' ? r : r.id));
+await phone.evaluate((id) => { window.paired.select([id]); window.__pairedEditor.zoomToSelection(); }, thought);
+await phone.waitForTimeout(500);
+const edges = await phone.locator('.selection-bar button').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [e.textContent.trim(), Math.round(r.left), Math.round(r.right)]; }));
+check('on a 390 px phone every bar button, Leave out included, is inside the window', edges.some(([t]) => t.startsWith('Leave out')) && edges.every(([, l, r]) => l >= 0 && r <= 390), JSON.stringify(edges));
+await phone.screenshot({ path: `${out}/leave-out-phone.png` });
+await phoneCtx.close();
 
 // --- Default tab: nothing new ---
 const plain = await open('');
