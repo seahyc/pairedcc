@@ -138,13 +138,39 @@ export function setCell(data: Dataset, index: number, name: string, value: strin
 /** An input recorded by a derived object: which object, at which content version. */
 export const inputRefSchema = z.object({ id: z.string().startsWith("shape:"), version: z.number().int().nonnegative() });
 export type InputRef = z.infer<typeof inputRefSchema>;
-export type StaleInput = { id: string; recorded: number; current: number | null };
+/**
+ * A stale input. `current` differs from `recorded` when the input itself changed (`null` when
+ * it was deleted). When the input is unchanged but is itself stale, `upstream` says why.
+ */
+export type StaleInput = { id: string; recorded: number; current: number | null; upstream?: StaleInput[] };
 
 /** Inputs whose content has changed since they were used, or that no longer exist. */
 export function staleInputs(inputs: readonly InputRef[], versions: ReadonlyMap<string, number>): StaleInput[] {
   return inputs
     .map((i) => ({ id: i.id, recorded: i.version, current: versions.get(i.id) ?? null }))
     .filter((i) => i.current !== i.recorded);
+}
+
+/** What staleChain needs to know about an object: its content version and recorded inputs. */
+export type Derivation = { version: number; inputs: readonly InputRef[] };
+
+/**
+ * Stale inputs, followed up the chain: a note derived from a chart is stale when the chart's
+ * dataset changed, even before the chart is recomputed. Cycles are not stale by themselves.
+ */
+export function staleChain(
+  inputs: readonly InputRef[],
+  lookup: (id: string) => Derivation | undefined,
+  seen: ReadonlySet<string> = new Set(),
+): StaleInput[] {
+  return inputs.flatMap((i): StaleInput[] => {
+    const node = lookup(i.id);
+    if (!node) return [{ id: i.id, recorded: i.version, current: null }];
+    if (node.version !== i.version) return [{ id: i.id, recorded: i.version, current: node.version }];
+    if (seen.has(i.id)) return [];
+    const upstream = staleChain(node.inputs, lookup, new Set([...seen, i.id]));
+    return upstream.length ? [{ id: i.id, recorded: i.version, current: node.version, upstream }] : [];
+  });
 }
 
 // Small deterministic PRNG so the synthetic data is identical on every machine.
