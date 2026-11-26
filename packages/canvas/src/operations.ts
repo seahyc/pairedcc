@@ -74,16 +74,18 @@ export function shapeName(shape: TLShape) {
   return shape.type[0].toUpperCase() + shape.type.slice(1);
 }
 
+/**
+ * Plain text of a tldraw rich-text document. Plain checks rather than a schema: this runs
+ * for every shape on every layers-panel render, and building a schema per call made
+ * opening a 10k-object board take seconds longer.
+ */
 export function richTextPlain(value: unknown): string {
-  const parsed = z
-    .object({
-      text: z.string().optional(),
-      content: z.array(z.unknown()).optional(),
-    })
-    .safeParse(value);
-  if (!parsed.success) return "";
-  if (parsed.data.text !== undefined) return parsed.data.text;
-  return (parsed.data.content ?? []).map(richTextPlain).join(" ");
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return "";
+  const { text, content } = value as { text?: unknown; content?: unknown };
+  if (text !== undefined && typeof text !== "string") return "";
+  if (content !== undefined && !Array.isArray(content)) return "";
+  if (text !== undefined) return text;
+  return (content ?? []).map(richTextPlain).join(" ");
 }
 
 export function createObject(editor: Editor, value: unknown) {
