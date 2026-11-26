@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-11-26T10:44:31.300Z",
+  "recordedAt": "2026-11-26T11:10:54.082Z",
   "agent": "fresh general-purpose subagent given only AGENT_API.md and the mcp-call client",
   "results": [
     {
@@ -7,28 +7,28 @@
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 67
+      "seconds": 60
     },
     {
       "task": "02-arrange-row",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 3,
-      "seconds": 26
+      "toolCalls": 2,
+      "seconds": 13
     },
     {
       "task": "03-annotate",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 25
+      "seconds": 13
     },
     {
       "task": "04-connect",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 14
+      "seconds": 13
     },
     {
       "task": "05-retext",
@@ -41,62 +41,62 @@
       "task": "06-picked-done",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 3,
-      "seconds": 31
+      "toolCalls": 2,
+      "seconds": 16
     },
     {
       "task": "07-duplicate-frame",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 3,
-      "seconds": 27
+      "toolCalls": 2,
+      "seconds": 12
     },
     {
       "task": "08-grid",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 3,
-      "seconds": 26
+      "toolCalls": 2,
+      "seconds": 16
     },
     {
       "task": "09-scene-frame",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 3,
-      "seconds": 23
+      "toolCalls": 2,
+      "seconds": 14
     },
     {
       "task": "10-recolour-after-human",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 24
+      "seconds": 12
     },
     {
       "task": "11-locked",
       "pass": true,
       "detail": "ok",
       "toolCalls": 3,
-      "seconds": 34
+      "seconds": 19
     },
     {
       "task": "12-resolve-marks",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 7,
-      "seconds": 46
+      "toolCalls": 5,
+      "seconds": 29
     },
     {
       "task": "13-dataset-chart",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 4,
-      "seconds": 30
+      "toolCalls": 3,
+      "seconds": 19
     },
     {
       "task": "14-read-chart",
-      "pass": false,
-      "detail": "no note naming only East within 300 px of the chart",
+      "pass": true,
+      "detail": "ok",
       "toolCalls": 2,
       "seconds": 14
     },
@@ -104,50 +104,50 @@
       "task": "15-edit-cell",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 4,
-      "seconds": 29
+      "toolCalls": 2,
+      "seconds": 13
     },
     {
       "task": "16-clear-filter",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 23
+      "seconds": 12
     },
     {
       "task": "17-new-page",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 5,
-      "seconds": 33
+      "toolCalls": 3,
+      "seconds": 19
     },
     {
       "task": "18-delete-one",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 15
+      "seconds": 13
     },
     {
       "task": "19-image-caption",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 3,
-      "seconds": 26
+      "toolCalls": 2,
+      "seconds": 14
     },
     {
       "task": "20-find-in-many",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 5,
-      "seconds": 76
+      "toolCalls": 2,
+      "seconds": 17
     },
     {
       "task": "21-undo-run",
       "pass": true,
       "detail": "ok",
       "toolCalls": 4,
-      "seconds": 32
+      "seconds": 24
     }
   ]
 }

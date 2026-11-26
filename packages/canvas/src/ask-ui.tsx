@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
-import { agentListeners, agentLink, announceAsk } from "./agent-client";
+import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
 import { askStatusLine, startersFor, suggestQuestion } from "./ask-rules";
 import { sourceOf } from "./import-meta";
@@ -28,6 +28,7 @@ export function AskLayer() {
   const editor = useEditor();
   const listeners = useValue("ask listeners", () => agentListeners.get(), []);
   const hosted = useValue("ask link mode", () => agentLink.get().mode === "hosted", []);
+  const recent = useValue("ask recent agent", () => chatAgentActivity(agentActivity.get()), []);
   const asks = useValue(
     "asks on page",
     () => {
@@ -58,7 +59,7 @@ export function AskLayer() {
   return (
     <div className="scratch-layer ask-layer">
       {asks.map((a) => {
-        const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given });
+        const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given, recent });
         return (
           <div key={a.id}>
             {a.outlines.map((o) => (
@@ -120,8 +121,12 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
         picked: shapes.every((s) => s.meta.mark === "picked"),
         rejected: shapes.every((s) => s.meta.mark === "rejected"),
         text: only ? textOf(only) : "",
-        blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
-        record: shapes.some((s) => ["record", "title", "field"].includes(sourceOf(s)?.kind ?? "")),
+                blank: shapes.every((s) => "richText" in s.props && !textOf(s)),
+        // An imported record keeps its own starters; anything else gets ones that fit the selection.
+        starters: startersFor(
+          shapes.map((s) => ({ type: s.type, text: textOf(s) })),
+          shapes.some((s) => ["record", "title", "field"].includes(sourceOf(s)?.kind ?? "")),
+        ).join("\n"),
       };
     },
     [editor],
@@ -203,7 +208,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
           </button>
         </div>
         <div className="ask-starters">
-          {startersFor(state).map((s) => (
+          {(state?.starters.split("\n") ?? []).map((s) => (
             <button key={s} type="button" onClick={() => submit(s)}>
               {s}
             </button>
