@@ -337,7 +337,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     its ask on the ask's own page whatever page is open, the person on another page is told who
     answered and where, the principles' "Not done" line is updated, unit-tested, and checked in a
     real tab (failing before, passing after).
-53. **`canvas_read` can find objects by their text.** The fresh agent reported that `canvas_read`
+53. (PR #74 open, awaiting review.) **`canvas_read` can find objects by their text.** The fresh agent reported that `canvas_read`
     is large and has no text filter (Decisions needed, 13), so finding "the card about pricing"
     means reading everything. Done when `read` accepts a `text` filter (case-insensitive, matched
     against an object's text and name) that combines with `ids`, the tool definition and AGENT_API
@@ -351,7 +351,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
-53. canvas_read text filter | claude/sprint-read-filter | 2026-11-26T12:14Z
 45d. Board sync gap (d): images survive a clean profile | claude/sprint-board-images | 2026-11-26T12:08Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
@@ -550,3 +549,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:10Z | build-B | 52 Stale flags readable without a pointer | #72 | Full reason on select and on keyboard focus; hidden-input rule pinned by tests; real tab 5/8 before, 8/8 after; first screen unchanged; scorecard unchanged |
 | 2026-11-26T12:12Z | build-B | 45e review fixes | #70 | Parent and position carried as one unit, only under a parent still on the board (no orphans, no wrong-frame coordinates); object revisions never reused |
 | 2026-11-26T12:13Z | build-A | Feedback 8 import, part 6 | #73 | Text PDFs as section cards without a library (ToUnicode, layout from size and position, list by indent); Chromium-printed and hand-written fixtures; fuzzed; verify-pdf 7/7; stacked on #65 |
+| 2026-11-26T12:20Z | build-B | 53 canvas_read text filter | #74 | `read` takes `text` (case- and accent-insensitive, with `ids`); live MCP read 5 objects/3,145 B to 2/1,577 B; manifest regenerated; root build green |
