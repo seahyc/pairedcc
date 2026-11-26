@@ -498,6 +498,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 81. **An agent's note never lands on top of something.** `canvas_annotate` places its note under the target without looking for free space, so it can cover an ask or another note (seen in PR #104's screenshot; also point 10 of the fresh agent in PR #97). Done when an annotation without `x`/`y` is placed clear of other objects (as answers and comments already are, via `freeSpot`), with a test and a before/after screenshot.
 
 ## Claims
+81. Agent note never lands on top of something | claude/sprint-annotate-clear | 2026-11-26T13:29Z
 7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
