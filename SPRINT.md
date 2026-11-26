@@ -343,7 +343,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     against an object's text and name) that combines with `ids`, the tool definition and AGENT_API
     document it, unit tests cover matching, and a live MCP call shows the smaller result.
 
+54. **Text never leaves its container, even without spaces.** The brief's rule ("Text never leaves
+    its container") is checked only with ordinary prose (`verify-calm.mjs`). Done when a long URL,
+    a long unbroken word, a code card and a long frame name each stay inside their card, comment,
+    answer or frame in a real page at 1440 and 390 px, checked by a script that fails before the fix,
+    with before/after screenshots.
+
 ## Claims
+54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
 53. canvas_read text filter | claude/sprint-read-filter | 2026-11-26T12:14Z
 45d. Board sync gap (d): images survive a clean profile | claude/sprint-board-images | 2026-11-26T12:08Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
