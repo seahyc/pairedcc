@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
-import { askStatusLine, startersFor, suggestQuestion } from "./ask-rules";
+import { askStatusLine, BAR_MARGIN, placeBar, startersFor, statusWidth, suggestQuestion } from "./ask-rules";
 import { sourceOf } from "./import-meta";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
@@ -44,7 +44,7 @@ export function AskLayer() {
               return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
             })
           : [];
-        return [{ id: s.id, ask, x: b.x, y: b.maxY, given: givenLabel(editor, ask.contextIds), outlines }];
+        return [{ id: s.id, ask, x: b.x, y: b.maxY, w: b.w, given: givenLabel(editor, ask.contextIds), outlines }];
       });
     },
     [editor],
@@ -65,7 +65,7 @@ export function AskLayer() {
             {a.outlines.map((o) => (
               <div key={o.id} className="ask-given" style={{ transform: `translate(${o.x - 6}px, ${o.y - 6}px)`, width: o.w + 12, height: o.h + 12 }} />
             ))}
-            <div className={`ask-status ${line.tone}`} data-ask-state={a.ask.state} data-ask-tone={line.tone} style={{ transform: `translate(${a.x}px, ${a.y + 6}px)` }}>
+            <div className={`ask-status ${line.tone}`} data-ask-state={a.ask.state} data-ask-tone={line.tone} style={{ transform: `translate(${a.x}px, ${a.y + 6}px)`, maxWidth: statusWidth(a.w) }}>
               {(line.tone === "working" || line.tone === "waiting") && <span className="ask-pulse" />}
               <span>
                 {line.tone === "working" || line.tone === "done" ? "✦ " : ""}
@@ -133,6 +133,23 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
   );
   const [question, setQuestion] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  // The bar's real width (it depends on its labels and font), measured after each render, so
+  // placing it never assumes a size it does not have.
+  const bar = useRef<HTMLElement | null>(null);
+  const setBar = (el: HTMLElement | null) => {
+    bar.current = el;
+  };
+  const [measured, setMeasured] = useState(0);
+  const [viewWidth, setViewWidth] = useState(() => window.innerWidth);
+  useLayoutEffect(() => {
+    const w = bar.current?.offsetWidth ?? 0;
+    if (w && w !== measured) setMeasured(w);
+  });
+  useEffect(() => {
+    const onResize = () => setViewWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const ids = state?.ids;
   useEffect(() => {
     if (asking && !ids) setAsking(false);
@@ -162,9 +179,8 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     }
   }
 
-  const width = asking ? 430 : 330;
-  const left = Math.max(70, Math.min(state.x, window.innerWidth - width - 16));
-  const top = state.y - 50 > 52 ? state.y - 50 : state.bottom + 12;
+  // The Ask box asks for 430 px; the bar is as wide as its buttons. Both narrow to the window.
+  const { left, top, width } = placeBar(state, asking ? 430 : measured || 380, viewWidth);
   // Keys keep working after a click: the board takes the keyboard back.
   const judge = (mark: "picked" | "rejected") => {
     toggleMark(editor, editor.getSelectedShapes(), mark);
@@ -172,15 +188,16 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
   };
   if (state.editing)
     return state.blank ? null : (
-      <div className="selection-bar hint" style={{ left, top }}>
+      <div ref={setBar} className="selection-bar hint" style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }}>
         <kbd>⌘↵</kbd> ask about this · <kbd>Esc</kbd> done
       </div>
     );
   if (asking)
     return (
       <form
+        ref={setBar}
         className="selection-bar asking"
-        style={{ left, top }}
+        style={{ left, top, width }}
         onSubmit={(e) => {
           e.preventDefault();
           submit(question);
@@ -217,7 +234,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
       </form>
     );
   return (
-    <div className="selection-bar" style={{ left, top }} role="toolbar" aria-label="What next">
+    <div ref={setBar} className="selection-bar" style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }} role="toolbar" aria-label="What next">
       <button className="primary" onClick={() => setAsking(true)} title="Ask your agent about the selection (⌘↵)">
         ✦ Ask <kbd>⌘↵</kbd>
       </button>
