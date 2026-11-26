@@ -156,8 +156,14 @@ task by which measure is furthest from target, not by backlog order.
 19. **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
     their boards, open one, and restore an earlier revision from the canvas.
+17. **Agent-usability tasks and a recorded attempt.** The scorecard's Agent usability row reports
+    0 tasks. Add at least 20 board tasks in `packages/canvas/eval/tasks/` with machine-checked end
+    states, a harness that gives a fresh agent only `AGENT_API.md` and the MCP tools, and a recorded
+    attempt in `eval/agent-runs/latest.json`. Tasks avoid board sync (build-A's own feature). Done
+    when the row reports a real completion rate and median tool calls.
 
 ## Claims
+17. Agent-usability tasks | claude/sprint-agent-tasks | 2026-11-26T10:27Z
 18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 13. Person imports a CSV | claude/sprint-csv-drop | 2026-11-26T10:21Z
