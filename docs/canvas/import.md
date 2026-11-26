@@ -37,17 +37,20 @@ Solveit's "the person sees exactly what the AI sees" holds: what the agent is gi
 | Clipboard: HTML table | Works for the shape Google Sheets puts on the clipboard (checked with a synthetic copy of it). Tables copied from Excel, Numbers or a web page go through the same reader but were not tried. |
 | Clipboard: tab-separated or strictly rectangular comma-separated text, markdown table | Works |
 | Clipboard: text of three or more paragraphs or two or more headings (400 characters or more) | Works, as section cards |
+| Clipboard: a stretch copied from a web page | Works, as section cards with the page's headings, when the copied HTML has two or more headings (400 characters or more); the plain text alone would lose them. One copied paragraph still pastes as one object. |
 | `.csv`, `.tsv` (quoted fields, doubled quotes, line breaks in cells; `;` is detected) | Works |
 | `.md`, `.txt` | Works: headings, paragraphs, lists and code blocks; a file that is mostly one pipe table is read as a table |
 | `.json` | Works for an array of objects, or an object holding exactly one such array |
-| `.html` | The first table in the file |
+| `.html` | The first table in the file, if it has one. Otherwise a web page: the content of its `<article>` or `<main>` (else its body) becomes section cards under its top heading or page title, with headings, paragraphs, lists and preformatted text kept, and navigation, scripts, styles, asides, figures, forms, adverts and the footer left out (`src/import-html.ts`). |
 | Images | Works by drop, the file chooser or the existing image paste |
-| `.xlsx`, `.xls`, `.numbers`, `.ods` | Not read. The canvas says so and suggests copying the cells or saving as CSV. No spreadsheet parser is a dependency. |
+| `.xlsx` | Works, by drop or the file chooser: the first sheet's cell values become the same records or table as pasting that range (`src/xlsx.ts`, no dependency: the zip is read with the browser's own decompression). Formulas give their last computed value; dates stay Excel's serial numbers; merged cells are read as their first cell. A workbook with more sheets says only the first was read. A damaged file says it cannot be read. |
+| `.xls`, `.numbers`, `.ods` | Not read. The canvas says only `.xlsx` is, and suggests saving as `.xlsx` or CSV or copying the cells. |
 | PDF, Word, slides | Not read |
 
 ## Not handled yet
 
-- Spreadsheet files (above). Only the first table of an HTML fragment is read; merged cells are read as their first cell.
+- A web page with a data table is read as that table, not as its prose. Pages that build their content with scripts, or mark it up without headings, come out as paragraphs or not at all.
+- Older spreadsheet files (above), and sheets after the first in an `.xlsx` workbook. Only the first table of an HTML fragment is read; merged cells are read as their first cell.
 - A table inside a longer markdown document is not drawn as a table; inline formatting (bold, links) is reduced to plain text.
 - The import is placed below everything already on the board, not at the drop point. Images are placed at the drop point.
 - Clusters are laid out from estimated card heights. Text never leaves its card, but spacing between clusters can be slightly uneven.

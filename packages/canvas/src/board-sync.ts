@@ -261,17 +261,20 @@ export function createBoardSync(o: SyncOptions) {
     // version stays in the board's revision history.
     const server = await o.api.get(boardId);
     if (!server) throw new Error("The board was deleted on the server.");
-    revision = server.revision;
     if (!base) {
       // No common version to merge from, so neither side may replace the other: this
       // browser's board is set aside as its own board and the account's board is opened.
+      // The server's revision is adopted only once the copy is safe: if setting aside is
+      // refused (at the board limit), a later save must not land on the account's board.
       const note = await setAside("Another tab or device saved this board first.");
+      revision = server.revision;
       apply(server.snapshot);
       base = server.snapshot;
       markSynced(o.local.snapshot());
       remember(false);
       return emit({ state: "saved", account: account!, revision, at: now().getTime(), note });
     }
+    revision = server.revision;
     const merged = mergeSnapshots(base, o.local.snapshot(), server.snapshot);
     apply(merged.snapshot);
     base = server.snapshot;

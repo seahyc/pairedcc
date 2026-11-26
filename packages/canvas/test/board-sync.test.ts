@@ -237,6 +237,31 @@ describe("board sync", () => {
     expect(last()).toMatchObject({ state: "saved", revision: 2, note: expect.stringContaining(id) });
   });
 
+  it("at the board limit, never replaces the account's board when this browser's work cannot be set aside", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("v1"));
+    await srv.api.put("main", 1, snap("phone"));
+    // The account is at its board limit: any new board is refused, as the server does with 403.
+    const put = srv.api.put;
+    srv.api.put = async (id, rev, snapshot) =>
+      id !== "main" && rev === 0 ? { ok: false, stale: false, refused: 403, error: "This account already has 50 boards" } : put(id, rev, snapshot);
+    // Case 1: unsaved edits on an older revision. Case 2 (below): earlier work with no memo at all.
+    for (const memo of [{ account: "alice", boardId: "main", revision: 1, dirty: true }, null] as const) {
+    const b = browser(snap("laptop offline"), memo);
+    const { s } = sync(srv, b, true);
+    await s.start().catch(() => undefined);
+    // Let any automatic retries run, then the person keeps working: the next save must still
+    // not land on the account's board, which this browser never merged with.
+    for (let i = 0; i < 4 && b.timers.length; i++) await Promise.resolve(b.timers.shift()!()).catch(() => undefined);
+    for (const t of ["laptop, more work", "laptop, still more"]) {
+      b.edit(t);
+      for (let i = 0; i < 4 && b.timers.length; i++) await Promise.resolve(b.timers.shift()!()).catch(() => undefined);
+    }
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "phone"]);
+    expect(text(b.doc)).toBe("laptop, still more");
+    }
+  });
+
   it("when two browsers create the account's board at once, the loser keeps its board as a separate one", async () => {
     const srv = server(), b = browser(snap("second browser"));
     const get = srv.api.get;
