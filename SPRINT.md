@@ -577,7 +577,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     when a scripted one-object move on a 10k board is measured before and after, the hidden layers
     panel costs nothing, the panel still works when opened, and the scorecard is not worse.
 
+95. **Before sending, the person sees what an ask will give.** Solveit (brief): "the context the agent sees is visible and chosen by the person." Today what an ask gives is shown only after it is sent (the ask's line and outline), so the person learns that the frame, a pinned card or a withheld card went along, or did not, too late to change it. Done when, while the Ask box is open, the board outlines exactly what the ask would give and the box says it in one muted line ("Gives “Charge per seat” + frame “Pricing”", with "+ N pinned" and "· N left out" where they apply), computed by the same code that builds the ask so the preview cannot differ from what is sent (unit-tested against the sent ask), checked in a real page (failing before, passing after), with before/after screenshots of the Ask box; the first screen is unchanged.
+
 ## Claims
+95. Before sending, the person sees what an ask will give | claude/sprint-ask-preview | 2026-11-26T14:16Z
 93. Stale flag placement follows the drawn flag | claude/sprint-stale-drawn | 2026-11-26T14:20Z
 94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
 
