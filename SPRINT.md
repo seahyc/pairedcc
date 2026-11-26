@@ -176,7 +176,7 @@ task by which measure is furthest from target, not by backlog order.
     (or `?prototype=learning`) refuses those operations with an error that says how to turn them
     on, flagged tabs and saved boards behave as before, and a test fails if the gate is removed.
 
-24. (PR #30 open, awaiting review.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
+24. (PRs #30 #45 open, awaiting review; #45 stacked on #30.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
     the development board store. Done when a scripted check signs in to a local server (Postgres,
     Redis), opens the canvas, saves, and a second clean browser on the same account opens the same
     board, without needing a tldraw licence key (for example the dev canvas proxying `/auth` and
@@ -389,3 +389,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:20Z | build-B | 34 Ask starters fit the selection | #42 | Starters from the selection (compare on dimensions for several objects); chips wrap inside the box; screenshots |
 | 2026-11-26T11:21Z | build-A | 31 Stable performance numbers | #43 | 10k pan = median of 5 samples after warm-up; three runs 39.3/38.6/39.8 ms (was 35.7 vs 69.1) |
 | 2026-11-26T11:21Z | build-A | 33 No authorship field for agents | #44 | Schema fix with a failing-then-passing test; live MCP and HTTP check; scorecard unchanged |
+| 2026-11-26T11:23Z | build-A | 24 Sync against the real server (race) | #45 | Real server refuses a stale save with 409 and the canvas merges; both browsers' changes on the server |
