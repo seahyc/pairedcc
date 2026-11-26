@@ -157,7 +157,7 @@ task by which measure is furthest from target, not by backlog order.
 16. (Merged, see Done; panning a full 10k board is still slow.) **10k objects.** tldraw's default `maxShapesPerPage` is 4,000, so a 10k board cannot exist.
     Done when the performance measure reports 10k load and pan numbers (raise the limit or
     decide another way and record it).
-20. (Renumbered from 17 to avoid a clash; likely covered by the `yc/calm-canvas` rework for playtest 1, so check that PR before starting.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
+20. (PR #40 open, awaiting review. The calm first board has no overlap; the tour board did.) **Welcome board header overlaps.** On a fresh canvas the subtitle "this board is yours. think
     out loud, with an agent beside you." wraps onto the shortcut hint line beneath it (seen at
     1440x900 in headless Chromium; `docs/canvas/screenshots/reload-late-fonts-*.png` runs show the
     page). Done when the header lines never overlap at 1440 and 390 px widths, with screenshots.
@@ -198,7 +198,7 @@ task by which measure is furthest from target, not by backlog order.
     the flag names the changed input (and the upstream cause for transitive staleness) in words a
     person can act on, is readable by assistive technology, with before/after screenshots.
 
-30. **A board opened on another device can show nothing.** A board created on a 1440 px screen
+30. (PR #38 open, awaiting review.) **A board opened on another device can show nothing.** A board created on a 1440 px screen
     and opened on a 390 px phone (board sync) opens on an empty view: its cards sit where the first
     screen's viewport was. Done when opening a board with no object in view frames its objects
     (never zooming past 100%), tested, with a 390 px screenshot before and after.
@@ -237,8 +237,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 32. Ask names the connected agent | claude/sprint-ask-recent-agent | 2026-11-26T11:17Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 31. Stable performance numbers | claude/sprint-perf-stable | 2026-11-26T11:13Z
-30. Board opens on an empty view | claude/sprint-reframe | 2026-11-26T11:09Z
-20. Welcome board header overlaps | claude/sprint-welcome-check | 2026-11-26T11:07Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
@@ -322,6 +320,8 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (review, #21) Not changed, for the maintainer: a clean browser that loads an account board saved before the calm canvas shows that board as it was, and only on the next reload adds the "Thinking" page and switches to it. Alternative: lay out the calm board right after the first load from the account.
 - (review, #24) The recorded attempt (20/21) predates the calm canvas and the tools added since. It is kept as the scorecard's figure until it is recorded again (backlog 32).
 - (review) Two review runs overlapped on 26 Nov (10:55Z to 11:15Z) and both combined #21. A review run should fetch and re-read the open PR list and the Log before each merge, not only at the start.
+- (build-B, item 30) A board that opens with none of its objects in view is framed (never past 100%), at startup and after sync loads the account's board; a view with anything in it is never moved.
+- (build-B, item 20) Seeded text with a layout-chosen width carries `meta.fixedWidth` and is exempt from the 460 px reading-width rule from #21; all other text, pasted text included, still wraps. On phones the zoom bar sits right of undo rather than leaving room for the desktop panel.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -363,3 +363,5 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:08Z | review | Rest of #21 | #21 | The hosted resident-agent channel (the PR's last commit, missed by the first combination) added as ed4fda1; secret check narrowed to its two paths with a test; 143 server and 163 canvas tests, e2e, calm check 33/33 and the no-agent state by hand |
 | 2026-11-26T11:15Z | review | Review #24 | #24 | Merged (squash) as 984374b after merging in the integration branch; self-test 21/21 once the task tab opens with ?prototype=data; scorecard on 984374b: acceptance 10/10, agent usability 20/21, safety 9/9, persistence pass, existing product pass, 10k pan flagged (noise) |
 | 2026-11-26T11:20Z | review | Review #22 to #28 | #22 #23 #25 #26 #27 #28 | Six merged (squash) on the calm canvas, each re-run on the combined branch; agent-usability attempt re-recorded with a fresh agent: 21/21, median 2 calls; safety 9/9 |
+| 2026-11-26T11:17Z | build-B | 30 Board opens empty on a phone | #38 | Desktop-then-phone first board showed 0 text shapes at 390 px, now 3; screenshots |
+| 2026-11-26T11:17Z | build-B | 20 Header and phone controls | #40 | Tour header and 390 px undo/zoom overlaps measured before (overlap) and after (none) |
