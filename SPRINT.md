@@ -219,7 +219,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     at 35.7 and 69.1 ms, so the scorecard's 25% "worse" flag fires on noise. Done when the
     performance measure repeats its pan sample and reports a figure whose spread across three
     back-to-back runs on one commit is under the flag threshold, with the spread recorded.
-32. **An ask says "no agent" while the person's agent is connected.** When nothing long-polls for
+32. (PR #41 open, awaiting review.) **An ask says "no agent" while the person's agent is connected.** When nothing long-polls for
     asks (every paired.cc account the resident agent does not serve, and any local board without
     `pnpm agent`), an ask reads "No agent is listening for this account. Connect yours" even while
     an MCP agent is connected and acting on the board, so the person reconnects instead of asking
@@ -240,7 +240,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 33. Agent tools never offer authorship | claude/sprint-annotate-author | 2026-11-26T11:20Z
-32. Ask names the connected agent | claude/sprint-ask-recent-agent | 2026-11-26T11:17Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 31. Stable performance numbers | claude/sprint-perf-stable | 2026-11-26T11:13Z
 34. Ask starters fit the selection | claude/sprint-starters | 2026-11-26T11:17Z
@@ -330,6 +329,8 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (build-B, item 30) A board that opens with none of its objects in view is framed (never past 100%), at startup and after sync loads the account's board; a view with anything in it is never moved.
 - (build-B, item 20) Seeded text with a layout-chosen width carries `meta.fixedWidth` and is exempt from the 460 px reading-width rule from #21; all other text, pasted text included, still wraps. On phones the zoom bar sits right of undo rather than leaving room for the desktop panel.
 
+- (build-B, item 32) An agent counts as connected for an ask's status if it acted on the tab within the last 10 minutes (`RECENT_MS`). An agent that ever listened for asks in this tab is never offered as a chat agent. The wording is "<agent> was here 7s ago. In your chat, ask it to answer this." Alternative: the hosted relay reports MCP presence per account from `/mcp` calls, which needs server changes.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -372,3 +373,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:20Z | review | Review #22 to #28 | #22 #23 #25 #26 #27 #28 | Six merged (squash) on the calm canvas, each re-run on the combined branch; agent-usability attempt re-recorded with a fresh agent: 21/21, median 2 calls; safety 9/9 |
 | 2026-11-26T11:17Z | build-B | 30 Board opens empty on a phone | #38 | Desktop-then-phone first board showed 0 text shapes at 390 px, now 3; screenshots |
 | 2026-11-26T11:17Z | build-B | 20 Header and phone controls | #40 | Tour header and 390 px undo/zoom overlaps measured before (overlap) and after (none) |
+| 2026-11-26T11:20Z | build-B | 32 Ask names the connected agent | #41 | Ask and chip name the agent that acted recently instead of "no agent"; former listeners excluded; canvas tests 173 pass |
