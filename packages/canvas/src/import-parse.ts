@@ -1,8 +1,6 @@
 // Reading imported material and deciding what it is. No editor and no DOM here, so every
 // rule can be tested directly: the parsers, the shape detection and the import plan.
 
-import { htmlToMarkdown } from "./import-html";
-
 export type Table = { title?: string; note?: string; columns: string[]; rows: string[][] };
 export type Section = { heading?: string; text: string };
 export type Parsed = { kind: "table"; table: Table } | { kind: "prose"; title?: string; sections: Section[] };
@@ -63,10 +61,7 @@ export function sniffDelimiter(text: string): "\t" | "," | ";" {
 
 // ---------- HTML tables (what a spreadsheet puts on the clipboard) ----------
 
-const entities: Record<string, string> = {
-  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
-  ldquo: "“", rdquo: "”", lsquo: "‘", rsquo: "’", mdash: "—", ndash: "–", hellip: "…", middot: "·", copy: "©", reg: "®", trade: "™", bull: "•", times: "×", euro: "€", pound: "£",
-};
+const entities: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
 export function decodeEntities(text: string) {
   return text.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (whole, code: string) => {
     if (code[0] === "#") {
@@ -308,12 +303,7 @@ export function parseImport(content: string, format: ImportFormat): Parsed {
   if (format === "html") {
     const rows = parseHtmlTable(content);
     if (rows) return { kind: "table", table: toTable(rows) };
-    const markdown = htmlToMarkdown(content), doc = parseProse(markdown);
-    // A page's one top heading is its title, even with a lead paragraph straight under it.
-    const top = doc.sections[0];
-    if (!doc.title && top?.heading && markdown.startsWith(`# ${top.heading}\n`) && (markdown.match(/^# /gm) ?? []).length === 1)
-      return { kind: "prose", title: top.heading, sections: top.text ? [{ text: top.text }, ...doc.sections.slice(1)] : doc.sections.slice(1) };
-    return { kind: "prose", ...doc };
+    return { kind: "prose", ...parseProse(cellText(content)) };
   }
   if (format === "tsv") return { kind: "table", table: toTable(parseDelimited(content, "\t")) };
   if (format === "csv") return { kind: "table", table: toTable(parseDelimited(content, sniffDelimiter(content))) };
@@ -334,11 +324,6 @@ export function detectPaste(data: { html?: string; text?: string }): { format: I
   if (/<table/i.test(html)) {
     const rows = parseHtmlTable(html)?.filter((r) => filled(r) > 0) ?? [];
     if (rows.length >= 2 && Math.max(...rows.map(filled)) >= 2) return { format: "html", content: html };
-  }
-  // Copied from a web page: its headings are in the HTML only, so the HTML is read when it has them.
-  if (html && !/<table/i.test(html) && /<h[1-6]\b/i.test(html)) {
-    const markdown = htmlToMarkdown(html);
-    if (markdown.length >= 400 && (markdown.match(/^#{1,6}\s+\S/gm) ?? []).length >= 2) return { format: "html", content: html };
   }
   if (looksDelimited(text, "\t")) return { format: "tsv", content: text };
   if (looksDelimited(text, ",")) return { format: "csv", content: text };
