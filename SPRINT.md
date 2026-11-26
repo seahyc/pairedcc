@@ -361,6 +361,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     placed no larger than a set size on its longest side (keeping its shape and its full-resolution
     asset, and leaving small images alone), agent `canvas_image` sizes are untouched, unit-tested,
     with before and after screenshots of a dropped photo.
+56. **`read`'s text filter: three matching gaps (review of #74, marked optional).** (a) Search text
+    is built with `richTextPlain`, which puts a space between formatting runs, so a word that is
+    partly bold ("**pr**icing") does not match; join inline runs without a separator. (b) Greek
+    final sigma: lowercasing makes a query's `ς` differ from a mid-word `σ`; fold `ς` to `σ`.
+    (c) Stripping every Unicode mark also erases Devanagari vowel signs (`दिन` matches `दीन`); strip
+    only combining diacritics (U+0300 to U+036F). Done when each has a failing test, then a fix.
+    Build on #74 once it merges.
 
 ## Claims
 56. Dropped images fit beside your thoughts | claude/sprint-image-size | 2026-11-26T12:16Z
