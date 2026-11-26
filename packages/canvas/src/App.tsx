@@ -104,6 +104,7 @@ import { onlyDerivedChange } from "./revision";
 import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followers } from "./follow";
+import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
@@ -311,10 +312,21 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
   },
 ];
 
+/** A dialog's section that takes focus, keeps Tab inside, closes on Escape and gives focus back. */
+function FocusSection({ onClose, children, ...rest }: { onClose: () => void } & React.HTMLAttributes<HTMLElement>) {
+  const focus = useDialogFocus<HTMLElement>(onClose);
+  return (
+    <section {...rest} {...focus}>
+      {children}
+    </section>
+  );
+}
+
 function ShortcutHelp({ onClose }: { onClose: () => void }) {
+  const focus = useDialogFocus<HTMLElement>(onClose);
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <section className="agent-dialog shortcut-dialog" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
+      <section {...focus} className="agent-dialog shortcut-dialog" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-heading">
           <Keyboard size={18} />
           <h2>Keyboard shortcuts</h2>
@@ -352,6 +364,10 @@ function Shell() {
   const setRightTab = setPanel;
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null),
+    moreButton = useRef<HTMLButtonElement>(null);
+  const mainMenu = useMenuKeys<HTMLDivElement>(menuOpen, () => setMenuOpen(false), menuButton),
+    moreMenu = useMenuKeys<HTMLDivElement>(moreOpen, () => setMoreOpen(false), moreButton);
   const [asking, setAsking] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -890,12 +906,12 @@ function Shell() {
           <SaveState />
           {openCount > 0 && <MarksCounter onOpen={() => setPanel("feedback")} />}
           <AgentChip onOpen={() => setAgentOpen(true)} />
-          <button className={`subtle-button menu-button ${menuOpen ? "open" : ""}`} aria-label="Menu" aria-expanded={menuOpen} title="Boards, panels, export" onClick={() => setMenuOpen((open) => !open)}>
+          <button ref={menuButton} className={`subtle-button menu-button ${menuOpen ? "open" : ""}`} aria-label="Menu" aria-haspopup="menu" aria-expanded={menuOpen} title="Boards, panels, export" onClick={() => setMenuOpen((open) => !open)}>
             <Menu size={15} />
           </button>
         </div>
         {menuOpen && (
-          <div className="menu" role="menu" aria-label="Menu">
+          <div ref={mainMenu.ref} onClickCapture={mainMenu.onClickCapture} className="menu" role="menu" aria-label="Menu">
             <button role="menuitem" onClick={addPage}>
               <FilePlus2 size={14} /> New board
             </button>
@@ -1059,12 +1075,12 @@ function Shell() {
           <span>Ask</span>
         </button>
         <div className="tool-divider" />
-        <button type="button" className={`tool-button ${moreOpen || moreTools.some((t) => t.id === currentTool) ? "active" : ""}`} aria-expanded={moreOpen} title="More tools" onClick={() => setMoreOpen((open) => !open)}>
+        <button ref={moreButton} type="button" className={`tool-button ${moreOpen || moreTools.some((t) => t.id === currentTool) ? "active" : ""}`} aria-haspopup="menu" aria-expanded={moreOpen} title="More tools" onClick={() => setMoreOpen((open) => !open)}>
           <Ellipsis size={18} strokeWidth={1.6} />
           <span>More</span>
         </button>
         {moreOpen && (
-          <div className="menu more-menu" role="menu" aria-label="More tools">
+          <div ref={moreMenu.ref} onClickCapture={moreMenu.onClickCapture} className="menu more-menu" role="menu" aria-label="More tools">
             {moreTools.map((t) => (
               <button key={t.id} role="menuitem" className={currentTool === t.id ? "current" : ""} onClick={() => { chooseTool(t.id); setMoreOpen(false); }}>
                 <t.icon size={14} /> {t.name} <kbd>{t.key}</kbd>
@@ -1457,7 +1473,8 @@ function Shell() {
       {boardsOpen && historyWhere && <SavedBoardsDialog where={historyWhere} onClose={() => setBoardsOpen(false)} />}
       {agentOpen && (
         <div className="modal-backdrop" onClick={() => setAgentOpen(false)}>
-          <section
+          <FocusSection
+            onClose={() => setAgentOpen(false)}
             className="agent-dialog"
             role="dialog"
             aria-modal="true"
@@ -1494,7 +1511,7 @@ function Shell() {
               open. Access is local to this computer.
             </p>
             </> : <HostedAgentAccess onCopied={setNotice} />}
-          </section>
+          </FocusSection>
         </div>
       )}
     </div>
