@@ -87,6 +87,7 @@ import { richTextPlain } from "./operations";
 import { onlyDerivedChange } from "./revision";
 import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
+import { followers } from "./follow";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
@@ -1457,6 +1458,21 @@ function App() {
         editor.updateShape({ id: shape.id, type: "text", props: { w: TEXT_WRAP } });
     });
     editor.sideEffects.registerAfterChangeHandler("shape", (_previous, next) => wrapText(next));
+    // What the person moves takes its comments, notes and replies along (same step, same undo).
+    editor.sideEffects.registerAfterChangeHandler("shape", (previous, next) => {
+      const dx = next.x - previous.x, dy = next.y - previous.y;
+      if ((!dx && !dy) || previous.parentId !== next.parentId) return;
+      const selected = new Set<string>(editor.getSelectedShapeIds());
+      if (!selected.has(next.id)) return;
+      const ids = followers([next.id], editor.getCurrentPageShapes(), selected);
+      if (!ids.length) return;
+      editor.updateShapes(
+        ids.flatMap((id) => {
+          const s = editor.getShape(id as TLShape["id"]);
+          return s && !s.isLocked ? [{ id: s.id, type: s.type, x: s.x + dx, y: s.y + dy }] : [];
+        }),
+      );
+    });
     // Double-click the empty board to write a thought: a pink card, already in typing mode.
     const writeOnDoubleClick = (info: { type: string; name?: string; phase?: string; target?: string }) => {
       if (info.type !== "click" || info.name !== "double_click" || info.phase !== "up" || info.target !== "canvas") return;
