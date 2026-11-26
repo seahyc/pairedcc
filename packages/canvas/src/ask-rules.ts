@@ -108,3 +108,21 @@ export function mergeHistory(entries: HistoryEntry[], targetIds: string[]) {
     return true;
   });
 }
+
+/**
+ * What to tell the person when an ask on a page they are not looking at is answered or fails:
+ * the agent responded, so it must be seen (never silence). Nothing when the ask is on screen,
+ * where its own status line says it, or when its state did not just change to an outcome.
+ */
+export function elsewhereNotice(
+  before: { state: string } | undefined,
+  after: { state: string; agent?: string } | undefined,
+  where: { onScreen: boolean; question: string; pageName: string },
+) {
+  if (!after || where.onScreen || before?.state === after.state) return undefined;
+  const asked = `“${where.question.length > 40 ? `${where.question.slice(0, 39)}…` : where.question}”`;
+  const page = `on the page “${where.pageName}”`;
+  if (after.state === "answered") return `✦ ${after.agent ?? "Your agent"} answered ${asked} ${page}.`;
+  if (after.state === "failed") return `Your ask ${asked} ${page} could not be answered. Open that page to retry.`;
+  return undefined;
+}

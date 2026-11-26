@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { AskDesk, LISTENER_GRACE_MS } from "../server/asks";
-import { answerLayout, askStatusLine, capWords, markOf, mergeHistory, suggestQuestion, OPTION_W } from "../src/ask-rules";
+import { answerLayout, askStatusLine, capWords, elsewhereNotice, markOf, mergeHistory, suggestQuestion, OPTION_W } from "../src/ask-rules";
 import { answerInput, askStatusInput } from "../src/protocol";
 import { buildPrompt, parseReply, readingNote, systemPrompt } from "../tools/resident-prompt";
 import { toolDefs } from "../tools/tool-defs";
@@ -237,6 +237,24 @@ describe("an ask about a frame is about what it holds", () => {
   it("says so when the frame holds nothing with text", () => {
     const empty = { question: "?", targets: [{ id: "shape:f", type: "frame", author: "Human", text: "(Ideas, no text)", inside: [] }] };
     expect(buildPrompt(empty)).toContain('- the frame "Ideas", which holds nothing with text.');
+  });
+});
+
+describe("an ask answered on a page the person has left", () => {
+  const where = { onScreen: false, question: "Give me options", pageName: "Pricing" };
+  it("says who answered and where", () => {
+    expect(elsewhereNotice({ state: "working" }, { state: "answered", agent: "Claude" }, where)).toBe("✦ Claude answered “Give me options” on the page “Pricing”.");
+    expect(elsewhereNotice({ state: "working" }, { state: "failed" }, where)).toContain("could not be answered. Open that page to retry.");
+  });
+  it("stays quiet on screen, for other states and for repeats", () => {
+    expect(elsewhereNotice({ state: "working" }, { state: "answered" }, { ...where, onScreen: true })).toBeUndefined();
+    expect(elsewhereNotice({ state: "waiting" }, { state: "working" }, where)).toBeUndefined();
+    expect(elsewhereNotice({ state: "answered" }, { state: "answered" }, where)).toBeUndefined();
+    expect(elsewhereNotice(undefined, undefined, where)).toBeUndefined();
+  });
+  it("shortens a long question", () => {
+    const said = elsewhereNotice({ state: "working" }, { state: "answered" }, { ...where, question: "x".repeat(80) })!;
+    expect(said).toContain(`“${"x".repeat(39)}…”`);
   });
 });
 
