@@ -88,7 +88,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_overview",
     op: "overview",
     description:
-      "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
+      "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
     input: overviewInput.shape,
     output: "json",
   },
@@ -96,8 +96,11 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_read",
     op: "read",
     description:
-      "Read the current page, selected objects, readable text, annotations, connections and open human marks (feedback notes, picks, rejects, ink over objects, with target IDs). Each object reports its author. Image bytes are omitted; canvas_get retrieves an image asset.",
-    input: ids,
+      "Read the current page, selected objects, readable text, annotations, connections and open human marks (feedback notes, picks, rejects, ink over objects, with target IDs). Each object reports its author. Image bytes are omitted; canvas_get retrieves an image asset. To find objects by their words instead of reading everything, pass text.",
+    input: {
+      ...ids,
+      text: z.string().max(200).optional().describe("Only objects whose text or name contains this, ignoring case and accents. Combines with ids."),
+    },
     output: "json",
   },
   {
@@ -160,7 +163,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_feedback",
     op: "feedback",
     description:
-      "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback.",
+      "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback. Answer an item with canvas_reply, not canvas_annotate, so the answer sits under the comment and is listed in the queue; an item with an `ask` field is an Ask: answer it with canvas_answer, which also records the answer on the Ask.",
     input: feedbackInput.shape,
     output: "json",
   },
@@ -168,7 +171,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_reply",
     op: "reply",
     description:
-      "Answer a feedback item in place: your note appears directly under the human's comment (or the picked/rejected object) and is listed as a reply in the queue. The item stays open until you or the human resolve it. The item must be on the open page.",
+      "Answer a feedback item in place (use this instead of canvas_annotate for items in canvas_feedback; for an item with an `ask` field use canvas_answer instead): your note appears directly under the human's comment (or the picked/rejected object) and is listed as a reply in the queue. The item stays open until you or the human resolve it. The item must be on the open page.",
     input: replyInput.shape,
     output: "json",
   },
@@ -176,7 +179,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_asks",
     op: "asks",
     description:
-      "List the human's asks: questions they put to an agent about objects they selected. Each has id, question, state (waiting, working, answered, failed), the selected `targets` with their text and author, the `frame` they sit in with its other objects, and `history` when the ask follows an earlier answer. That is the whole context the human sees on the ask; answer from it. Defaults to waiting asks.",
+      "List the human's asks: questions they put to an agent about objects they selected. Each has id, question, state (waiting, working, answered, failed), the selected `targets` with their text and author (a selected frame lists what it holds in `inside`), the `frame` they sit in with its other objects, and `history` when the ask follows an earlier answer (with the other options that answer offered). Any of these carries `mark` (picked or rejected) where the person picked or crossed it out: build on picks and do not offer crossed-out ideas again. That is the whole context the human sees on the ask; answer from it. Defaults to waiting asks.",
     input: asksInput.shape,
     output: "json",
   },

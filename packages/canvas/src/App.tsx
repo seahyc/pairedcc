@@ -68,13 +68,18 @@ import {
 } from "./operations";
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
 import { convergeForPerson, createComment } from "./agent-operations";
-import { prototypeEnabled } from "./prototype-flags";
+import { prototypeEnabled, canvasReturnTo } from "./prototype-flags";
+import { followConnectors } from "./connector-follow";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
+import { BoardImageShapeUtil } from "./image-shape";
+import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
+import { elsewhereNotice } from "./ask-rules";
+import { askOf } from "./asks";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
 import { DataTableShapeUtil } from "./table-shape";
 import { ImportLayer, chooseImportFile } from "./import-ui";
@@ -94,6 +99,7 @@ import { richTextPlain } from "./operations";
 import { onlyDerivedChange } from "./revision";
 import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
+import { followers } from "./follow";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
@@ -226,7 +232,7 @@ function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void })
         </p>
         <button
           className="wide-button dark"
-          onClick={() => (location.href = `/docs/login?returnTo=${encodeURIComponent("/canvas/")}`)}
+          onClick={() => (location.href = `/docs/login?returnTo=${encodeURIComponent(canvasReturnTo())}`)}
         >
           Sign in to connect an agent
         </button>
@@ -580,6 +586,26 @@ function Shell() {
   const shapeColor =
     shape && "color" in shape.props ? shape.props.color : undefined;
   const bounds = shape ? editor.getShapePageBounds(shape) : undefined;
+  // An ask answered (or failed) on a page the person has left: say so where they are now.
+  useEffect(
+    () =>
+      editor.store.listen(
+        ({ changes }) => {
+          for (const [before, after] of Object.values(changes.updated)) {
+            if (after.typeName !== "shape") continue;
+            const shape = after as TLShape, pageId = editor.getAncestorPageId(shape);
+            const said = elsewhereNotice(askOf(before as TLShape), askOf(shape), {
+              onScreen: pageId === editor.getCurrentPageId(),
+              question: "richText" in shape.props ? richTextPlain(shape.props.richText).trim() : "",
+              pageName: (pageId && editor.getPage(pageId)?.name) || "another page",
+            });
+            if (said) setNotice(said);
+          }
+        },
+        { scope: "document" },
+      ),
+    [editor],
+  );
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(""), 3500);
@@ -1380,8 +1406,8 @@ function Shell() {
     </div>
   );
 }
-import { GeoShapeGeoStyle, PageRecordType, createShapeId } from "tldraw";
-const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil];
+import { GeoShapeGeoStyle, PageRecordType, createShapeId, react } from "tldraw";
+const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil, BoardImageShapeUtil];
 const TEXT_WRAP = 460;
 // One set of editor options: the page limit, and double-click writes a card rather than plain text.
 const editorOptions = { ...canvasOptions, createTextOnCanvasDoubleClick: false };
@@ -1475,6 +1501,19 @@ function App() {
       return { ...next, meta: { ...next.meta, updatedAt: Date.now() } };
     });
     window.paired = createBridge(editor);
+    // Images from before boards kept them: copy them into the board so the next save carries
+    // them. Done once sync is listening (after a save or load), so the copy is itself saved;
+    // a board with no account gets it after a few seconds. A no-op when there is nothing to move.
+    let moving = false;
+    const moveImages = () => {
+      if (moving) return;
+      moving = true;
+      void moveLocalImagesIntoBoard(editor).finally(() => (moving = false));
+    };
+    const stopImageMove = react("move older images into the board", () => {
+      if (boardSync.get().state === "saved") moveImages();
+    });
+    const imageMoveTimer = setTimeout(moveImages, 8000);
     if (import.meta.env.DEV) window.__pairedEditor = editor;
     setAgentEditor(editor);
     const page = editor.getCurrentPage();
@@ -1494,6 +1533,40 @@ function App() {
         editor.updateShape({ id: shape.id, type: "text", props: { w: TEXT_WRAP } });
     });
     editor.sideEffects.registerAfterChangeHandler("shape", (_previous, next) => wrapText(next));
+    // What the person moves takes its comments, notes and replies along (same step, same undo).
+    // Undo, redo and a cancelled drag (bail) restore followers from history themselves, so
+    // following pauses while they run.
+    let replaying = false;
+    for (const name of ["undo", "redo", "bail", "bailToMark"] as const) {
+      const original = editor[name].bind(editor) as (...args: unknown[]) => Editor;
+      (editor as unknown as Record<string, unknown>)[name] = (...args: unknown[]) => {
+        replaying = true;
+        try {
+          return original(...args);
+        } finally {
+          replaying = false;
+        }
+      };
+    }
+    editor.sideEffects.registerAfterChangeHandler("shape", (previous, next) => {
+      if (replaying) return;
+      const dx = next.x - previous.x, dy = next.y - previous.y;
+      if ((!dx && !dy) || previous.parentId !== next.parentId) return;
+      const selected = new Set<string>(editor.getSelectedShapeIds());
+      if (!selected.has(next.id)) return;
+      // A frame or group carries its subtree: comments on its children follow, and nothing
+      // inside it (say a comment about the frame placed in the frame) is moved a second time.
+      const subtree = [...editor.getShapeAndDescendantIds([next.id])] as string[];
+      const ids = followers(subtree, editor.getCurrentPageShapes(), new Set([...selected, ...subtree]));
+      if (!ids.length) return;
+      editor.updateShapes(
+        ids.flatMap((id) => {
+          const s = editor.getShape(id as TLShape["id"]);
+          return s && !s.isLocked ? [{ id: s.id, type: s.type, x: s.x + dx, y: s.y + dy }] : [];
+        }),
+      );
+    });
+    followConnectors(editor);
     // Double-click the empty board to write a thought: a pink card, already in typing mode.
     const writeOnDoubleClick = (info: { type: string; name?: string; phase?: string; target?: string }) => {
       if (info.type !== "click" || info.name !== "double_click" || info.phase !== "up" || info.target !== "canvas") return;
@@ -1547,6 +1620,8 @@ function App() {
       editor.off("event", writeOnDoubleClick);
       delete window.paired;
       delete window.__pairedEditor;
+      stopImageMove();
+      clearTimeout(imageMoveTimer);
     };
   }
   return (
@@ -1555,6 +1630,7 @@ function App() {
         <Tldraw
           licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
           persistenceKey="picabird-canvas-v1"
+          assets={boardImageStore}
           shapeUtils={scratchShapes}
           getShapeVisibility={learningVisibility}
           tools={scratchTools}
