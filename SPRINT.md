@@ -166,7 +166,7 @@ task by which measure is furthest from target, not by backlog order.
     `packages/canvas/eval/tasks/`, each with a machine-checked end state, a runner that sets each
     one up in a real tab, and a recorded attempt by a fresh agent that has only `AGENT_API.md` and
     the tools. Done when the scorecard reports a completion rate and median tool calls.
-19. (Part 1 PR #32 open, awaiting review: restore and history API, no UI. Part 2, the entry point, waits for #21 so it lands in the calm menu.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
+19. (Part 1 PR #32 and part 2 PR #35, stacked, open and awaiting review: restore from Menu → Earlier versions. Part 3, listing and opening other server boards, not started.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
     their boards, open one, and restore an earlier revision from the canvas.
 21. (Merged, see Done.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
@@ -317,3 +317,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T11:03Z | build-B | 19 Board history, part 1 | #32 | `restore(revision)` without losing work; dev store serves revisions; checked in a real tab and a clean profile |
 | 2026-11-26T11:04Z | build-B | 27 Group operation | #33 | Guarded frame grouping; live HTTP and MCP check (`tools/verify-group.cjs`); root build and test green with services |
 | 2026-11-26T11:07Z | build-B | 29 Say why stale | #34 | Stale flag names the root cause and path, with tooltip and aria-label; before/after screenshots |
+| 2026-11-26T11:11Z | build-B | 19 Board history, part 2 | #35 | Menu → Earlier versions lists and restores revisions; first screen unchanged except the clock; checked at 1440 and 390 px |
