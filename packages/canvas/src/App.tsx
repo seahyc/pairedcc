@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Tldraw,
   useEditor,
@@ -77,6 +77,7 @@ import {
 } from "./scratchbook";
 import { richTextPlain } from "./operations";
 import { canvasOptions } from "./canvas-options";
+import { layerTree } from "./layer-tree";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
@@ -330,6 +331,8 @@ function Shell() {
   const importRef = useRef<HTMLInputElement>(null),
     imageRef = useRef<HTMLInputElement>(null);
   const shape = selected.length === 1 ? selected[0] : undefined;
+  const tree = useMemo(() => layerTree(shapes), [shapes]);
+  const selectedIds = useMemo(() => new Set(selected.map((s) => s.id)), [selected]);
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       const target = event.target;
@@ -579,16 +582,15 @@ function Shell() {
     return editor.isShapeHidden(s) ? "Hidden until you answer" : shapeName(s);
   }
   function layerRows(parentId: string, depth = 0): React.ReactNode {
-    return shapes
-      .filter((s) => s.parentId === parentId)
-      .reverse()
+    return tree
+      .childrenOf(parentId)
       .map((s) => {
-        const children = shapes.some((c) => c.parentId === s.id),
+        const children = tree.hasChildren(s.id),
           isCollapsed = collapsed.has(s.id);
         return (
           <React.Fragment key={s.id}>
             <div
-              className={`layer ${selected.some((t) => t.id === s.id) ? "selected" : ""}`}
+              className={`layer ${selectedIds.has(s.id) ? "selected" : ""}`}
               style={{ paddingLeft: 12 + depth * 16 }}
             >
               {children ? (
