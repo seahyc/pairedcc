@@ -87,6 +87,8 @@ pnpm build:canvas   # from the repository root: type check and production build
 pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents every tool
 ```
 
+`tools/verify-csv-faithful.mjs <screenshot dir> [origin]` checks that a CSV dropped on the data prototype keeps what the file says: a non-UTF-8 file is refused with a fix, long IDs stay text, a quoted empty value keeps its row.
+
 `tools/verify-calm.mjs` drives a fresh browser profile through the whole loop (first load, long text in a card, plain text, a comment and a 300-word paste, an ask answered by the resident agent, the no-agent state, pick, cross out, comment, the queue, reload, an older saved board) and saves screenshots. Playwright is not a dependency here; run it from a directory where it is installed:
 
 ```sh

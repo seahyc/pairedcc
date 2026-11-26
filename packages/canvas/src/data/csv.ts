@@ -14,26 +14,27 @@ export const isCsvFile = (file: { name: string; type: string }) => file.type ===
 
 /** RFC 4180 records: quoted fields may hold commas, newlines and doubled quotes. */
 function records(text: string): { rows: { cells: string[]; line: number }[]; unclosedAt?: number } {
-  const rows: { cells: string[]; line: number }[] = [];
-  let cells: string[] = [], cell = "", quoted = false, line = 1, start = 1, quoteLine = 0;
+  // `wasQuoted` tells a row holding one quoted empty value ("") from a blank line.
+  const rows: { cells: string[]; line: number; wasQuoted?: boolean }[] = [];
+  let cells: string[] = [], cell = "", quoted = false, line = 1, start = 1, quoteLine = 0, wasQuoted = false;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (quoted) {
       if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
       else if (c === '"') quoted = false;
       else { if (c === "\n") line++; cell += c; }
-    } else if (c === '"' && cell === "") { quoted = true; quoteLine = line; }
+    } else if (c === '"' && cell === "") { quoted = true; quoteLine = line; wasQuoted = true; }
     else if (c === ",") { cells.push(cell); cell = ""; }
     else if (c === "\n" || c === "\r") {
       if (c === "\r" && text[i + 1] === "\n") i++;
       cells.push(cell);
-      rows.push({ cells, line: start });
-      cells = []; cell = ""; line++; start = line;
+      rows.push({ cells, line: start, wasQuoted });
+      cells = []; cell = ""; line++; start = line; wasQuoted = false;
     } else cell += c;
   }
   if (quoted) return { rows, unclosedAt: quoteLine };
-  if (cell !== "" || cells.length) { cells.push(cell); rows.push({ cells, line: start }); }
-  return { rows: rows.filter((r) => !(r.cells.length === 1 && r.cells[0].trim() === "")) };
+  if (cell !== "" || cells.length || wasQuoted) { cells.push(cell); rows.push({ cells, line: start, wasQuoted }); }
+  return { rows: rows.filter((r) => r.wasQuoted || !(r.cells.length === 1 && r.cells[0].trim() === "")) };
 }
 
 /** Locate a schema problem in the file's terms: rows count from the header as row 1. */
@@ -44,7 +45,44 @@ function where(issue: { path: PropertyKey[]; message: string }) {
   return issue.message;
 }
 
-const numeric = (v: string) => v.trim() !== "" && Number.isFinite(Number(v));
+/**
+ * A value counts as a number only if a number can hold it exactly enough: an integer must be a
+ * safe integer (long IDs beyond 2^53 would round and merge), and a decimal at most 15
+ * significant digits. Anything else stays text, as the file wrote it.
+ */
+const numeric = (v: string) => {
+  const t = v.trim();
+  if (t === "" || !Number.isFinite(Number(t))) return false;
+  if (/^[-+]?\d+$/.test(t)) return Number.isSafeInteger(Number(t));
+  const mantissa = /^[-+]?(\d*)\.?(\d*)(?:e[-+]?\d+)?$/i.exec(t);
+  if (!mantissa) return true; // hex, binary and similar notations: see Decisions needed (item 13)
+  return (mantissa[1] + mantissa[2]).replace(/^0+/, "").length <= 15;
+};
+
+/** Line (from 1) of the first byte that is not valid UTF-8, or 0 when all of it is. */
+function firstBadLine(bytes: Uint8Array) {
+  let line = 1;
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i];
+    if (b === 0x0a) line++;
+    if (b < 0x80) continue;
+    const extra = b >= 0xf0 && b <= 0xf4 ? 3 : b >= 0xe0 ? 2 : b >= 0xc2 && b < 0xe0 ? 1 : -1;
+    if (extra < 0 || i + extra >= bytes.length) return line;
+    for (let k = 1; k <= extra; k++) if ((bytes[i + k] & 0xc0) !== 0x80) return line;
+    i += extra;
+  }
+  return 0;
+}
+
+/** The file's text, read strictly as UTF-8: a file in another encoding is refused with a fix, not mangled. */
+export function decodeCsv(bytes: Uint8Array): { ok: true; text: string } | { ok: false; errors: string[] } {
+  try {
+    return { ok: true, text: new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes) };
+  } catch {
+    const line = firstBadLine(bytes);
+    return { ok: false, errors: [`It is not UTF-8 text (an accented letter or symbol${line ? ` near line ${line}` : ""} cannot be read). Save it again as “CSV UTF-8” and drop it again.`] };
+  }
+}
 
 export function parseCsv(text: string, fileName: string): CsvResult {
   const parsed = records(text.replace(/^﻿/, ""));
@@ -83,7 +121,12 @@ export function parseCsv(text: string, fileName: string): CsvResult {
  * any file was not.
  */
 export async function importCsvFiles(editor: Editor, files: readonly File[], point: { x: number; y: number }) {
-  const results = await Promise.all(files.map(async (f) => ({ file: f, result: parseCsv(await f.text(), f.name) })));
+  const results = await Promise.all(
+    files.map(async (f) => {
+      const decoded = decodeCsv(new Uint8Array(await f.arrayBuffer()));
+      return { file: f, result: decoded.ok ? parseCsv(decoded.text, f.name) : ({ ok: false, errors: decoded.errors } as CsvResult) };
+    }),
+  );
   const created: TLShapeId[] = [];
   const messages: string[] = [];
   editor.markHistoryStoppingPoint("import csv");
