@@ -66,7 +66,9 @@ export function retryAsk(editor: Editor, id: string) {
   if (shape.meta.status === "resolved") resolveMark(editor, editor.getShape(shape.id)!, "open", HUMAN);
 }
 
-type Given = { id: string; type: string; author: string; text: string; mark?: AskMark };
+type Given = { id: string; type: string; author: string; text: string; mark?: AskMark; inside?: Given[]; insideMore?: number };
+/** How many of a selected frame's objects an ask gives, in reading order. */
+export const INSIDE_LIMIT = 20;
 const given = (s: TLShape, max = 2000): Given => {
   const mark = markOf(s.meta);
   return { id: s.id, type: s.type, author: authorOf(s), text: clip(textOf(s) || `(${shapeName(s)}, no text)`, max), ...(mark ? { mark } : {}) };
@@ -75,6 +77,27 @@ const said = (s: TLShape, max: number): HistoryEntry => {
   const mark = markOf(s.meta);
   return { id: s.id, who: authorOf(s), said: clip(textOf(s), max), ...(mark ? { mark } : {}) };
 };
+
+/**
+ * What a selected frame holds, nested frames included: the person put these together, so an
+ * ask about the frame is about them. Reading order (top to bottom, then left to right).
+ */
+const media = new Set(["image", "video", "bookmark", "embed"]);
+function inside(editor: Editor, frame: TLShape, skip: Set<string>) {
+  const found: TLShape[] = [];
+  const walk = (id: TLShapeId) => {
+    for (const childId of editor.getSortedChildIdsForParent(id)) {
+      const child = editor.getShape(childId);
+      if (!child || skip.has(child.id) || child.type === "arrow" || askOf(child)) continue;
+      if (child.type === "frame" || child.type === "group") walk(child.id);
+      if (textOf(child) || media.has(child.type)) found.push(child);
+    }
+  };
+  walk(frame.id);
+  const at = (s: TLShape) => editor.getShapePageBounds(s) ?? { x: 0, y: 0 };
+  found.sort((a, b) => at(a).y - at(b).y || at(a).x - at(b).x);
+  return { inside: found.slice(0, INSIDE_LIMIT).map((s) => given(s, 400)), more: Math.max(0, found.length - INSIDE_LIMIT) };
+}
 
 /** The exchange that led here, oldest first, when the human asks about an agent's answer. */
 function thread(editor: Editor, shape: TLShape, depth = 0, seen = new Set<string>()): HistoryEntry[] {
@@ -118,7 +141,11 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     ...(ask.error ? { error: ask.error } : {}),
     pageId: page?.id,
     pageName: page?.name,
-    targets: targets.map((t) => given(t)),
+    targets: targets.map((t) => {
+      if (t.type !== "frame") return given(t);
+      const held = inside(editor, t, skip);
+      return { ...given(t), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
+    }),
     history: mergeHistory(targets.flatMap((t) => thread(editor, t)), targets.map((t) => t.id)),
     ...(frame
       ? {

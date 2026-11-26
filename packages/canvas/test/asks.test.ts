@@ -187,3 +187,32 @@ describe("asks carry the person's picks and cross-outs", () => {
     expect(systemPrompt).toContain("Do not offer again what they crossed out");
   });
 });
+
+describe("an ask about a frame is about what it holds", () => {
+  const ask = {
+    question: "What do these have in common?",
+    targets: [
+      {
+        id: "shape:f", type: "frame", author: "Human", text: "(Pricing, no text)",
+        inside: [
+          { id: "shape:1", type: "card", author: "Human", text: "Per seat" },
+          { id: "shape:2", type: "card", author: "Claude", text: "Per post", mark: "rejected" as const },
+        ],
+        insideMore: 3,
+      },
+    ],
+  };
+  it("lists the frame's objects under it, with marks and what was left out", () => {
+    const prompt = buildPrompt(ask);
+    expect(prompt).toContain('- the frame "Pricing", which holds:');
+    expect(prompt).toContain('  - card by the person: """Per seat"""');
+    expect(prompt).toContain('  - card by Claude (an agent), which the person crossed out: """Per post"""');
+    expect(prompt).toContain("  - and 3 more not shown");
+    expect(prompt).not.toContain("no text");
+    expect(readingNote(ask)).toBe("reading 3 objects");
+  });
+  it("says so when the frame holds nothing with text", () => {
+    const empty = { question: "?", targets: [{ id: "shape:f", type: "frame", author: "Human", text: "(Ideas, no text)", inside: [] }] };
+    expect(buildPrompt(empty)).toContain('- the frame "Ideas", which holds nothing with text.');
+  });
+});

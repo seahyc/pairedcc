@@ -174,7 +174,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_asks",
     op: "asks",
     description:
-      "List the human's asks: questions they put to an agent about objects they selected. Each has id, question, state (waiting, working, answered, failed), the selected `targets` with their text and author, the `frame` they sit in with its other objects, and `history` when the ask follows an earlier answer (with the other options that answer offered). Any of these carries `mark` (picked or rejected) where the person picked or crossed it out: build on picks and do not offer crossed-out ideas again. That is the whole context the human sees on the ask; answer from it. Defaults to waiting asks.",
+      "List the human's asks: questions they put to an agent about objects they selected. Each has id, question, state (waiting, working, answered, failed), the selected `targets` with their text and author (a selected frame lists what it holds in `inside`), the `frame` they sit in with its other objects, and `history` when the ask follows an earlier answer (with the other options that answer offered). Any of these carries `mark` (picked or rejected) where the person picked or crossed it out: build on picks and do not offer crossed-out ideas again. That is the whole context the human sees on the ask; answer from it. Defaults to waiting asks.",
     input: asksInput.shape,
     output: "json",
   },

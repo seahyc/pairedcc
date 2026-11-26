@@ -16,7 +16,7 @@ Reply with one JSON object and nothing else:
 {"read":"<what you read, under 12 words, e.g. 'your card on pricing and the frame Pricing'>","kind":"answer"|"alternatives"|"question","text":"<for answer or question>","alternatives":["<for alternatives>"]}`;
 
 type Mark = "picked" | "rejected";
-type Given = { id: string; type: string; author: string; text: string; mark?: Mark };
+type Given = { id: string; type: string; author: string; text: string; mark?: Mark; inside?: Given[]; insideMore?: number };
 export type AskForPrompt = {
   question: string;
   targets: Given[];
@@ -28,6 +28,9 @@ const who = (author: string) => (author === "Human" ? "the person" : `${author} 
 const judged = (mark?: Mark) => (mark === "picked" ? ", which the person picked" : mark === "rejected" ? ", which the person crossed out" : "");
 const judgedAfter = (mark?: Mark) => (mark === "picked" ? " (the person picked this)" : mark === "rejected" ? " (the person crossed this out)" : "");
 
+/** A frame's name from how the canvas gives an object with no text: "(Pricing, no text)". */
+const frameName = (t: Given) => t.text.replace(/^\((.*), no text\)$/, "$1");
+
 /** The whole context for one ask. Nothing else is sent. */
 export function buildPrompt(ask: AskForPrompt) {
   const lines: string[] = [];
@@ -37,7 +40,16 @@ export function buildPrompt(ask: AskForPrompt) {
     lines.push("");
   }
   lines.push(ask.targets.length === 1 ? "Selected object:" : `Selected objects (${ask.targets.length}):`);
-  for (const t of ask.targets) lines.push(`- ${t.type} written by ${who(t.author)}${judged(t.mark)}: """${t.text}"""`);
+  for (const t of ask.targets) {
+    if (!t.inside) {
+      lines.push(`- ${t.type} written by ${who(t.author)}${judged(t.mark)}: """${t.text}"""`);
+      continue;
+    }
+    // A selected frame is what the person put together: the ask is about everything in it.
+    lines.push(`- the frame "${frameName(t)}"${judged(t.mark)}, which holds${t.inside.length ? ":" : " nothing with text."}`);
+    for (const o of t.inside) lines.push(`  - ${o.type} by ${who(o.author)}${judged(o.mark)}: """${o.text}"""`);
+    if (t.insideMore) lines.push(`  - and ${t.insideMore} more not shown`);
+  }
   if (ask.frame) {
     lines.push("", `They sit in the frame "${ask.frame.name}"${ask.frame.objects.length ? ", which also holds:" : "."}`);
     for (const o of ask.frame.objects) lines.push(`- ${o.type} by ${who(o.author)}${judged(o.mark)}: """${o.text}"""`);
@@ -72,6 +84,6 @@ export function parseReply(raw: string): AgentReply {
 
 /** One line for the ask's status: what the agent was given. */
 export function readingNote(ask: AskForPrompt) {
-  const n = ask.targets.length + (ask.history?.length ?? 0);
+  const n = ask.targets.reduce((sum, t) => sum + 1 + (t.inside?.length ?? 0), 0) + (ask.history?.length ?? 0);
   return `reading ${n === 1 ? "1 object" : `${n} objects`}${ask.frame ? ` and the frame "${ask.frame.name}"` : ""}`;
 }
