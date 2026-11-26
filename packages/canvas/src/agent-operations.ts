@@ -13,6 +13,8 @@ import {
   connectionInput,
   imageInput,
   resolveInput,
+  feedbackInput,
+  replyInput,
   type CanvasCommand,
 } from "./protocol";
 import {
@@ -26,7 +28,8 @@ import {
 import { createPrompt } from "./learning/prompt-shape";
 import { overview } from "./overview";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell } from "./data/agent";
-import { agentStyle, collectMarks, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
+import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
+import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
 
 const cardInput = z.object({
   x: z.number().finite(),
@@ -279,6 +282,93 @@ export function annotateObject(editor: Editor, value: unknown) {
   });
   return describeObject(editor, id);
 }
+type Rect = { x: number; y: number; w: number; h: number };
+const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+/** Nudge a new card down until it no longer sits on top of something else. */
+function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set()) {
+  const others = editor
+    .getCurrentPageShapes()
+    .filter((s) => s.type !== "frame" && s.type !== "arrow" && !ignore.has(s.id))
+    .flatMap((s) => editor.getShapePageBounds(s) ?? []);
+  const spot = { ...box };
+  for (let i = 0; i < 12 && others.some((o) => hits(spot, o)); i++) spot.y += 28;
+  return spot;
+}
+
+/**
+ * The human's comment: a pink handwritten card pinned to the selected objects (with an
+ * arrow to each) or to a spot on the board. It joins the feedback queue as an open item.
+ */
+export function createComment(editor: Editor, value: { targetIds?: string[]; x?: number; y?: number; text?: string }) {
+  const targets = (value.targetIds ?? []).map((id) => find(editor, id));
+  let x = value.x ?? 0, y = value.y ?? 0;
+  if (targets.length) {
+    const boxes = targets.flatMap((t) => editor.getShapePageBounds(t) ?? []);
+    if (!boxes.length) throw new Error("Target must have bounds");
+    const right = Math.max(...boxes.map((b) => b.maxX)), top = Math.min(...boxes.map((b) => b.y));
+    const spot = freeSpot(editor, { x: right + 56, y: top, w: 240, h: 72 }, new Set(targets.map((t) => t.id)));
+    x = spot.x;
+    y = spot.y;
+  }
+  const meta = {
+    name: "Feedback",
+    role: "annotation",
+    status: "open",
+    author: HUMAN,
+    ...(targets.length ? { targetId: targets[0].id, targetIds: targets.map((t) => t.id) } : {}),
+  };
+  let id = createShapeId();
+  return atomic(editor, "add comment", () => {
+    id = createCard(editor, { x, y, text: value.text ?? "" }, HUMAN, meta);
+    for (const target of targets) connect(editor, { fromId: id, toId: target.id, relation: "feedback" }, HUMAN);
+    return id;
+  });
+}
+
+/** An agent's answer to a feedback item, placed directly under it (and under earlier replies). */
+export function replyToFeedback(editor: Editor, value: unknown, actor: string) {
+  const input = replyInput.parse(value);
+  const item = collectFeedback(editor).find((i) => i.id === input.id);
+  if (!item) throw new Error("Not a feedback item. Use ids from the feedback operation.");
+  if (item.pageId !== editor.getCurrentPageId())
+    throw new Error(`That item is on page "${item.pageName}". Ask the human to open that page, then reply.`);
+  const anchor = editor.getShapePageBounds(find(editor, input.id));
+  if (!anchor) throw new Error("Feedback item has no bounds");
+  let bottom = anchor.maxY;
+  for (const reply of item.replies) {
+    const shape = editor.getShape(reply.id as TLShape["id"]);
+    const bounds = shape && editor.getShapePageBounds(shape);
+    if (bounds) bottom = Math.max(bottom, bounds.maxY);
+  }
+  const id = atomic(editor, "reply to feedback", () =>
+    createCard(editor, { x: anchor.x + 14, y: bottom + 10, width: 300, text: input.text }, actor, {
+      name: "Reply",
+      role: "annotation",
+      status: "open",
+      author: actor,
+      targetId: input.id,
+      replyTo: input.id,
+    }),
+  );
+  return { reply: describeObject(editor, id), item: collectFeedback(editor).find((i) => i.id === input.id) };
+}
+
+/** The whole feedback queue in one call: comments, picks, rejects and ink, with replies. */
+export function readFeedback(editor: Editor, value: unknown = {}) {
+  const input = feedbackInput.parse(value);
+  const all = collectFeedback(editor, { allPages: input.allPages });
+  const items = filterFeedback(all, input.status);
+  const title = editor.getPages().map((p) => p.name).join(", ");
+  return {
+    board: { currentPageId: editor.getCurrentPageId(), pages: editor.getPages().map((p) => ({ id: p.id, name: p.name })) },
+    counts: feedbackCounts(all),
+    items,
+    notes: collectLooseNotes(editor),
+    ...(input.format === "markdown" ? { markdown: feedbackMarkdown(items, { title, exportedAt: new Date() }) } : {}),
+  };
+}
+
 export function readCanvas(editor: Editor, value: unknown = {}) {
   const input = readInput.parse(value);
   const objects = editor
@@ -455,14 +545,20 @@ export async function executeCommand(
         author: actor,
       });
     case "resolve": {
+      // Marks on other pages can be resolved too: the queue spans the board.
       const input = resolveInput.parse(command.input),
-        s = find(editor, input.id);
+        s = editor.getShape(input.id as TLShape["id"]);
+      if (!s) throw new Error(`Object not found: ${input.id}`);
       if (s.isLocked) throw new Error("Unlock the mark before editing it");
       if (revision(s) !== input.expectedRevision)
         throw new Error("Mark changed. Read it before updating.");
       resolveMark(editor, s, input.status, actor);
-      return describeObject(editor, s.id);
+      return describeObject(editor, s.id) ?? { id: s.id, revision: revision(editor.getShape(s.id) ?? s) };
     }
+    case "feedback":
+      return readFeedback(editor, command.input ?? {});
+    case "reply":
+      return replyToFeedback(editor, command.input, actor);
     case "remove": {
       const input = z
           .object({

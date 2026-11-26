@@ -14,7 +14,7 @@ node /Users/yingcong/Code/tools/pairedcc/packages/canvas/node_modules/tsx/dist/c
 
 Set `PAIRED_SESSION` to target a particular tab. Its ID persists across reloads in that tab's session storage. `canvas_sessions` lists connections. If several are open, requests without a session ID fail rather than selecting a canvas arbitrarily.
 
-Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
+Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_feedback`, `canvas_reply`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
 
 Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
 
@@ -37,7 +37,7 @@ Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
 
 Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists recent runs, newest first, with the object IDs each run created, updated and removed. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
 
-The undo is all-or-nothing. If the human or a later run has changed a field the run set, edited an object the run created, deleted an object the run changed, or locked one, nothing is changed and the error names each conflicting object and field. Undo the later run first, or leave it. The canvas's own derived values (the revision counter and auto-sized card height) do not count as conflicts.
+The undo is all-or-nothing. If the human or a later run has changed a field the run set, edited an object the run created, deleted an object the run changed, or locked one, nothing is changed and the error names each conflicting object and field. Undo the later run first, or leave it. The canvas's own derived values (the revision counter, the text-edit timestamp and auto-sized card height) do not count as conflicts.
 
 The run ledger lives in the open tab's memory. It holds the last 100 runs and is cleared on reload. An agent undo is also a step in the shared tldraw history, so the human's Cmd+Z straight after it re-applies the run.
 
@@ -55,6 +55,45 @@ The canvas uses Thariq's scratchbook visual language, so authorship shows at a g
 Suggested loop: read back how you understood the mark, propose captioned options, give your view, ask numbered questions, say how to answer, then post a "Done: …" note and resolve the marks you addressed.
 
 `tools/demo-scratchbook.ts build` creates a demo page: three definitions of "paying hirer" with synthetic data. Pick and reject in the browser, then run `close` to post the Done note and resolve every open mark.
+
+### The feedback queue
+
+Everything the human marks goes into one queue that spans every page: comments (C on a selection, or pinned to a spot on the board), picks (P), rejects (X) and pen ink drawn over an object. The human sees it in the Feedback tab; agents read it in one call.
+
+```sh
+curl -s http://localhost:5183/api/canvas/command \
+  -H 'Content-Type: application/json' \
+  -d '{"requestId":"feedback-'$(date +%s)'","actor":"My agent","command":{"op":"feedback","input":{"status":"open","format":"markdown"}}}'
+```
+
+`feedback` takes `status` (`open`, `resolved` or `all`, the default), `allPages` (default true) and `format` (`markdown` adds a readable `markdown` string). It returns `counts`, `items` and `notes`. Each item has:
+
+| Field | Meaning |
+|---|---|
+| `id`, `revision` | The mark's object: the comment card, the picked or rejected object, or the ink stroke. Pass both to `resolve`. |
+| `kind` | `comment`, `pick`, `reject` or `ink` |
+| `status` | `open` or `resolved`, with `resolvedBy` and `resolvedAt` once resolved |
+| `text` | The comment's text (empty for other kinds) |
+| `author` | Always the human; agent notes are never queue items |
+| `targetIds`, `targets` | What it is about, with each target's type, name and text. Empty for a comment pinned to the board. |
+| `position`, `bounds` | Where the mark sits in page space |
+| `pageId`, `pageName` | The page it is on |
+| `createdAt`, `updatedAt` | ISO times; absent on marks made before timestamps were recorded |
+| `replies` | Agent answers attached to the item: `id`, `author`, `text`, `createdAt` |
+
+`notes` lists other things the human wrote on the board (plain notes and text) since timestamps were recorded, so nothing typed during a session is missed.
+
+`reply` (`id`, `text`) puts your answer directly under the item and threads it in the queue. The item must be on the open page. `resolve` closes an item on any page and records who closed it; the human can reopen it. Use a fresh `requestId` for every read: a repeated ID returns the earlier result.
+
+To print the queue from every open tab without writing a request:
+
+```sh
+pnpm --filter @pairedcc/canvas feedback          # Markdown
+pnpm --filter @pairedcc/canvas feedback --json   # items, counts and notes
+pnpm --filter @pairedcc/canvas feedback --open   # open items only
+```
+
+`read` still returns `marks` and `annotations` for the open page; `feedback` is the fuller, board-wide view.
 
 ### Compose an exploration
 
@@ -133,7 +172,9 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `image` | `src` (base64 image data URL), `x`, `y`, `width`, `height`, optional name, sourceUrl, isAnimated, caption |
 | `connect` | `fromId`, `toId`, optional relation (reference, alternative, derived-from, feedback), label |
 | `annotate` | `targetId`, `text`, optional position; creates a targeted note and bound connector |
-| `resolve` | Mark `id` (feedback note, picked/rejected object or ink stroke), `expectedRevision`, `status` (open or resolved) |
+| `resolve` | Mark `id` (feedback note, picked/rejected object or ink stroke), `expectedRevision`, `status` (open or resolved); works on any page |
+| `feedback` | Optional `status`, `allPages`, `format`; returns the board-wide feedback queue with replies |
+| `reply` | Feedback item `id`, `text`; places an agent answer under the item |
 | `remove` | `id`, `expectedRevision`; locked objects cannot be removed |
 | `select` | `ids` |
 | `focus` | Optional `ids`; fits the selected objects or current page |
@@ -173,6 +214,9 @@ Checks that use a real open browser and clean up their temporary objects:
 PAIRED_SESSION=your-session-id node --import tsx tools/verify-api.ts
 PAIRED_SESSION=your-session-id node --import tsx tools/verify-mcp.ts
 PAIRED_SESSION=your-session-id node --import tsx tools/verify-composition.ts
+PAIRED_SESSION=your-session-id node --import tsx tools/verify-feedback-mcp.ts
 ```
+
+The feedback check needs an open comment on the board (press C). It reads the queue over MCP, replies, resolves and reopens, and leaves its reply on the board.
 
 The HTTP check covers live read/create/update, retry deduplication, conflicting retries, stale writes and origin rejection. The MCP check launches a real stdio client/server and exercises all three composition tools as well as image insertion, asset retrieval and PNG rendering. The composition check covers frame-relative coordinates, styling, duplication, page-space layout and rejection of stale layouts/invalid scenes. Checks remove their fixtures.

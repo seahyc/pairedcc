@@ -7,11 +7,14 @@ const requestSchema = envelopeSchema.extend({ id: z.string() });
 type Reply = (message: { id: string; ok: boolean; result?: unknown; error?: string }) => void;
 
 export type AgentLink =
-  | { mode: "local" }
+  | { mode: "local"; state?: "connected" | "disconnected" }
   | { mode: "hosted"; state: "signed-out" | "connecting" | "connected"; email?: string };
 
 /** Current agent connection, for the Agent access panel. */
 export const agentLink = atom<AgentLink>("agent link", { mode: "hosted", state: "signed-out" });
+
+/** The last thing an agent did on this canvas, for the status chip in the top bar. */
+export const agentActivity = atom<{ actor: string; op: string; at: number; ok: boolean; error?: string } | null>("agent activity", null);
 
 function sessionId() {
   const id = sessionStorage.getItem("picabird-agent-session") ?? crypto.randomUUID();
@@ -35,11 +38,15 @@ function commandRunner(editor: Editor, session: string, isClosed: () => boolean)
       if (seen.size > 500) seen.delete(seen.keys().next().value!);
     }
     void work
-      .then((result) => !isClosed() && reply({ id, ok: true, result }))
-      .catch((error) =>
-        !isClosed() &&
-        reply({ id, ok: false, error: error instanceof Error ? error.message : "Canvas operation failed" }),
-      );
+      .then((result) => {
+        agentActivity.set({ actor, op: command.op, at: Date.now(), ok: true });
+        if (!isClosed()) reply({ id, ok: true, result });
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : "Canvas operation failed";
+        agentActivity.set({ actor, op: command.op, at: Date.now(), ok: false, error: message });
+        if (!isClosed()) reply({ id, ok: false, error: message });
+      });
   };
 }
 
@@ -58,14 +65,20 @@ export function connectAgentAccess(editor: Editor, onChange: (link: AgentLink) =
     onChange({ mode: "local" });
     const hello = () => hot.send("paired:hello", { sessionId: session, title: document.title });
     const request = (raw: unknown) => run(raw, (message) => hot.send("paired:response", message));
+    const up = () => onChange({ mode: "local", state: "connected" });
+    const down = () => onChange({ mode: "local", state: "disconnected" });
     hot.on("paired:request", request);
+    hot.on("paired:connected", up);
     hot.on("vite:ws:connect", hello);
+    hot.on("vite:ws:disconnect", down);
     hello();
     return () => {
       hot.send("paired:bye", { sessionId: session });
       closed = true;
       hot.off("paired:request", request);
+      hot.off("paired:connected", up);
       hot.off("vite:ws:connect", hello);
+      hot.off("vite:ws:disconnect", down);
     };
   }
 

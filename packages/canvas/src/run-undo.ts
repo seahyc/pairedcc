@@ -33,9 +33,9 @@ export function documentDiff(diff: RunDiff): RunDiff {
 export const isEmptyDiff = (d: RunDiff) =>
   !Object.keys(d.added).length && !Object.keys(d.updated).length && !Object.keys(d.removed).length;
 
-/** Fields derived by the canvas rather than set by anyone (revision counter, auto-sized card height). */
+/** Fields derived by the canvas rather than set by anyone (revision counter, text-edit timestamp, auto-sized card height). */
 function ignored(rec: Rec, path: string) {
-  return path === "meta.revision" || (rec.type === "card" && path === "props.h");
+  return path === "meta.revision" || path === "meta.updatedAt" || (rec.type === "card" && path === "props.h");
 }
 
 function equal(a: unknown, b: unknown): boolean {

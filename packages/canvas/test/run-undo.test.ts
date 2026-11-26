@@ -14,6 +14,10 @@ describe("changed fields", () => {
   it("lists top-level, props and meta differences and ignores the revision counter", () => {
     expect(changedPaths(shape("a"), shape("a", { x: 5 }, { color: "red" }, { revision: 7, name: "n" })).sort()).toEqual(["meta.name", "props.color", "x"]);
   });
+  it("ignores the text-edit timestamp the canvas stamps on its own", () => {
+    expect(changedPaths(shape("a"), shape("a", {}, {}, { updatedAt: 1764148926000 }))).toEqual([]);
+    expect(changedPaths(shape("a"), shape("a", {}, { color: "red" }, { updatedAt: 1764148926000 }))).toEqual(["props.color"]);
+  });
   it("ignores auto-sized card height", () => {
     expect(changedPaths(shape("c", { type: "card" }), shape("c", { type: "card" }, { h: 140 }))).toEqual([]);
   });

@@ -9,6 +9,7 @@ import {
   DefaultFontStyle,
   serializeTldrawJson,
   parseTldrawJsonFile,
+  startEditingShapeWithRichText,
   type Editor,
   type TLShape,
   type TLComponents,
@@ -45,6 +46,8 @@ import {
   X,
   Bird,
   MessageSquarePlus,
+  MessagesSquare,
+  Keyboard,
 } from "lucide-react";
 import {
   createObject,
@@ -55,7 +58,8 @@ import {
   type CanvasBridge,
 } from "./operations";
 import { agentLink, connectAgentAccess } from "./agent-client";
-import { annotateObject } from "./agent-operations";
+import { createComment } from "./agent-operations";
+import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { isLegacySeed, seed } from "./seed";
 import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
 import { PromptShapeUtil, createLearningPrototypePage, learningPrototypeEnabled, learningVisibility } from "./learning/prompt-shape";
@@ -67,7 +71,10 @@ import {
   toggleMark,
   authorOf,
   humanStyle,
+  collectFeedback,
+  HUMAN,
 } from "./scratchbook";
+import { richTextPlain } from "./operations";
 import "tldraw/tldraw.css";
 import "./style.css";
 
@@ -220,10 +227,83 @@ function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void })
   );
 }
 
+const shortcutGroups: { title: string; rows: [string, string][] }[] = [
+  {
+    title: "Feedback",
+    rows: [
+      ["Comment on the selection, or pin one at the pointer", "C"],
+      ["Pick the selection (again to undo)", "P"],
+      ["Reject the selection (again to undo)", "X"],
+      ["Open or close the feedback queue", "Shift C"],
+      ["Finish typing", "Esc"],
+    ],
+  },
+  { title: "Tools", rows: tools.map((t) => [t.name, t.key] as [string, string]) },
+  {
+    title: "Move around",
+    rows: [
+      ["Pan", "Space + drag, or scroll"],
+      ["Zoom", "Pinch, or ⌘ scroll"],
+      ["Fit everything", "Shift 1"],
+      ["Fit selection", "Shift 2"],
+    ],
+  },
+  {
+    title: "Edit",
+    rows: [
+      ["Undo / redo", "⌘ Z / ⇧ ⌘ Z"],
+      ["Duplicate", "⌘ D"],
+      ["Select all", "⌘ A"],
+      ["Delete", "⌫"],
+      ["Edit text", "Double-click or Enter"],
+      ["Deselect, back to Move", "Esc"],
+      ["This list", "?"],
+    ],
+  },
+];
+
+function ShortcutHelp({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <section className="agent-dialog shortcut-dialog" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
+        <div className="dialog-heading">
+          <Keyboard size={18} />
+          <h2>Keyboard shortcuts</h2>
+          <IconButton label="Close shortcuts" onClick={onClose}>
+            <X size={17} />
+          </IconButton>
+        </div>
+        <p>
+          Pink is you, lavender with ✦ is your agent. Everything you comment on, pick or reject goes into one feedback queue that your agent reads and answers.
+        </p>
+        <div className="shortcut-grid">
+          {shortcutGroups.map((group) => (
+            <div key={group.title}>
+              <h3>{group.title}</h3>
+              <dl className="shortcuts">
+                {group.rows.map(([name, keys]) => (
+                  <div key={name}>
+                    <dt>{name}</dt>
+                    <dd>{keys}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function Shell() {
   const editor = useEditor();
-  const [feedbackTarget, setFeedbackTarget] = useState<string | null>(null);
-  const [feedbackText, setFeedbackText] = useState("");
+  const [rightTab, setRightTab] = useState<"properties" | "feedback">("properties");
+  const [helpOpen, setHelpOpen] = useState(false);
+  const openCount = useValue("open feedback", () => collectFeedback(editor).filter((i) => i.status === "open").length, [editor]);
+  const link = useValue("agent link", () => agentLink.get(), []);
+  const editingId = useValue("editing", () => editor.getEditingShapeId(), [editor]);
+  const pointer = useRef<{ x: number; y: number } | null>(null);
   const shapes = useValue("layers", () => editor.getCurrentPageShapesSorted(), [
     editor,
   ]);
@@ -240,7 +320,6 @@ function Shell() {
     redo = useValue("can redo", () => editor.getCanRedo(), [editor]);
   const [leftOpen, setLeftOpen] = useState(true),
     [agentOpen, setAgentOpen] = useState(false),
-    [saved] = useState("Stored on this device"),
     [notice, setNotice] = useState(""),
     [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const importRef = useRef<HTMLInputElement>(null),
@@ -291,6 +370,7 @@ function Shell() {
         return;
       }
       if (key === "escape") {
+        setHelpOpen(false);
         editor.cancel();
         editor.setCurrentTool("select");
         editor.selectNone();
@@ -311,22 +391,91 @@ function Shell() {
       )
         return;
       const key = event.key.toLowerCase();
-      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
-      if (key !== "p" && key !== "x") return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (editor.getEditingShapeId()) return;
+      // ? shows the shortcuts, C comments, Shift+C opens the feedback queue.
+      if (event.key === "?" || (key === "c" && !event.repeat)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (event.key === "?") setHelpOpen((open) => !open);
+        else if (event.shiftKey) setRightTab((tab) => (tab === "feedback" ? "properties" : "feedback"));
+        else addComment();
+        return;
+      }
+      if (event.shiftKey) return;
+      if (key !== "p" && key !== "x") return;
       const picked = editor.getSelectedShapes();
       if (!picked.length) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       toggleMark(editor, picked, key === "p" ? "picked" : "rejected");
     }
+    const track = (event: PointerEvent) => {
+      pointer.current = { x: event.clientX, y: event.clientY };
+    };
+    window.addEventListener("pointermove", track, { capture: true });
+    window.addEventListener("pointerdown", track, { capture: true });
     window.addEventListener("keydown", judge, { capture: true });
     window.addEventListener("keydown", keydown);
     return () => {
+      window.removeEventListener("pointermove", track, { capture: true });
+      window.removeEventListener("pointerdown", track, { capture: true });
       window.removeEventListener("keydown", judge, { capture: true });
       window.removeEventListener("keydown", keydown);
     };
   }, [editor]);
+  // A comment left empty is dropped when the human stops typing in it.
+  const lastEditing = useRef<string | null>(null);
+  useEffect(() => {
+    const previous = lastEditing.current;
+    lastEditing.current = editingId;
+    if (!previous || previous === editingId) return;
+    const left = editor.getShape(previous as never);
+    if (!left || left.meta.role !== "annotation" || authorOf(left) !== HUMAN) return;
+    if ("richText" in left.props && richTextPlain(left.props.richText).trim()) return;
+    const arrows = editor.getCurrentPageShapes().filter((a) => a.type === "arrow" && a.meta.fromId === left.id);
+    editor.deleteShapes([left.id, ...arrows.map((a) => a.id)]);
+  }, [editor, editingId]);
+  // A note dropped with a single click starts in typing mode, like one drawn by dragging.
+  const lastTool = useRef(currentTool);
+  useEffect(() => {
+    const previous = lastTool.current;
+    lastTool.current = currentTool;
+    if (previous !== "card" || currentTool !== "select") return;
+    const fresh = editor.getOnlySelectedShape();
+    if (!fresh || fresh.type !== "card" || editor.getEditingShapeId()) return;
+    if ("richText" in fresh.props && richTextPlain(fresh.props.richText).trim()) return;
+    startEditingShapeWithRichText(editor, fresh.id, { selectAll: true });
+  }, [editor, currentTool]);
+  /** C: comment on the selection, or pin a comment where the pointer is, and start typing. */
+  function addComment() {
+    try {
+      const targets = editor.getSelectedShapes().filter((s) => s.type !== "arrow");
+      let id: string;
+      if (targets.length) id = createComment(editor, { targetIds: targets.map((s) => s.id) });
+      else {
+        const at = pointer.current;
+        const overCanvas = at && !document.elementFromPoint(at.x, at.y)?.closest("aside,header,nav,.bottom-left,.zoom-controls,.modal-backdrop");
+        const point = at && overCanvas ? editor.screenToPage(at) : editor.getViewportPageBounds().center;
+        id = createComment(editor, { x: point.x - 12, y: point.y - 12 });
+      }
+      editor.setCurrentTool("select");
+      editor.select(id as never);
+      // Keep the new comment clear of the side panels and the edges of the window.
+      const box = editor.getShapePageBounds(id as never);
+      if (box) {
+        const from = editor.pageToScreen({ x: box.x, y: box.y }), to = editor.pageToScreen({ x: box.maxX, y: box.maxY });
+        const left = document.querySelector(".editor-chrome.left-closed") ? 70 : 300, right = window.innerWidth - 260, top = 64, bottom = window.innerHeight - 90;
+        const dx = to.x > right ? right - to.x : from.x < left ? left - from.x : 0;
+        const dy = to.y > bottom ? bottom - to.y : from.y < top ? top - from.y : 0;
+        const camera = editor.getCamera();
+        if (dx || dy) editor.setCamera({ x: camera.x + dx / camera.z, y: camera.y + dy / camera.z, z: camera.z }, { animation: { duration: 160 } });
+      }
+      startEditingShapeWithRichText(editor, id as never, { selectAll: true });
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Could not add a comment");
+    }
+  }
   const shapeColor =
     shape && "color" in shape.props ? shape.props.color : undefined;
   const bounds = shape ? editor.getShapePageBounds(shape) : undefined;
@@ -497,13 +646,11 @@ function Shell() {
           <span>Untitled exploration</span>
           <ChevronDown size={12} />
           <span className="local-badge">Local</span>
-          <MarksCounter />
+          <MarksCounter onOpen={() => setRightTab("feedback")} />
         </div>
         <div className="top-actions">
-          <span className="save-state">
-            <Check size={12} />
-            {saved}
-          </span>
+          <SaveState />
+          <AgentChip onOpen={() => setAgentOpen(true)} />
           <button className="subtle-button" onClick={() => setAgentOpen(true)}>
             <Braces size={14} /> Agent access
           </button>
@@ -606,16 +753,7 @@ function Shell() {
           </React.Fragment>
         ))}
         <div className="tool-divider" />
-        <IconButton
-          label="Add feedback to selection"
-          onClick={() => {
-            const target = editor.getOnlySelectedShape();
-            if (target) {
-              setFeedbackText("");
-              setFeedbackTarget(target.id);
-            } else setNotice("Select an object to attach feedback");
-          }}
-        >
+        <IconButton label="Comment on the selection, or on the board (C)" onClick={addComment}>
           <MessageSquarePlus size={18} />
         </IconButton>
         <IconButton
@@ -637,16 +775,18 @@ function Shell() {
         />
       </nav>
       <aside className="right-panel">
-        <div className="panel-tabs">
-          <SlidersHorizontal size={14} />
-          <span className="tab-current">Properties</span>
-          <span className="panel-caption">
-            {selected.length > 1
-              ? `${selected.length} objects`
-              : (shape?.type ?? "Page")}
-          </span>
+        <div className="panel-tabs right-tabs" role="tablist">
+          <button role="tab" aria-selected={rightTab === "properties"} className={rightTab === "properties" ? "tab-current" : "tab-other"} onClick={() => setRightTab("properties")}>
+            <SlidersHorizontal size={14} /> Properties
+          </button>
+          <button role="tab" aria-selected={rightTab === "feedback"} className={rightTab === "feedback" ? "tab-current" : "tab-other"} onClick={() => setRightTab("feedback")}>
+            <MessagesSquare size={14} /> Feedback
+            <span className={openCount ? "tab-count has-open" : "tab-count"}>{openCount}</span>
+          </button>
         </div>
-        {shape && bounds ? (
+        {rightTab === "feedback" ? (
+          <FeedbackPanel onNotice={setNotice} />
+        ) : shape && bounds ? (
           <>
             <div className="inspector-section">
               <label className="field-label" htmlFor="object-name">
@@ -868,8 +1008,20 @@ function Shell() {
               </div>
             )}
             <div className="inspector-section">
-              <div className="section-title">Navigation</div>
+              <div className="section-title">Shortcuts</div>
               <dl className="shortcuts">
+                <div>
+                  <dt>Comment</dt>
+                  <dd>C</dd>
+                </div>
+                <div>
+                  <dt>Pick / reject</dt>
+                  <dd>P / X</dd>
+                </div>
+                <div>
+                  <dt>All shortcuts</dt>
+                  <dd>?</dd>
+                </div>
                 <div>
                   <dt>Pan</dt>
                   <dd>Space + drag</dd>
@@ -966,57 +1118,21 @@ function Shell() {
         >
           <Maximize size={15} />
         </IconButton>
+        <IconButton label="Keyboard shortcuts (?)" onClick={() => setHelpOpen(true)}>
+          <Keyboard size={15} />
+        </IconButton>
       </div>
       {notice && (
         <div className="toast" role="status">
           {notice}
         </div>
       )}
-      {feedbackTarget && (
-        <div className="modal-backdrop" onClick={() => setFeedbackTarget(null)}>
-          <section
-            className="agent-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Add feedback"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="dialog-heading">
-              <MessageSquarePlus size={18} />
-              <h2>Feedback on this object</h2>
-              <IconButton
-                label="Close feedback"
-                onClick={() => setFeedbackTarget(null)}
-              >
-                <X size={17} />
-              </IconButton>
-            </div>
-            <textarea
-              autoFocus
-              className="feedback-input"
-              aria-label="Feedback"
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.currentTarget.value)}
-              placeholder="I like this direction. Try…"
-            />
-            <button
-              className="wide-button"
-              disabled={!feedbackText.trim()}
-              onClick={() => {
-                annotateObject(editor, {
-                  targetId: feedbackTarget,
-                  text: feedbackText,
-                  author: "Human",
-                });
-                setFeedbackTarget(null);
-                setFeedbackText("");
-              }}
-            >
-              Add to canvas
-            </button>
-          </section>
+      {link.mode === "local" && link.state === "disconnected" && (
+        <div className="link-banner" role="alert">
+          Lost the connection to the local server, so agents cannot reach this board. Your work is still saved here. It reconnects by itself; reload if it does not.
         </div>
       )}
+      {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
       {agentOpen && (
         <div className="modal-backdrop" onClick={() => setAgentOpen(false)}>
           <section
@@ -1156,6 +1272,15 @@ function App() {
         return { ...next, meta: { ...next.meta, revision: version } };
       },
     );
+    // Timestamps: when each object was made and when its text last changed.
+    editor.sideEffects.registerBeforeCreateHandler("shape", (shape, source) =>
+      source === "user" ? { ...shape, meta: { ...shape.meta, createdAt: Date.now() } } : shape,
+    );
+    editor.sideEffects.registerBeforeChangeHandler("shape", (previous, next, source) => {
+      if (source !== "user" || !("richText" in previous.props) || !("richText" in next.props)) return next;
+      if (previous.props.richText === next.props.richText) return next;
+      return { ...next, meta: { ...next.meta, updatedAt: Date.now() } };
+    });
     window.paired = createBridge(editor);
     setAgentEditor(editor);
     const page = editor.getCurrentPage();
@@ -1174,6 +1299,8 @@ function App() {
       if (legacy) editor.deleteShapes([...editor.getCurrentPageShapeIds()]);
       else if (editor.getCurrentPageShapes().length) return;
       seed(editor);
+      // Mark the welcome board's own objects, so its text is never mistaken for the human's notes.
+      editor.updateShapes(editor.getCurrentPageShapes().map((s) => ({ id: s.id, type: s.type, meta: { ...s.meta, seed: true } })));
       editor.updatePage({ id: page.id, meta: { ...editor.getCurrentPage().meta, seeded: 2 } });
     });
     setReady(true);

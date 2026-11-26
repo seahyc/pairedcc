@@ -7,7 +7,7 @@ import { documentDiff, isEmptyDiff, planUndo, runsInput, undoRunInput, type RunD
 // objects it created, changed or removed) so an agent, or the person, can undo that
 // run as a unit without undoing anything else. See ./run-undo.ts for the rules.
 
-const readOnly = new Set<CanvasCommand["op"]>(["read", "get", "overview", "screenshot", "select", "focus", "runs"]);
+const readOnly = new Set<CanvasCommand["op"]>(["read", "get", "overview", "feedback", "screenshot", "select", "focus", "runs"]);
 export type AgentRun = {
   runId: string;
   op: string;

@@ -141,7 +141,7 @@ export function seed(editor: Editor) {
   put(b, text(b.x, b.y, "Answer by marking the board (next page) or by writing on it.", { size: "s", color: "grey", w: INNER }), 10);
 
   // C: judgement without typing.
-  const c = column(2, "C", "judge with a pen, not a prompt", "Select something and press P to pick it or X to reject it. Or just circle it with the pen. Each mark goes to the agent's queue.");
+  const c = column(2, "C", "judge with a pen, not a prompt", "Select something and press P to pick it, X to reject it or C to comment on it. Or just circle it with the pen. Each mark goes to the agent's queue.");
   const names = ["Slow mornings, good coffee", "Artisanal beverage experiences", "The corner you come back to"];
   const firstY = c.y;
   const nameIds = names.map((n) => put(c, card(c.x, c.y, n, AGENT, 250), 26));
