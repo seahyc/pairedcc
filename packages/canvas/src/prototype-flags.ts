@@ -26,3 +26,11 @@ export function prototypeRefusal(op: string, search = typeof location === "undef
   if (!name || prototypeEnabled(name, search)) return null;
   return `${TOOL[op]} is part of the ${name} prototype, which is off in this tab. Nothing was changed. The person can turn it on by opening the canvas with ?prototype=${name}.`;
 }
+
+/** Where sign-in returns to: the canvas, keeping this tab's prototype flags (and nothing else). */
+export function canvasReturnTo(search = typeof location === "undefined" ? "" : location.search) {
+  const flags = new URLSearchParams();
+  for (const name of new URLSearchParams(search).getAll("prototype")) flags.append("prototype", name);
+  const query = flags.toString();
+  return `/canvas/${query ? `?${query}` : ""}`;
+}

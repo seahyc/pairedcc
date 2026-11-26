@@ -420,8 +420,64 @@
       }
     },
     {
+      "name": "canvas_group",
+      "description": "Wrap objects in a named frame without moving them, to show they belong together (a cluster, a set of alternatives, the evidence for a claim). Pass objects with their current expectedRevision and a name; a stale or locked object rejects the whole call. The objects must share a parent. Returns the frame and the objects, now inside it. canvas_undo_run takes the group back.",
+      "op": "group",
+      "output": "json",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "description": "Which open canvas to use; see canvas_sessions. Optional when only one is open.",
+            "type": "string"
+          },
+          "objects": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "starts_with",
+                  "pattern": "^shape:.*"
+                },
+                "expectedRevision": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "id",
+                "expectedRevision"
+              ]
+            }
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The frame's label: what these objects have in common."
+          },
+          "padding": {
+            "default": 40,
+            "type": "number",
+            "minimum": 0,
+            "maximum": 400
+          }
+        },
+        "required": [
+          "objects",
+          "name"
+        ]
+      }
+    },
+    {
       "name": "canvas_overview",
-      "description": "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
+      "description": "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
       "op": "overview",
       "output": "json",
       "inputSchema": {
@@ -877,7 +933,7 @@
     },
     {
       "name": "canvas_annotate",
-      "description": "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. Rendered as agent work (lavender, ✦). Humans add pink handwritten feedback through the toolbar.",
+      "description": "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar.",
       "op": "annotate",
       "output": "json",
       "inputSchema": {
@@ -903,11 +959,6 @@
           },
           "y": {
             "type": "number"
-          },
-          "author": {
-            "default": "Human",
-            "type": "string",
-            "maxLength": 100
           }
         },
         "required": [
@@ -956,7 +1007,7 @@
     },
     {
       "name": "canvas_feedback",
-      "description": "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback.",
+      "description": "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback. Answer an item with canvas_reply, not canvas_annotate, so the answer sits under the comment and is listed in the queue; an item with an `ask` field is an Ask: answer it with canvas_answer, which also records the answer on the Ask.",
       "op": "feedback",
       "output": "json",
       "inputSchema": {
@@ -996,7 +1047,7 @@
     },
     {
       "name": "canvas_reply",
-      "description": "Answer a feedback item in place: your note appears directly under the human's comment (or the picked/rejected object) and is listed as a reply in the queue. The item stays open until you or the human resolve it. The item must be on the open page.",
+      "description": "Answer a feedback item in place (use this instead of canvas_annotate for items in canvas_feedback; for an item with an `ask` field use canvas_answer instead): your note appears directly under the human's comment (or the picked/rejected object) and is listed as a reply in the queue. The item stays open until you or the human resolve it. The item must be on the open page.",
       "op": "reply",
       "output": "json",
       "inputSchema": {
@@ -1147,6 +1198,66 @@
         },
         "required": [
           "id"
+        ]
+      }
+    },
+    {
+      "name": "canvas_import",
+      "description": "Bring a table or document onto the board as source material the human can think with, in one undoable step. Rows of prose (a review, findings, interview notes) become one cluster per row: a title line from the short identifying columns, a tag for categories such as severity (most severe first), and one card per long text column, labelled with its column name. Grids of numbers stay one read-only table. Markdown or prose becomes one card per section in reading order. Imported objects have a neutral source look and carry `meta.source` (from, at, row, column). Columns left empty for a verdict are not drawn: the human picks (P), crosses out (X) or comments (C). Returns the record ids in reading order.",
+      "op": "import",
+      "output": "json",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "description": "Which open canvas to use; see canvas_sessions. Optional when only one is open.",
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000000,
+            "description": "The table or document as text: CSV, TSV, an HTML table, Markdown, a JSON array of objects, or plain prose."
+          },
+          "format": {
+            "default": "auto",
+            "description": "auto works it out from the content; name the format for CSV with few columns.",
+            "type": "string",
+            "enum": [
+              "auto",
+              "csv",
+              "tsv",
+              "html",
+              "markdown",
+              "json",
+              "text"
+            ]
+          },
+          "name": {
+            "description": "Where it came from, recorded on every object and shown to the human: a file name or a short description.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "as": {
+            "default": "auto",
+            "description": "auto: rows of prose become record cards, grids of numbers stay one table. Force either with cards or table.",
+            "type": "string",
+            "enum": [
+              "auto",
+              "cards",
+              "table"
+            ]
+          },
+          "focus": {
+            "default": true,
+            "description": "Move the view to the first records.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "content"
         ]
       }
     },
@@ -1688,7 +1799,7 @@
     },
     {
       "name": "canvas_converge",
-      "description": "PROTOTYPE converge. When several alternatives, branches or hypotheses are on the board and the person wants them pulled together, write one synthesis: what they add up to and where they still disagree, naming the sources. Creates an agent card beside the sources (or at x, y) with a derived-from arrow from each source; read reports convergedFrom in its meta and marks it stale when a source changes, so revise it then. Keep the sources; never delete or move them. Runs only in a tab opened with ?prototype=converge.",
+      "description": "PROTOTYPE converge. When several alternatives, branches or hypotheses are on the board and the person wants them pulled together, write one synthesis: what they add up to and where they still disagree, naming the sources. Creates an agent card beside the sources (or at x, y) with a derived-from arrow from each source, labelled A, B, C; give claims as points citing their sources and the card cites them by those letters, so each claim can be checked against its evidence; read reports convergedFrom in its meta and marks it stale when a source changes, so revise it then. Keep the sources; never delete or move them. Runs only in a tab opened with ?prototype=converge.",
       "op": "converge",
       "output": "json",
       "inputSchema": {
@@ -1719,6 +1830,35 @@
           "name": {
             "type": "string",
             "maxLength": 200
+          },
+          "points": {
+            "description": "Optional claims, each citing the sources it rests on (from sourceIds). The card cites them by the letter on each source's arrow, so the person can check every claim against its evidence.",
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "sourceIds": {
+                  "minItems": 1,
+                  "maxItems": 20,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "starts_with",
+                    "pattern": "^shape:.*"
+                  }
+                }
+              },
+              "required": [
+                "text",
+                "sourceIds"
+              ]
+            }
           },
           "x": {
             "description": "Defaults to just right of the sources.",

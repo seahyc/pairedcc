@@ -7,11 +7,12 @@ export type PerfRow = { objects: number; loadMs?: number; panMedianFrameMs?: num
 
 export type Raw = {
   acceptance?: { steps: { name: string; pass: boolean; detail: string }[] };
+  askLoop?: { steps: { name: string; pass: boolean; detail: string }[] };
   agentUsability?: { tasks: number; attempted: number; completed: number; medianToolCalls: number | null };
   safety?: { races: { name: string; pass: boolean; detail: string; humanEditsLost: number }[]; humanEditsLost: number };
   persistence?: { cleanProfile: boolean; sameProfileReload: boolean; detail: string; objects: number };
   performance?: PerfRow[];
-  workspace?: { build: boolean; packages: Record<string, { pass: boolean; summary: string }> };
+  workspace?: { build: boolean; packages: Record<string, { pass: boolean; summary: string }>; e2e?: string };
 };
 
 /** A performance metric counts as worse when it exceeds the previous run by this factor (timing noise). */
@@ -38,6 +39,12 @@ export function rows(raw: Raw, previous?: Raw): Row[] {
     const passed = a.steps.filter((s) => s.pass).length;
     out.push({ measure: "Acceptance scenario", target: "every step passes", result: `${passed}/${a.steps.length} steps`, status: passed === a.steps.length && a.steps.length > 0 ? "pass" : "fail" });
   } else out.push({ measure: "Acceptance scenario", target: "every step passes", result: "not run", status: "not run" });
+
+  const k = raw.askLoop;
+  if (k) {
+    const passed = k.steps.filter((s) => s.pass).length;
+    out.push({ measure: "Ask loop", target: "every step passes", result: `${passed}/${k.steps.length} steps`, status: passed === k.steps.length && k.steps.length > 0 ? "pass" : "fail" });
+  } else out.push({ measure: "Ask loop", target: "every step passes", result: "not run", status: "not run" });
 
   const u = raw.agentUsability;
   if (!u || u.attempted === 0)
@@ -81,7 +88,9 @@ export function rows(raw: Raw, previous?: Raw): Row[] {
   const w = raw.workspace;
   if (w) {
     const failing = Object.entries(w.packages).filter(([, r]) => !r.pass).map(([k]) => k);
-    const result = `build ${w.build ? "passes" : "fails"}; tests: ${failing.length ? `${failing.join(", ")} failing` : "all packages pass"}`;
+    // Say why e2e could not pass when it had no database, so the row is not read as a product bug.
+    const why = failing.includes("e2e") && w.e2e?.startsWith("e2e had no database") ? ` (${w.e2e.slice(4)})` : "";
+    const result = `build ${w.build ? "passes" : "fails"}; tests: ${failing.length ? `${failing.join(", ")} failing${why}` : "all packages pass"}`;
     out.push({ measure: "Existing product", target: "green", result, status: w.build && !failing.length ? "pass" : "fail" });
   } else out.push({ measure: "Existing product", target: "green", result: "not run", status: "not run" });
   return out;
