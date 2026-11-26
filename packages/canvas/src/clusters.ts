@@ -6,8 +6,26 @@ export type Placed = { id: string; x: number; y: number; w: number; h: number };
 export type Cluster = { ids: string[]; bounds: { x: number; y: number; w: number; h: number } };
 
 export function clusters(items: readonly Placed[], gap = 60, max = 50): Cluster[] {
-  const parent = items.map((_, i) => i);
-  const root = (i: number): number => (parent[i] === i ? i : (parent[i] = root(parent[i])));
+  // Union-find, iterative with path compression and union by size: a long chain of
+  // neighbours (a row of thousands) must not grow the call stack.
+  const parent = items.map((_, i) => i), size = items.map(() => 1);
+  const root = (i: number) => {
+    let r = i;
+    while (parent[r] !== r) r = parent[r];
+    while (parent[i] !== r) {
+      const next = parent[i];
+      parent[i] = r;
+      i = next;
+    }
+    return r;
+  };
+  const join = (a: number, b: number) => {
+    let ra = root(a), rb = root(b);
+    if (ra === rb) return;
+    if (size[ra] < size[rb]) [ra, rb] = [rb, ra];
+    parent[rb] = ra;
+    size[ra] += size[rb];
+  };
   // Sweep by left edge: only objects starting within reach of this one's right edge can touch it.
   const order = items.map((_, i) => i).sort((a, b) => items[a].x - items[b].x);
   for (let k = 0; k < order.length; k++) {
@@ -16,7 +34,7 @@ export function clusters(items: readonly Placed[], gap = 60, max = 50): Cluster[
       const b = items[order[m]];
       if (b.x > a.x + a.w + gap) break;
       const dy = Math.max(0, b.y - (a.y + a.h), a.y - (b.y + b.h));
-      if (dy <= gap) parent[root(order[k])] = root(order[m]);
+      if (dy <= gap) join(order[k], order[m]);
     }
   }
   const groups = new Map<number, number[]>();

@@ -31,3 +31,12 @@ describe("clusters of nearby objects", () => {
     expect(result[0].ids).toHaveLength(10_000);
   });
 });
+
+describe("long chains", () => {
+  it("handles a 10,000-object row where each touches only its neighbour", () => {
+    const row = Array.from({ length: 10_000 }, (_, i) => box(`r${i}`, i * 210, 0, 200, 100));
+    const result = clusters(row);
+    expect(result).toHaveLength(1);
+    expect(result[0].ids).toHaveLength(10_000);
+  });
+});
