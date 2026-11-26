@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { AskDesk, LISTENER_GRACE_MS } from "../server/asks";
-import { answerLayout, askStatusLine, capWords, suggestQuestion, OPTION_W } from "../src/ask-rules";
+import { answerLayout, askStatusLine, capWords, markOf, mergeHistory, suggestQuestion, OPTION_W } from "../src/ask-rules";
 import { answerInput, askStatusInput } from "../src/protocol";
 import { buildPrompt, parseReply, readingNote, systemPrompt } from "../tools/resident-prompt";
 import { toolDefs } from "../tools/tool-defs";
@@ -149,5 +149,41 @@ describe("resident agent prompt", () => {
     expect(parseReply('{"kind":"alternatives","alternatives":["only one"]}')).toMatchObject({ kind: "answer", text: "only one" });
     expect(parseReply("Just prose.")).toEqual({ kind: "answer", text: "Just prose." });
     expect(() => parseReply("  ")).toThrow();
+  });
+});
+
+describe("asks carry the person's picks and cross-outs", () => {
+  it("reads a mark only when the person set one", () => {
+    expect(markOf({ mark: "picked" })).toBe("picked");
+    expect(markOf({ mark: "rejected" })).toBe("rejected");
+    expect(markOf({ mark: "maybe" })).toBeUndefined();
+    expect(markOf({})).toBeUndefined();
+  });
+  it("keeps each earlier object once and leaves out what is already selected", () => {
+    const asked = { who: "Human asked", said: "Options for pricing?" };
+    const a = { id: "shape:a", who: "Claude", said: "A · Per seat", mark: "picked" as const };
+    const b = { id: "shape:b", who: "Claude", said: "B · Per post", mark: "rejected" as const };
+    const c = { id: "shape:c", who: "Claude", said: "C · Flat" };
+    // Selecting A and C walks the same thread twice: once from each option.
+    const merged = mergeHistory([asked, b, c, asked, a, b], ["shape:a", "shape:c"]);
+    expect(merged).toEqual([asked, b]);
+  });
+  it("tells the model what was picked and crossed out, wherever it sits", () => {
+    const prompt = buildPrompt({
+      question: "Take this further",
+      targets: [{ id: "shape:a", type: "card", author: "Claude", text: "A · Per seat", mark: "picked" }],
+      frame: { name: "Pricing", objects: [{ id: "shape:n", type: "card", author: "Human", text: "Usage based", mark: "rejected" }] },
+      history: [
+        { who: "Human asked", said: "Options for pricing?" },
+        { id: "shape:b", who: "Claude", said: "B · Per post", mark: "rejected" },
+        { id: "shape:c", who: "Claude", said: "C · Flat" },
+      ],
+    });
+    expect(prompt).toContain('card written by Claude (an agent), which the person picked: """A · Per seat"""');
+    expect(prompt).toContain('card by the person, which the person crossed out: """Usage based"""');
+    expect(prompt).toContain("- Claude: B · Per post (the person crossed this out)");
+    expect(prompt).toContain("- Claude: C · Flat\n");
+    expect(systemPrompt).toContain("Build on what the person picked");
+    expect(systemPrompt).toContain("Do not offer again what they crossed out");
   });
 });
