@@ -165,3 +165,11 @@ describe("why something is stale, in words", () => {
     expect(staleReason(stale, nameOf)).toBe("“Café orders” changed, and 2 more inputs");
   });
 });
+
+describe("why stale, when one input has several upstream causes", () => {
+  it("counts every root cause, not just the first input", () => {
+    const nameOf = (id: string) => ({ "shape:a": "Orders", "shape:b": "Prices", "shape:chart": "Revenue" })[id];
+    const stale = [{ id: "shape:chart", recorded: 1, current: 1, upstream: [{ id: "shape:a", recorded: 0, current: 1 }, { id: "shape:b", recorded: 2, current: 3 }] }];
+    expect(staleReason(stale, nameOf)).toBe("“Orders” changed (via “Revenue”), and 1 more input");
+  });
+});
