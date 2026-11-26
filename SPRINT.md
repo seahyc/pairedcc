@@ -134,7 +134,7 @@ task by which measure is furthest from target, not by backlog order.
     (`test-token-1`) that the server never issues, so it fails at the first step even with Postgres,
     Redis and `JWT_SECRET` available. Done when it passes against a local server with a real
     sign-in path and its required services are documented. Do not delete or skip it.
-11. **Shared-edit gaps found in review of per-run undo.** (a) Undoing a run that deleted a shape
+11. (PR #22 open, awaiting review.) **Shared-edit gaps found in review of per-run undo.** (a) Undoing a run that deleted a shape
     puts it back even when its parent frame has since been deleted, leaving an orphan; (b) any
     agent can list and undo another agent's runs in the same tab; (c) an agent can hide an object
     the person made behind a learning prompt. Done when each has a scripted race in the eval's
@@ -192,7 +192,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 9. Editor-level data agent tests | claude/sprint-data-agent-tests | 2026-11-26T10:47Z
 18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
-11. Shared-edit gaps | claude/sprint-shared-edit | 2026-11-26T10:37Z
 
 ## Done
 - Reviewed and merged 2026-11-26 by the review lane, each re-run against the combined branch: #8 as 6f4f3fb, #9 as e357f71, #10 as f7483a9, #11 as 4e4c9b7, #12 as 204980a, #13 as 054ab83, #14 as 3a4a85f, #15 as 8708875 (with two fixes, see Decisions needed).
@@ -238,6 +237,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-B, item 10) The e2e spec signs in by reading the real magic link from the server log (email sending is not built) and invites the second user through Share, because a signed-in user's document is private. Mismatch found, not changed: the editor tells the owner "anyone with this link can edit", but the API returns 404 to signed-in non-collaborators and the page stays on "Loading document...". Product choice needed: make link access real, or change the banner.
 - (build-A, item 21) A tab without `?prototype=data` refuses `dataset`, `chart`, `chart_state` and `cell`, and one without `?prototype=learning` refuses `learn`, before touching the board. Prototype objects already on a saved board still show everywhere. Agents still see the tools (hosted manifest under `hostedPrototypeTools`, still on; local stdio lists all); alternative: turn `hostedPrototypeTools` off too.
 - (build-A) Two build-A runs overlapped on 26 Nov: this run duplicated the eval board-store fix on #15 and the agent-usability tasks (item 18) before seeing the other run's pushes, and withdrew both without pushing. Lanes should re-read Claims after every pull, not only at the start.
+- (build-B, item 11) (a) Undo of a deletion is refused when the restored object's parent frame or page, or an arrow's other end, was deleted since (consistent with all-or-nothing undo), rather than re-parenting it. (b) Runs belong to their actor label: an agent lists and undoes only its own. Labels are not authenticated, and local MCP agents share "MCP agent" unless `PAIRED_ACTOR` is set, so this prevents mistakes, not misuse. (c) `canvas_learn` hides only objects an agent made.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -259,3 +259,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T10:37Z | build-B | 10 Repair e2e spec | #19 | Real magic-link sign-in and Share invite; passes 3/3 against local Postgres and Redis; root `pnpm build && pnpm test` green with services |
 | 2026-11-26T10:45Z | review | Review #8 to #15 | #8 #9 #10 #11 #12 #13 #14 #15 | All eight merged (squash) after re-running each proof on the combined branch; two defects fixed in #15 (whole-board overwrite, stray welcome cards); scorecard on 8708875: acceptance 8/10, safety pass, persistence pass (dev store), 10k reported |
 | 2026-11-26T10:43Z | build-A | 21 Prototype ops behind flags | #20 | Unflagged tabs refuse the five prototype ops and change nothing; test fails without the gate; live HTTP check; scorecard unchanged |
+| 2026-11-26T10:44Z | build-B | 11 Shared-edit gaps | #22 | Three races added; safety measure 3/6 (1 human edit lost) on the old code to 6/6 (0 lost) |
