@@ -104,7 +104,7 @@ Browser checks performed 17 Nov 2026: native object dragging, pen drawing, text 
 - **Acceptance**: the working spec's first scenario step by step; the person clicks, types and drops files in the page, the agent uses MCP. Expected values are computed from the fixture, not read back from the canvas.
 - **Safety**: stale agent write against a newer human edit, agent undo (`canvas_undo_run`) with interleaved human edits, and agent writes to a locked object; counts human edits lost.
 - **Persistence**: a board saved in one browser profile, compared through `read` in a clean profile.
-- **Performance**: load time and median pan frame time at 1k and 10k objects, compared with the previous scorecard (more than 25% slower is flagged). Boards are built with the editor directly through `window.__pairedEditor`, which only development builds expose.
+- **Performance**: load time and median pan frame time at 1k and 10k objects, compared with the previous scorecard (more than 25% slower is flagged). The pan figure is the median of five 120-frame samples after a discarded warm-up (`EVAL_PAN_SAMPLES` changes the count), and each sample's median is kept in the scorecard, because one sample can swing by 2x on a busy machine. Boards are built with the editor directly through `window.__pairedEditor`, which only development builds expose.
 - **Agent usability**: tasks in `eval/tasks/` with machine-checked end states; the script reports the latest recorded attempt (`eval/agent-runs/latest.json`) and never calls a model.
 - **Existing product**: `pnpm build` and `pnpm -r --no-bail test`, per package.
 
