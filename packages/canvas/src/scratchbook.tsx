@@ -6,7 +6,8 @@ import {
   type Editor,
   type TLShape,
 } from "tldraw";
-import { revision, richTextPlain } from "./operations";
+import { revision, richTextPlain, shapeName } from "./operations";
+import { buildFeedback, type FeedbackSource } from "./feedback";
 
 // Scratchbook visual language: human marks are pink ink and handwriting;
 // agent work is lavender, plain type and carries a ✦. See docs/canvas/working-spec.md.
@@ -108,7 +109,14 @@ export function toggleMark(editor: Editor, shapes: TLShape[], mark: Mark) {
       if (clear) {
         delete meta.mark;
         delete meta.markStatus;
-      } else Object.assign(meta, { mark, markStatus: "open" });
+        delete meta.markedAt;
+        delete meta.resolvedAt;
+        delete meta.resolvedBy;
+      } else {
+        Object.assign(meta, { mark, markStatus: "open", markedAt: Date.now() });
+        delete meta.resolvedAt;
+        delete meta.resolvedBy;
+      }
       editor.updateShape({ id: s.id, type: s.type, meta });
     }
   });
@@ -116,7 +124,12 @@ export function toggleMark(editor: Editor, shapes: TLShape[], mark: Mark) {
 
 /** Mark a human note, pick/reject or ink stroke addressed (or reopen it). */
 export function resolveMark(editor: Editor, shape: TLShape, status: MarkStatus, actor: string) {
-  const meta: TLShape["meta"] = { ...shape.meta, resolvedBy: actor };
+  const meta: TLShape["meta"] = { ...shape.meta };
+  if (status === "resolved") Object.assign(meta, { resolvedBy: actor, resolvedAt: Date.now() });
+  else {
+    delete meta.resolvedBy;
+    delete meta.resolvedAt;
+  }
   if (shape.meta.role === "annotation") {
     Object.assign(meta, {
       status,
@@ -129,6 +142,66 @@ export function resolveMark(editor: Editor, shape: TLShape, status: MarkStatus, 
   } else throw new Error("Object is not a human mark (feedback note, pick, reject or ink)");
   editor.markHistoryStoppingPoint("resolve mark");
   editor.updateShape({ id: shape.id, type: shape.type, meta });
+}
+
+const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText) : "");
+
+function sourcesOf(editor: Editor, allPages: boolean): { sources: FeedbackSource[]; shapes: TLShape[] } {
+  const pages = allPages ? editor.getPages() : [editor.getCurrentPage()];
+  const sources: FeedbackSource[] = [], all: TLShape[] = [];
+  for (const page of pages) {
+    const shapes = [...editor.getPageShapeIds(page.id)].flatMap((id) => editor.getShape(id) ?? []);
+    for (const s of shapes) {
+      const b = editor.getShapePageBounds(s);
+      all.push(s);
+      sources.push({
+        id: s.id,
+        type: s.type,
+        pageId: page.id,
+        pageName: page.name,
+        name: shapeName(s),
+        text: textOf(s),
+        author: authorOf(s),
+        revision: revision(s),
+        meta: s.meta,
+        bounds: b ? { x: b.x, y: b.y, w: b.w, h: b.h } : undefined,
+        inkTargets: s.type === "draw" && !isAgentShape(s) ? inkTargets(editor, s, shapes) : undefined,
+      });
+    }
+  }
+  return { sources, shapes: all };
+}
+
+/** The feedback queue for the whole board (or one page): comments, picks, rejects, ink, with replies. */
+export function collectFeedback(editor: Editor, opts: { allPages?: boolean } = {}) {
+  return buildFeedback(sourcesOf(editor, opts.allPages ?? true).sources);
+}
+
+/**
+ * Things the human wrote on the board that are not in the queue: plain notes and text
+ * added since timestamps were recorded. Returned beside the queue so nothing the human
+ * typed during a session is missed. The welcome board's own text is excluded.
+ */
+export function collectLooseNotes(editor: Editor) {
+  return sourcesOf(editor, true)
+    .sources.filter(
+      (s) =>
+        s.author === HUMAN &&
+        s.meta.role === undefined &&
+        s.meta.seed !== true &&
+        typeof s.meta.createdAt === "number" &&
+        ["card", "note", "text", "geo"].includes(s.type) &&
+        s.text.trim(),
+    )
+    .map((s) => ({
+      id: s.id,
+      type: s.type,
+      text: s.text.trim(),
+      pageId: s.pageId,
+      pageName: s.pageName,
+      position: s.bounds ? { x: Math.round(s.bounds.x), y: Math.round(s.bounds.y) } : undefined,
+      createdAt: new Date(s.meta.createdAt as number).toISOString(),
+    }));
 }
 
 // Thariq's marks are clean crimson strokes: a rounded box around picks, an X through rejects.
@@ -274,12 +347,13 @@ export function ScratchbookLayer() {
       );
       return editor.getCurrentPageShapes().flatMap((s) => {
         const b = editor.getShapePageBounds(s);
-        if (!b) return [];
+        if (!b || editor.isShapeHidden(s)) return [];
         const textual = s.type === "card" || s.type === "note" || s.type === "text" || (s.type === "geo" && "richText" in s.props && richTextPlain(s.props.richText));
         const agent = isAgentShape(s) && Boolean(textual);
         const mark = s.meta.mark === "picked" || s.meta.mark === "rejected" ? s.meta.mark : undefined;
-        if (!agent && !mark && !resolved.has(s.id)) return [];
-        return [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, type: s.type, caption: s.meta.role === "caption", heading: s.type === "card" && s.props.tone === "heading", agent, mark, resolved: resolved.has(s.id) }];
+        const comment = s.meta.role === "annotation" && !isAgentShape(s);
+        if (!agent && !mark && !comment && !resolved.has(s.id)) return [];
+        return [{ comment, id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, type: s.type, caption: s.meta.role === "caption", heading: s.type === "card" && s.props.tone === "heading", agent, mark, resolved: resolved.has(s.id) }];
       });
     },
     [editor],
@@ -296,6 +370,11 @@ export function ScratchbookLayer() {
             </svg>
           )}
           {i.agent && <span className={i.heading ? "scratch-spark heading" : i.type === "text" || i.caption ? "scratch-spark inline" : "scratch-spark"}>✦</span>}
+          {i.comment && !i.resolved && (
+            <svg className="scratch-pin" width="22" height="22" viewBox="0 0 22 22">
+              <path d="M11 1.5c5.2 0 9.5 3.6 9.5 8.2s-4.3 8.2-9.5 8.2c-1 0-2-.1-2.9-.4L3 20.5l1.3-4.6C2.6 14.4 1.5 12.2 1.5 9.7 1.5 5.1 5.8 1.5 11 1.5Z" />
+            </svg>
+          )}
           {i.resolved && <span className="scratch-done">✓</span>}
         </div>
       ))}
@@ -319,20 +398,25 @@ export function PaperBackground() {
   );
 }
 
-/** "96 items · 0 open marks", like Thariq's board header. */
-export function MarksCounter() {
+/** "96 items · 2 open marks", like Thariq's board header. Click to open the feedback queue. */
+export function MarksCounter({ onOpen }: { onOpen: () => void }) {
   const editor = useEditor();
   const { items, open } = useValue(
     "marks counter",
     () => ({
       items: editor.getCurrentPageShapes().filter((s) => s.type !== "arrow").length,
-      open: collectMarks(editor).filter((m) => m.status === "open").length,
+      open: collectFeedback(editor).filter((m) => m.status === "open").length,
     }),
     [editor],
   );
   return (
-    <div className={open ? "marks-counter has-open" : "marks-counter"} role="status">
+    <button
+      type="button"
+      className={open ? "marks-counter has-open" : "marks-counter"}
+      title="Open the feedback queue (Shift + C)"
+      onClick={onOpen}
+    >
       {items} items · {open} open {open === 1 ? "mark" : "marks"}
-    </div>
+    </button>
   );
 }

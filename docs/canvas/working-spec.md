@@ -257,3 +257,11 @@ YC asked to replicate Thariq's board. The local canvas now has:
 - MCP instructions describing the agent loop.
 
 Verified live in Dia on a demo page with synthetic data: keyboard pick/reject, agent read-back, questions, a Done note and resolution to zero open marks. Detection of freehand pen ink over an object is implemented but was not exercised live, because synthetic pointer events did not produce a tldraw stroke. Not built: converging branches, learning mode, data widgets.
+
+## Feedback queue and heuristics pass: 2026-11-26
+
+YC asked to anchor the UX on Jakob Nielsen's ten heuristics and Michael Nielsen's augmentation ideas, and to be able to leave feedback inside the canvas as a native primitive. The audit, what was fixed and what remains are in `usability-heuristics.md`.
+
+Built: one-key comments (C) on objects or on a spot on the board; a board-wide queue of comments, picks, rejects and ink with open/resolved state, shown in a Feedback tab with jump, resolve, reopen and Markdown/JSON export; `feedback` and `reply` agent operations (and MCP tools) alongside `resolve`; timestamps on new objects; live save state, an agent status chip, a lost-link banner and a shortcut sheet on `?`.
+
+Verified in headless Chromium against the local dev server: each feedback action, an HTTP and an MCP read returning a comment just left, reply and resolve by an agent, reopen by the human, export, the queue across two pages, and persistence across reload. Not built: comments on part of an object, a human reply box, separate undo per author, a rejected tray, a working chip on objects, a command palette.

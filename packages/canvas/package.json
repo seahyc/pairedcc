@@ -9,6 +9,7 @@
     "test": "vitest run",
     "mcp": "tsx tools/mcp.ts",
     "manifest": "tsx tools/build-manifest.ts",
+    "feedback": "tsx tools/pull-feedback.ts",
     "eval": "tsx eval/run.ts"
   },
   "dependencies": {

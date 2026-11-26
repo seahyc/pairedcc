@@ -7,6 +7,7 @@ import {
   T,
   renderHtmlFromRichTextForMeasurement,
   richTextValidator,
+  startEditingShapeWithRichText,
   toRichText,
   useValue,
   type Editor,
@@ -161,4 +162,11 @@ export class CardShapeTool extends BaseBoxShapeTool {
   static override id = "card";
   static override initial = "idle";
   override shapeType = "card" as const;
+  /** A fresh note is for writing in: go straight to typing instead of leaving the tool armed. */
+  override onCreate(shape: TLShape | null) {
+    if (!shape) return;
+    this.editor.setCurrentTool("select");
+    this.editor.select(shape.id);
+    startEditingShapeWithRichText(this.editor, shape.id, { selectAll: true });
+  }
 }
