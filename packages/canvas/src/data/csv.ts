@@ -44,7 +44,14 @@ function where(issue: { path: PropertyKey[]; message: string }) {
   return issue.message;
 }
 
-const numeric = (v: string) => v.trim() !== "" && Number.isFinite(Number(v));
+/**
+ * A plain decimal number. Codes stay text: a zero-padded value (`007`, the ZIP `02139`) would
+ * lose its zeros as a number, and `Number()` would also read `0x1A` or `0b11` as numbers.
+ */
+const numeric = (v: string) => {
+  const t = v.trim();
+  return /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(t) && !/^[+-]?0\d/.test(t) && Number.isFinite(Number(t));
+};
 
 export function parseCsv(text: string, fileName: string): CsvResult {
   const parsed = records(text.replace(/^﻿/, ""));
