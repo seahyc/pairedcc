@@ -1,32 +1,51 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Browser, type APIRequestContext } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+
+// Signs in through the real magic-link flow: request a link, read it from the server's log
+// (the server prints links until email sending exists), and open it in that user's browser.
+async function signIn(browser: Browser, request: APIRequestContext, email: string) {
+  const sent = await request.post('/auth/magic/send', { data: { email, returnTo: '/docs' } })
+  expect(sent.ok()).toBe(true)
+  let link: string | undefined
+  await expect
+    .poll(() => {
+      const log = readFileSync(process.env.E2E_SERVER_LOG!, 'utf8')
+      link = [...log.matchAll(/Magic link for (\S+): (\S+)/g)].reverse().find((m) => m[1] === email)?.[2]
+      return link
+    }, { message: `magic link for ${email} in the server log` })
+    .toBeTruthy()
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  await page.goto(link!)
+  await page.waitForURL(/\/docs\/?$/)
+  expect((await context.cookies()).some((c) => c.name === 'session')).toBe(true)
+  return { context, page, email }
+}
 
 test.describe('Document collaboration', () => {
   test('two users can edit the same document', async ({ browser, request }) => {
-    const ctx1 = await browser.newContext()
-    const ctx2 = await browser.newContext()
-
-    // User 1: send magic link and verify
-    await request.post('/auth/magic/send', { data: { email: 'user1@test.com' } })
-    const jwt1 = await request.fetch('/auth/magic/verify?token=test-token-1')
-    const cookies1 = jwt1.headers()['set-cookie']
-    await ctx1.addCookies([{ name: 'session', value: extractCookieValue(cookies1), domain: 'localhost', path: '/' }])
-
-    // User 2: send magic link and verify
-    await request.post('/auth/magic/send', { data: { email: 'user2@test.com' } })
-    const jwt2 = await request.fetch('/auth/magic/verify?token=test-token-2')
-    const cookies2 = jwt2.headers()['set-cookie']
-    await ctx2.addCookies([{ name: 'session', value: extractCookieValue(cookies2), domain: 'localhost', path: '/' }])
+    // Synthetic addresses, unique per run so reruns against the same database stay independent.
+    const run = Date.now()
+    const user1 = await signIn(browser, request, `user1-${run}@example.test`)
+    const user2 = await signIn(browser, request, `user2-${run}@example.test`)
 
     // User 1 creates a document
-    const page1 = await ctx1.newPage()
-    await page1.goto('/')
+    const page1 = user1.page
     await page1.click('text=New Document')
-    await page1.waitForURL(/\/d\//)
+    await page1.waitForURL(/\/docs\/d\//)
     const docUrl = page1.url()
 
+    // User 1 invites user 2 through Share (a signed-in user's document is private until shared)
+    await page1.getByRole('button', { name: 'Share' }).click()
+    await page1.getByPlaceholder('email@example.com').fill(user2.email)
+    await page1.getByRole('button', { name: 'Invite' }).click()
+    await expect(page1.locator('.collab-row')).toContainText(user2.email)
+    await page1.getByRole('button', { name: 'Close' }).click()
+
     // User 2 opens the same document
-    const page2 = await ctx2.newPage()
+    const page2 = user2.page
     await page2.goto(docUrl)
+    await expect(page2.locator('.ProseMirror')).toBeVisible()
 
     // User 1 types text
     await page1.locator('.ProseMirror').click()
@@ -38,11 +57,7 @@ test.describe('Document collaboration', () => {
     // Verify presence shows 2 avatars
     await expect(page1.locator('.avatar')).toHaveCount(2, { timeout: 3000 })
 
-    await ctx1.close()
-    await ctx2.close()
+    await user1.context.close()
+    await user2.context.close()
   })
 })
-
-function extractCookieValue(setCookie: string): string {
-  return setCookie.split(';')[0].split('=')[1]
-}
