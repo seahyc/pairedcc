@@ -72,3 +72,17 @@ describe("the resident agent is told where things sit", () => {
     expect(buildPrompt({ question: "Why?", targets: [] })).not.toContain("same group");
   });
 });
+
+describe("what the question is about says where it sits", () => {
+  it("each target with a relation is said with it", () => {
+    const prompt = buildPrompt({
+      question: "Which first?",
+      targets: [
+        { id: "a", type: "card", author: "Human", text: "Charge per seat", relation: "above" },
+        { id: "b", type: "card", author: "Human", text: "No relation known" },
+      ],
+    });
+    expect(prompt).toContain('- card written by the person, above it: """Charge per seat"""');
+    expect(prompt).toContain('- card written by the person: """No relation known"""');
+  });
+});

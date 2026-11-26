@@ -12,7 +12,7 @@ import { createRequire } from 'node:module';
 const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-p2-cluster.mjs <screenshot dir>');
-const BASE = 'http://localhost:5183';
+const BASE = process.env.PAIRED_URL ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 const browser = await chromium.launch();
@@ -60,6 +60,7 @@ const group = (ask?.cluster ?? []).map((m) => m.id), targets = (ask?.targets ?? 
 // The card right beside the question is given as a target; the rest of the row as its group.
 check('the ask is given the row its card sits in (beside it, or in its group)', [left, middle, right].every((id) => group.includes(id) || targets.includes(id)) && targets.includes(middle), JSON.stringify({ targets, group: ask?.cluster?.map((m) => [m.text, m.relation]) }));
 check('and not the card far away', !group.includes(far));
+check('the card right beside the question says where it sits too', (ask?.targets ?? []).find((t) => t.id === middle)?.relation === 'above', JSON.stringify(ask?.targets?.map((t) => [t.text, t.relation])));
 check('each group member says where it sits, in words', (ask?.cluster ?? []).length >= 2 && ask.cluster.every((m) => ['left of', 'right of', 'above', 'under'].includes(m.relation)) && ask.cluster.find((m) => m.id === left)?.relation !== 'right of', JSON.stringify(ask?.cluster?.map((m) => [m.text, m.relation])));
 check('nothing is given twice (a card beside the question is not also in its group)', group.every((id) => !(ask?.targets ?? []).some((t) => t.id === id)), JSON.stringify({ targets: ask?.targets?.map((t) => t.id), group }));
 
