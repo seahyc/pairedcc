@@ -5,6 +5,7 @@ import { ImportError, detectPaste, formatOfFile, type ImportAs, type ImportForma
 import { importContent, importImages, removeImport, showBox, type ImportResult } from "./import-board";
 import { sourceOf } from "./import-meta";
 import { readPdf } from "./import-pdf";
+import { readXlsx, rowsToTsv } from "./xlsx";
 import { importCsvFiles, isCsvFile } from "./data/csv";
 import { dataPrototypeEnabled } from "./data/shapes";
 
@@ -110,8 +111,20 @@ export function ImportLayer({ onNotice }: { onNotice: (text: string) => void }) 
           fail(error);
         }
       }
-      else if (format === "xlsx") onNotice("Spreadsheet files are not read yet. Copy the cells and paste them here, or save as CSV.");
-      else if (!format) onNotice(`Cannot read ${file.name} yet. Try CSV, TSV, Markdown, text, JSON, HTML, PDF or an image.`);
+      else if (format === "xlsx" && !/\.xlsx$/i.test(file.name)) onNotice(`${file.name} is not read yet: only .xlsx workbooks are. Save it as .xlsx or CSV, or copy the cells and paste them here.`);
+      else if (format === "xlsx" && file.size > 10_000_000) onNotice(`${file.name} is too large to lay out as cards (10 MB at most).`);
+      else if (format === "xlsx") {
+        try {
+          // The first sheet goes through the same importer as a pasted spreadsheet range.
+          const book = await readXlsx(new Uint8Array(await file.arrayBuffer()));
+          if (!book.rows.some((r) => r.some((c) => c.trim()))) throw new ImportError(`The first sheet of ${file.name}, “${book.sheet}”, is empty.`);
+          run({ content: rowsToTsv(book.rows), format: "tsv", from: file.name });
+          if (book.sheets > 1) onNotice(`Read the first sheet of ${file.name}, “${book.sheet}”. Other sheets are not read yet.`);
+        } catch (error) {
+          fail(error);
+        }
+      }
+      else if (!format) onNotice(`Cannot read ${file.name} yet. Try CSV, TSV, Markdown, text, JSON, HTML, a workbook (.xlsx), PDF or an image.`);
       else if (file.size > 2_000_000) onNotice(`${file.name} is too large to lay out as cards (2 MB at most).`);
       else run({ content: await file.text(), format, from: file.name });
     }
@@ -211,7 +224,7 @@ export function ImportLayer({ onNotice }: { onNotice: (text: string) => void }) 
       <input
         ref={picker}
         type="file"
-        accept=".csv,.tsv,.tab,.md,.markdown,.txt,.json,.html,.htm,.pdf,image/*"
+        accept=".csv,.tsv,.tab,.md,.markdown,.txt,.json,.html,.htm,.xlsx,.pdf,image/*"
         multiple
         hidden
         aria-label="Import a file"

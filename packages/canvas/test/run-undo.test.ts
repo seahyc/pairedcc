@@ -118,3 +118,31 @@ describe("whose runs an agent sees", () => {
     expect(ledger.list(10).map(summariseRun).map((r) => r.runId)).toEqual(["r3", "r2", "r1"]);
   });
 });
+
+describe("undo of a connection whose ends moved", () => {
+  const arrow = (meta: Record<string, unknown> = {}, bend = 10) =>
+    ({ id: "shape:arrow", typeName: "shape", type: "arrow", x: 0, y: 0, parentId: "page:1", props: { bend }, meta: { revision: 1, fromId: "shape:a", toId: "shape:b", ...meta } });
+  const binding = (id: string, toId: string, anchor: { x: number; y: number }, meta: Record<string, unknown> = {}) =>
+    ({ id, typeName: "binding", type: "arrow", fromId: "shape:arrow", toId, props: { terminal: id.endsWith("start") ? "start" : "end", normalizedAnchor: anchor }, meta });
+  const created = [arrow(), binding("binding:start", "shape:a", { x: 0.5, y: 1 }), binding("binding:end", "shape:b", { x: 0.5, y: 0 })];
+  const added = Object.fromEntries(created.map((r) => [r.id, r]));
+  const now = (recs: object[]) => {
+    const m = new Map(recs.map((r) => [(r as { id: string }).id, r]));
+    return (id: string) => m.get(id) as never;
+  };
+
+  it("still removes the connection after it re-routed to follow a moved end", () => {
+    const rerouted = [arrow({ revision: 3 }, -24), binding("binding:start", "shape:a", { x: 1, y: 0.5 }, { followed: true }), binding("binding:end", "shape:b", { x: 0, y: 0.5 }, { followed: true })];
+    expect(planUndo(diff({ added }), now(rerouted))).toEqual({ put: [], remove: ["binding:start", "binding:end", "shape:arrow"], conflicts: [] });
+  });
+
+  it("refuses when someone attached the connection to a different object", () => {
+    const rebound = [arrow(), binding("binding:start", "shape:a", { x: 0.5, y: 1 }), binding("binding:end", "shape:c", { x: 0.5, y: 0 })];
+    expect(planUndo(diff({ added }), now(rebound)).conflicts).toEqual([{ id: "binding:end", reason: "changed after the run created it", fields: ["toId"] }]);
+  });
+
+  it("counts a bend change as an edit on a connector with fixed anchors", () => {
+    const fixed = arrow({ fixedAnchors: true });
+    expect(planUndo(diff({ added: { [fixed.id]: fixed } }), now([{ ...fixed, props: { bend: 40 } }])).conflicts).toHaveLength(1);
+  });
+});

@@ -40,8 +40,10 @@ export function startersFor(selection: readonly { type: string; text: string }[]
   if (selection.length > 1) return ["Compare these", "What dimensions do these differ on?", "What do they have in common?"];
   const [only] = selection;
   if (!only) return starters;
-  // No group or chart starters yet: an ask about a frame does not send its children, and one
-  // about a chart does not send its data, so those starters would promise what the agent lacks.
+  // A frame is what the person put together, and its contents are sent with the ask (`inside`).
+  if (only.type === "frame") return ["What do these have in common?", "What is missing from this group?", "Which of these matters most?"];
+  // No chart starters yet: an ask about a chart does not send its data, so they would promise
+  // what the agent lacks.
   if (/\?\s*$/.test(only.text.trim())) return ["Answer this", "What would change the answer?", "Give me alternatives"];
   return starters;
 }
@@ -83,4 +85,26 @@ export function askStatusLine(
   if (!opts.listeners.length)
     return { tone: "nobody", text: "No agent is listening. Start one: pnpm --filter @pairedcc/canvas agent", retry: true };
   return { tone: "waiting", text: `Waiting for ${opts.listeners[0]} · ${secs(ask.askedAt, opts.now)}` };
+}
+
+/** The person's judgement on an object, as the board shows it: boxed (picked) or struck through (crossed out). */
+export type AskMark = "picked" | "rejected";
+export function markOf(meta: Record<string, unknown>): AskMark | undefined {
+  return meta.mark === "picked" || meta.mark === "rejected" ? meta.mark : undefined;
+}
+
+export type HistoryEntry = { who: string; said: string; id?: string; mark?: AskMark };
+/**
+ * One thread from several selected answers: each earlier object once, in order, and none
+ * that is already among the selected objects (those are given with their own marks).
+ */
+export function mergeHistory(entries: HistoryEntry[], targetIds: string[]) {
+  const skip = new Set(targetIds), seen = new Set<string>();
+  return entries.filter((e) => {
+    if (e.id && skip.has(e.id)) return false;
+    const key = e.id ?? `${e.who}\u0000${e.said}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

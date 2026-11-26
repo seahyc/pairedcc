@@ -1,9 +1,12 @@
 import { createShapeId, toRichText, type Editor, type TLRichText, type TLShape, type TLShapeId } from "tldraw";
 import { z } from "zod";
-import { atomic } from "./agent-operations";
+import { atomic, connect } from "./agent-operations";
+import { HUMAN } from "./scratchbook";
 import { planImport, parseImport, summarise, type ImportAs, type ImportFormat, type ImportPlan } from "./import-parse";
 import { sourceOf, type SourceMeta } from "./import-meta";
 import { tableLayout } from "./table-shape";
+import { fieldSlots, planSideBySide, type RecordBox } from "./import-compare";
+import { citationsOf, planCited, sectionKey, type SectionBox } from "./import-cite";
 
 // Putting an import on the board. Everything made here is an ordinary object: it moves,
 // can be edited, picked, crossed out, commented on and asked about. One import is one undo step.
@@ -84,7 +87,10 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
     };
 
     if (plan.kind === "records") {
-      const columns = Math.min(4, Math.max(1, ...plan.records.map((r) => r.fields.length)));
+      // One slot per field column for the whole import, so a blank cell leaves a gap instead of
+      // shifting the record's later cards into another column's place.
+      const slots = fieldSlots(plan.records, plan.table.columns);
+      const columns = slots.perRow;
       const w = FIELD_W[columns], rowW = columns * w + (columns - 1) * GAP;
       width = rowW;
       const verdict = plan.verdictColumns.length
@@ -109,9 +115,10 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
         });
         y += heightOf(editor, titleId) + 10;
         const ids = [titleId];
-        for (let i = 0; i < record.fields.length; i += 4) {
-          const row = record.fields.slice(i, i + 4).map((field, j) =>
-            card(start.x + j * (w + GAP), y, w, "source", labelled(field.column, field.text), `${field.column} · ${record.title}`, {
+        const slotRows = [...new Set(record.fields.map((f) => slots.place(f.column).row))].sort((a, b) => a - b);
+        for (const slotRow of slotRows) {
+          const row = record.fields.filter((f) => slots.place(f.column).row === slotRow).map((field) =>
+            card(start.x + slots.place(field.column).col * (w + GAP), y, w, "source", labelled(field.column, field.text), `${field.column} · ${record.title}`, {
               kind: "field",
               row: record.row,
               column: field.column,
@@ -258,4 +265,112 @@ export function importForAgent(editor: Editor, value: unknown, actor: string) {
       return { id, name: typeof shape?.meta.name === "string" ? shape.meta.name : "", row: sourceOf(shape)?.row };
     }),
   };
+}
+/** The record an object belongs to: the record itself, or the record its title or field card sits in. */
+export function recordOf(editor: Editor, shape: TLShape | undefined): TLShape | undefined {
+  const kind = sourceOf(shape)?.kind;
+  if (!shape || !kind) return undefined;
+  if (kind === "record") return shape;
+  if (kind !== "title" && kind !== "field") return undefined;
+  const parent = editor.getShape(shape.parentId as TLShapeId);
+  return sourceOf(parent)?.kind === "record" ? parent : undefined;
+}
+
+/** The distinct records the selection touches, in selection order. */
+export function selectedRecords(editor: Editor): TLShape[] {
+  const seen = new Map<string, TLShape>();
+  for (const shape of editor.getSelectedShapes()) {
+    const record = recordOf(editor, shape);
+    if (record && !seen.has(record.id)) seen.set(record.id, record);
+  }
+  return [...seen.values()];
+}
+
+/**
+ * Put two records of one import next to each other, the same columns lined up, as one undo
+ * step; then select both and bring them into view. Returns why not when it cannot.
+ */
+export function sideBySide(editor: Editor, a: TLShape, b: TLShape): { ok: true } | { ok: false; reason: string } {
+  const importId = sourceOf(a)?.importId;
+  const boxes: RecordBox[] = editor.getCurrentPageShapes().flatMap((shape) => {
+    const source = sourceOf(shape), bounds = editor.getShapePageBounds(shape);
+    return source?.kind === "record" && bounds && source.importId === importId
+      ? [{ id: shape.id, importId: source.importId, x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h }]
+      : [];
+  });
+  if (sourceOf(b)?.importId !== importId) boxes.push({ id: b.id, importId: sourceOf(b)?.importId ?? "", x: 0, y: 0, w: 0, h: 0 });
+  const plan = planSideBySide(boxes, a.id, b.id);
+  if (!plan.ok) return plan;
+  const ids = [plan.upper, plan.lower] as TLShapeId[];
+  // One step: the moves and the selection squash into a single undo entry.
+  atomic(editor, "side by side", () => {
+    for (const move of plan.moves) {
+      const shape = editor.getShape(move.id as TLShapeId);
+      if (shape) editor.updateShape({ id: shape.id, type: shape.type, x: shape.x + move.dx, y: shape.y + move.dy });
+    }
+    editor.select(...ids);
+  });
+  const box = editor.getSelectionPageBounds();
+  if (box) showBox(editor, { x: box.x, y: box.y, w: box.w, h: box.h });
+  return { ok: true };
+}
+
+/** Sections on this page whose heading starts with a code ("Q56. Fleet costs"), in reading order. */
+function codedSections(editor: Editor): SectionBox[] {
+  return editor
+    .getCurrentPageShapes()
+    .flatMap((shape) => {
+      const source = sourceOf(shape), key = source?.kind === "section" ? sectionKey(String(shape.meta.name ?? "")) : undefined;
+      const bounds = key ? editor.getShapePageBounds(shape) : undefined;
+      return key && bounds && source ? [{ id: shape.id, key, x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h, at: source.at, order: source.order ?? 0 }] : [];
+    })
+    .sort((a, b) => a.at.localeCompare(b.at) || a.order - b.order);
+}
+
+/** What a record cites, and which of those codes head a section on this page. */
+export function citedBy(editor: Editor, record: TLShape): { codes: string[]; found: string[] } {
+  const codes = citationsOf(sourceOf(record)?.values ?? {});
+  if (!codes.length) return { codes, found: [] };
+  const keys = new Set(codedSections(editor).map((s) => s.key));
+  return { codes, found: codes.filter((code) => keys.has(code)) };
+}
+
+/**
+ * Move the sections a record cites into one column beside it, each linked from the record's title
+ * line by a reference arrow, as one undo step. Running it again re-gathers them without new arrows.
+ */
+export function bringCited(editor: Editor, record: TLShape): { ok: true; moved: number; missing: string[] } | { ok: false; reason: string } {
+  const codes = citationsOf(sourceOf(record)?.values ?? {});
+  const box = editor.getShapePageBounds(record);
+  if (!codes.length || !box) return { ok: false, reason: "This record does not cite any section by code." };
+  const obstacles = editor.getCurrentPageShapes().flatMap((shape) => {
+    const b = shape.type === "arrow" || shape.parentId !== editor.getCurrentPageId() ? undefined : editor.getShapePageBounds(shape);
+    return b ? [{ id: shape.id as string, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
+  });
+  const plan = planCited({ id: record.id, x: box.x, y: box.y, w: box.w, h: box.h }, codes, codedSections(editor), obstacles);
+  if (!plan.moves.length) return { ok: false, reason: `No section headed ${codes.join(", ")} is on this page. Import the document it cites first.` };
+  // Arrows leave from the record's right edge (its first row's last card), so they run through
+  // the clear gap to the sections and never across the record's own text.
+  const children = record.type === "group" ? editor.getSortedChildIdsForParent(record.id).flatMap((id) => editor.getShape(id) ?? []) : [];
+  const edge = (shape: TLShape) => editor.getShapePageBounds(shape);
+  const firstRow = children.filter((s) => sourceOf(s)?.kind === "field").sort((a, b) => edge(a)!.y - edge(b)!.y || edge(b)!.maxX - edge(a)!.maxX);
+  const title = firstRow[0] ?? children.find((s) => sourceOf(s)?.kind === "title") ?? record;
+  const linked = new Set(
+    editor
+      .getCurrentPageShapes()
+      .filter((s) => s.type === "arrow" && s.meta.fromId === title.id && s.meta.relation === "reference")
+      .map((s) => String(s.meta.toId)),
+  );
+  atomic(editor, "bring cited sections", () => {
+    for (const move of plan.moves) {
+      const shape = editor.getShape(move.id as TLShapeId), now = shape && editor.getShapePageBounds(shape);
+      if (shape && now) editor.updateShape({ id: shape.id, type: shape.type, x: shape.x + move.x - now.x, y: shape.y + move.y - now.y });
+    }
+    for (const move of plan.moves)
+      if (!linked.has(move.id)) connect(editor, { fromId: title.id, toId: move.id, relation: "reference" }, HUMAN, { start: { x: 1, y: 0.5 }, end: { x: 0, y: 0.5 } });
+    editor.select(record.id, ...plan.moves.map((m) => m.id as TLShapeId));
+  });
+  const all = editor.getSelectionPageBounds();
+  if (all) showBox(editor, { x: all.x, y: all.y, w: all.w, h: all.h });
+  return { ok: true, moved: plan.moves.length, missing: plan.missing };
 }
