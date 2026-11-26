@@ -491,13 +491,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     with an agent over HTTP (failing before, passing after); nothing new is visible. (Separate from
     item 7's keyboard-only loop: this is what is heard, not what is reachable.)
 
-79. **`read`'s text filter: the two findings left open on #78.** (Decisions needed, build-B item 58.) (a) `ß` does not fold to `ss`, so `STRASSE` misses `Straße`; (b) a match may end inside a grapheme, so `कल` matches `कला` and `かく` matches `かぐ` once normalised. Done when each has a failing-first unit test and is fixed, with Latin, Greek and accented matching unchanged.
+79. (PR #103 open, awaiting review.) **`read`'s text filter: the two findings left open on #78.** (Decisions needed, build-B item 58.) (a) `ß` does not fold to `ss`, so `STRASSE` misses `Straße`; (b) a match may end inside a grapheme, so `कल` matches `कला` and `かく` matches `かぐ` once normalised. Done when each has a failing-first unit test and is fixed, with Latin, Greek and accented matching unchanged.
 
 ## Claims
-79. Read filter: ß and grapheme boundaries | claude/sprint-read-graphemes | 2026-11-26T13:21Z
 7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
+- 79. Read filter folds ß and matches whole characters (build-B): PR #103 (2 failing-first tests).
 - 77. Friction from the second agent attempt (build-B): PR #102 (asks page filter, schema descriptions for duplicate offsets and connect relations, overview and reply documented, `list --brief`; (a) not reproduced).
 - 78. Ask progress announced (build-A): PR #101 (one polite live region says each change of an ask's state once; verify-ask-live 3/8 → 8/8).
 - Reviewed and merged 2026-11-26 by the review lane: #67 to #84 and #96, 19 more (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
@@ -671,6 +671,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 - (build-B, item 77) Not changed, for the maintainer: tools silently drop input keys they do not know (`canvas_update` with `locked: true` succeeds and changes nothing), so an agent can believe it did something it cannot. Refusing unknown keys would touch every tool's schema (zod `strict`) and could break clients that send extra fields; alternative: return a `ignored` list of dropped keys.
 
+- (build-B, item 79) `read`'s text filter folds case through upper case, so Turkish dotless ı also matches i (looser, never stricter). Matches must start and end on grapheme boundaries (`Intl.Segmenter`, default locale).
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -785,3 +787,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:18Z | review | Review #67 to #84, #96 | #67 to #84 #96 | 19 merged (squash); workspace build and tests green after each (canvas 377, server 157 on Postgres 16, e2e 1); live checks re-run for #67 #68 #69 #70 #72 #73 #76 #77 #80 #82 #83. Review fixes: #73 page-tree cycle guard with a test, #80 keeps #55's vertical clamp, AGENT_API paragraphs lost in the #67 merge restored. Scorecard on 8da6809: six rows pass, safety 10/10, 10k pan 49 ms |
 | 2026-11-26T13:19Z | build-B | 77 Friction from the second agent attempt | #102 | asks page filter, schema descriptions, overview/reply docs, list --brief; 5 failing-first tests; live MCP check; workspace measure pass with throwaway services |
 | 2026-11-26T13:20Z | build-A | #93 review follow-up | #93 | Bounded byline search (3 s → 65 ms), region outside comments/head and whole tag names, ASCII-only lowercase for offsets, one-pass comment strip; 4 new tests; verify-webpage 9/9 |
+| 2026-11-26T13:21Z | build-B | 79 Read filter ß and grapheme boundaries | #103 | ß/ẞ fold to ss; matches start and end on whole characters; 2 failing-first tests; canvas suite green |
