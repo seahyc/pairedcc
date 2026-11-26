@@ -166,7 +166,7 @@ task by which measure is furthest from target, not by backlog order.
     `packages/canvas/eval/tasks/`, each with a machine-checked end state, a runner that sets each
     one up in a real tab, and a recorded attempt by a fresh agent that has only `AGENT_API.md` and
     the tools. Done when the scorecard reports a completion rate and median tool calls.
-19. (#32 merged; PRs #35, #39, stacked in that order, open and awaiting review: restore from Menu → Earlier versions, open from Menu → Saved boards. Complete once all three merge.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
+19. (#32 and #35 merged; PR #39 open and awaiting review: restore from Menu → Earlier versions, open from Menu → Saved boards. Complete once all three merge.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
     their boards, open one, and restore an earlier revision from the canvas.
 21. (Merged, see Done.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
@@ -187,13 +187,13 @@ task by which measure is furthest from target, not by backlog order.
 26. (PR #28 open, awaiting review.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
     Done when the server enforces a per-account limit with a test and the choice is recorded.
 
-27. (PR #33 open, awaiting review.) **Group objects through a structured operation.** The spec's agent interface asks for
+27. (Merged, see Done.) **Group objects through a structured operation.** The spec's agent interface asks for
     "create, update, connect, group, arrange and annotate" as structured operations; there is no
     group operation. Done when `canvas_group` wraps revision-guarded objects in a named frame that
     keeps their page positions, rejects the whole call on a stale or locked object, is one undoable
     run, and is tested at editor level and live over HTTP and MCP.
 
-29. (PR #34 open, awaiting review.) **Say why something is stale.** The board flags a stale derived object with just "stale";
+29. (Merged, see Done.) **Say why something is stale.** The board flags a stale derived object with just "stale";
     the person cannot tell which input changed (read reports it, the board does not). Done when
     the flag names the changed input (and the upstream cause for transitive staleness) in words a
     person can act on, is readable by assistive technology, with before/after screenshots.
@@ -222,7 +222,7 @@ task by which measure is furthest from target, not by backlog order.
     several objects), as one undo step, tested, with before/after screenshots.
 
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
-28. (PR #36 open, awaiting review.) **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
+28. (Merged, see Done.) **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
     fails only because `pnpm eval:canvas` runs the e2e suite without Postgres, Redis or a matching
     Chromium; with them it passes. Done when the workspace measure uses `DATABASE_URL`/`REDIS_URL`
     when set, otherwise starts throwaway services when the binaries exist, points Playwright at a
@@ -263,7 +263,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 37. **`read` reports a card's style.** Agents create notes with `style` (note, heading, quote,
     code) but `read` shows it only as `props.tone`, so checking it took a `canvas_get` (PR #24
     attempt). Done when `read` and `get` report `style` on cards, documented and tested.
-39. (PR #57 open, awaiting review.) **Agent-usability tasks for features merged after #24.** The 21 tasks predate the Ask loop
+39. **Agent-usability tasks for features merged after #24.** The 21 tasks predate the Ask loop
     (#21), comment replies in the queue, and converge (#27). Done when tasks for those exist with
     a passing self-test (check fails on setup, passes after the reference solution), written by a
     lane that did not build them, and the scorecard's task count reflects them.
@@ -285,19 +285,25 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     0 and 300 ms, kept at 1,000 ms) shows the old board, and the next edit saves it on top. Done
     when a scripted check restores, reloads at once and still sees the restored board, for example
     by recording in the memo what content was synced and re-reading the account when it differs.
-43. **Agent friction found in the 24-task attempt (#57).** A fresh agent reported: feedback items
-    say `kind: "comment"` where read `marks` say `"note"`; `locked` is missing from
-    `canvas_overview`; `canvas_duplicate`'s default offset (320) ignores the object's width, so a
-    600-wide frame's copy overlaps it; `canvas_runs` names the op but not the fields a run changed.
-    Done when each is fixed or documented in AGENT_API.md, with a test for each fix.
+
+44. **Asks carry the person's picks and cross-outs.** `docs/canvas/principles.md`, finding 6
+    (comparing beats describing): "picking one does not carry it forward." An ask's context lists
+    the selected objects and the exchange behind them, but not which options the person picked (P)
+    or crossed out (X), although the board shows both; an agent asked to "take this further" about
+    option A does not know B and C were rejected. Done when every object an ask gives (targets,
+    frame objects, history) reports the person's mark, an ask about one option also gives its
+    sibling options with their marks, the resident agent's prompt says to build on picks and not
+    offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
 
 ## Claims
-43. Agent friction from the 24-task attempt | claude/sprint-agent-friction | 2026-11-26T11:41Z
+44. Asks carry picks and cross-outs | claude/sprint-ask-marks | 2026-11-26T11:55Z
+39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
 - 40. Say which tool answers feedback (build-A): PR #53.
+- Reviewed and merged 2026-11-26 by the review lane: #33 as 2b83999, #34 as 0f1807f, #35 as 6b92e2f, #36 as bac1a93.
 - Reviewed and merged 2026-11-26 by the review lane: #24 as 984374b, #29 as 2a36db5, #30 as e8b3218, #31 as 66678b5, #32 as b8b30a3 (each after merging in the integration branch and re-running its proof; fixes noted in the Log).
 - 37. read reports card style (build-A): PR #51.
 - 35. Annotation arrows follow their note (build-A): PR #48 (connectors re-pick facing sides when either end moves; explicit anchors kept).
@@ -394,7 +400,8 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (review, #31) With `?prototype=converge` the person's "Pull into a synthesis" is in Properties, which the calm layout keeps behind the menu (three clicks). Alternative: a flagged entry on the selection bar, next to Ask. The letters on the arrows are small and partly covered by the arrow line.
 
 - (build-B, item 41) The scorecard gains an "Ask loop" row next to the maintainer's measures (target: every step passes). It runs with no resident agent, so step 1 accepts any line that gives a way to an answer ("pnpm …", "chat", "Connect an agent" or "Waiting for …"). Answer cards may sit up to 400 px from their ask.
-- (build-A, item 39) Agent-usability tasks missing from the recorded attempt now count as not completed. Task 14's check (from #24) fails an agent note that names East as highest but also lists the other regions; left unchanged, since loosening another lane's check would weaken the measure.
+
+- (review, #33) `canvas_group` was let in as an ordinary tool although it comes from the spec's proposed agent interface list, because the list's other verbs already are ordinary tools. Alternative: a flagged prototype (`?prototype=group`).
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -453,5 +460,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:35Z | review | Review #29 to #32 | #29 #30 #31 #32 | All four merged (squash) after merging in the integration branch; #29 gained the 403 board-limit case; #30 reproduced against Postgres 16 and Redis; #31 refitted to #27 as merged and the calm layout; #32 driven in a real tab, reload-after-restore gap filed as 42; build and all package tests green after each |
 | 2026-11-26T11:34Z | build-A | 21 follow-up; 28 review fixes | #54 #36 | Sign-in keeps the tab's prototype flags (regression from #20 found in review); #36 services hardened: passwords, loopback, trusted pid file, cleanup on Ctrl+C, real headless-launch probe |
 | 2026-11-26T11:41Z | build-B | 41 Scorecard measures the Ask loop | #56 | New eval row, 5/5 steps in a real page and stdio MCP client; four UI mutations each fail a step; other measures unchanged |
-| 2026-11-26T11:40Z | build-A | 39 Agent-usability tasks for newer features | #57 | Tasks for the Ask loop, threaded replies and converge; self-test 24/24; fresh-agent attempt 23/24, median 3 calls; row counts missing tasks |
-| 2026-11-26T11:40Z | build-A | Feedback 8 import and paste, parts 1 to 3 | #46 #55 #58 | #46 brings yc/import-paste in (CSV drop under ?prototype=data kept: acceptance 9/10→10/10; verify-import 47/47); #55 side by side for two records (13/13 browser checks); #58 cited sections beside a record with reference arrows (15/15); first screen unchanged; stacked 46←55←58 |
+| 2026-11-26T11:45Z | review | Review #33 to #36 | #33 #34 #35 #36 | All four merged (squash) after merging in the integration branch and re-running each proof; #34 no longer names a hidden input; scorecard on bac1a93: all six rows pass (acceptance 10/10, agent usability 21/21, safety 9/9, persistence, 10k pan 37.3 ms, existing product with throwaway services) |

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T11:43Z",
-  "commit": "54a0c3d",
+  "generatedAt": "2026-11-26T11:42Z",
+  "commit": "bac1a93",
   "carriedOver": [],
   "table": [
     {
@@ -30,7 +30,7 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 1270 ms, pan 16.7 ms/frame; 10k: load 8582 ms, pan 36.5 ms/frame",
+      "result": "1k: load 1591 ms, pan 16.7 ms/frame; 10k: load 8290 ms, pan 37.3 ms/frame",
       "status": "reported"
     },
     {
@@ -47,61 +47,61 @@
           "name": "Person imports a dataset by dropping a CSV file",
           "pass": true,
           "detail": "ok",
-          "ms": 1515
+          "ms": 1513
         },
         {
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 20
+          "ms": 18
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 489
+          "ms": 498
         },
         {
           "name": "Agent charts the selection",
           "pass": true,
           "detail": "ok",
-          "ms": 18
+          "ms": 31
         },
         {
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 824
+          "ms": 829
         },
         {
           "name": "Agent reads that exact chart state",
           "pass": true,
           "detail": "ok",
-          "ms": 8
+          "ms": 13
         },
         {
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 23
+          "ms": 49
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1161
+          "ms": 1184
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": true,
           "detail": "ok",
-          "ms": 914
+          "ms": 939
         },
         {
           "name": "Reload restores everything",
           "pass": true,
           "detail": "ok",
-          "ms": 382
+          "ms": 467
         }
       ],
       "pageErrors": [],
@@ -113,63 +113,63 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 48,
+          "ms": 71,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 108,
+          "ms": 145,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 240,
+          "ms": 255,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo of a deletion after the person deleted its frame",
           "pass": true,
           "detail": "ok",
-          "ms": 57,
+          "ms": 93,
           "humanEditsLost": 0
         },
         {
           "name": "One agent cannot undo another agent's run",
           "pass": true,
           "detail": "ok",
-          "ms": 2903,
+          "ms": 2973,
           "humanEditsLost": 0
         },
         {
           "name": "Agent cannot hide the person's work behind a learning prompt",
           "pass": true,
           "detail": "ok",
-          "ms": 3519,
+          "ms": 3735,
           "humanEditsLost": 0
         },
         {
           "name": "Stale agent chart state against a newer human filter",
           "pass": true,
           "detail": "ok",
-          "ms": 375,
+          "ms": 391,
           "humanEditsLost": 0
         },
         {
           "name": "Stale agent cell edit against a newer human cell edit",
           "pass": true,
           "detail": "ok",
-          "ms": 377,
+          "ms": 394,
           "humanEditsLost": 0
         },
         {
           "name": "Agent data write to a locked dataset or chart",
           "pass": true,
           "detail": "ok",
-          "ms": 480,
+          "ms": 484,
           "humanEditsLost": 0
         }
       ],
@@ -184,17 +184,17 @@
     "performance": [
       {
         "objects": 1000,
-        "buildMs": 214,
-        "loadMs": 1270,
+        "buildMs": 184,
+        "loadMs": 1591,
         "panMedianFrameMs": 16.7,
         "panP95FrameMs": 16.8
       },
       {
         "objects": 10000,
-        "buildMs": 1214,
-        "loadMs": 8582,
-        "panMedianFrameMs": 36.5,
-        "panP95FrameMs": 97.7
+        "buildMs": 1460,
+        "loadMs": 8290,
+        "panMedianFrameMs": 37.3,
+        "panP95FrameMs": 93.8
       }
     ],
     "agentUsability": {
@@ -209,11 +209,11 @@
       "packages": {
         "e2e": {
           "pass": true,
-          "summary": "1 passed (11.9s)"
+          "summary": "1 passed (12.9s)"
         },
         "canvas": {
           "pass": true,
-          "summary": "205 passed (205)"
+          "summary": "198 passed (198)"
         },
         "cli": {
           "pass": true,
@@ -229,7 +229,7 @@
         },
         "server": {
           "pass": true,
-          "summary": "140 passed | 9 skipped (149)"
+          "summary": "149 passed (149)"
         },
         "web": {
           "pass": true,
@@ -237,7 +237,7 @@
         }
       },
       "testExit": 0,
-      "e2e": "e2e used throwaway Postgres and Redis started by the eval"
+      "e2e": "e2e used DATABASE_URL and REDIS_URL from the environment"
     }
   }
 }

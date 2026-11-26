@@ -1,6 +1,6 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-26T11:35Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-26T11:45Z by the review lane. Branch: `claude/sprint-int`.
 
 ## Read first
 - **The calm-canvas rework (#21) is merged, combined by the review lane with 16 sprint PRs.** It
@@ -34,17 +34,24 @@ Last updated 2026-11-26T11:35Z by the review lane. Branch: `claude/sprint-int`.
   #21, the prototype gate and run ownership in place. It replaces the 20/21 recorded before them
   (backlog 32 is done). Task 14, the earlier failure, passed. What the agent found confusing is
   under Decisions needed, item 13.
-- **The scorecard flags Performance as regressed** (10k pan 40 to 76.6 ms a frame). The same code
-  measured 39 to 84 ms across runs on this container, so this is the known spread, not a change;
-  backlog 31 (stable performance numbers) is claimed.
+- **All six scorecard rows pass on `bac1a93`.** The 10k pan time read 37 ms in this run and 77 ms
+  in the one before on the same container; the scorecard flagged that earlier run as a regression,
+  which it was not. Backlog 31 (stable performance numbers) is claimed.
 - **Restoring an earlier version (#32) can be lost by a reload within about a second.** The board
   shows the restored version and the server holds it, but this browser's own copy is written a
   moment later; a reload before that brings back the board as it was, and the next edit saves that
   on top. Nothing is deleted (every version stays in history). Found by the review with a script
   (reload 0 ms and 300 ms after restore: lost; 1,000 ms: kept). Filed as backlog 42; the same gap
   exists for any board just loaded from the account.
-- **Review lag.** Build lanes opened PRs #33 to #52 while #21 to #32 were reviewed; they are not
-  on this branch and nothing in this report covers them.
+- **`canvas_group` (#33) is a new agent tool that is always on**, not a flagged prototype: an agent
+  can wrap the person's objects in a named frame. It comes from the working spec's *proposed* agent
+  interface list, where every other verb (create, update, connect, arrange, annotate) was already
+  an ordinary tool, so the review let it in on the same footing. It is revision-guarded, refuses
+  to cover anything outside the group and is undone as one run. Decision 15 below.
+- **The menu has one more item, "Earlier versions" (#35)**, shown when the board is saved to an
+  account or the local server. The first screen is unchanged.
+- **Review lag.** Build lanes opened PRs #38 to #52 and later while #21 to #36 were reviewed; they
+  are not on this branch and nothing in this report covers them.
 - **#15 changes how every signed-in board is saved, and is the merge most worth reading**
   (`packages/canvas/src/board-sync.ts`). The board is uploaded to the account 1.2 s after each
   change and a clean browser opens the account's board. Review found and fixed two defects before
@@ -88,19 +95,19 @@ Last updated 2026-11-26T11:35Z by the review lane. Branch: `claude/sprint-int`.
   of the data and learning prototypes are proven by headless scripts, not `pnpm test` (backlog 9).
 
 ## Status
-`pnpm build` passes. `pnpm -r --no-bail test` on `16ce025`:
+`pnpm build` passes. `pnpm -r --no-bail test` on `bac1a93`:
 
 | Package | Result |
 |---|---|
-| canvas | 150 passed |
-| server | 129 passed, 7 skipped (the Postgres board suite; 19 of 19 pass with `TEST_DATABASE_URL` set) |
+| canvas | 198 passed |
+| server | 149 passed with `TEST_DATABASE_URL` set (the Postgres board suite is skipped without it) |
 | sdk | 12 passed |
 | mcp-server | 4 passed |
 | cli, web | no test files |
-| e2e | needs Postgres and Redis; 1 passed when they are provided, otherwise stops at start |
+| e2e | 1 passed; needs Postgres and Redis, which `pnpm eval:canvas` now starts itself when they are installed |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T11:43Z on `54a0c3d`:
+Scorecard from `pnpm eval:canvas` at 2026-11-26T11:42Z on `bac1a93`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
@@ -108,7 +115,7 @@ Scorecard from `pnpm eval:canvas` at 2026-11-26T11:43Z on `54a0c3d`:
 | Agent usability | ≥90% of ≥20 tasks | 21/21 (100%), median 2 tool calls | pass |
 | Safety of shared edits | 0 human edits lost | 0 lost; 9/9 races pass | pass |
 | Persistence | identical in a clean profile | identical | pass |
-| Performance | reported, not worse | 1k: load 1270 ms, pan 16.7 ms/frame; 10k: load 8582 ms, pan 36.5 ms/frame | reported |
+| Performance | reported, not worse | 1k: load 1591 ms, pan 16.7 ms/frame; 10k: load 8290 ms, pan 37.3 ms/frame | reported |
 | Existing product | green | build passes; tests: all packages pass | pass |
 <!-- scorecard:end -->
 
@@ -147,6 +154,10 @@ MCP. Agent usability reports the attempt recorded with #24.
 - [#30](https://github.com/seahyc/pairedcc/pull/30) Board sync checked in a real browser against the real server: `PAIRED_SERVER_URL` makes the dev canvas proxy sign-in and boards (e8b3218). Reproduced with Postgres 16 and Redis: saved, opened in a clean browser on the same account, hidden from another account, 401 signed out.
 - [#31](https://github.com/seahyc/pairedcc/pull/31) Converge prototype, part 2 (`?prototype=converge`): lettered arrows, claims that cite their sources, and a person's own synthesis from Properties (66678b5). Review fitted it to #27 as merged and to the calm layout, where Properties is behind the menu.
 - [#32](https://github.com/seahyc/pairedcc/pull/32) `restore(revision)` in board sync and history routes in the dev board store; no screen yet (b8b30a3). Driven in a real tab: restore, undo of the restore, missing revision. See Read first for the reload gap.
+- [#33](https://github.com/seahyc/pairedcc/pull/33) `canvas_group`: wrap revision-guarded objects in a named frame without moving them; stale, locked, mixed parents or covering an outsider reject the whole call (2b83999). Live HTTP and MCP check reproduced line for line.
+- [#34](https://github.com/seahyc/pairedcc/pull/34) The stale flag names the input that changed and the path it came through (0f1807f). Review stopped it naming an input still hidden behind a learning prompt.
+- [#35](https://github.com/seahyc/pairedcc/pull/35) Menu → Earlier versions lists kept revisions and restores one (6b92e2f). Driven in a browser at 1440 and 390 px: list, restore, reload.
+- [#36](https://github.com/seahyc/pairedcc/pull/36) The eval gives the e2e suite real services, from the environment or throwaway Postgres and Redis it starts and removes (bac1a93). Run both ways; nothing left running or on disk.
 - Review lane: `packages/cli` and `packages/web` test scripts pass with no test files (a712b50).
 
 How each was checked: the branch was merged with the integration branch, built and tested; every
@@ -185,10 +196,14 @@ None.
     is large and has no text filter; an agent cannot tell whether a tab has a prototype flag on.
 14. **Prototype fields in `canvas_get`** (#26) are returned in every tab, not behind a flag, since
     they are read-only and put nothing on the board. Alternative: `?prototype=primitives`.
+15. **`canvas_group` always on** (#33). Alternative: label it a prototype and refuse it without
+    `?prototype=group`, like converge.
+16. **Where a person converges** (#31): "Pull into a synthesis" sits in Properties, three clicks
+    away on the calm layout. Alternative: on the selection bar beside Ask, behind the same flag.
 12. **Document sharing wording** (found by #19, outside canvas scope): a new document says "anyone
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-Open and not yet reviewed: #33 to #52 (board history screens,
-board picker, group operation, stale reason, eval services, saved boards). PR descriptions #9 to
+Open and not yet reviewed: #38 to #52 and later (framing a board on open, saved boards picker,
+welcome header, ask starters, stable performance numbers and others). PR descriptions #9 to
 #20 carry a tool footer written before the brief ruled it out; commits do not.
