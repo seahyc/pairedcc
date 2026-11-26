@@ -10,7 +10,7 @@ export async function safety(browser: Browser, base: string) {
   const human = (fn: string, arg?: unknown) => page.evaluate(`(${fn})(window.paired, ${JSON.stringify(arg ?? null)})`);
   const get = (id: string) => agent.call("canvas_get", { id });
   const text = (o: any) => JSON.stringify(o?.props?.richText ?? o?.text ?? "");
-  const race = async (name: string, fn: (lost: (n: number) => void) => Promise<true | string>) => {
+  const race: Race = async (name, fn) => {
     let lost = 0;
     const list: Check[] = [];
     await check(list, name, () => fn((n) => (lost += n)));
@@ -83,5 +83,90 @@ export async function safety(browser: Browser, base: string) {
     await agent.close();
     await context.close();
   }
+  await dataRaces(browser, base, race);
   return { races, humanEditsLost: races.reduce((n, r) => n + r.humanEditsLost, 0) };
+}
+
+type Race = (name: string, fn: (lost: (n: number) => void) => Promise<true | string>) => Promise<void>;
+
+// The same races on the data prototype's own writes (chart state and dataset cells),
+// in a tab with the prototype turned on. The person acts through the page.
+async function dataRaces(browser: Browser, base: string, race: Race) {
+  const { context, page, session } = await openCanvas(browser, base, "?prototype=data");
+  const agent = await mcpAgent(base, session);
+  const get = (id: string) => agent.call("canvas_get", { id });
+  const refused = async (tool: string, args: Record<string, unknown>) => {
+    try {
+      await agent.call(tool, args);
+      return false;
+    } catch {
+      return true;
+    }
+  };
+  // Synthetic readings, made up for this check.
+  const rows = ["North", "South"].flatMap((site) => ["Jan", "Feb"].map((month, m) => ({ site, month, kwh: 100 + m * 10 + (site === "South" ? 5 : 0) })));
+  const columns = [{ name: "site", type: "text" }, { name: "month", type: "text" }, { name: "kwh", type: "number" }];
+  try {
+    await agent.call("canvas_page", { name: "Data safety races" });
+    const ds = await agent.call("canvas_dataset", { x: 0, y: 0, title: "Readings", source: "Synthetic, made up for the eval", columns, rows });
+    const ch = await agent.call("canvas_chart", { x: 520, y: 0, datasetId: ds.id, state: { x: "site", y: "kwh" } });
+    await page.evaluate(() => (window as any).paired.select([]));
+    await agent.call("canvas_focus", {});
+    await sleep(400);
+
+    await race("Stale agent chart state against a newer human filter", async (lost) => {
+      const seen = await get(ch.id);
+      await page.locator(".chart").first().getByRole("button", { name: "Feb", exact: true }).click();
+      await sleep(300);
+      const human = (await get(ch.id)).widget?.state?.filter;
+      if (JSON.stringify(human) !== JSON.stringify({ month: ["Feb"] })) return `the person's filter did not apply: ${JSON.stringify(human)}`;
+      const rejected = await refused("canvas_chart_state", { id: ch.id, expectedRevision: seen.revision, state: { filter: {} } });
+      const now = (await get(ch.id)).widget?.state?.filter;
+      if (JSON.stringify(now) !== JSON.stringify(human)) lost(1);
+      if (!rejected) return "stale chart state write was accepted";
+      return JSON.stringify(now) === JSON.stringify(human) ? true : `human filter lost: ${JSON.stringify(now)}`;
+    });
+
+    await race("Stale agent cell edit against a newer human cell edit", async (lost) => {
+      const seen = await get(ds.id);
+      const cell = page.getByLabel("kwh, row 2"); // labels count rows from 1
+      await cell.click();
+      await cell.fill("777");
+      await cell.press("Enter");
+      await sleep(300);
+      const human = (await get(ds.id)).dataset?.rows?.[1]?.kwh;
+      if (human !== 777) return `the person's cell edit did not apply (row 1 kwh is ${human})`;
+      const rejected = await refused("canvas_cell", { id: ds.id, expectedRevision: seen.revision, row: 1, column: "kwh", value: 1 });
+      const now = (await get(ds.id)).dataset?.rows?.[1]?.kwh;
+      if (now !== human) lost(1);
+      if (!rejected) return "stale cell write was accepted";
+      return now === human ? true : `human cell edit lost: ${now}`;
+    });
+
+    await race("Agent data write to a locked dataset or chart", async (lost) => {
+      const failures: string[] = [];
+      for (const id of [ds.id, ch.id]) {
+        await page.evaluate((x: string) => (window as any).paired.select([x]), id);
+        await page.keyboard.press("Shift+L");
+        await sleep(200);
+        const locked = await get(id);
+        if (!locked.locked) return `Shift+L did not lock ${locked.type}`;
+        const [tool, args] = locked.type === "dataset"
+          ? ["canvas_cell", { id, expectedRevision: locked.revision, row: 0, column: "kwh", value: 1 }]
+          : ["canvas_chart_state", { id, expectedRevision: locked.revision, state: { aggregate: "mean" } }];
+        if (!(await refused(tool, args))) failures.push(`${tool} on a locked ${locked.type} was accepted`);
+        const now = await get(id);
+        const before = locked.type === "dataset" ? locked.dataset?.rows : locked.widget?.state;
+        const after = now.type === "dataset" ? now.dataset?.rows : now.widget?.state;
+        if (JSON.stringify(before) !== JSON.stringify(after)) {
+          lost(1);
+          failures.push(`locked ${locked.type} changed`);
+        }
+      }
+      return failures.length ? failures.join("; ") : true;
+    });
+  } finally {
+    await agent.close();
+    await context.close();
+  }
 }

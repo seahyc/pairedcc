@@ -27,7 +27,7 @@ import {
 } from "./operations";
 import { createPrompt } from "./learning/prompt-shape";
 import { overview } from "./overview";
-import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell } from "./data/agent";
+import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
 
@@ -390,9 +390,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
           };
       }
       // Data objects are summarised: rows and bars appear in dataset/widget, rows only via get.
-      const props = object && (s.type === "dataset" || s.type === "chart")
-        ? Object.fromEntries(Object.entries(object.props).filter(([k]) => k !== "data" && k !== "bars"))
-        : object?.props;
+      const props = object && summaryProps(s.type, object.props as Record<string, unknown>);
       return {
         ...object,
         props,
