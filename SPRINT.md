@@ -438,14 +438,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     commit, including one taken straight after the other measures, stay inside the flag threshold
     (for example the lower quartile of more, shorter samples), with the spread recorded and the
     threshold unchanged.
-70. **Side by side and "Show cited" bring comments along.** (Review of #55 and #58 with #52.) Both
+70. (PR #92 open, awaiting review.) **Side by side and "Show cited" bring comments along.** (Review of #55 and #58 with #52.) Both
     move records and sections with `updateShape` before selecting them, so the comments, notes and
     replies attached to them stay where they were. Done when a comment on a moved record or section
     moves with it in the same undo step, checked in a browser.
-71. (PR #93 open, awaiting review.) **The web page reader stays quick on awkward markup.** (Review of #65.) 50,000 unclosed `<li>`
+71. (PRs #93 and #98 open, awaiting review: two lanes did it at once; review lane, merge one. #98 also covers unclosed comments, brackets that never close, stray "<", headings, pre, article and head, each with a 2 MB test, and keeps the regex structure; #93 rewrites the reader as one tag pass.) **The web page reader stays quick on awkward markup.** (Review of #65.) 50,000 unclosed `<li>`
     take 4 s and 20,000 unclosed advert `<div>`s 1.2 s; the file limit is 2 MB. Done when a 2 MB
     page of unclosed tags is read, or refused with a plain message, in under a second, with a test.
-72. **A fresh agent-usability attempt on the merged branch.** The 23/24 in the scorecard was
+72. (PR #97 open, awaiting review.) **A fresh agent-usability attempt on the merged branch.** The 23/24 in the scorecard was
     recorded before #58 to #66 merged, and before read marks renamed `note` to `comment`. Done when
     `eval/agent-runs/latest.json` holds an attempt against the current branch and task 14's check
     is confirmed or corrected with the reason given.
@@ -481,15 +481,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     after, and the person's own edits are unaffected. Moving and deleting the person's objects are
     recorded as a decision, not changed.
 
+77. **Friction from the 26 Nov 13:03 agent-usability attempt (PR #97; reported by the agent, not yet reproduced).** (a) `eval/mcp-call.ts list` prints about 50 KB that does not parse as one JSON value; (b) `canvas_asks` lists every page's asks with no current-page filter; (c) the agent found no `locked` hint or child count in `canvas_overview` under the names it expected, costing a `canvas_read`; (d) `canvas_duplicate`'s default offset (320) overlaps a wider frame; (e) the docs do not say which `canvas_connect` relation means "supports", or whether `canvas_reply` changes the comment's revision before `canvas_resolve`. Done when each is reproduced with a failing test and fixed, or recorded as a decision with the reason.
+
 ## Claims
 76. Agent never rewrites the person's words | claude/sprint-human-words | 2026-11-26T13:14Z
 69. The 10k pan figure survives a slow-mode run | claude/sprint-pan-quartile | 2026-11-26T13:14Z
-71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
-70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
-72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
 7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
+- 72. Fresh agent-usability attempt (build-B): PR #97 (23/24, median 2 tool calls; task 14's check corrected to accept a fuller answer naming the top region first as highest; friction filed as item 77).
+- 71. Web page reader stays quick (build-B): PR #98, duplicate of #93 from another lane (2 MB of unclosed tags: 145 s worst before, under 0.5 s after; failing-first tests).
+- 70. Side by side and Show cited bring comments along (build-B): PR #92 (verify-import-follow 7/9 → 9/9).
 - Feedback 8, import and paste (build-A): merged #46 (yc/import-paste brought in, CSV drop stays a dataset under the data flag), #55 (side by side, column slots), #58 (cited sections beside a record), #60 (.xlsx), #65 (web pages), #73 (PDF). Open: #85 (item 62), #89 (item 65), #93 (item 71). The feedback item stays open for the second playtest.
 - 51. CSV keeps what the file says (build-A): PR #68.
 - 50. Stale checks stay linear (build-A): PR #71 (16-round read 1.8 s → 8 ms; 18 rounds no longer hangs).
@@ -646,6 +648,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 - (build-A, item 71) Item 71 was claimed twice a minute apart (build-A `claude/sprint-html-linear` 13:00Z, then `claude/sprint-html-fast` 13:01Z). PR #93 (from the first claim) is open with the fix and proof; the second claim can be dropped unless that lane finds #93 lacking.
 
+- (build-B, item 72) Task 14's check required a note naming only the top region; the fresh agent wrote a correct note that also gave the other bars' values and failed. Corrected, not weakened: when the note names other regions it must name the top region first and say it is the highest; a bare list, a wrong pick or no pick still fail (unit-tested, self-test OK). The recorded attempt is kept as scored under the old check (23/24); under the corrected check its evidence passes. Alternative: keep "only the top region" and say so in the prompt.
+- (build-B, item 71) Two lanes built item 71 at once (#93 unclaimed at 13:04, #98 under the 13:01 claim). In #98 a "<" with no ">" before the next "<" is text and an unclosed comment runs to the end of the page, as a browser reads them; open list items close at the next item or the end of their list. Lanes should claim before starting.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -751,3 +756,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:09Z | build-A | Run end; #89 review follow-up | #89 | Marked headers with blank cells, headings with pipes, appended titles (3 failing-first tests); #85 #89 #93 merge cleanly with claude/sprint-int and with each other (386 tests on the combination); feedback-8 claim released |
 | 2026-11-26T13:10Z | build-B | Review of #94 (three yellow findings) | #94 | Recorded, not yet fixed, for #94's next push or a follow-up: (a) Tab eligibility follows the card's span, not the drawn flag (a card half off the right edge keeps an offscreen flag tabbable; a selected flag opened into view can be skipped); (b) the fixed 120 px room can still clip a long reason at high zoom, since the flag scales with the canvas, so placement should compare its measured height on each side; (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first line, so the anchor should clamp to the top edge. Not answered on the threads, because the reply tool appends a tool footer the hard rules forbid. #76 and #77 merged |
 | 2026-11-26T13:12Z | build-B | 58 follow-up | #96 | #78 merged before its last fix: a duplicate plain-text filter still dropped partly bold words on the integration branch; removed, reproduced live before and after |
+| 2026-11-26T13:16Z | build-B | 70 Side by side and Show cited bring comments along | #92 | moveWithAttached moves programmatic moves with their comments in one undo step; real tab 7/9 before, 9/9 after; acceptance, ask loop, safety, persistence unchanged |
+| 2026-11-26T13:16Z | build-B | 72 Fresh agent-usability attempt | #97 | 23/24, median 2 tool calls on cdd473d; task 14 check corrected with reason; friction filed as 77 |
+| 2026-11-26T13:16Z | build-B | 71 Web page reader stays quick | #98 | Duplicate of #93; one-pass element matching, implicit li close, stray "<" as text; worst 2 MB case 145 s → 0.5 s; reader tests unchanged |
