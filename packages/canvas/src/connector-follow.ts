@@ -28,19 +28,30 @@ export function bendFor({ vertical, dx, dy }: { vertical: boolean; dx: number; d
 
 const same = (p: Anchor | undefined, q: Anchor) => !!p && p.x === q.x && p.y === q.y;
 
-/** Re-pick the facing sides for one connector; returns whether anything changed. */
+/** Whether a connector follows its ends: made by `connect` without explicit anchors. */
+export const isFollowed = (arrow: TLShape) => arrow.type === "arrow" && !arrow.meta.fixedAnchors && typeof arrow.meta.fromId === "string";
+
+/**
+ * Re-pick the facing sides for one connector; returns whether anything changed. The ends are
+ * read from the connector's current bindings, not from meta, because a duplicated connector
+ * keeps the original's meta while its bindings point at the copies.
+ */
 export function reanchor(editor: Editor, arrow: TLShape): boolean {
-  if (arrow.type !== "arrow" || arrow.meta.fixedAnchors || typeof arrow.meta.fromId !== "string" || typeof arrow.meta.toId !== "string") return false;
-  const from = editor.getShape(arrow.meta.fromId as TLShapeId), to = editor.getShape(arrow.meta.toId as TLShapeId);
+  if (!isFollowed(arrow)) return false;
+  const bindings = editor.getBindingsFromShape<TLArrowBinding>(arrow.id, "arrow");
+  const startBinding = bindings.find((b) => b.props.terminal === "start"), endBinding = bindings.find((b) => b.props.terminal === "end");
+  if (!startBinding || !endBinding) return false;
+  const from = editor.getShape(startBinding.toId), to = editor.getShape(endBinding.toId);
   const a = from && editor.getShapePageBounds(from), b = to && editor.getShapePageBounds(to);
   if (!a || !b) return false;
   const want = chooseAnchors(a, b);
-  const bindings = editor.getBindingsFromShape<TLArrowBinding>(arrow.id, "arrow");
   let changed = false;
-  for (const binding of bindings) {
+  for (const binding of [startBinding, endBinding]) {
     const anchor = binding.props.terminal === "start" ? want.start : want.end;
     if (same(binding.props.normalizedAnchor, anchor)) continue;
-    editor.updateBinding({ ...binding, props: { ...binding.props, normalizedAnchor: anchor } });
+    // meta.followed marks the anchor as derived, so selective agent undo does not count the
+    // re-route as someone's edit (src/run-undo.ts).
+    editor.updateBinding({ ...binding, meta: { ...binding.meta, followed: true }, props: { ...binding.props, normalizedAnchor: anchor } });
     changed = true;
   }
   if (changed && "bend" in arrow.props) editor.updateShape({ id: arrow.id, type: "arrow", props: { bend: bendFor(want) } });
@@ -54,8 +65,13 @@ export function followConnectors(editor: Editor) {
     const moved = previous.x !== next.x || previous.y !== next.y || previous.rotation !== next.rotation || previous.parentId !== next.parentId ||
       (previous.props as { w?: number }).w !== (next.props as { w?: number }).w || (previous.props as { h?: number }).h !== (next.props as { h?: number }).h;
     if (!moved) return;
-    for (const binding of editor.getBindingsToShape<TLArrowBinding>(next.id, "arrow")) {
-      const arrow = editor.getShape(binding.fromId);
+    // Moving a frame moves its children without changing their records, so look at the
+    // connectors bound to the shape and to everything inside it, each once.
+    const arrows = new Set<TLShapeId>();
+    for (const id of editor.getShapeAndDescendantIds([next.id]))
+      for (const binding of editor.getBindingsToShape<TLArrowBinding>(id, "arrow")) arrows.add(binding.fromId);
+    for (const id of arrows) {
+      const arrow = editor.getShape(id);
       if (arrow) reanchor(editor, arrow);
     }
   });
