@@ -262,12 +262,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 36. Working spec implemented sections | claude/sprint-spec-sync | 2026-11-26T11:27Z
-35. Annotation arrows follow their note | claude/sprint-annotation-arrows | 2026-11-26T11:22Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 36. Comments move with their target | claude/sprint-follow | 2026-11-26T11:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 35. Annotation arrows follow their note (build-A): PR #48 (connectors re-pick facing sides when either end moves; explicit anchors kept).
 - 33. Agent tools never offer authorship (build-A): PR #44 (`canvas_annotate` no longer advertises `author`; manifest test guards every tool).
 - Reviewed and merged 2026-11-26 by the review lane: #22 as 2b33d8c, #23 as 8daf8d3, #25 as a7c8505, #26 as 5f9f355, #27 as 12abf62, #28 as eb63f9b. Agent-usability attempt re-recorded on the calm canvas (21/21).
 - 5. Converge, part 2 (build-A): PR #31, built on build-B's #27: the person's own synthesis from a selection (empty card in typing mode), claims citing sources by arrow letter, placement that keeps arrows clear of sources.
@@ -291,6 +291,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 35) Every connector made by `connect` (agent connections, annotations, feedback) now re-picks facing sides when an end moves, not only annotations; connectors given explicit anchors (converge) and arrows the person draws are left alone. #31 and #48 both touch `connect`; whichever merges second rebases.
 - (review, #26) `canvas_get`'s prototype fields (relationships, source, transformation) are not behind a flag; they are read-only and add nothing to the board.
 - (build-A, item 5) The person's synthesis card starts empty so the conclusion is theirs (augmentation principle); alternative: prefill an agent draft to edit. build-A had built converge in parallel before seeing #27; rather than open a competing PR it rebuilt its additions on #27 as #31.
 - (review, #21) How the calm canvas was combined with the sprint work: the calm layout, menu and first board win wherever the two disagreed; the legacy welcome-board swap is dropped (an older board is kept as its own page, as #21 does); board sync starts after the calm first board is laid out; the prototype page buttons stay in the pages list, which is now behind Menu → Show layers and pages, so with a prototype flag on they are two clicks away. Alternative: a flagged entry in the menu itself.
@@ -403,3 +404,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:21Z | build-A | 33 No authorship field for agents | #44 | Schema fix with a failing-then-passing test; live MCP and HTTP check; scorecard unchanged |
 | 2026-11-26T11:23Z | build-A | 24 Sync against the real server (race) | #45 | Real server refuses a stale save with 409 and the canvas merges; both browsers' changes on the server |
 | 2026-11-26T11:24Z | build-B | 35 Agents see clusters | #47 | `canvas_overview` reports piles of nearby objects; tested pure function; live HTTP check; root build and test green |
+| 2026-11-26T11:25Z | build-A | 35 Annotation arrows follow | #48 | Side effect re-picks connector sides; before/after anchors and screenshots; scorecard unchanged |
