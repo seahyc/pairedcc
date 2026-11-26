@@ -51,6 +51,17 @@ describe("what a prompt may hide", () => {
   it("hides an object an agent made", () => {
     expect(hideRefusal(obj({ createdBy: "My agent" }))).toBeNull();
   });
+  it("treats the person's comments and their arrows as the person's work", () => {
+    // A comment left with C is an annotation by "Human"; its arrow is createdBy "Human".
+    expect(hideRefusal(obj({ role: "annotation", author: "Human", targetId: "shape:x" }))).toMatch(/person made/);
+    expect(hideRefusal(obj({ createdBy: "Human" }, { type: "arrow" }))).toMatch(/person made/);
+    expect(hideRefusal(obj({ role: "annotation", author: "My agent" }))).toBeNull();
+  });
+  it("refuses an agent frame that holds something the person made", () => {
+    const children = [obj({ createdBy: "My agent" }, { id: "shape:a" }), obj({}, { id: "shape:mine" })];
+    expect(hideRefusal(obj({ createdBy: "My agent" }, { type: "frame" }), children)).toMatch(/shape:mine/);
+    expect(hideRefusal(obj({ createdBy: "My agent" }, { type: "frame" }), [children[0]])).toBeNull();
+  });
   it("never hides the person's own work, a locked object or another prompt", () => {
     expect(hideRefusal(obj({}))).toMatch(/person made/);
     expect(hideRefusal(obj({ createdBy: "My agent" }, { isLocked: true }))).toMatch(/Unlock/);
