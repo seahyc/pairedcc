@@ -24,6 +24,7 @@ On YC's Mac, the local server is managed by user LaunchAgent `com.paired.canvas.
 - Live save state, an agent status chip (last action, failures, lost link) and a shortcut sheet on `?`. The audit behind these is `docs/canvas/usability-heuristics.md`.
 - Data prototype (`?prototype=data`, then **Data prototype page**, or drop a `.csv` file on the canvas): a dataset table with editable cells, a bar chart over it filtered and selected by clicking, exact chart state readable by agents, and stale marking (dashed chart with Recompute, a "stale" flag on derived notes) when an input changes. Synthetic data only.
 - Learning prototype (`?prototype=learning`, then **Learning prototype page**): predict-then-check and generate-first prompt cards that hide a result until the person answers or skips.
+- Converge prototype (`?prototype=converge`): an agent pulls alternatives into one synthesis card with a derived-from arrow from each source; the synthesis shows as stale when a source changes.
 - Browser object interface: `window.paired.read()`, `create(input)`, `update(input)`, `select(ids)`, `undo()` and `redo()`.
 
 Local HTTP and MCP access are now implemented; see [AGENT_API.md](AGENT_API.md). A built-in AI assistant remains future work. Updates require `expectedRevision`; stale updates and updates to locked objects are rejected. Agents and humans use the same tldraw store and history.
@@ -62,7 +63,7 @@ The prototype stores work in the current browser profile. Export a file to move 
 
 ## Agent workflow
 
-Open **Agent access** for the MCP configuration for this tab. The 26 tools include an overview read, the feedback queue (read and reply), four prototype data tools (dataset, chart, chart state, cell), a prototype learning prompt, scene composition, nested frames, layout and duplication, per-operation undo, targeted feedback and image operations. The **Agent studio** page is a scripted SVG demonstration. Integration checks cover the real HTTP/browser bridge and MCP stdio protocol. Locally the API runs in the development server. On paired.cc, Agent access shows a one-line command per client and the hosted endpoint forwards to the signed-in tab.
+Open **Agent access** for the MCP configuration for this tab. The 27 tools include an overview read, the feedback queue (read and reply), four prototype data tools (dataset, chart, chart state, cell), a prototype learning prompt, a prototype converge tool, scene composition, nested frames, layout and duplication, per-operation undo, targeted feedback and image operations. The **Agent studio** page is a scripted SVG demonstration. Integration checks cover the real HTTP/browser bridge and MCP stdio protocol. Locally the API runs in the development server. On paired.cc, Agent access shows a one-line command per client and the hosted endpoint forwards to the signed-in tab.
 
 ## Migration compatibility
 

@@ -78,6 +78,7 @@ export const commandSchema = z.object({
     "chart",
     "chart_state",
     "cell",
+    "converge",
   ]),
   input: z.record(z.string(), z.unknown()).optional(),
 });

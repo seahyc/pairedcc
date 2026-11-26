@@ -27,6 +27,7 @@ import {
   revision,
 } from "./operations";
 import { createPrompt } from "./learning/prompt-shape";
+import { convergeInput, placeBeside } from "./converge/model";
 import { overview } from "./overview";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell } from "./data/agent";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
@@ -264,6 +265,31 @@ export function connect(editor: Editor, value: unknown, actor: string) {
   });
   return describeObject(editor, id);
 }
+/**
+ * PROTOTYPE: pull alternatives into one synthesis card. The card records each source as an
+ * input (so it shows as stale when a source changes) and gets a derived-from arrow from each.
+ */
+export function converge(editor: Editor, value: unknown, actor: string) {
+  const input = convergeInput.parse(value);
+  const sources = input.sourceIds.map((id) => find(editor, id));
+  for (const s of sources) if (editor.isShapeHidden(s)) throw new Error(`${s.id} is hidden; a synthesis must come from what the person can see`);
+  const boxes = sources.map((s) => editor.getShapePageBounds(s)).filter((b): b is NonNullable<typeof b> => !!b);
+  const at = input.x !== undefined && input.y !== undefined ? { x: input.x, y: input.y } : placeBeside(boxes);
+  const inputs = recordInputs(editor, input.sourceIds);
+  editor.markHistoryStoppingPoint("converge");
+  let id = "";
+  const connections: unknown[] = [];
+  editor.run(() => {
+    id = createCard(editor, { kind: "note", x: at.x, y: at.y, text: input.text, name: input.name ?? "Synthesis" }, actor, {
+      role: "synthesis",
+      convergedFrom: input.sourceIds,
+      inputs,
+    });
+    for (const source of input.sourceIds) connections.push(connect(editor, { fromId: source, toId: id, relation: "derived-from" }, actor));
+  });
+  return { synthesis: describeObject(editor, id), sources: input.sourceIds, connections };
+}
+
 export function annotateObject(editor: Editor, value: unknown) {
   const input = annotationInput.parse(value),
     target = find(editor, input.targetId),
@@ -530,6 +556,8 @@ export async function executeCommand(
       return patchObject(editor, command.input);
     case "learn":
       return createPrompt(editor, command.input, actor);
+    case "converge":
+      return converge(editor, command.input, actor);
     case "dataset":
       return createDataset(editor, command.input, actor);
     case "chart":
