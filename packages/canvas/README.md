@@ -88,6 +88,8 @@ pnpm build:canvas   # from the repository root: type check and production build
 pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents every tool
 ```
 
+`tools/verify-pdf.mjs <screenshot dir> [origin]` checks a PDF (`test/fixtures/notes.pdf`, the synthetic notes printed by Chromium with `test/fixtures/build-pdf.cjs`).
+
 `tools/verify-cite.mjs <screenshot dir> [origin]` checks bringing cited sections beside a record (the synthetic `test/fixtures/pack.md` is the document the review cites).
 
 `tools/verify-compare.mjs <screenshot dir> [origin]` checks Side by side on two pasted records (alignment, order kept, one undo).
@@ -126,7 +128,7 @@ Browser checks performed 17 Nov 2026: native object dragging, pen drawing, text 
 
 This first pass adopts familiar canvas primitives and interactions. It does not reproduce Paper's CSS-flex layout system, shaders, component system or HTML/React export. Interactive data widgets exist only as the flagged data prototype (one bar chart type). The local agent transport is implemented.
 
-The server now has a per-account board API (`/api/canvas/boards`, `packages/server/src/canvas/boards`). It saves the tldraw document with a revision number, rejects a save on a stale revision with 409 and the current revision, keeps the last 50 revisions, and is covered by tests against memory and a real Postgres (`TEST_DATABASE_URL`). Limits: 10 MB per board (413), and 50 boards per account (`MAX_BOARDS_PER_ACCOUNT`): creating one more is refused with 403 and the limit, while saving an existing board is never limited. Board sync (above) uses it. The development server's file store keeps one local person's boards and has no board limit.
+The server now has a per-account board API (`/api/canvas/boards`, `packages/server/src/canvas/boards`). It saves the tldraw document with a revision number, rejects a save on a stale revision with 409 and the current revision, keeps the newest 20 revisions and then one per 15 minutes of older work (50 at most, so history reaches back hours rather than minutes), and is covered by tests against memory and a real Postgres (`TEST_DATABASE_URL`). Limits: 10 MB per board (413), and 50 boards per account (`MAX_BOARDS_PER_ACCOUNT`): creating one more is refused with 403 and the limit, while saving an existing board is never limited. Board sync (above) uses it. The development server's file store keeps one local person's boards and has no board limit.
 
 The prototype stores work in the current browser profile. Export a file to move work between profiles or devices. Boards are not stored on a server and there is no multiplayer backend; hosted agent access (`https://paired.cc/mcp`) relays commands to a signed-in open tab. tldraw development use works locally; production use requires an appropriate tldraw license. No production deployment was made.
 
