@@ -7,6 +7,7 @@ import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
+import { keys } from "./keys";
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
 const short = (text: string, max = 28) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
@@ -217,7 +218,7 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
   if (state.editing)
     return state.blank ? null : (
       <div ref={setBar} className="selection-bar hint" style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }}>
-        <kbd>⌘↵</kbd> ask about this · <kbd>Esc</kbd> done
+        <kbd>{keys("⌘↵")}</kbd> ask about this · <kbd>Esc</kbd> done
       </div>
     );
   if (asking)
@@ -263,8 +264,8 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
     );
   return (
     <div ref={setBar} className="selection-bar" style={{ left, top, maxWidth: viewWidth - 2 * BAR_MARGIN }} role="toolbar" aria-label="What next">
-      <button className="primary" onClick={() => setAsking(true)} title="Ask your agent about the selection (⌘↵)">
-        ✦ Ask <kbd>⌘↵</kbd>
+      <button className="primary" onClick={() => setAsking(true)} title={keys("Ask your agent about the selection (⌘↵)")}>
+        ✦ Ask <kbd>{keys("⌘↵")}</kbd>
       </button>
       <button className={state.picked ? "on" : ""} onClick={() => judge("picked")} title="Pick: this one (P)">
         Pick <kbd>P</kbd>

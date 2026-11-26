@@ -271,12 +271,12 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
     title: "Think",
     rows: [
       ["Write a thought", "N, or double-click the board"],
-      ["Ask your agent about the selection", "⌘ ↵"],
+      ["Ask your agent about the selection", keys("⌘ ↵")],
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
       ["Open or close the feedback queue", "Shift C"],
-      ["Bring in a table or document as cards", "⌘ V, or drop a file"],
+      ["Bring in a table or document as cards", keys("⌘ V, or drop a file")],
       ["Next / previous imported record", "J / K"],
       ["Finish typing", "Esc"],
     ],
@@ -286,7 +286,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
     title: "Move around",
     rows: [
       ["Pan", "Space + drag, or scroll"],
-      ["Zoom", "Pinch, or ⌘ scroll"],
+      ["Zoom", keys("Pinch, or ⌘ scroll")],
       ["Fit everything", "Shift 1"],
       ["Fit selection", "Shift 2"],
     ],
@@ -294,10 +294,10 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
   {
     title: "Edit",
     rows: [
-      ["Undo / redo", "⌘ Z / ⇧ ⌘ Z"],
-      ["Duplicate", "⌘ D"],
-      ["Select all", "⌘ A"],
-      ["Delete", "⌫"],
+      ["Undo / redo", keys("⌘ Z / ⇧ ⌘ Z")],
+      ["Duplicate", keys("⌘ D")],
+      ["Select all", keys("⌘ A")],
+      ["Delete", keys("⌫")],
       ["Edit text", "Double-click or Enter"],
       ["Deselect, back to Move", "Esc"],
       ["This list", "?"],
@@ -827,7 +827,7 @@ function Shell() {
               ))}
             <div className="menu-rule" />
             <button role="menuitem" onClick={() => { setPanel(panel === "feedback" ? null : "feedback"); setMenuOpen(false); }}>
-              <MessagesSquare size={14} /> Feedback queue <kbd>⇧C</kbd>
+              <MessagesSquare size={14} /> Feedback queue <kbd>{keys("⇧C")}</kbd>
             </button>
             <button role="menuitem" onClick={() => { setLeftOpen(!leftOpen); setMenuOpen(false); }}>
               <Layers size={14} /> {leftOpen ? "Hide" : "Show"} layers and pages
@@ -965,7 +965,7 @@ function Shell() {
             <span>{t.name}</span>
           </button>
         ))}
-        <button type="button" className="tool-button ask" title="Ask your agent about the selection (⌘↵)" onClick={askAboutSelection}>
+        <button type="button" className="tool-button ask" title={keys("Ask your agent about the selection (⌘↵)")} onClick={askAboutSelection}>
           <Sparkles size={18} strokeWidth={1.6} />
           <span>Ask</span>
         </button>
@@ -1286,11 +1286,11 @@ function Shell() {
                 </div>
                 <div>
                   <dt>Duplicate</dt>
-                  <dd>⌘ D</dd>
+                  <dd>{keys("⌘ D")}</dd>
                 </div>
                 <div>
                   <dt>Undo</dt>
-                  <dd>⌘ Z</dd>
+                  <dd>{keys("⌘ Z")}</dd>
                 </div>
               </dl>
             </div>
@@ -1407,6 +1407,7 @@ function Shell() {
   );
 }
 import { GeoShapeGeoStyle, PageRecordType, createShapeId, react } from "tldraw";
+import { keys } from "./keys";
 const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil, BoardImageShapeUtil];
 const TEXT_WRAP = 460;
 // One set of editor options: the page limit, and double-click writes a card rather than plain text.
