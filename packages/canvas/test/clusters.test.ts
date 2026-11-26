@@ -28,7 +28,8 @@ describe("clusters of nearby objects", () => {
     const t = performance.now();
     const result = clusters(many);
     expect(performance.now() - t).toBeLessThan(1000);
-    expect(result[0].ids).toHaveLength(10_000);
+    expect(result[0].count).toBe(10_000);
+    expect(result[0].ids).toHaveLength(50);
   });
 });
 
@@ -37,6 +38,7 @@ describe("long chains", () => {
     const row = Array.from({ length: 10_000 }, (_, i) => box(`r${i}`, i * 210, 0, 200, 100));
     const result = clusters(row);
     expect(result).toHaveLength(1);
-    expect(result[0].ids).toHaveLength(10_000);
+    expect(result[0].count).toBe(10_000);
+    expect(result[0].ids).toHaveLength(50);
   });
 });
