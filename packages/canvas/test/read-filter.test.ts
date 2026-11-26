@@ -63,3 +63,10 @@ describe("text filter: German sharp s and whole characters (item 79)", () => {
     expect(matchesText("", "anything")).toBe(true);
   });
 });
+
+describe("text filter: emoji presentation (item 79 follow-up)", () => {
+  it("ignores variation selectors, so a bare ❤ still finds ❤️", () => {
+    expect(matchesText("❤", "❤️ love")).toBe(true);
+    expect(matchesText("❤️", "❤ love")).toBe(true);
+  });
+});

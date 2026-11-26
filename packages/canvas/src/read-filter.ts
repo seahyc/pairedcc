@@ -9,7 +9,7 @@
  * matches the same letter inside a word.
  */
 const fold = (s: string) =>
-  s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toUpperCase().toLowerCase().replace(/ß/g, "ss").replace(/ς/g, "σ").replace(/\s+/g, " ").trim();
+  s.normalize("NFKD").replace(/[\u0300-\u036f\ufe0e\ufe0f]/g, "").toUpperCase().toLowerCase().replace(/ß/g, "ss").replace(/ς/g, "σ").replace(/\s+/g, " ").trim();
 
 const graphemes = typeof Intl !== "undefined" && "Segmenter" in Intl ? new Intl.Segmenter(undefined, { granularity: "grapheme" }) : undefined;
 
