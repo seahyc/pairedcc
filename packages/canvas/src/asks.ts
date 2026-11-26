@@ -103,13 +103,14 @@ const given = (editor: Editor, s: TLShape, max = 2000): Given => {
   };
 };
 const said = (editor: Editor, s: TLShape, max: number): HistoryEntry => {
-  const mark = markOf(s.meta);
+  const mark = markOf(s.meta), source = sourceOf(s);
   // A frame asked about earlier has no text of its own: say what it held, as the ask did then.
+  // Imported material is said with its column names, as in the ask itself.
   const text =
     s.type === "frame"
       ? `the frame "${shapeName(s)}", holding: ${inside(editor, s, new Set()).inside.map((o) => o.text).join("; ") || "nothing with text"}`
-      : textOf(s);
-  return { id: s.id, who: authorOf(s), said: clip(text, max), ...(mark ? { mark } : {}) };
+      : sourceText(s, textOf(s)) || textOf(s);
+  return { id: s.id, who: source ? sourceAuthor(source) : authorOf(s), said: clip(text, max), ...(mark ? { mark } : {}) };
 };
 /** A grouped record is given as its parts: the title line, then each field in column order. */
 const parts = (editor: Editor, s: TLShape): TLShape[] => {
@@ -157,7 +158,8 @@ function thread(editor: Editor, shape: TLShape, depth = 0, seen = new Set<string
     .sort((a, b) => a.y - b.y || a.x - b.x);
   return [
     ...earlier,
-    ...about.map((t) => said(editor, t, 600)),
+    // A grouped record is said as its parts, as the first ask gave it, not as its textless group.
+    ...about.flatMap((t) => parts(editor, t)).map((t) => said(editor, t, 600)),
     // The ask card's id keeps two asks with the same words (a starter used twice) apart.
     { id: parent.id, who: `${HUMAN} asked`, said: clip(textOf(parent), 600) },
     ...siblings.map((s) => said(editor, s, 600)),
