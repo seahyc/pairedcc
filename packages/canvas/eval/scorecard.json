@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T10:08Z",
-  "commit": "b6bc472",
+  "generatedAt": "2026-11-26T10:15Z",
+  "commit": "164b3ed",
   "carriedOver": [],
   "table": [
     {
@@ -24,13 +24,13 @@
     {
       "measure": "Persistence",
       "target": "identical in a clean profile",
-      "result": "differs: the saved page does not exist in a clean profile (boards are stored only in this browser)",
-      "status": "fail"
+      "result": "identical",
+      "status": "pass"
     },
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: error; 10k: error (worse: 1000: now fails (board did not reload with 1000 objects within 120 s (86 objects on \"Page 1\")))",
+      "result": "1k: load 2487 ms, pan 16.7 ms/frame; 10k: error",
       "status": "fail"
     },
     {
@@ -47,31 +47,31 @@
           "name": "Person imports a dataset by dropping a CSV file",
           "pass": false,
           "detail": "no dataset object after the drop (0 other objects added)",
-          "ms": 1513
+          "ms": 1511
         },
         {
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 33
+          "ms": 34
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 482
+          "ms": 491
         },
         {
           "name": "Agent charts the selection",
           "pass": true,
           "detail": "ok",
-          "ms": 32
+          "ms": 31
         },
         {
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 855
+          "ms": 843
         },
         {
           "name": "Agent reads that exact chart state",
@@ -83,25 +83,25 @@
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 38
+          "ms": 40
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1558
+          "ms": 1569
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": false,
           "detail": "a result derived from the chart is not marked stale when the chart's dataset changes",
-          "ms": 936
+          "ms": 939
         },
         {
           "name": "Reload restores everything",
           "pass": false,
           "detail": "1 of 5 objects differ after reload: card revision/props/meta (props h); 5 objects now",
-          "ms": 541
+          "ms": 525
         }
       ],
       "pageErrors": [],
@@ -113,21 +113,21 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 73,
+          "ms": 93,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 190,
+          "ms": 208,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 266,
+          "ms": 269,
           "humanEditsLost": 0
         }
       ],
@@ -135,14 +135,17 @@
     },
     "persistence": {
       "objects": 4,
-      "sameProfileReload": false,
-      "cleanProfile": false,
-      "detail": "the saved page does not exist in a clean profile (boards are stored only in this browser)"
+      "sameProfileReload": true,
+      "cleanProfile": true,
+      "detail": "identical"
     },
     "performance": [
       {
         "objects": 1000,
-        "error": "board did not reload with 1000 objects within 120 s (86 objects on \"Page 1\")"
+        "buildMs": 505,
+        "loadMs": 2487,
+        "panMedianFrameMs": 16.7,
+        "panP95FrameMs": 16.9
       },
       {
         "objects": 10000,
@@ -165,15 +168,15 @@
         },
         "canvas": {
           "pass": true,
-          "summary": "100 passed (100)"
-        },
-        "cli": {
-          "pass": true,
-          "summary": "no test files"
+          "summary": "101 passed (101)"
         },
         "mcp-server": {
           "pass": true,
           "summary": "4 passed (4)"
+        },
+        "cli": {
+          "pass": true,
+          "summary": "no test files"
         },
         "sdk": {
           "pass": true,
