@@ -215,6 +215,12 @@ task by which measure is furthest from target, not by backlog order.
     already show explicit grouping), computed by a tested pure function, documented, and checked
     live over HTTP.
 
+36. **Comments and replies move with what they are about.** `usability-heuristics.md`, what
+    remains, item 10: "Replies and comments do not move with their target; they keep their arrow
+    but stay where they were placed." Done when moving an object moves the comments, agent notes
+    and replies attached to it by the same amount (not those also being moved, not ones about
+    several objects), as one undo step, tested, with before/after screenshots.
+
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 28. (PR #36 open, awaiting review.) **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
     fails only because `pnpm eval:canvas` runs the e2e suite without Postgres, Redis or a matching
@@ -258,6 +264,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 36. Working spec implemented sections | claude/sprint-spec-sync | 2026-11-26T11:27Z
 35. Annotation arrows follow their note | claude/sprint-annotation-arrows | 2026-11-26T11:22Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
+36. Comments move with their target | claude/sprint-follow | 2026-11-26T11:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
