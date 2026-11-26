@@ -40,8 +40,10 @@ export function startersFor(selection: readonly { type: string; text: string }[]
   if (selection.length > 1) return ["Compare these", "What dimensions do these differ on?", "What do they have in common?"];
   const [only] = selection;
   if (!only) return starters;
-  // No group or chart starters yet: an ask about a frame does not send its children, and one
-  // about a chart does not send its data, so those starters would promise what the agent lacks.
+  // A frame is what the person put together, and its contents are sent with the ask (`inside`).
+  if (only.type === "frame") return ["What do these have in common?", "What is missing from this group?", "Which of these matters most?"];
+  // No chart starters yet: an ask about a chart does not send its data, so they would promise
+  // what the agent lacks.
   if (/\?\s*$/.test(only.text.trim())) return ["Answer this", "What would change the answer?", "Give me alternatives"];
   return starters;
 }
@@ -105,4 +107,22 @@ export function mergeHistory(entries: HistoryEntry[], targetIds: string[]) {
     seen.add(key);
     return true;
   });
+}
+
+/**
+ * What to tell the person when an ask on a page they are not looking at is answered or fails:
+ * the agent responded, so it must be seen (never silence). Nothing when the ask is on screen,
+ * where its own status line says it, or when its state did not just change to an outcome.
+ */
+export function elsewhereNotice(
+  before: { state: string } | undefined,
+  after: { state: string; agent?: string } | undefined,
+  where: { onScreen: boolean; question: string; pageName: string },
+) {
+  if (!after || where.onScreen || before?.state === after.state) return undefined;
+  const asked = `“${where.question.length > 40 ? `${where.question.slice(0, 39)}…` : where.question}”`;
+  const page = `on the page “${where.pageName}”`;
+  if (after.state === "answered") return `✦ ${after.agent ?? "Your agent"} answered ${asked} ${page}.`;
+  if (after.state === "failed") return `Your ask ${asked} ${page} could not be answered. Open that page to retry.`;
+  return undefined;
 }

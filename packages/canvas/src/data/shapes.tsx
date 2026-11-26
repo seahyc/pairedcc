@@ -290,8 +290,9 @@ export function DataLayer() {
   const editor = useEditor();
   const items = useValue(
     "stale derived objects",
-    () =>
-      editor.getCurrentPageShapes().flatMap((s) => {
+    () => {
+      const selected = new Set<string>(editor.getSelectedShapeIds());
+      return editor.getCurrentPageShapes().flatMap((s) => {
         if (s.type === "chart" || editor.isShapeHidden(s)) return [];
         const stale = staleness(editor, s);
         const b = stale.length ? editor.getShapePageBounds(s) : undefined;
@@ -301,21 +302,26 @@ export function DataLayer() {
           // A result still hidden behind a learning prompt is not named before the person answers.
           return shape && !editor.isShapeHidden(shape) ? shapeName(shape) : undefined;
         };
-        return [{ id: s.id, x: b.x, y: b.y, w: b.w, name: shapeName(s), reason: staleReason(stale, nameOf) }];
-      }),
+        return [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, name: shapeName(s), reason: staleReason(stale, nameOf), open: selected.has(s.id) }];
+      });
+    },
     [editor],
   );
-  // The flag says which input changed, so the person knows what to recheck.
+  // The flag says which input changed, so the person knows what to recheck. On the board a
+  // long reason is cut short; selecting the object, or reaching the flag with Tab, shows all of it.
   return (
     <div className="scratch-layer">
       {items.map((i) => (
         <span
           key={i.id}
-          className="stale-flag"
+          className={i.open ? "stale-flag open" : "stale-flag"}
+          data-shape-id={i.id}
           role="note"
+          tabIndex={0}
           aria-label={`${i.name} is out of date: ${i.reason}`}
           title={`Out of date: ${i.reason}`}
-          style={{ transform: `translate(${i.x + i.w}px, ${i.y - 12}px) translateX(-100%)` }}
+          // Selected, the whole reason opens under the object, clear of the selection bar above it.
+          style={{ transform: i.open ? `translate(${i.x}px, ${i.y + i.h + 8}px)` : `translate(${i.x + i.w}px, ${i.y - 12}px) translateX(-100%)` }}
         >
           stale · {i.reason}
         </span>
