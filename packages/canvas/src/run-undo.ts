@@ -110,6 +110,17 @@ export function planUndo(diff: RunDiff, current: (id: string) => Rec | undefined
     if (current(id)) conflicts.push({ id, reason: "recreated after the run deleted it" });
     else put.push(deleted);
   }
+  // What comes back must not point at something deleted since: a shape needs its parent
+  // frame or page, a binding both of its ends, either still there or restored with it.
+  const present = (ref: unknown) => typeof ref !== "string" || !!current(ref) || ref in diff.removed;
+  for (const rec of put) {
+    if (!(rec.id in diff.removed)) continue;
+    if (rec.typeName === "shape" && !present(rec.parentId))
+      conflicts.push({ id: rec.id, reason: `its parent ${String(rec.parentId)} was deleted after the run` });
+    if (rec.typeName === "binding")
+      for (const end of [rec.fromId, rec.toId])
+        if (!present(end)) conflicts.push({ id: rec.id, reason: `it connects ${String(end)}, which was deleted after the run` });
+  }
   if (conflicts.length) return { put: [], remove: [], conflicts };
   put.sort((a, b) => rank(a) - rank(b));
   // Remove bindings before the shapes they connect.

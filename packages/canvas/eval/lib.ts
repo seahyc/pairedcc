@@ -149,7 +149,7 @@ export type Agent = {
 };
 
 /** A real stdio MCP client running tools/mcp.ts against one tab. Tool errors reject. */
-export async function mcpAgent(base: string, session: string): Promise<Agent> {
+export async function mcpAgent(base: string, session: string, actor?: string): Promise<Agent> {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
   const client = new Client({ name: "paired-eval", version: "1.0.0" });
@@ -157,7 +157,7 @@ export async function mcpAgent(base: string, session: string): Promise<Agent> {
     new StdioClientTransport({
       command: process.execPath,
       args: [`${packageDir}/node_modules/tsx/dist/cli.mjs`, `${packageDir}/tools/mcp.ts`],
-      env: { ...env, PAIRED_URL: base, PAIRED_SESSION: session },
+      env: { ...env, PAIRED_URL: base, PAIRED_SESSION: session, ...(actor ? { PAIRED_ACTOR: actor } : {}) },
     }),
   );
   const agent: Agent = {

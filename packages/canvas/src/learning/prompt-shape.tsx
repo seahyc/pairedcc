@@ -14,7 +14,7 @@ import {
   type TLShapeId,
 } from "tldraw";
 import { revision } from "../operations";
-import { commitResponse, hiddenBy, learnInput, modeCopy, skipPrompt, type PromptProps, type PromptStatus } from "./model";
+import { commitResponse, hiddenBy, hideRefusal, learnInput, modeCopy, skipPrompt, type PromptProps, type PromptStatus } from "./model";
 
 // PROTOTYPE learning prompt card. Objects with meta.revealAfter = <prompt id> stay
 // hidden until the person commits an answer or skips. The shape is always registered
@@ -140,8 +140,8 @@ export function createPrompt(editor: Editor, value: unknown, actor: string) {
   const shapes = input.hideIds.map((id) => {
     const s = editor.getCurrentPageShapes().find((s) => s.id === id);
     if (!s) throw new Error(`Object not found: ${id}`);
-    if (s.isLocked) throw new Error(`Unlock ${id} before hiding it`);
-    if (s.type === "prompt") throw new Error("A prompt cannot hide another prompt");
+    const refusal = hideRefusal(s);
+    if (refusal) throw new Error(refusal);
     return s;
   });
   const id = createShapeId();
