@@ -1,6 +1,6 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-26T11:45Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-26T11:55Z by the review lane. Branch: `claude/sprint-int`.
 
 ## Read first
 - **The calm-canvas rework (#21) is merged, combined by the review lane with 16 sprint PRs.** It
@@ -34,9 +34,16 @@ Last updated 2026-11-26T11:45Z by the review lane. Branch: `claude/sprint-int`.
   #21, the prototype gate and run ownership in place. It replaces the 20/21 recorded before them
   (backlog 32 is done). Task 14, the earlier failure, passed. What the agent found confusing is
   under Decisions needed, item 13.
-- **All six scorecard rows pass on `bac1a93`.** The 10k pan time read 37 ms in this run and 77 ms
-  in the one before on the same container; the scorecard flagged that earlier run as a regression,
-  which it was not. Backlog 31 (stable performance numbers) is claimed.
+- **Five scorecard rows pass on `e53322f`; Performance reads "regressed" and is not.** That run
+  measured 10k pan at 77.9 ms a frame; the same commit measured again straight after gave 35 ms,
+  and the run before it 37.3 ms. The number flips between about 37 and 78 on this container
+  whatever the code. Backlog 31 (stable performance numbers) has PR #43 open.
+- **Opening another saved board (#39) changes what a browser's one local board means.** A browser
+  keeps one board locally; "Saved boards" swaps it for another of the account's boards and saves
+  there from then on, and other tabs of that browser follow. It only appears when the account has
+  more than one board. Checked with one tab and two (edits land on the opened board, `main` is
+  untouched, undo cannot bring the old board back), but this is the part of board sync with the
+  most moving pieces; `open()` and `followOtherTab()` in `packages/canvas/src/board-sync.ts`.
 - **Restoring an earlier version (#32) can be lost by a reload within about a second.** The board
   shows the restored version and the server holds it, but this browser's own copy is written a
   moment later; a reload before that brings back the board as it was, and the next edit saves that
@@ -50,7 +57,7 @@ Last updated 2026-11-26T11:45Z by the review lane. Branch: `claude/sprint-int`.
   to cover anything outside the group and is undone as one run. Decision 15 below.
 - **The menu has one more item, "Earlier versions" (#35)**, shown when the board is saved to an
   account or the local server. The first screen is unchanged.
-- **Review lag.** Build lanes opened PRs #38 to #52 and later while #21 to #36 were reviewed; they
+- **Review lag.** Build lanes opened PRs #40 to #52 and later while #21 to #39 were reviewed; they
   are not on this branch and nothing in this report covers them.
 - **#15 changes how every signed-in board is saved, and is the merge most worth reading**
   (`packages/canvas/src/board-sync.ts`). The board is uploaded to the account 1.2 s after each
@@ -95,11 +102,11 @@ Last updated 2026-11-26T11:45Z by the review lane. Branch: `claude/sprint-int`.
   of the data and learning prototypes are proven by headless scripts, not `pnpm test` (backlog 9).
 
 ## Status
-`pnpm build` passes. `pnpm -r --no-bail test` on `bac1a93`:
+`pnpm build` passes. `pnpm -r --no-bail test` on `e53322f`:
 
 | Package | Result |
 |---|---|
-| canvas | 198 passed |
+| canvas | 210 passed |
 | server | 149 passed with `TEST_DATABASE_URL` set (the Postgres board suite is skipped without it) |
 | sdk | 12 passed |
 | mcp-server | 4 passed |
@@ -107,7 +114,7 @@ Last updated 2026-11-26T11:45Z by the review lane. Branch: `claude/sprint-int`.
 | e2e | 1 passed; needs Postgres and Redis, which `pnpm eval:canvas` now starts itself when they are installed |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T11:42Z on `bac1a93`:
+Scorecard from `pnpm eval:canvas` at 2026-11-26T11:51Z on `e53322f`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
@@ -115,7 +122,7 @@ Scorecard from `pnpm eval:canvas` at 2026-11-26T11:42Z on `bac1a93`:
 | Agent usability | ≥90% of ≥20 tasks | 21/21 (100%), median 2 tool calls | pass |
 | Safety of shared edits | 0 human edits lost | 0 lost; 9/9 races pass | pass |
 | Persistence | identical in a clean profile | identical | pass |
-| Performance | reported, not worse | 1k: load 1591 ms, pan 16.7 ms/frame; 10k: load 8290 ms, pan 37.3 ms/frame | reported |
+| Performance | reported, not worse | 1k: load 1442 ms, pan 16.7 ms/frame; 10k: load 9164 ms, pan 77.9 ms/frame (worse: 10000 panMedianFrameMs 37.3 → 77.9) | regressed |
 | Existing product | green | build passes; tests: all packages pass | pass |
 <!-- scorecard:end -->
 
@@ -158,6 +165,8 @@ MCP. Agent usability reports the attempt recorded with #24.
 - [#34](https://github.com/seahyc/pairedcc/pull/34) The stale flag names the input that changed and the path it came through (0f1807f). Review stopped it naming an input still hidden behind a learning prompt.
 - [#35](https://github.com/seahyc/pairedcc/pull/35) Menu → Earlier versions lists kept revisions and restores one (6b92e2f). Driven in a browser at 1440 and 390 px: list, restore, reload.
 - [#36](https://github.com/seahyc/pairedcc/pull/36) The eval gives the e2e suite real services, from the environment or throwaway Postgres and Redis it starts and removes (bac1a93). Run both ways; nothing left running or on disk.
+- [#38](https://github.com/seahyc/pairedcc/pull/38) A board that opens with none of its objects in view is framed, never past 100% zoom (e489580). Reproduced: saved at 1440 px, opened on a 390 px phone profile, three objects in view at 78%.
+- [#39](https://github.com/seahyc/pairedcc/pull/39) Menu → Saved boards opens another of the account's boards (e53322f). Driven with one tab and two; see Read first.
 - Review lane: `packages/cli` and `packages/web` test scripts pass with no test files (a712b50).
 
 How each was checked: the branch was merged with the integration branch, built and tested; every
@@ -204,6 +213,5 @@ None.
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-Open and not yet reviewed: #38 to #52 and later (framing a board on open, saved boards picker,
-welcome header, ask starters, stable performance numbers and others). PR descriptions #9 to
+Open and not yet reviewed: #40 to #52 and later (welcome header, ask starters, stable performance numbers and others). PR descriptions #9 to
 #20 carry a tool footer written before the brief ruled it out; commits do not.

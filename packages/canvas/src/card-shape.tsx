@@ -16,13 +16,17 @@ import {
   type TLShape,
 } from "tldraw";
 
+import { sourceOf } from "./import-meta";
+
 // A scratchbook card: the human's pink handwritten scrap or the agent's lavender note.
 declare module "tldraw" {
   interface TLGlobalShapePropsMap {
     card: { w: number; h: number; richText: TLRichText; tone: CardTone };
   }
 }
-export type CardTone = "human" | "agent" | "caption" | "heading" | "quote" | "code";
+// "source", "sourceTitle" and "sourceNote" are imported material: plain print on paper, neither the
+// person's handwriting nor an agent's lavender.
+export type CardTone = "human" | "agent" | "caption" | "heading" | "quote" | "code" | "source" | "sourceTitle" | "sourceNote";
 export type CardShape = TLShape<"card">;
 
 // Text classes. The human writes in a brush marker on pink scraps. Agents write in a
@@ -32,6 +36,7 @@ const hand = "'Caveat Brush', cursive";
 const casual = "'Shantell Sans', 'Comic Neue', sans-serif";
 const serif = "Newsreader, Georgia, serif";
 const mono = "'JetBrains Mono', ui-monospace, monospace";
+const print = "Inter, system-ui, sans-serif";
 export const cardType: Record<CardTone, { font: string; size: number; lineHeight: number; pad: number; weight: string; style: "normal" | "italic"; color: string }> = {
   human: { font: hand, size: 27, lineHeight: 1.22, pad: 18, weight: "400", style: "normal", color: "#a50f4d" },
   agent: { font: casual, size: 16, lineHeight: 1.45, pad: 16, weight: "400", style: "normal", color: "#22203a" },
@@ -39,8 +44,11 @@ export const cardType: Record<CardTone, { font: string; size: number; lineHeight
   heading: { font: casual, size: 30, lineHeight: 1.15, pad: 0, weight: "700", style: "normal", color: "#3a2fd0" },
   quote: { font: serif, size: 19, lineHeight: 1.4, pad: 18, weight: "400", style: "italic", color: "#2b2940" },
   code: { font: mono, size: 13, lineHeight: 1.6, pad: 14, weight: "400", style: "normal", color: "#22203a" },
+  source: { font: print, size: 15, lineHeight: 1.5, pad: 14, weight: "400", style: "normal", color: "#2c2d30" },
+  sourceTitle: { font: print, size: 18, lineHeight: 1.3, pad: 0, weight: "600", style: "normal", color: "#2c2d30" },
+  sourceNote: { font: print, size: 13, lineHeight: 1.5, pad: 0, weight: "400", style: "normal", color: "#6b675e" },
 };
-const unboxed = new Set<CardTone>(["caption", "heading"]);
+const unboxed = new Set<CardTone>(["caption", "heading", "sourceTitle", "sourceNote"]);
 
 export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
   static override type = "card" as const;
@@ -48,7 +56,7 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
     w: T.number,
     h: T.number,
     richText: richTextValidator,
-    tone: T.literalEnum("human", "agent", "caption", "heading", "quote", "code"),
+    tone: T.literalEnum("human", "agent", "caption", "heading", "quote", "code", "source", "sourceTitle", "sourceNote"),
   };
   override canEdit() {
     return true;
@@ -87,9 +95,20 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
     const t = cardType[shape.props.tone];
     const isSelected = useValue("card selected", () => this.editor.getOnlySelectedShapeId() === shape.id, [this.editor, shape.id]);
     const ref = useAutoHeight(this.editor, shape, t.pad * 2 + (unboxed.has(shape.props.tone) ? 2 : 4));
+    // Imported material carries its tags (such as severity) as chips and a quiet edge.
+    const source = sourceOf(shape), level = source?.level;
     return (
       <HTMLContainer style={{ width: shape.props.w, height: shape.props.h }}>
-        <div ref={ref} className={`scrap scrap--${shape.props.tone}`} style={{ fontStyle: t.style, fontWeight: t.weight }}>
+        <div ref={ref} className={`scrap scrap--${shape.props.tone}${typeof level === "number" ? ` sev sev-${Math.min(level, 4)}` : ""}`} style={{ fontStyle: t.style, fontWeight: t.weight }}>
+        {source?.chips && source.chips.length > 0 && (
+          <div className="source-chips">
+            {source.chips.map((chip, i) => (
+              <span key={i} className={chip.level === null ? "source-chip" : `source-chip sev-${Math.min(chip.level, 4)}`}>
+                {chip.label}
+              </span>
+            ))}
+          </div>
+        )}
         <RichTextLabel
           shapeId={shape.id}
           type="card"
