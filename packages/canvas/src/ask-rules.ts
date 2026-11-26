@@ -200,3 +200,18 @@ export function placeBar(sel: { x: number; y: number; bottom: number }, barWidth
 export function statusWidth(cardWidth: number) {
   return Math.min(640, Math.max(260, Math.round(cardWidth)));
 }
+
+/** Gap between an ask and an answer placed beside it. */
+export const BESIDE_GAP = 40;
+/** How far an answer may slide down from under its ask before beside is tried. */
+export const ANSWER_SLIDE = 28;
+
+/**
+ * Under the ask, or beside it: an answer belongs next to its own ask. Under is the default; when
+ * the space under the ask is taken (later asks stacked below it), the answer would slide down
+ * past them and sit under someone else's question, so it goes beside its ask instead, unless
+ * beside would slide further.
+ */
+export function pickAnswerSpot(underSlide: number, besideSlide: number): "under" | "beside" {
+  return underSlide <= ANSWER_SLIDE || underSlide <= besideSlide ? "under" : "beside";
+}

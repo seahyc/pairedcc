@@ -107,6 +107,8 @@ pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents 
 cd /some/dir/with/playwright && node /path/to/packages/canvas/tools/verify-calm.mjs /tmp/shots
 ```
 
+`tools/verify-answer-beside.mjs <screenshot dir>`, run the same way, starts its own dev server and checks that three asks about one card, answered out of order, each keep their answer next to them (under, or beside when the space under is taken by the next ask) with nothing overlapping, and that a lone ask still gets its answer underneath.
+
 `tools/verify-contain.mjs <screenshot dir>` is run the same way and needs no agent. At 1440 and 390 px it checks that a long URL, a long unbroken word, a code note and plain text stay inside their shapes, that the selection bar and the Ask box (send button included) sit inside the window wherever the selection is, and that an ask's state line wraps under its card rather than running off screen.
 
 Key hints are written with Apple's symbols and shown in the person's own keys (`src/keys.ts`): Ctrl, Shift and Backspace on Windows, Linux and Android, ⌘ ⇧ ⌫ on Apple devices. `tools/verify-keys.mjs <screenshot dir>`, run the same way, starts its own dev server with an empty board store and checks the first board, the selection bar, the typing hint, the Ask tooltips and the shortcut sheet as a Windows and as a Mac browser.

@@ -4,7 +4,7 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { keepForAgent } from "./leave-out";
 import { chartText, datasetText, staleReason } from "./data/model";
@@ -289,7 +289,12 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   // The room the person's window has beside the canvas chrome, so no answer lands off screen.
   const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
   const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
-  const spot = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
+  // Under the ask, or beside it when the space under it is taken (later asks stacked below),
+  // so the answer never ends up under someone else's question.
+  const under = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
+  const besideBox = { ...layout.box, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
+  const beside = freeSpot(editor, besideBox, new Set([shape.id]), pageId);
+  const spot = pickAnswerSpot(under.y - layout.box.y, beside.y - besideBox.y) === "under" ? under : beside;
   // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
   // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
   // work here must not silently remove an answer they cannot see (canvas_undo_run still can).
