@@ -74,6 +74,30 @@ export function mergeSnapshots(base: Snapshot, mine: Snapshot, theirs: Snapshot)
   return { snapshot: { store, schema: mine.schema }, conflicts };
 }
 
+/**
+ * The account's board plus the records created in this tab since `initial` (objects made
+ * while the board was loading). Changes to records that already existed are not carried
+ * over: on a new browser those are the welcome board settling (cards re-measuring), which
+ * the account's board replaces. A new record whose parent is missing is left out.
+ */
+export function withNewRecords(initial: Snapshot, current: Snapshot, server: Snapshot) {
+  const store: Record<string, unknown> = { ...server.store };
+  const added = Object.entries(current.store).filter(([id, r]) => !(id in initial.store) && !(id in server.store) && (r as { typeName?: string }).typeName !== "user");
+  let kept = 0;
+  for (let pass = true; pass; ) {
+    pass = false;
+    for (const [id, r] of added) {
+      if (id in store) continue;
+      const parent = (r as { parentId?: string }).parentId;
+      if (parent && !(parent in store)) continue;
+      store[id] = r;
+      kept++;
+      pass = true;
+    }
+  }
+  return { snapshot: { store, schema: server.schema }, kept };
+}
+
 export function copyId(boardId: string, at: Date) {
   return `${boardId}-browser-${at.toISOString().slice(0, 16).replace(/[-:T]/g, "")}`;
 }
@@ -97,8 +121,8 @@ export function createBoardSync(o: SyncOptions) {
   let started = false;
   let synced = "";
   let base: Snapshot | null = null;
-  // The board as it was when sync was created; edits made while the account's board is
-  // loading are merged onto it instead of being replaced.
+  // The board as it was when sync was created; objects created while the account's board
+  // is loading are carried onto it instead of being replaced.
   const initial = o.local.snapshot();
   let status: SyncStatus = { state: "local" };
   const emit = (s: SyncStatus) => {
@@ -228,12 +252,11 @@ export function createBoardSync(o: SyncOptions) {
         if (!copy.ok) throw new Error(copy.stale ? `Board ${id} already exists` : copy.error);
         note = `This browser's earlier board was saved to your account as "${id}".`;
       }
-      const current = o.local.snapshot();
-      const editedWhileLoading = JSON.stringify(current) !== JSON.stringify(initial);
-      apply(editedWhileLoading ? mergeSnapshots(initial, current, server.snapshot).snapshot : server.snapshot);
+      const loaded = withNewRecords(initial, o.local.snapshot(), server.snapshot);
+      apply(loaded.snapshot);
       base = server.snapshot;
       revision = server.revision;
-      if (editedWhileLoading) {
+      if (loaded.kept) {
         started = true;
         return await push(note ?? "Kept the changes made while your board was loading.");
       }
