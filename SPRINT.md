@@ -491,7 +491,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     with an agent over HTTP (failing before, passing after); nothing new is visible. (Separate from
     item 7's keyboard-only loop: this is what is heard, not what is reachable.)
 
+79. **`read`'s text filter: the two findings left open on #78.** (Decisions needed, build-B item 58.) (a) `ß` does not fold to `ss`, so `STRASSE` misses `Straße`; (b) a match may end inside a grapheme, so `कल` matches `कला` and `かく` matches `かぐ` once normalised. Done when each has a failing-first unit test and is fixed, with Latin, Greek and accented matching unchanged.
+
 ## Claims
+79. Read filter: ß and grapheme boundaries | claude/sprint-read-graphemes | 2026-11-26T13:21Z
 7. Robustness: keyboard-only core loop | claude/sprint-robust-keys | 2026-11-26T13:20Z
 
 ## Done
