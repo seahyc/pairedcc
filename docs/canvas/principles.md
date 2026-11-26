@@ -44,11 +44,13 @@ Sources: [the Solveit method](https://www.answer.ai/posts/2025-10-01-solveit-ful
 | AI output is editable and is part of the context | "you can even edit past AI responses"; "The AI always sees the current state of your dialog, not the edit history" | An answer is an ordinary card. Edit it and ask about it: the agent is sent its current text and the exchange that led to it. |
 | The context is visible and curated by the person | "the AI should be able to see everything exactly as the human does"; hidden messages "are excluded from AI context" | The agent is given exactly the selection, the frame it sits in and the thread behind it. The ask says what was given and outlines it. The agent runs with no tools, files or memory. |
 
-Not borrowed yet: pinning or hiding objects from context, token counts, learning/concise/standard modes, ghost text, running code beside notes, undo per message.
+Hiding objects from context is a prototype (`?prototype=context`, item 67): **Leave out** (L) on the selection bar keeps an object out of what asks give the agent, the board marks it "left out of asks", and the ask says how many were withheld; an object the person selects is still given.
+
+Not borrowed yet: pinning objects into context, token counts, learning/concise/standard modes, ghost text, running code beside notes, undo per message.
 
 ## Not done in this pass
 
 - Asks are answered only on a computer running the resident agent or another agent that waits for asks. On paired.cc the relay reports who is listening only for accounts the resident agent serves; for any other account an ask says no agent is listening for it and waits until a connected agent reads it.
 - The resident agent sees text only: no images, drawings or the look of the board.
 - Answers arrive whole after about three seconds; they are not streamed.
-- One ask is about one selection on one page. An answer goes under its ask on that page even when the person has opened another page; they are told who answered and on which page, but the board does not take them there.
+- One ask is about one selection on one page. An answer goes under its ask on that page even when the person has opened another page; they are told who answered and on which page, and the notice's **Show** (G) opens that page with the answer selected beside its ask (item 85). The board never takes them there by itself.

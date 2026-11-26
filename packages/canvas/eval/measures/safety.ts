@@ -57,6 +57,25 @@ export async function safety(browser: Browser, base: string) {
       return aNow.x === humanA && text(bNow) === humanB ? true : "a human edit was undone with the agent's run";
     });
 
+    await race("Agent rewrite of the person's own words", async (lost) => {
+      // The person writes a note; an agent holding its current revision tries to change the words.
+      const id = await human("(p) => p.create({ kind: 'note', x: 1600, y: 0, text: 'My own words' })");
+      const mine = await get(id as string);
+      let rejected = false;
+      try {
+        await agent.call("canvas_update", { id, expectedRevision: mine.revision, text: "Words the person never wrote" });
+      } catch {
+        rejected = true;
+      }
+      const now = text(await get(id as string));
+      if (now !== text(mine)) lost(1);
+      if (!rejected) return "the agent's rewrite of the person's words was accepted";
+      // The person can still change their own words.
+      const fresh = await get(id as string);
+      await human("(p, a) => p.update({ id: a.id, expectedRevision: a.revision, text: 'My own words, revised' })", { id, revision: fresh.revision });
+      return text(await get(id as string)).includes("My own words, revised") ? true : "the person could not edit their own note";
+    });
+
     await race("Agent write to a locked object", async (lost) => {
       const note = await agent.call("canvas_create", { kind: "note", x: 1200, y: 0, text: "Locked by the person" });
       await human("(p, id) => p.select([id])", note.id);
@@ -291,11 +310,14 @@ async function restoreRace(browser: Browser, base: string, race: Race) {
       await b.page.evaluate(() => (window as any).paired.create({ kind: "note", x: 4000, y: 600, text: "restore race: newer edit in B" }));
       await sleep(1500);
       if (!(await savedToAccount(b.page))) return "browser B's edit was not saved";
-      let refused = false;
+      if (typeof keep !== "number") return "browser A has no saved revision to restore";
+      // Only the stale-tab refusal counts; a restore that fails for another reason proves nothing.
+      let refused = false, why = "";
       try {
         await sync(a.page, `s.restore(${keep})`);
-      } catch {
-        refused = true;
+      } catch (error) {
+        why = String(error);
+        refused = /changed on another tab or device/.test(why);
       }
       await sleep(500);
       const onServer = (await server()).includes("restore race: newer edit in B");
@@ -304,7 +326,7 @@ async function restoreRace(browser: Browser, base: string, race: Race) {
       await sleep(2500);
       const inA = await shows(a.page, "restore race: newer edit in B");
       if (!onServer || !inA) lost(1);
-      if (!refused) return "the restore in the stale tab was accepted";
+      if (!refused) return why ? `the restore failed, but not as a stale-tab refusal: ${why.slice(0, 160)}` : "the restore in the stale tab was accepted";
       if (!onServer) return "the newer edit is gone from the board store";
       return inA ? true : "the newer edit is missing from browser A after reload";
     });

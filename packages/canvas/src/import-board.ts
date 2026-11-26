@@ -1,4 +1,5 @@
 import { createShapeId, toRichText, type Editor, type TLRichText, type TLShape, type TLShapeId } from "tldraw";
+import { moveWithAttached, type Mover } from "./follow";
 import { z } from "zod";
 import { atomic, connect } from "./agent-operations";
 import { HUMAN, inkTargets } from "./scratchbook";
@@ -108,6 +109,7 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
         const titleText = record.details ? `${record.title}\n${record.details}` : record.title;
         const titleId = card(start.x, y, Math.max(200, Math.round(rowW - chipRoom(record.chips))), "sourceTitle", toRichText(titleText), record.title, {
           kind: "title",
+          shown: titleText,
           row: record.row,
           values: record.values,
           chips: record.chips,
@@ -134,7 +136,7 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
           stepId = createShapeId();
           editor.groupShapes(ids, { groupId: stepId, select: false });
           editor.updateShape({ id: stepId, type: "group", meta: { name: record.title.slice(0, 80), revision: 0, source: { ...base, ...record_ } } });
-        } else editor.updateShape({ id: titleId, type: "card", meta: { ...editor.getShape(titleId)!.meta, source: { ...base, ...record_, chips: record.chips } } });
+        } else editor.updateShape({ id: titleId, type: "card", meta: { ...editor.getShape(titleId)!.meta, source: { ...base, ...record_, chips: record.chips, shown: titleText } } });
         stepIds.push(stepId);
         // First view: the heading and the first record, and the second when it is close.
         if (order === 0 || (order === 1 && y - start.y < 760)) focusBottom = y;
@@ -332,10 +334,9 @@ export function sideBySide(editor: Editor, a: TLShape, b: TLShape): { ok: true }
   const ids = [plan.upper, plan.lower] as TLShapeId[];
   // One step: the moves and the selection squash into a single undo entry.
   atomic(editor, "side by side", () => {
-    for (const move of plan.moves) {
-      const shape = editor.getShape(move.id as TLShapeId);
-      if (shape) editor.updateShape({ id: shape.id, type: shape.type, x: shape.x + move.dx, y: shape.y + move.dy });
-    }
+    // Comments, notes and replies on every moved record come along (follow.ts).
+    editor.selectNone();
+    moveWithAttached(editor as unknown as Mover, plan.moves);
     editor.select(...ids);
   });
   const box = editor.getSelectionPageBounds();
@@ -390,10 +391,14 @@ export function bringCited(editor: Editor, record: TLShape): { ok: true; moved: 
       .map((s) => String(s.meta.toId)),
   );
   atomic(editor, "bring cited sections", () => {
-    for (const move of plan.moves) {
-      const shape = editor.getShape(move.id as TLShapeId), now = shape && editor.getShapePageBounds(shape);
-      if (shape && now) editor.updateShape({ id: shape.id, type: shape.type, x: shape.x + move.x - now.x, y: shape.y + move.y - now.y });
-    }
+    editor.selectNone();
+    moveWithAttached(
+      editor as unknown as Mover,
+      plan.moves.flatMap((move) => {
+        const now = editor.getShapePageBounds(move.id as TLShapeId);
+        return now ? [{ id: move.id, dx: move.x - now.x, dy: move.y - now.y }] : [];
+      }),
+    );
     for (const move of plan.moves)
       if (!linked.has(move.id)) connect(editor, { fromId: title.id, toId: move.id, relation: "reference" }, HUMAN, { start: { x: 1, y: 0.5 }, end: { x: 0, y: 0.5 } });
     editor.select(record.id, ...plan.moves.map((m) => m.id as TLShapeId));

@@ -91,8 +91,9 @@ describe("CSV import", () => {
   });
   it("types a long malformed cell quickly (no regex backtracking)", () => {
     const t = performance.now();
-    parseCsv(`v\n${"9".repeat(40_000)}x\n`, "long.csv");
-    expect(performance.now() - t).toBeLessThan(200);
+    // Large enough that backtracking would take over a minute, with a limit a busy machine still meets.
+    parseCsv(`v\n${"9".repeat(400_000)}x\n`, "long.csv");
+    expect(performance.now() - t).toBeLessThan(2000);
   });
 });
 

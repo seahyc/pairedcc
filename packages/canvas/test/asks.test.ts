@@ -244,7 +244,7 @@ describe("an ask answered on a page the person has left", () => {
   const where = { onScreen: false, question: "Give me options", pageName: "Pricing" };
   it("says who answered and where", () => {
     expect(elsewhereNotice({ state: "working" }, { state: "answered", agent: "Claude" }, where)).toBe("✦ Claude answered “Give me options” on the page “Pricing”.");
-    expect(elsewhereNotice({ state: "working" }, { state: "failed" }, where)).toContain("could not be answered. Open that page to retry.");
+    expect(elsewhereNotice({ state: "working" }, { state: "failed" }, where)).toContain("could not be answered. Show it to retry.");
   });
   it("stays quiet on screen, for other states and for repeats", () => {
     expect(elsewhereNotice({ state: "working" }, { state: "answered" }, { ...where, onScreen: true })).toBeUndefined();
@@ -255,6 +255,34 @@ describe("an ask answered on a page the person has left", () => {
   it("shortens a long question", () => {
     const said = elsewhereNotice({ state: "working" }, { state: "answered" }, { ...where, question: "x".repeat(80) })!;
     expect(said).toContain(`“${"x".repeat(39)}…”`);
+  });
+});
+
+import { elsewhereShow, noticeMs } from "../src/ask-rules";
+describe("showing an ask answered on another page", () => {
+  const replies = [
+    { id: "shape:a", replyTo: "shape:ask" },
+    { id: "shape:b", replyTo: "shape:ask" },
+    { id: "shape:other", replyTo: "shape:elsewhere" },
+    { id: "shape:gone", replyTo: "shape:ask", hidden: true },
+    { id: "shape:plain" },
+  ];
+  it("selects the answers to that ask, in board order, leaving out hidden ones", () => {
+    expect(elsewhereShow("answered", "shape:ask", replies)).toEqual(["shape:a", "shape:b"]);
+  });
+  it("selects the ask itself when it failed, so Retry is on the selection", () => {
+    expect(elsewhereShow("failed", "shape:ask", replies)).toEqual(["shape:ask"]);
+  });
+  it("falls back to the ask when its answers have been deleted or hidden", () => {
+    expect(elsewhereShow("answered", "shape:ask", [{ id: "shape:gone", replyTo: "shape:ask", hidden: true }])).toEqual(["shape:ask"]);
+  });
+  it("offers nothing for other states", () => {
+    expect(elsewhereShow("working", "shape:ask", replies)).toEqual([]);
+    expect(elsewhereShow("waiting", "shape:ask", replies)).toEqual([]);
+  });
+  it("keeps a notice with something to press long enough to press it", () => {
+    expect(noticeMs(false)).toBe(3500);
+    expect(noticeMs(true)).toBeGreaterThanOrEqual(10000);
   });
 });
 
