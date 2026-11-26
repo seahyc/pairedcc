@@ -310,7 +310,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     sibling options with their marks, the resident agent's prompt says to build on picks and not
     offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
 
-45. ((a) to (c): PR #66 open, awaiting review; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): PR #70 open, awaiting review. (d) open.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
+45. ((a) to (c): PR #66 open, awaiting review; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): PR #70 open, awaiting review. (d): PR #76 open, awaiting review.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
     failing test first, then a fix or a recorded decision: (a) after a board is deleted and
     recreated under the same ID, a save or delete holding the old revision number is accepted
     (revisions restart at 1); (b) PostgreSQL `JSONB` rejects a snapshot holding an unpaired UTF-16
@@ -343,26 +343,62 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     against an object's text and name) that combines with `ids`, the tool definition and AGENT_API
     document it, unit tests cover matching, and a live MCP call shows the smaller result.
 
-54. **Text never leaves its container, even without spaces.** The brief's rule ("Text never leaves
+54. (PR #80 open, awaiting review.) **Text never leaves its container, even without spaces.** The brief's rule ("Text never leaves
     its container") is checked only with ordinary prose (`verify-calm.mjs`). Done when a long URL,
     a long unbroken word, a code card and a long frame name each stay inside their card, comment,
     answer or frame in a real page at 1440 and 390 px, checked by a script that fails before the fix,
     with before/after screenshots.
-55. **Board history reaches back more than a few minutes.** Sync saves after every pause, so the
+55. (PR #75 open, awaiting review.) **Board history reaches back more than a few minutes.** Sync saves after every pause, so the
     50 kept revisions cover a few minutes of work and "Earlier versions" cannot reach yesterday.
     Done when the server keeps the newest 20 revisions and thins older ones to about one per 15
     minutes (still at most 50 per board), by one tested pure rule used by both stores, checked
     against real Postgres, with the choice recorded.
 
+56. (PR #77 open, awaiting review.) **A dropped or pasted image arrives at a size that fits beside your thoughts.** Feedback 8
+    ("it should render in a way that's super intuitive") and the calm brief (one obvious thing on
+    screen). An image is placed at its pixel size, so a 3000 px photo covers the whole board and
+    every card on it (seen while checking item 45 (d)). Done when an image the person adds is
+    placed no larger than a set size on its longest side (keeping its shape and its full-resolution
+    asset, and leaving small images alone), agent `canvas_image` sizes are untouched, unit-tested,
+    with before and after screenshots of a dropped photo.
+58. (Renumbered from 56 to avoid a clash. PR #78 open, stacked on #74.) **`read`'s text filter: three matching gaps (review of #74, marked optional).** (a) Search text
+    is built with `richTextPlain`, which puts a space between formatting runs, so a word that is
+    partly bold ("**pr**icing") does not match; join inline runs without a separator. (b) Greek
+    final sigma: lowercasing makes a query's `ς` differ from a mid-word `σ`; fold `ς` to `σ`.
+    (c) Stripping every Unicode mark also erases Devanagari vowel signs (`दिन` matches `दीन`); strip
+    only combining diacritics (U+0300 to U+036F). Done when each has a failing test, then a fix.
+    Build on #74 once it merges.
+
+57. **The development board store survives its folder being removed.** Deleting
+    `packages/canvas/.local/boards` (or `PAIRED_BOARDS_DIR`) while `pnpm dev:canvas` runs makes
+    every board call fail with ENOENT, shown as a Vite error overlay, until the folder is made by
+    hand (seen while resetting boards for item 46's screenshots). Done when list answers empty and
+    the next save recreates the folder, with a failing-first test.
+59. **The safety measure covers restoring an earlier version.** Restore (#32, #35) can lose another
+    browser's newer edit if it ever merges or overwrites. Done when the eval's Safety row has a race:
+    browser A restores an earlier revision after browser B saved a newer edit; the restore is
+    refused and B's edit is still on the server and in A after reload (0 human edits lost).
+
+60. (Renumbered from 59 to avoid a clash.) **Key hints name the person's own keys.** `docs/canvas/principles.md`, finding 7 (recognising
+    beats recalling) and playtest item 6 ("I don't know how to trigger the agent"). Every hint on
+    screen says ⌘↵ (selection bar, typing hint, tooltips, shortcut sheet, the first board's card),
+    but on Windows and Linux the key is Ctrl, so the one way to ask is named in a key those people
+    do not have. Done when hints show Ctrl on non-Apple platforms and ⌘ on Apple ones, from one
+    tested function, with a headless check under a Windows platform finding no ⌘ on the first
+    screen or the selection bar, and screenshots.
+
 ## Claims
-55. Board history thinning | claude/sprint-history-thin | 2026-11-26T12:16Z
-54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
-45d. Board sync gap (d): images survive a clean profile | claude/sprint-board-images | 2026-11-26T12:08Z
+60. Key hints name the person's own keys | claude/sprint-mod-keys | 2026-11-26T12:30Z
+59. Safety race for restore | claude/sprint-eval-restore | 2026-11-26T12:27Z
+57. Dev board store survives its folder being removed | claude/sprint-dev-store-dir | 2026-11-26T12:19Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 54. Text and the next step stay inside the window (build-A): PR #80 (unbroken text already wrapped; the selection bar, Ask box and ask state line ran off a 390 px phone and the bar off a desktop's right edge; fixed, 11/20 to 20/20).
+- 56. Dropped images fit beside your thoughts (build-B): PR #77.
+- 45 (d). Images survive a clean profile (build-B): PR #76.
 - 52. Stale flags readable without a pointer (build-B): PR #72 ((a) was already true as #34 merged; now pinned by tests).
 - 46. Answer lands on its ask's page (build-B): PR #69, stacked on #64 and #67.
 - 47. Ask about a frame gives its contents (build-B): PR #67, stacked on #64.
@@ -396,6 +432,9 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 54) On a window too narrow for the selection bar or Ask box beside the tool strip (phones), they cover the strip while open rather than leave the screen. An ask's state line now wraps within its card's width (260 to 640 px) instead of running on in one line. Alternative: hide the tool strip while asking on phones.
+- (build-B, item 56) An image the person drops, pastes or imports first lands at most 600 on its longest side (about two card widths, whole on a laptop screen at 100%). The asset keeps full resolution and small images keep their size. Agent images with an explicit size are untouched. Alternative: fit to a share of the current view.
+- (build-B, item 45 d) Images the person adds are kept inside the board snapshot as data URLs, with photos over 1.5 MB scaled to 2048 px WebP, rather than in a server asset store. This needs no new storage or secret, and images count toward the 10 MB board limit (a refused save says so). Images added before this move into the board once sync is listening. Alternative: a server asset store with per-account quotas when boards outgrow this.
 - (build-B, item 52) A stale flag opens its whole reason when its object is selected (under the object, clear of the selection bar) or when the flag is focused with Tab (growing upward). Unselected, it stays one line. Part (a), never naming a hidden input, was already in #34 as merged; it is now pinned by unit tests rather than changed.
 - (build-B, item 46) An answer to an ask on another page is placed on the ask's page, and the person sees a toast naming who answered and on which page. The board never switches their page for them, because moving their view uninvited would undo their own navigation. Alternative: a "Go there" button in the toast.
 - (build-B, item 47) A selected frame's contents go to the agent as `inside` on that target: up to 20 objects in reading order, with nested frames walked into and `insideMore` counting the rest. Objects with neither text nor media (ink strokes, empty shapes) are left out, as `frame.objects` already does.
@@ -480,6 +519,10 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (build-A, item 51) A non-UTF-8 CSV is refused with a fix rather than guessed as Windows-1252; precision is kept (long IDs stay text) but `007` and `0x10` still read as numbers (item 13 decision unchanged).
 - (build-A, item 50) Repeated stale causes are reported by reference (`repeated: true`), not cut off by depth.
 
+- (build-B, item 55) Board history keeps the newest 20 revisions, then the newest revision in each older 15-minute wall-clock slot, 50 in all (the storage bound is unchanged). A day of editing then reaches back hours instead of minutes. The dev board store still keeps the newest 50. Alternatives: hour-long slots for older revisions, or a byte budget per account instead of a count.
+
+- (build-B, item 58) Two more optional findings on #78 are left open: matches can end inside a grapheme (`कल` matches `कला`; `かく` matches `かぐ` after normalisation), and `ß` does not fold to `ss` (`STRASSE` misses `Straße`). Fix if non-Latin search matters: compare at grapheme boundaries (`Intl.Segmenter`) and apply full case folding.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -556,3 +599,9 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:12Z | build-B | 45e review fixes | #70 | Parent and position carried as one unit, only under a parent still on the board (no orphans, no wrong-frame coordinates); object revisions never reused |
 | 2026-11-26T12:13Z | build-A | Feedback 8 import, part 6 | #73 | Text PDFs as section cards without a library (ToUnicode, layout from size and position, list by indent); Chromium-printed and hand-written fixtures; fuzzed; verify-pdf 7/7; stacked on #65 |
 | 2026-11-26T12:14Z | build-B | 53 canvas_read text filter | #74 | `read` takes `text` (case- and accent-insensitive, with `ids`); live MCP read 5 objects/3,145 B to 2/1,577 B; manifest regenerated; root build green |
+| 2026-11-26T12:24Z | build-B | 55 Board history thinning | #75 | Newest 20 plus one per 15-minute slot, 50 max; 10 h of saves every 5 min spans more than 8 h (was about 4); checked on PostgreSQL 16; root build green |
+| 2026-11-26T12:17Z | build-B | 45 (d) Images survive a clean profile | #76 | Images kept in the board; older ones moved in once sync listens; real tabs: fresh 2/5 before, 5/5 after; legacy 4/4; scorecard unchanged |
+| 2026-11-26T12:23Z | build-B | 56 Dropped images fit beside your thoughts | #77 | New images land at most 600 on the longest side, asset kept full size; real tab 5/6 before, 6/6 after; first screen unchanged; scorecard unchanged |
+| 2026-11-26T12:23Z | build-B | 58 Read filter matching gaps | #78 | Partly formatted words, Greek final sigma and Devanagari vowel signs match correctly; failing-first tests; live MCP check |
+| 2026-11-26T12:26Z | build-B | 8 Docs: board history on the menu | #79 | README and working spec no longer say no screen lists boards; #75's README line describes the new retention |
+| 2026-11-26T12:27Z | build-A | 54 Text and next step inside the window | #80 | verify-contain 11/20 → 20/20 at 1440 and 390 px (Ask box send button was off a phone screen, Send again too); 8 failing-first unit tests; first screen unchanged; scorecard unchanged |

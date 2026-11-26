@@ -4,6 +4,7 @@ import { END, START, markdown, perfRegressions, rows, spliceReport, type Raw } f
 
 const allPass: Raw = {
   acceptance: { steps: [{ name: "a", pass: true, detail: "ok" }] },
+  askLoop: { steps: [{ name: "ask", pass: true, detail: "ok" }] },
   agentUsability: { tasks: 20, attempted: 20, completed: 19, medianToolCalls: 4 },
   safety: { races: [{ name: "r", pass: true, detail: "ok", humanEditsLost: 0 }], humanEditsLost: 0 },
   persistence: { cleanProfile: true, sameProfileReload: true, detail: "identical", objects: 3 },
@@ -14,7 +15,7 @@ const status = (raw: Raw, measure: string, previous?: Raw) => rows(raw, previous
 
 describe("scorecard rows", () => {
   it("passes every measure when every target is met", () => {
-    expect(rows(allPass).map((r) => r.status)).toEqual(["pass", "pass", "pass", "pass", "reported", "pass"]);
+    expect(rows(allPass).map((r) => r.status)).toEqual(["pass", "pass", "pass", "pass", "pass", "reported", "pass"]);
   });
 
   it("fails acceptance on any failing step and reports the count", () => {
@@ -23,10 +24,21 @@ describe("scorecard rows", () => {
     expect(rows(raw)[0].result).toBe("1/2 steps");
   });
 
+  it("fails the Ask loop on any failing step, and says when it was not run", () => {
+    const raw = { ...allPass, askLoop: { steps: [{ name: "ask", pass: true, detail: "ok" }, { name: "answer", pass: false, detail: "x" }] } };
+    expect(status(raw, "Ask loop")).toBe("fail");
+    expect(rows(raw).find((r) => r.measure === "Ask loop")?.result).toBe("1/2 steps");
+    expect(status({ ...allPass, askLoop: undefined }, "Ask loop")).toBe("not run");
+    expect(status({ ...allPass, askLoop: { steps: [] } }, "Ask loop")).toBe("fail");
+  });
+
   it("requires at least 20 attempted tasks and 90% completion for agent usability", () => {
     expect(status({ ...allPass, agentUsability: { tasks: 10, attempted: 10, completed: 10, medianToolCalls: 3 } }, "Agent usability")).toBe("fail");
     expect(status({ ...allPass, agentUsability: { tasks: 20, attempted: 20, completed: 17, medianToolCalls: 3 } }, "Agent usability")).toBe("fail");
     expect(status({ ...allPass, agentUsability: { tasks: 0, attempted: 0, completed: 0, medianToolCalls: null } }, "Agent usability")).toBe("not run");
+    // A recorded attempt that predates newer tasks: the missing ones count as not completed.
+    const stale = { ...allPass, agentUsability: { tasks: 24, attempted: 21, completed: 21, medianToolCalls: 2 } };
+    expect(rows(stale).find((r) => r.measure === "Agent usability")).toMatchObject({ status: "fail", result: "21/24 (88%), median 2 tool calls; 3 tasks not in the recorded attempt" });
   });
 
   it("fails safety when a human edit is lost or a race cannot be run", () => {
