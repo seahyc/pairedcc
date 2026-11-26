@@ -62,6 +62,10 @@ export const commandSchema = z.object({
     "overview",
     "runs",
     "undo_run",
+    "dataset",
+    "chart",
+    "chart_state",
+    "cell",
   ]),
   input: z.record(z.string(), z.unknown()).optional(),
 });

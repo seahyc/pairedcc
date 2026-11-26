@@ -97,6 +97,11 @@ export function planUndo(diff: RunDiff, current: (id: string) => Rec | undefined
       continue;
     }
     const paths = changedPaths(from, to);
+    // A lock set since the run means hands off, the same as for any other agent write.
+    if (now.isLocked && to.isLocked !== true) {
+      conflicts.push({ id, reason: "locked after the run changed it" });
+      continue;
+    }
     const fields = paths.filter((p) => !equal(get(now, p), get(to, p)));
     if (fields.length) conflicts.push({ id, reason: "changed again after the run", fields });
     else if (paths.length) put.push(paths.reduce((rec, p) => set(rec, p, get(from, p)), now));

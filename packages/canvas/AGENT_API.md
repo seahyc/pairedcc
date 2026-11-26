@@ -28,7 +28,7 @@ Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
 
 Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists recent runs, newest first, with the object IDs each run created, updated and removed. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
 
-The undo is all-or-nothing. If the human or a later run has changed a field the run set, edited an object the run created, or deleted an object the run changed, nothing is changed and the error names each conflicting object and field. Undo the later run first, or leave it. The canvas's own derived values (the revision counter and auto-sized card height) do not count as conflicts.
+The undo is all-or-nothing. If the human or a later run has changed a field the run set, edited an object the run created, deleted an object the run changed, or locked one, nothing is changed and the error names each conflicting object and field. Undo the later run first, or leave it. The canvas's own derived values (the revision counter and auto-sized card height) do not count as conflicts.
 
 The run ledger lives in the open tab's memory. It holds the last 100 runs and is cleared on reload. An agent undo is also a step in the shared tldraw history, so the human's Cmd+Z straight after it re-applies the run.
 

@@ -49,6 +49,12 @@ describe("planning the undo of one agent run", () => {
     const b = shape("shape:b");
     expect(planUndo(diff({ updated: { [b.id]: [b, { ...b, x: 1 }] } }), store()).conflicts[0].reason).toMatch(/deleted/);
   });
+  it("does not write to an object the person locked after the run", () => {
+    const before = shape("shape:a"), after = shape("shape:a", {}, { color: "violet" });
+    const plan = planUndo(diff({ updated: { [before.id]: [before, after] } }), store(shape("shape:a", { isLocked: true }, { color: "violet" })));
+    expect(plan.put).toEqual([]);
+    expect(plan.conflicts).toEqual([{ id: "shape:a", reason: "locked after the run changed it" }]);
+  });
   it("puts back what the run deleted, pages before shapes before bindings", () => {
     const page = { id: "page:2", typeName: "page", name: "P", index: "a1", meta: {} };
     const s = shape("shape:a", { parentId: "page:2" });

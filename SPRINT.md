@@ -69,6 +69,9 @@ and after, and the review lane re-runs it on `claude/sprint-int` after each merg
 task by which measure is furthest from target, not by backlog order.
 
 ## Backlog (highest value first)
+0. **`pnpm eval:canvas` and the baseline scorecard** (see Goal and eval above). Unclaimed as of
+   2026-11-26T09:30Z and still the first thing to build. The two headless scripts in
+   `packages/canvas/tools/verify-data-*.cjs` already walk most acceptance steps and can seed it.
 1. **Server-side board storage.** Boards live only in the browser today. Add authenticated save and
    load per account in the server, with revisions and stale-write rejection matching the browser
    contract, migration from IndexedDB, and tests. No production migration is run.
@@ -85,19 +88,37 @@ task by which measure is furthest from target, not by backlog order.
 7. **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
    (1k and 10k objects), keyboard accessibility, 390px layout.
 8. **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
+   AGENT_API.md does not yet describe `canvas_dataset`, `canvas_chart`, `canvas_chart_state`,
+   `canvas_cell`, the `inputs` field on create, or the `dataset` / `widget` / `stale` read fields.
+9. **Editor-level tests for the data prototype's agent operations.** `test/data-agent.test.ts`
+   checks schemas only; stale-write rejection, locked-object rejection, partial chart state and
+   `read` omitting rows are proven only by `tools/verify-data-agent.cjs`, which `pnpm test` does not
+   run. Done when breaking any of those behaviours fails `pnpm test:canvas` (or the eval).
+10. **Repair `e2e/tests/editor-collab.spec.ts`.** It signs in with placeholder magic-link tokens
+    (`test-token-1`) that the server never issues, so it fails at the first step even with Postgres,
+    Redis and `JWT_SECRET` available. Done when it passes against a local server with a real
+    sign-in path and its required services are documented. Do not delete or skip it.
 
 ## Claims
-4. Agent interface | claude/sprint-agent-overview | 2026-11-26T08:56Z
+6. Learning mode prototypes | claude/sprint-learning | 2026-11-26T09:04Z
 
 ## Done
-- 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Merge in order; each is stacked on the previous.
+- 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Independent of #2–#4; whichever merges second rebases protocol/tool-defs and regenerates the manifest.
+- 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Reviewed and merged 2026-11-26 as 9f19690, 68d7ff3, ff68adc.
 
 ## Decisions needed
 - (build-B, item 2) Filtering or selecting a stale chart re-runs it on current data and clears the stale state (spec: immediate feedback). Alternative: keep the old snapshot until an explicit Recompute.
 - (build-B, item 2) The data prototype is reached through a "Data prototype page" button shown only with `?prototype=data`; dataset and chart shapes are always registered so saved boards load.
 - (build-B) Root `pnpm test` fails on `claude/sprint-int` independent of sprint work: `packages/cli` and `packages/web` have no test files and the e2e suite needs DATABASE_URL/REDIS_URL/JWT_SECRET. Used `pnpm -r --no-bail test` and reported per-package results. Fix: add `--passWithNoTests` to those scripts (out of canvas scope, not changed).
 
+- (build-B, item 4) Agent undo is per run, all-or-nothing, field-level: it restores only fields the run changed and refuses if any were changed since. The run ledger is in tab memory (last 100, cleared on reload) until server-side boards (item 1) exist. Human Cmd+Z right after an agent undo re-applies the run (shared linear history).
+- (review) The prototype agent tools (`canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell`) and one "Data prototype:" sentence in the agent instructions are in the shared tool definitions and the hosted manifest, so every connected agent sees them whether or not the person opened `?prototype=data`. They are labelled PROTOTYPE. Alternative: leave them out of the hosted manifest until the scenario is confirmed.
+- (review) Root `pnpm test` cannot be green in the sprint environment because of the e2e suite (backlog 10). The review gate is `pnpm build` plus `pnpm -r --no-bail test` with every package except `e2e` passing. `packages/cli` and `packages/web` now run `vitest run --passWithNoTests`.
+- (review) PR branches carried a tool identity as commit author, so PRs are squashed locally under the owner's identity and pushed, then closed with a pointer to the commit, rather than merged through GitHub. They show as closed, not merged.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
 | 2026-11-26T08:55Z | build-B | 2 Acceptance scenario | #2 #3 #4 | Model, flagged page, agent ops; HTTP e2e and screenshots pass |
+| 2026-11-26T09:04Z | build-B | 4 Agent interface | #5 | Overview, runs, undo_run; live HTTP and MCP checks pass |
+| 2026-11-26T09:30Z | review | Review #2 #3 #4 | #2 #3 #4 | All three merged (squash); proofs reproduced; build and package tests green on the merged branch |
