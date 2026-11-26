@@ -26,6 +26,16 @@ export function devBoardStore(dir: string) {
   return {
     list: () => readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => summary(read(f.slice(0, -5))!)).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)),
     get: (id: string) => read(id),
+    /** Kept revisions, newest first, without snapshots (server: GET /:id/revisions). */
+    revisions(id: string) {
+      const b = read(id);
+      return b ? b.history.map((h) => ({ revision: h.revision, sizeBytes: JSON.stringify(h.snapshot).length, savedAt: h.savedAt })).reverse() : null;
+    },
+    /** One kept revision with its snapshot (server: GET /:id/revisions/:rev). */
+    revision(id: string, revision: number) {
+      const h = read(id)?.history.find((x) => x.revision === revision);
+      return h ? { revision: h.revision, sizeBytes: JSON.stringify(h.snapshot).length, savedAt: h.savedAt, snapshot: h.snapshot } : null;
+    },
     /** Same outcomes as the server: created/saved, stale (with current), or missing. */
     save(id: string, expectedRevision: number, snapshot: unknown, name?: string) {
       const current = read(id), at = new Date().toISOString();
@@ -74,9 +84,22 @@ export function devBoards(dir = process.env.PAIRED_BOARDS_DIR ?? join(process.cw
         const url = new URL(req.url ?? "/", "http://localhost");
         if (url.pathname !== PREFIX && !url.pathname.startsWith(`${PREFIX}/`)) return next();
         if (!isLocalRequest(req)) return send(res, 403, { error: "Development boards accept same-origin loopback requests only" });
-        const id = decodeURIComponent(url.pathname.slice(PREFIX.length + 1));
+        const [rawId = "", sub, rawRev, ...extra] = url.pathname.slice(PREFIX.length + 1).split("/");
+        const id = decodeURIComponent(rawId);
         if (!id) return req.method === "GET" ? send(res, 200, { boards: store.list(), account: "local" }) : send(res, 405, { error: "Use GET" });
         if (!validId(id)) return send(res, 400, { error: "Board IDs are 1–64 letters, digits, - or _" });
+        if (sub !== undefined) {
+          if (sub !== "revisions" || extra.length) return send(res, 404, { error: "Not found" });
+          if (req.method !== "GET") return send(res, 405, { error: "Use GET" });
+          if (rawRev === undefined || rawRev === "") {
+            const list = store.revisions(id);
+            return list ? send(res, 200, { revisions: list }) : send(res, 404, { error: "Board not found" });
+          }
+          const rev = Number(rawRev);
+          if (!Number.isInteger(rev) || rev < 1) return send(res, 400, { error: "Invalid board ID or revision" });
+          const one = store.revision(id, rev);
+          return one ? send(res, 200, { revision: one }) : send(res, 404, { error: "Revision not found" });
+        }
         if (req.method === "GET") {
           const b = store.get(id);
           return b ? send(res, 200, { board: { id: b.id, name: b.name, revision: b.revision, updatedAt: b.updatedAt, snapshot: b.snapshot } }) : send(res, 404, { error: "Board not found" });

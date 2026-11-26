@@ -16,9 +16,9 @@ where `<repo>` is the absolute path of your checkout; the configuration in Agent
 
 Set `PAIRED_SESSION` to target a particular tab. Its ID persists across reloads in that tab's session storage. `canvas_sessions` lists connections. If several are open, requests without a session ID fail rather than selecting a canvas arbitrarily.
 
-Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_asks`, `canvas_ask_status`, `canvas_answer`, `canvas_feedback`, `canvas_reply`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
+Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_asks`, `canvas_ask_status`, `canvas_answer`, `canvas_import`, `canvas_feedback`, `canvas_reply`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
 
-Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
+Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`, `canvas_group`.
 
 ### Learning prompts (prototype)
 
@@ -65,9 +65,12 @@ Suggested loop: read the chart's `widget`, cite `summary` and the selected value
 
 ### Converge (prototype)
 
-`canvas_converge` pulls several alternatives, branches or hypotheses into one synthesis. It runs only in a tab opened with `?prototype=converge`. Pass `sourceIds` (2 to 20 objects on the open page, each once, none hidden) and `text` (what they add up to and where they still disagree). Optionally pass a `name` and an `x`, `y` position; by default the card goes 80 px right of the sources, aligned with their top.
+`canvas_converge` pulls several alternatives, branches or hypotheses into one synthesis. It runs only in a tab opened with `?prototype=converge`. Pass `sourceIds` (2 to 20 objects on the open page, each once, none hidden) and `text` (what they add up to and where they still disagree). Optionally pass `points`, claims that each cite the `sourceIds` they rest on, a `name`, and an `x`, `y` position. By default the card goes 80 px right of a column of sources (top-aligned) or 80 px below a row of them (left-aligned), so no arrow crosses a source.
 
-It creates one agent card with `meta.role: "synthesis"`, `meta.convergedFrom` (the source IDs) and `meta.inputs` (each source's version at that moment), plus a derived-from arrow from each source. The result is `{ synthesis, sources, connections }`. Because the sources are recorded as inputs, `read` reports the synthesis as `stale` once any source changes, and the board flags it. Revise it then. The sources are never moved or deleted, and the whole operation is one run, so `canvas_undo_run` removes the card and arrows together.
+It creates one agent card with `meta.role: "synthesis"`, `meta.convergedFrom` (the source IDs) and `meta.inputs` (each source's version at that moment), plus a derived-from arrow from each source labelled A, B, C… The card lists each point with the letters of the sources it cites, and keeps `meta.points`. The result is `{ synthesis, sources, labels, connections }`, where `labels` maps each source ID to its letter. Because the sources are recorded as inputs, `read` reports the synthesis as `stale` once any source changes, and the board flags it. Revise it then. The sources are never moved or deleted, and the whole operation is one run, so `canvas_undo_run` removes the card and arrows together.
+
+The person can converge too: open the canvas with `?prototype=converge`, select two or more objects and press **Pull into a synthesis** in Properties. That makes the same linked card, in their handwriting and empty, ready for them to write their own conclusion.
+
 ### Relationships, sources and transformations (prototype)
 
 `canvas_get` adds three read-only fields from the working spec's proposed primitives. They are derived from what the board already records, so they never disagree with it:
@@ -138,6 +141,26 @@ Asks are also items in the feedback queue (`ask` holds the state), so nothing is
 
 On paired.cc the three operations work over MCP, but MCP clients have no wait endpoint and are not shown as listening; read `canvas_asks` when the human tells you they asked. The one exception is the site's resident agent, described in the README: it holds a server secret, long-polls `POST /api/canvas/asks/wait` and may only call `ask_status` and `answer`, and only for accounts on the server's allowlist. Those accounts see whether it is listening; every other account sees that no agent is listening for it.
 
+### Importing source material
+
+`import` (`canvas_import`) brings a table or document onto the board as something the human can think with, in one undoable step. It is the same importer that runs when the human pastes or drops a file; the rules are in `docs/canvas/import.md`.
+
+```json
+{ "op": "import", "input": { "content": "No.,Topic,Objection,Severity\n1,Fleet cost,\"Three answers give three totals...\",Critical\n", "format": "csv", "name": "review.csv" } }
+```
+
+| Field | Meaning |
+|---|---|
+| `content` | The text itself, up to 2 MB: CSV, TSV, an HTML table, Markdown, a JSON array of objects, or prose |
+| `format` | `auto` (default), `csv`, `tsv`, `html`, `markdown`, `json`, `text`. Name it for CSV with fewer than three columns |
+| `name` | Where it came from; recorded on every object and shown to the human. Defaults to "from <your name>" |
+| `as` | `auto` (default): rows of prose become record cards, grids of numbers stay one table. `cards` or `table` forces either |
+| `focus` | Move the view to the first records (default true) |
+
+The result has `kind` (`records`, `table` or `prose`), a `summary` line, `importId` and, for records and sections, `objects` in reading order (`id`, `name`, `row`). A record is a group: a title card and one card per long column. Imported objects carry `meta.source` (`importId`, `from`, `at`, `kind`, and `row`, `column`, `values` where they apply); a record's `values` holds every non-empty cell of its row by column name, so one `get` on the group id gives the whole row. Columns left empty for a verdict are listed in `verdictColumns` and not drawn: the human's verdict is a pick, a cross or a comment, which you read with `feedback`. Do not set them yourself.
+
+When the human asks about a record, the ask's `targets` are the record's cards, each with `text` as `Column name: text` and `author` as `Imported source (<from>, row <n>)`.
+
 ### The feedback queue
 
 Everything the human marks goes into one queue that spans every page: comments (C on a selection, or pinned to a spot on the board), picks (P), rejects (X) and pen ink drawn over an object. The human sees it in the Feedback tab; agents read it in one call.
@@ -198,6 +221,8 @@ Primitive creation and updates accept `font` (draw/sans/serif/mono), `size` (s/m
 `canvas_arrange` accepts `objects: [{id, expectedRevision}]`, `layout: "row" | "column" | "grid"`, page-space `x`, `y`, optional `gap` (default 40) and `columns` (default 3). It sizes cells using actual object bounds, including rotated objects. Input order determines placement. A stale revision or locked object rejects the entire layout. Pass a frame or its children, never both.
 
 `canvas_duplicate` accepts the same guarded `objects` list plus optional `offsetX` (default 320) and `offsetY` (default 0). Frames bring their descendants. Include arrows in the duplicated set to preserve bindings between copies. The result contains copied objects and the new selection; originals remain intact.
+
+`canvas_group` wraps objects in a named frame without moving them, to show they belong together. Pass the same guarded `objects` list, a `name` for the frame, and optional `padding` (default 40) around their combined bounds. The objects must share a parent: all on the page, or all in one frame, in which case the new frame nests inside it. A stale revision or a locked object rejects the whole call. The result has the `frame` and the `objects`, now inside it, with their new revisions. It is one run, so `canvas_undo_run` takes it back.
 
 A useful first request:
 
@@ -260,6 +285,7 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `asks` | Optional `state`; lists the human's asks with their context |
 | `ask_status` | Ask `id`, `state` (working, failed, waiting), optional `note`, `error` |
 | `answer` | Ask `id` and either `text` or 2 to 4 `alternatives`; optional `read`, `question` |
+| `import` | `content`, optional `format`, `name`, `as`, `focus`; lays a table or document out as source material |
 | `remove` | `id`, `expectedRevision`; locked objects cannot be removed |
 | `select` | `ids` |
 | `focus` | Optional `ids`; fits the selected objects or current page |
@@ -268,11 +294,12 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `scene` | `nodes` with unique keys, optional frame parentKey; optional connections between keys |
 | `arrange` | Guarded objects, `layout` (row/column/grid), page-space x/y, optional gap/columns |
 | `duplicate` | Guarded objects, optional offsetX/offsetY |
+| `group` | Guarded objects, `name`, optional `padding`; wraps them in a frame in place |
 | `learn` | Prototype: `mode` (predict/generate), `question`, `x`, `y`, optional `width`, `hideIds` |
 | `overview` | Optional `parentId`, `limit`, `cursor`; compact listing of one level |
 | `runs` | Optional `limit`; recent agent runs in this tab |
 | `undo_run` | `runId`; reverses that run only, or fails listing conflicts |
-| `converge` | Prototype: `sourceIds`, `text`, optional `name`, `x`, `y`; synthesis card with derived-from arrows |
+| `converge` | Prototype: `sourceIds`, `text`, optional `points` (each `text` and its `sourceIds`), `name`, `x`, `y`; synthesis card with lettered derived-from arrows |
 | `dataset` | Prototype: `x`, `y`, optional size; `synthetic: "orders"` or `columns`, `rows`, `title`, `source` |
 | `chart` | Prototype: `x`, `y`, optional size, `datasetId`, `state` (x, y, aggregate, filter, selected) |
 | `chart_state` | Prototype: `id`, `expectedRevision`, partial `state`; recomputes on current data |
@@ -283,6 +310,8 @@ Mutations operate on the browser's current page. Read before changing objects; i
 ### Retry and revision behaviour
 
 Keep the same `requestId` and request content when retrying an HTTP operation. Within one development-server run, identical retries reuse the original result; changed content with the same ID is rejected. The ledger holds the newest 1,000 requests and is in memory. Restarting the server resets it. This is not durable exactly-once execution across server restarts.
+
+An optional `"via": "mcp"` marks a request from an MCP client, a chat agent the person talks to; the bundled MCP server sends it. When no agent is listening for asks, an ask names the last such agent and tells the person to ask it in their chat. Scripts leave `via` out, so they are never offered that way.
 
 Updates/removals require the object's current revision. A stale revision fails without applying that operation. If a request times out or the browser disconnects before acknowledgement, its outcome may be unknown: read the canvas before issuing a new mutation. All connected agents are trusted local processes; the actor label is attribution, not authenticated identity. The API rejects remote and cross-origin requests. No secrets or paid providers are configured.
 
