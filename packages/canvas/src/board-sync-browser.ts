@@ -1,9 +1,11 @@
 import { atom, getSnapshot, loadSnapshot, type Editor } from "tldraw";
-import { createBoardSync, type BoardApi, type MemoStore, type PutResult, type Snapshot, type SyncMemo, type SyncStatus } from "./board-sync";
+import { createBoardSync, type BoardApi, type MemoStore, type PutResult, type RevisionSummary, type BoardSummary, type Snapshot, type SyncMemo, type SyncStatus } from "./board-sync";
+import { bringContentIntoView } from "./reframe";
 
 // Wires board sync to the editor, the network and localStorage. On paired.cc the account
 // comes from the session (/auth/me) and boards from /api/canvas/boards. The development
-// server serves the same board API for one local person (server/boards-dev.ts).
+// server serves the same board API for one local person (server/boards-dev.ts), unless
+// PAIRED_SERVER_URL proxies it to a real server (vite.config.ts).
 
 export const boardSync = atom<SyncStatus>("board sync", { state: "local" });
 
@@ -32,7 +34,7 @@ const json = { "Content-Type": "application/json" };
 
 export const boardApi: BoardApi = {
   async account() {
-    if (import.meta.env.DEV) {
+    if (!__BOARDS_ON_SERVER__) {
       const r = await fetch("/api/canvas/boards");
       return r.ok ? "local" : null;
     }
@@ -55,6 +57,24 @@ export const boardApi: BoardApi = {
     const { board } = (await r.json()) as { board: { revision: number; snapshot: Snapshot } };
     return { revision: board.revision, snapshot: board.snapshot };
   },
+  async list() {
+    const r = await fetch("/api/canvas/boards", { credentials: "same-origin" });
+    if (!r.ok) throw new Error(`Loading your boards failed (${r.status})`);
+    return ((await r.json()) as { boards: BoardSummary[] }).boards;
+  },
+  async revisions(id) {
+    const r = await fetch(`/api/canvas/boards/${encodeURIComponent(id)}/revisions`, { credentials: "same-origin" });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`Loading the board's history failed (${r.status})`);
+    return ((await r.json()) as { revisions: RevisionSummary[] }).revisions;
+  },
+  async revision(id, revision) {
+    const r = await fetch(`/api/canvas/boards/${encodeURIComponent(id)}/revisions/${revision}`, { credentials: "same-origin" });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`Loading revision ${revision} failed (${r.status})`);
+    const body = (await r.json()) as { revision: { revision: number; snapshot: Snapshot } };
+    return { revision: body.revision.revision, snapshot: body.revision.snapshot };
+  },
   async put(id, expectedRevision, snapshot): Promise<PutResult> {
     const r = await fetch(`/api/canvas/boards/${encodeURIComponent(id)}`, {
       method: "PUT",
@@ -65,7 +85,29 @@ export const boardApi: BoardApi = {
     const body = (await r.json().catch(() => ({}))) as { board?: { revision: number }; current?: { revision: number }; error?: string };
     if (r.ok && body.board) return { ok: true, revision: body.board.revision };
     if (r.status === 409 && body.current) return { ok: false, stale: true, revision: body.current.revision };
-    return { ok: false, stale: false, error: body.error ?? `Saving the board failed (${r.status})` };
+    const error = body.error ?? `Saving the board failed (${r.status})`;
+    // The server refused this board itself (too large, not a valid board, or the account
+    // already keeps as many boards as it may): not offline, and retrying it cannot work.
+    if (r.status === 400 || r.status === 403 || r.status === 413) return { ok: false, stale: false, refused: r.status, error };
+    return { ok: false, stale: false, error };
+  },
+};
+
+type Sync = ReturnType<typeof createBoardSync>;
+let active: Sync | null = null;
+
+/** The open board's history, for the "Earlier versions" dialog; null until sync has started. */
+export const boardHistory = {
+  revisions: () => (active ? active.revisions() : Promise.resolve(null)),
+  restore: (revision: number) => {
+    if (!active) return Promise.reject(new Error("This board is not saved to an account yet."));
+    return active.restore(revision);
+  },
+  boards: () => (active ? active.boards() : Promise.resolve(null)),
+  current: () => active?.boardId() ?? null,
+  open: (boardId: string) => {
+    if (!active) return Promise.reject(new Error("This board is not saved to an account yet."));
+    return active.open(boardId);
   },
 };
 
@@ -82,10 +124,18 @@ export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
         const page = editor.getCurrentPageId();
         loadSnapshot(editor.store, { document: snapshot as never });
         if (editor.getPage(page)) editor.setCurrentPage(page);
+        bringContentIntoView(editor);
       },
+      reset: () => editor.clearHistory(),
       listen: (fn) => editor.store.listen(fn, { scope: "document", source: "user" }),
     },
   });
+  // Development only, like window.__pairedEditor: lets headless checks drive history.
+  if (import.meta.env.DEV) (window as unknown as { __pairedBoardSync?: typeof sync }).__pairedBoardSync = sync;
+  active = sync;
   void sync.start();
-  return () => sync.stop();
+  return () => {
+    if (active === sync) active = null;
+    sync.stop();
+  };
 }

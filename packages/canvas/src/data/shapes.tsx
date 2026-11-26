@@ -14,7 +14,7 @@ import {
   type TLShapeId,
 } from "tldraw";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { revision } from "../operations";
+import { revision, shapeName } from "../operations";
 import {
   aggregate,
   chartStateSchema,
@@ -23,6 +23,7 @@ import {
   inputRefSchema,
   setCell,
   staleChain,
+  staleReason,
   syntheticOrders,
   toggleFilter,
   toggleSelection,
@@ -294,15 +295,29 @@ export function DataLayer() {
         if (s.type === "chart" || editor.isShapeHidden(s)) return [];
         const stale = staleness(editor, s);
         const b = stale.length ? editor.getShapePageBounds(s) : undefined;
-        return b ? [{ id: s.id, x: b.x, y: b.y, w: b.w }] : [];
+        if (!b) return [];
+        const nameOf = (id: string) => {
+          const shape = editor.getShape(id as TLShapeId);
+          // A result still hidden behind a learning prompt is not named before the person answers.
+          return shape && !editor.isShapeHidden(shape) ? shapeName(shape) : undefined;
+        };
+        return [{ id: s.id, x: b.x, y: b.y, w: b.w, name: shapeName(s), reason: staleReason(stale, nameOf) }];
       }),
     [editor],
   );
+  // The flag says which input changed, so the person knows what to recheck.
   return (
-    <div className="scratch-layer" aria-hidden>
+    <div className="scratch-layer">
       {items.map((i) => (
-        <span key={i.id} className="stale-flag" style={{ transform: `translate(${i.x + i.w - 8}px, ${i.y - 12}px)` }}>
-          stale
+        <span
+          key={i.id}
+          className="stale-flag"
+          role="note"
+          aria-label={`${i.name} is out of date: ${i.reason}`}
+          title={`Out of date: ${i.reason}`}
+          style={{ transform: `translate(${i.x + i.w}px, ${i.y - 12}px) translateX(-100%)` }}
+        >
+          stale · {i.reason}
         </span>
       ))}
     </div>
