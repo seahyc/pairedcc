@@ -1691,3 +1691,58 @@ kbd {
 .chart-empty { margin: auto; color: #7a766c; }
 .stale-flag { position: absolute; top: 0; left: 0; padding: 1px 7px; border-radius: 999px; background: #fff1e0; border: 1px dashed #b4540a; color: #8a3f06; font: 600 11px 'JetBrains Mono', monospace; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; cursor: help; }
 .prototype-row { color: #3a2fd0; }
+
+/* Earlier versions dialog */
+.history-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  max-height: min(360px, 50vh);
+  overflow-y: auto;
+  border-top: 1px solid #ebebef;
+}
+.history-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  padding: 8px 2px;
+  border-bottom: 1px solid #ebebef;
+}
+.history-when {
+  font-size: 13px;
+  color: #33343a;
+  overflow-wrap: anywhere;
+}
+.history-detail {
+  grid-row: 2;
+  font-size: 11px;
+  color: #8a8c92;
+  overflow-wrap: anywhere;
+}
+.history-list li > button,
+.history-now {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+.history-now {
+  font-size: 11px;
+  color: #8a8c92;
+}
+.history-status {
+  font-size: 12px;
+  color: #7e8089;
+  margin-top: 8px;
+}
+.history-status.done {
+  color: #2f6b3f;
+}
+.history-status.failed {
+  color: #9a5b00;
+}
+/* Text-only button: keep its label where narrow screens collapse subtle buttons to icons. */
+.subtle-button.history-restore {
+  font-size: 12px;
+  gap: 5px;
+}
