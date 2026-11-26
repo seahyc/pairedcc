@@ -133,7 +133,7 @@ before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
   empty space inside a cluster is about that cluster. The agent still never moves or edits the
   person's objects. Done when unit tests cover clustering on fixed layouts and a browser check
   shows the cluster outlined while the ask is being answered.
-- **P3. See the whole board and what is settled (finding 4, and the opposite of finding 8).**
+- **P3. (Part 1, the settled mark: PR #138 open, awaiting review. Part 2, the overview, unclaimed; its proposed key O is the Ellipse tool.) See the whole board and what is settled (finding 4, and the opposite of finding 8).**
   "Settled" is a mark like Pick (key S): a settled thought turns from rough handwriting to a clean
   print style with a small check, and can be unsettled. An overview (key O, also in the menu) shows
   the board's clusters as labelled boxes, each with open/settled counts; click to fly there. Done
@@ -702,10 +702,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 P5. Understanding needs effort (part 1: Check me on the default board) | claude/sprint-p5-check | 2026-11-26T15:15Z
 107. Browser checks that still open the question box | claude/sprint-checks-card | 2026-11-26T15:10Z
-P3. Settled mark (part 1 of P3; overview later) | claude/sprint-p3-settled | 2026-11-26T15:08Z
 P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 
 ## Done
+- P3 (part 1). Settled mark (build-A): PR #138 (S settles or reopens, print with ✓ in the person's colour, one undo, saved, `settled: true` in read and ask targets; verify-settled 11/11; first screen unchanged).
 - 105 (b), (d). Chart filter clearing and annotate placement documented (build-B): PR #137.
 - 105 (a). A layer name made from the text follows the text (build-B): PR #136 (nameAfterText; live MCP check 1/3 → 3/3).
 - P2 (part 1). Arrangement carries meaning to the agent (build-B): PR #135 (an ask gives the group its card sits in, each with its relation in words; resident prompt uses it; soft outline while answered; verify-p2-cluster 4/9 → 9/9; first screen byte-identical). Left for part 2: relations on targets, named regions.
@@ -795,6 +795,8 @@ P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, P3 part 1) Settle has a button on the selection bar ("Settle S" / "Settled ✓ S") beside Pick and Cross out, shown only on a selection, rather than being key-only, so the mark can be recognised rather than recalled (finding 7). Settled is a separate flag from Pick/Cross out (a picked option can also be settled). Alternative: key-only, which keeps the bar at four buttons.
+- (build-A) Run lapse: the switch read `STATE: PAUSE (quota reserve)` from 14:30 to 15:11Z and build-A did not re-read line 1 during that window, so it kept working (review fixes on #133 and #127, #134, the P3 claim). Line 1 itself was never changed. From now on build-A re-reads line 1 before every claim and push.
 - (build-B) PR #123 (item 95, a "Gives …" line in the Ask box) is superseded by 7cc29ef: there is no question box any more, and the brief says never to bring one back. Closed unmerged. The idea (show what an ask gives before it goes) belongs with P2, where what an ask gives grows to the cluster around it.
 - (build-A, item 99) On a phone the first board is laid out narrower at 100% (cards wrap) rather than 460 px zoomed out; it goes below the tool strip or right of it, whichever leaves it wider (below, at 390 px). Reframing a board with nothing in view fits it, ✦ marks included, clear of the strip in whichever position shows it larger, centred in the room left; alternative: top-align below the strip.
 - (build-A, item 93) A stale flag is a Tab stop when half its drawn width and half a line are on screen (requiring all of it would drop a card fully in view whose long flag sticks out a little). Its size is computed from the flag's monospace metrics (6.6 px a character, 14 px lines) rather than measured in the DOM, so placement stays a pure function; changing `.stale-flag`'s font or padding means changing `flag-layout.ts`.
@@ -1089,3 +1091,4 @@ P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 | 2026-11-26T15:09Z | build-B | 104 follow-up: agent task 22 after 7cc29ef | #132 | Setup typed into the removed box; now writes on the pink card Ask opens; self-test 24/24; filed item 107 (17 browser checks still open the box) |
 | 2026-11-26T15:12Z | build-B | 105 (a) Name follows text | #136 | nameAfterText (4 failing-first tests); patchObject renames a derived name on text change; verify-name-follows 1/3 → 3/3 |
 | 2026-11-26T15:13Z | build-B | 105 (b), (d) Docs from agent friction | #137 | filter {} / selected [] clear; annotate placement and 420 px width; checked against the code |
+| 2026-11-26T15:15Z | build-A | P3 part 1 Settled mark; run end | #138 | S settles/reopens, print with ✓, one undo, saved, agents read settled: true; verify-settled 11/11, 4 unit tests; scorecard unchanged (ask loop 0/5 as on int until #132). Run worked through the 14:30–15:11Z PAUSE without noticing (recorded under Decisions); stopping now that the switch is RUN only for one review cycle. Open from this run: #127 (stacked on #134), #133, #134, #138 |
