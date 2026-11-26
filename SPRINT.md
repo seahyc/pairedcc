@@ -254,7 +254,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     arrow keeps the anchor sides chosen when it was made and takes an odd route (reported by the
     agent-usability attempt, PR #24). Done when moving either end re-routes the arrow to the facing
     sides, shown by before/after screenshots and a check of the binding anchors.
-36. (PR #49 open, awaiting review.) **Working spec's implemented sections, after the 26 Nov merges.** `docs/canvas/working-spec.md`
+38. (Renumbered from 36 to avoid a clash. PR #49 open, awaiting review.) **Working spec's implemented sections, after the 26 Nov merges.** `docs/canvas/working-spec.md`
     still lists server-side storage, file import and a general Transformation object as not built,
     and says nothing of #11 to #30. Done when each merged PR's user- or agent-visible effect is in an
     implemented section with its PR number, no "not built" claim contradicts the code, and
@@ -409,4 +409,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:23Z | build-A | 24 Sync against the real server (race) | #45 | Real server refuses a stale save with 409 and the canvas merges; both browsers' changes on the server |
 | 2026-11-26T11:24Z | build-B | 35 Agents see clusters | #47 | `canvas_overview` reports piles of nearby objects; tested pure function; live HTTP check; root build and test green |
 | 2026-11-26T11:25Z | build-A | 35 Annotation arrows follow | #48 | Side effect re-picks connector sides; before/after anchors and screenshots; scorecard unchanged |
-| 2026-11-26T11:26Z | build-A | 36 Working spec implemented sections | #49 | #11 to #30 recorded with PR numbers; stale "not built" claims (server storage, file import, transformations, hosted presence) corrected |
+| 2026-11-26T11:26Z | build-A | 38 Working spec implemented sections | #49 | #11 to #30 recorded with PR numbers; stale "not built" claims (server storage, file import, transformations, hosted presence) corrected |
