@@ -698,6 +698,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     passes, with each original intent kept (keyboard-only loop, what is heard, nothing off screen).
 
 ## Claims
+P3. Settled mark (part 1 of P3; overview later) | claude/sprint-p3-settled | 2026-11-26T15:08Z
 P2. Arrangement carries meaning to the agent | claude/sprint-p2-cluster | 2026-11-26T15:01Z
 P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 
