@@ -10,6 +10,7 @@ describe("hosted tool manifest", () => {
     // Asks are queue items too, but only canvas_answer records the answer on the Ask.
     for (const name of ["canvas_feedback", "canvas_reply"]) expect(describe(name), name).toMatch(/`ask` field[^.;]*canvas_answer/);
     expect(readFileSync(new URL("../AGENT_API.md", import.meta.url), "utf8")).toMatch(/`ask` field[^.]*`canvas_answer`/);
+  });
   it("never offers an agent a field that sets authorship (the canvas attributes every write to the caller)", () => {
     const manifest = JSON.parse(manifestJson());
     for (const tool of manifest.tools) expect(Object.keys(tool.inputSchema.properties ?? {}), tool.name).not.toContain("author");
