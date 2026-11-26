@@ -36,6 +36,9 @@ describe("scorecard rows", () => {
     expect(status({ ...allPass, agentUsability: { tasks: 10, attempted: 10, completed: 10, medianToolCalls: 3 } }, "Agent usability")).toBe("fail");
     expect(status({ ...allPass, agentUsability: { tasks: 20, attempted: 20, completed: 17, medianToolCalls: 3 } }, "Agent usability")).toBe("fail");
     expect(status({ ...allPass, agentUsability: { tasks: 0, attempted: 0, completed: 0, medianToolCalls: null } }, "Agent usability")).toBe("not run");
+    // A recorded attempt that predates newer tasks: the missing ones count as not completed.
+    const stale = { ...allPass, agentUsability: { tasks: 24, attempted: 21, completed: 21, medianToolCalls: 2 } };
+    expect(rows(stale).find((r) => r.measure === "Agent usability")).toMatchObject({ status: "fail", result: "21/24 (88%), median 2 tool calls; 3 tasks not in the recorded attempt" });
   });
 
   it("fails safety when a human edit is lost or a race cannot be run", () => {
