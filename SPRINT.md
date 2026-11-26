@@ -387,7 +387,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested function, with a headless check under a Windows platform finding no ⌘ on the first
     screen or the selection bar, and screenshots.
 
-61. **An ask about a chart or dataset gives what it shows.** The acceptance scenario's "agent
+61. (PR #86 open, awaiting review; stacked on #69, #67, #64.) **An ask about a chart or dataset gives what it shows.** The acceptance scenario's "agent
     reads that exact state" holds for MCP agents (`canvas_chart_state`, `read`'s `widget`), but an
     ask carries only `"(Chart, no text)"`, and the resident agent answers with no tools, so "what
     does this chart show?" is answered blind. `startersFor` withholds chart starters for that
@@ -415,12 +415,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
 63. Answer lands in view | claude/sprint-answer-view | 2026-11-26T12:38Z
-61. Ask about a chart or dataset gives what it shows | claude/sprint-ask-chart | 2026-11-26T12:31Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 61. Ask about a chart or dataset gives what it shows (build-B): PR #86, stacked on #69.
 - 60. Key hints in the person's own keys (build-A): PR #83 (Ctrl on Windows, Linux and Android, ⌘ on Apple; verify-keys 10/16 → 16/16).
 - 57. Dev board store survives its folder being removed (build-B): PR #81.
 - 54. Text and the next step stay inside the window (build-A): PR #80 (unbroken text already wrapped; the selection bar, Ask box and ask state line ran off a 390 px phone and the bar off a desktop's right edge; fixed, 11/20 to 20/20).
@@ -459,6 +459,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B, item 61) An ask about a chart gives its bars as text (up to 40, then a count) and, when stale, the bars still drawn with the reason, rather than bars recomputed from current data, so the agent sees what the person sees. A dataset gives its first five rows. Chart and dataset starters are offered (behind `?prototype=data`, where these objects exist).
 - (build-A, item 60) The first board's "How to ask" card is board text, written in the keys of the device that laid it out; a board seeded on a Mac and opened on Windows keeps ⌘↵ on that card while the bar and hints say Ctrl. Alternative: render that card's key at display time.
 - (build-B, item 47) With frame contents sent on an ask (#67), a selected frame now gets group starters ("What do these have in common?", "What is missing from this group?", "Which of these matters most?"). #42 had held these back because the frame's children were not sent. Charts still get the default three.
 - (build-A, item 54) On a window too narrow for the selection bar or Ask box beside the tool strip (phones), they cover the strip while open rather than leave the screen. An ask's state line now wraps within its card's width (260 to 640 px) instead of running on in one line. Alternative: hide the tool strip while asking on phones.
@@ -641,3 +642,5 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:36Z | build-B | 45/59 merges and a review fix | #66 #70 #82 | #66 and #70 merged with #59 and re-checked in two browsers; #82's restore race uses a throwaway server under EVAL_URL (26 fixture writes to a reused board's history before, 0 after) |
 | 2026-11-26T12:38Z | build-B | 64 CSV codes keep leading zeros | #84 | 007 and 02139 stay text, 0x1A no longer becomes 26; plain numbers unchanged; drop in the page and acceptance 10/10 |
 | 2026-11-26T12:39Z | build-A | Review follow-ups on #55 #68; 62 import keeps what was said | #55 #68 #85 | #55: blank cells keep column slots, side by side never overlaps (2 failing-first tests, browser 14/14); #68: unsafe integers in any spelling stay text; #85: quote-aware delimiter, view switch refused after edits and one undo, 2,000-row cap stated, table height derived (browser before 3 pass/6 fail → 9/9). All import branches merged with claude/sprint-int after #46 landed |
+| 2026-11-26T12:39Z | build-B | 61 Ask about a chart or dataset | #86 | Chart and dataset text from tested pure functions; starters; real tab 1/8 before, 8/8 after; scorecard unchanged |
+| 2026-11-26T12:39Z | build-B | Process slip, fixed | #64 #67 #69 #72 #76 #77 #81 #86 | The PR tool added a tool-link footer to these descriptions, against the hard rules; removed from all eight (re-read to confirm). The edit also escaped the inner HTML of another bot's Devin review badge in those bodies; the PR text is unchanged |
