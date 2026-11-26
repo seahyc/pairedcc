@@ -549,7 +549,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     again) with its key, ⌘/Ctrl+Enter retries it, a headless check fails before and passes after,
     and an answered ask and a card keep Ask.
 
+86. **The principles status table says what the build does now.** `docs/canvas/principles.md`'s "What the build does" and "Still missing" columns date from the calm-canvas pass; since then #42 (starters fit the selection), #47 (overview clusters), #55 (side by side), #64 (picks carried), #67 (frame contents), #83/#88 (keys, tap) and #86 (chart asks) closed gaps it still lists as missing, so a playtester or agent reading it is misled. Done when every row is checked against the code and the merged PRs, each change cites its PR, and nothing unmerged is claimed.
+
 ## Claims
+86. The principles status table says what the build does now | claude/sprint-principles-status | 2026-11-26T14:05Z
 88. A failed ask is retried from the keyboard | claude/sprint-retry-key | 2026-11-26T14:00Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 
