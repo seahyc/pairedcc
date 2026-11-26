@@ -691,17 +691,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 105. **Friction from the 26-task agent attempt (PR #131; reported by the agent, not yet reproduced).** (a) `canvas_update` with `text` leaves the layer `name` at the old text, and `read` and `overview` show the stale name; (b) clearing a chart filter (`filter: {}`) has no example in AGENT_API; (c) `canvas_runs` lists every page's runs, with no page filter; (d) `canvas_annotate`'s placement without x/y and its fixed 420 px width are undocumented; (e) results are large (full richText props, long `created` lists in `canvas_runs`). Done when each is reproduced and fixed or recorded as a decision.
 
-106. **The keyboard, heard and contain checks follow Ask without a question box.** Since 7cc29ef ("The
+106. (PR #134 open, awaiting review.) **The keyboard, heard and contain checks follow Ask without a question box.** Since 7cc29ef ("The
     card is the question") `tools/verify-keyboard.mjs` (6 fail), `verify-heard.mjs` (7 fail) and
     `verify-contain.mjs` (3 fail) still drive the removed Ask box, on claude/sprint-int as on every
     branch. Done when each walks the new flow (write a question card, finish or Ctrl/⌘+Enter) and
     passes, with each original intent kept (keyboard-only loop, what is heard, nothing off screen).
 
 ## Claims
-106. Keyboard, heard and contain checks follow the new Ask | claude/sprint-checks-new-ask | 2026-11-26T14:58Z
 P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 
 ## Done
+- 106. Keyboard, heard and contain checks follow the new Ask (build-A): PR #134 (verify-keyboard 10/16 → 16/16, verify-heard 6/13 → 13/13, verify-contain crash → 20/20; tools only).
 - 102. Review follow-ups to #115 and #118 (build-A): PR #133 (board keys stay out of dialogs; newer attempt replaces a queued one; bar notices a quiet ask; (b) moot after 7cc29ef).
 - 104. The Ask loop measure follows the card-is-the-question loop (build-B): PR #132 (0/5 → 5/5 on the integration branch; two mutations each fail their step).
 - 101. Agent-usability tasks for #99 and #51 (build-B): PR #131 (tasks 25 and 26 self-tested; fresh attempt 26/26, median 2 tool calls; friction filed as item 105).
@@ -1075,3 +1075,4 @@ P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 | 2026-11-26T14:48Z | build-B | 100 (a)-(c) Ask announcements | #129 | liveText, announceState, optionsInLatestRound (failing-first tests); answers stamped with answeredAt; verify-announce-fixes 1/4 → 4/4 |
 | 2026-11-26T14:52Z | build-B | 104 Ask loop measure after 7cc29ef | #132 | Measure drove the removed question box (0/5); now writes a question beside a thought and finishes, checks a plain card is not sent and the beside thought is given, ⌘↵ for the failed ask; 5/5; mutations fail their steps |
 | 2026-11-26T14:53Z | build-A | 102 Review follow-ups to #115 #118 | #133 | Backspace in the agent dialog deleted the card behind it (reproduced); verify-menu-keys 16/19 → 19/19, verify-retry-key 10/11 → 11/11 (clock-driven quiet check), 2 failing-first desk tests; ask loop 0/5 on claude/sprint-int since 7cc29ef (build-B's #132) |
+| 2026-11-26T14:57Z | build-A | 106 Checks follow Ask without a box | #134 | verify-keyboard 10/16 → 16/16, verify-heard 6/13 → 13/13, verify-contain crash → 20/20 on the new flow; intent of each kept |
