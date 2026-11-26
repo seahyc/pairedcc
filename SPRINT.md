@@ -69,22 +69,22 @@ and after, and the review lane re-runs it on `claude/sprint-int` after each merg
 task by which measure is furthest from target, not by backlog order.
 
 ## Backlog (highest value first)
-0. **`pnpm eval:canvas` and the baseline scorecard** (see Goal and eval above). Unclaimed as of
-   2026-11-26T09:30Z and still the first thing to build. The two headless scripts in
-   `packages/canvas/tools/verify-data-*.cjs` already walk most acceptance steps and can seed it.
+0. **`pnpm eval:canvas` and the baseline scorecard** (see Goal and eval above). Still the first
+   thing the sprint needs. The headless scripts in `packages/canvas/tools/verify-*` already walk
+   most acceptance and shared-edit steps and can seed it.
 1. **Server-side board storage.** Boards live only in the browser today. Add authenticated save and
    load per account in the server, with revisions and stale-write rejection matching the browser
    contract, migration from IndexedDB, and tests. No production migration is run.
-2. **The first end-to-end acceptance scenario** in the working spec, built as a prototype: dataset
+2. (Merged, see Done.) **The first end-to-end acceptance scenario** in the working spec, built as a prototype: dataset
    object, chart view, direct filtering, agent reads exact widget state, stale marking when an input
    changes. Synthetic data.
 3. **Foundational primitives** from the spec as typed objects with tests: Relationship, Source,
    Transformation and Agent run (request, scope, progress, attributable and reversible changes).
-4. **Agent interface.** Overview-then-detail reads so agents never need a full-board dump; an agent
+4. (Merged, see Done.) **Agent interface.** Overview-then-detail reads so agents never need a full-board dump; an agent
    operation undoable as one unit without undoing human edits; tests over HTTP and MCP.
 5. **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
    what it came from.
-6. **Learning mode prototypes** from the spec: predict-then-check and generate-first.
+6. (Merged, see Done.) **Learning mode prototypes** from the spec: predict-then-check and generate-first.
 7. **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
    (1k and 10k objects), keyboard accessibility, 390px layout.
 8. **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
@@ -98,15 +98,25 @@ task by which measure is furthest from target, not by backlog order.
     (`test-token-1`) that the server never issues, so it fails at the first step even with Postgres,
     Redis and `JWT_SECRET` available. Done when it passes against a local server with a real
     sign-in path and its required services are documented. Do not delete or skip it.
+11. **Shared-edit gaps found in review of per-run undo.** (a) Undoing a run that deleted a shape
+    puts it back even when its parent frame has since been deleted, leaving an orphan; (b) any
+    agent can list and undo another agent's runs in the same tab; (c) an agent can hide an object
+    the person made behind a learning prompt. Done when each has a scripted race in the eval's
+    "Safety of shared edits" measure and either a fix or a recorded decision.
+12. **Prototype tool exposure.** Decide in code how prototype tools reach agents: today
+    `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` and `canvas_learn` are
+    in the shared definitions and hosted manifest for every agent. Done when there is one switch
+    (and a test) that leaves prototype tools out of the hosted manifest, defaulting to the current
+    behaviour until the maintainer chooses.
 
 ## Claims
 0. Eval harness and baseline scorecard | claude/sprint-eval | 2026-11-26T09:14Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
-- 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Independent of #2–#4; whichever merges second rebases protocol/tool-defs and regenerates the manifest.
+- 4. Agent interface: PR #5 (`canvas_overview`, `canvas_runs`, `canvas_undo_run`, live HTTP+MCP check). Reviewed and merged 2026-11-26 as f47a23f, with a fix so undo never writes to an object locked since the run.
 - 2. First acceptance scenario prototype: PRs #2 (model), #3 (shapes, `?prototype=data`), #4 (agent ops). Reviewed and merged 2026-11-26 as 9f19690, 68d7ff3, ff68adc.
-- 6. Learning mode prototypes: PR #6 (`prompt` card, predict and generate modes, `canvas_learn`, `?prototype=learning`).
+- 6. Learning mode prototypes: PR #6 (`prompt` card, predict and generate modes, `canvas_learn`, `?prototype=learning`). Reviewed and merged 2026-11-26 as e83c517.
 
 ## Decisions needed
 - (build-B, item 2) Filtering or selecting a stale chart re-runs it on current data and clears the stale state (spec: immediate feedback). Alternative: keep the old snapshot until an explicit Recompute.
@@ -119,6 +129,8 @@ task by which measure is furthest from target, not by backlog order.
 - (review) PR branches carried a tool identity as commit author, so PRs are squashed locally under the owner's identity and pushed, then closed with a pointer to the commit, rather than merged through GitHub. They show as closed, not merged.
 - (build-B, item 6) Learning prompts are created by agents (tool description restricts use to when the person asks to learn) or from the flagged demo page; no per-frame learning switch yet. Answered prompts are read via status, not counted as open marks. Hidden results are also hidden in the layer list.
 - (build-B, item 8) Deferred until #2–#6 merge, since docs must match merged code; each PR already updates AGENT_API for what it adds.
+- (review, item 6) `canvas_learn` can hide any unlocked object, including one the person made, until they answer, skip or delete the prompt. Alternative: only let an agent hide objects it created.
+- (review) Branches opened before another PR merges conflict in `protocol.ts`, `tool-defs.ts`, `App.tsx`, `style.css` and the manifest. The review lane merges `claude/sprint-int` into the PR branch, regenerates the manifest and re-runs every live check before squashing.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -127,3 +139,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T09:04Z | build-B | 4 Agent interface | #5 | Overview, runs, undo_run; live HTTP and MCP checks pass |
 | 2026-11-26T09:30Z | review | Review #2 #3 #4 | #2 #3 #4 | All three merged (squash); proofs reproduced; build and package tests green on the merged branch |
 | 2026-11-26T09:09Z | build-B | 6 Learning mode | #6 | Predict and generate prompts; headless and HTTP checks pass |
+| 2026-11-26T09:18Z | review | Review #5 #6 | #5 #6 | Both merged (squash) after merging in the integration branch; one locked-object defect fixed in #5; all live checks re-run on the combined code |
