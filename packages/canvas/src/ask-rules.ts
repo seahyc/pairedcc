@@ -255,3 +255,16 @@ export function retryLabel(line: { tone: string; retry?: boolean }): "Retry" | "
   if (!line.retry) return undefined;
   return line.tone === "nobody" ? "Send again" : "Retry";
 }
+
+/**
+ * An image or video as an ask gives it: the agent answers from text only, so it gets the file
+ * name, size, caption and alt text the board holds, and is told plainly when there is none.
+ */
+export function describeImage(i: { kind: "image" | "video"; name?: string; w?: number; h?: number; caption?: string; alt?: string }) {
+  const label = i.kind === "video" ? "Video" : "Image";
+  const name = i.name?.trim(), caption = i.caption?.trim(), alt = i.alt?.trim();
+  const size = i.w && i.h ? `${Math.round(i.w)}×${Math.round(i.h)} px` : "";
+  if (!name && !caption && !alt) return size ? `${label}, ${size}.` : `${label} with no file name, caption or alt text: you cannot see it.`;
+  const head = [`${label}${name ? ` "${name}"` : ""}`, size].filter(Boolean).join(", ");
+  return [`${head}.`, caption ? `Caption: "${caption}".` : "", alt ? `Alt text: "${alt}".` : ""].filter(Boolean).join(" ");
+}
