@@ -64,6 +64,7 @@ import { isLegacySeed, seed } from "./seed";
 import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
 import { PromptShapeUtil, createLearningPrototypePage, learningPrototypeEnabled, learningVisibility } from "./learning/prompt-shape";
 import { ChartShapeUtil, DataLayer, DatasetShapeUtil, createDataPrototypePage, dataPrototypeEnabled } from "./data/shapes";
+import { importCsvFiles, isCsvFile } from "./data/csv";
 import {
   PaperBackground,
   ScratchbookLayer,
@@ -483,6 +484,24 @@ function Shell() {
   const shapeColor =
     shape && "color" in shape.props ? shape.props.color : undefined;
   const bounds = shape ? editor.getShapePageBounds(shape) : undefined;
+  // PROTOTYPE (?prototype=data): dropping CSV files on the canvas creates datasets.
+  // Other dropped files go on to tldraw's own handling.
+  useEffect(() => {
+    if (!dataPrototypeEnabled()) return;
+    const onDrop = (e: DragEvent) => {
+      const files = [...(e.dataTransfer?.files ?? [])];
+      const csvs = files.filter(isCsvFile);
+      if (!csvs.length || !(e.target instanceof Element) || !e.target.closest(".tl-container")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const point = editor.screenToPage({ x: e.clientX, y: e.clientY });
+      void importCsvFiles(editor, csvs, point).then(setNotice);
+      const rest = files.filter((f) => !isCsvFile(f));
+      if (rest.length) void editor.putExternalContent({ type: "files", files: rest, point });
+    };
+    window.addEventListener("drop", onDrop, true);
+    return () => window.removeEventListener("drop", onDrop, true);
+  }, [editor]);
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(""), 3500);
