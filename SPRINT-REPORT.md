@@ -35,7 +35,18 @@ Last updated 2026-11-26T09:25Z by the review lane. Branch: `claude/sprint-int`.
 | cli, web | no test files (now exit 0) |
 | e2e | fails, pre-existing (see above) |
 
-Scorecard (`pnpm eval:canvas`): not available yet.
+<!-- scorecard:start -->
+Scorecard from `pnpm eval:canvas` at 2026-11-26T09:47Z on `4bc11fb`:
+
+| Measure | Target | Result | Status |
+|---|---|---|---|
+| Acceptance scenario | every step passes | 7/10 steps | fail |
+| Agent usability | ≥90% of ≥20 tasks | 0 tasks, no recorded attempt | not run |
+| Safety of shared edits | 0 human edits lost | 0 lost; 3/3 races pass | pass |
+| Persistence | identical in a clean profile | differs: the saved page does not exist in a clean profile (boards are stored only in this browser) | fail |
+| Performance | reported, not worse | 1k: load 2514 ms, pan 16.7 ms/frame; 10k: error | fail |
+| Existing product | green | build passes; tests: e2e failing | fail |
+<!-- scorecard:end -->
 
 ## Merged
 - [#2](https://github.com/seahyc/pairedcc/pull/2) Dataset and chart state model: pure functions, synthetic café orders, 10 tests (9f19690).

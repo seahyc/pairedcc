@@ -9,6 +9,7 @@
     "dev:canvas": "pnpm --filter @pairedcc/canvas dev",
     "build:canvas": "pnpm --filter @pairedcc/canvas build",
     "test:canvas": "pnpm --filter @pairedcc/canvas test",
+    "eval:canvas": "pnpm --filter @pairedcc/canvas eval",
     "mcp:canvas": "pnpm --filter @pairedcc/canvas mcp"
   },
   "pnpm": {
