@@ -98,6 +98,24 @@ describe("ask rules", () => {
     expect(askStatusLine({ ...base, state: "answered", agent: "Claude", answeredAt: 3500 }, opts).text).toContain("answered in 4s · given “a card”");
     expect(askStatusLine({ ...base, state: "waiting" }, { ...opts, listeners: null }).text).toContain("Connect an agent");
   });
+  it("names a connected agent that acted on the board recently instead of saying there is none", () => {
+    const base = { attempt: 0, askedAt: 0, state: "waiting" };
+    const recent = { actor: "Claude Code", at: 0 };
+    // paired.cc, an account the resident agent does not serve
+    const hosted = askStatusLine(base, { listeners: null, hosted: true, now: 40_000, given: "", recent });
+    expect(hosted).toMatchObject({ tone: "waiting" });
+    expect(hosted.text).toBe("Claude Code was here 40s ago. In your chat, ask it to answer this.");
+    expect(hosted.text).not.toContain("Connect an agent");
+    // locally, with no resident agent running
+    const local = askStatusLine(base, { listeners: [], now: 3 * 60_000, given: "", recent });
+    expect(local).toMatchObject({ tone: "nobody", retry: true });
+    expect(local.text).toBe("Claude Code was here 3 min ago. In your chat, ask it to answer this.");
+    // an agent seen long ago does not count
+    const stale = askStatusLine(base, { listeners: null, hosted: true, now: 11 * 60_000, given: "", recent });
+    expect(stale.text).toContain("Connect an agent");
+    // a listening agent still wins
+    expect(askStatusLine(base, { listeners: ["Resident"], now: 4000, given: "", recent }).text).toContain("Waiting for Resident");
+  });
 });
 
 describe("answer contract", () => {
