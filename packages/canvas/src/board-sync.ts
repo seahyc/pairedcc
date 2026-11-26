@@ -21,7 +21,12 @@ export type BoardApi = {
   account(): Promise<string | null>;
   get(id: string): Promise<ServerBoard | null>;
   put(id: string, expectedRevision: number, snapshot: Snapshot): Promise<PutResult>;
+  /** Kept revisions of a board, newest first, or null if it does not exist. */
+  revisions?(id: string): Promise<RevisionSummary[] | null>;
+  /** One kept revision's snapshot, or null if it was pruned or never existed. */
+  revision?(id: string, revision: number): Promise<ServerBoard | null>;
 };
+export type RevisionSummary = { revision: number; sizeBytes: number; savedAt: string };
 export type LocalBoard = {
   snapshot(): Snapshot;
   load(snapshot: Snapshot): void;
@@ -283,9 +288,36 @@ export function createBoardSync(o: SyncOptions) {
     }
   }
 
+  /**
+   * Put an earlier revision back as the board's newest revision. Edits not yet saved are
+   * saved first, so the board as it was before the restore stays in the history and the
+   * restore itself can be undone by restoring that revision.
+   */
+  async function restore(target: number): Promise<{ revision: number; restoredFrom: number }> {
+    if (!account || !o.api.revision) throw new Error("Revisions are only kept for boards saved to an account.");
+    await save();
+    while (saving) await saving;
+    if (status.state !== "saved") throw new Error("Save the board before restoring an earlier version.");
+    const before = revision;
+    if (target === before) return { revision, restoredFrom: target };
+    const old = await o.api.revision(boardId, target);
+    if (!old) throw new Error(`Revision ${target} is no longer kept.`);
+    apply(old.snapshot);
+    remember(true);
+    try {
+      await push(`Restored revision ${target}. The board as it was before is revision ${before} in the history.`);
+    } catch (error) {
+      failed(error);
+      throw error;
+    }
+    return { revision, restoredFrom: target };
+  }
+
   return {
     start,
     save,
+    restore,
+    revisions: () => (account && o.api.revisions ? o.api.revisions(boardId) : Promise.resolve(null)),
     status: () => status,
     stop() {
       stopped = true;

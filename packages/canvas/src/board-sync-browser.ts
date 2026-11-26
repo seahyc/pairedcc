@@ -1,5 +1,5 @@
 import { atom, getSnapshot, loadSnapshot, type Editor } from "tldraw";
-import { createBoardSync, type BoardApi, type MemoStore, type PutResult, type Snapshot, type SyncMemo, type SyncStatus } from "./board-sync";
+import { createBoardSync, type BoardApi, type MemoStore, type PutResult, type RevisionSummary, type Snapshot, type SyncMemo, type SyncStatus } from "./board-sync";
 
 // Wires board sync to the editor, the network and localStorage. On paired.cc the account
 // comes from the session (/auth/me) and boards from /api/canvas/boards. The development
@@ -49,6 +49,19 @@ export const boardApi: BoardApi = {
     const { board } = (await r.json()) as { board: { revision: number; snapshot: Snapshot } };
     return { revision: board.revision, snapshot: board.snapshot };
   },
+  async revisions(id) {
+    const r = await fetch(`/api/canvas/boards/${encodeURIComponent(id)}/revisions`, { credentials: "same-origin" });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`Loading the board's history failed (${r.status})`);
+    return ((await r.json()) as { revisions: RevisionSummary[] }).revisions;
+  },
+  async revision(id, revision) {
+    const r = await fetch(`/api/canvas/boards/${encodeURIComponent(id)}/revisions/${revision}`, { credentials: "same-origin" });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`Loading revision ${revision} failed (${r.status})`);
+    const body = (await r.json()) as { revision: { revision: number; snapshot: Snapshot } };
+    return { revision: body.revision.revision, snapshot: body.revision.snapshot };
+  },
   async put(id, expectedRevision, snapshot): Promise<PutResult> {
     const r = await fetch(`/api/canvas/boards/${encodeURIComponent(id)}`, {
       method: "PUT",
@@ -80,6 +93,8 @@ export function startBoardSync(editor: Editor, hadLocalWork: boolean) {
       listen: (fn) => editor.store.listen(fn, { scope: "document", source: "user" }),
     },
   });
+  // Development only, like window.__pairedEditor: lets headless checks drive history.
+  if (import.meta.env.DEV) (window as unknown as { __pairedBoardSync?: typeof sync }).__pairedBoardSync = sync;
   void sync.start();
   return () => sync.stop();
 }

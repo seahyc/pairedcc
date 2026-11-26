@@ -32,6 +32,14 @@ function server(signedIn: string | null = "alice") {
       b.history.push(structuredClone(snapshot));
       return { ok: true, revision: b.revision };
     },
+    async revisions(id) {
+      const b = boards.get(id);
+      return b ? b.history.map((_, i) => ({ revision: i + 1, sizeBytes: 1, savedAt: "" })).reverse() : null;
+    },
+    async revision(id, rev) {
+      const h = boards.get(id)?.history[rev - 1];
+      return h ? { revision: rev, snapshot: structuredClone(h) } : null;
+    },
   };
   return { api, boards, setDown: (v: boolean) => (down = v) };
 }
@@ -367,4 +375,49 @@ describe("withNewRecords", () => {
     expect(Object.keys(snapshot.store).sort()).toEqual(["a", "child", "frame", "page:1"]);
     expect(kept).toBe(2);
   });
+
+  it("restores an earlier revision as the newest one, keeping the board before it in history", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    b.edit("v2");
+    await b.flush();
+    b.edit("v3");
+    await b.flush();
+    expect(srv.boards.get("main")!.revision).toBe(3);
+    expect((await s.revisions())?.map((r) => r.revision)).toEqual([3, 2, 1]);
+    expect(await s.restore(1)).toEqual({ revision: 4, restoredFrom: 1 });
+    expect(text(b.doc)).toBe("v1");
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("v1");
+    expect(text(srv.boards.get("main")!.history[2])).toBe("v3"); // nothing lost
+    expect(last()).toMatchObject({ state: "saved", revision: 4, note: expect.stringContaining("revision 3") });
+    expect(b.stored.memo).toMatchObject({ revision: 4, dirty: false });
+    // The restore is undone by restoring the revision it replaced.
+    await s.restore(3);
+    expect(text(b.doc)).toBe("v3");
+  });
+
+  it("saves edits made in this tab before restoring, so they stay in history", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("unsaved thought"); // debounce timer not run yet
+    await s.restore(1);
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "unsaved thought", "v1"]);
+    expect(text(b.doc)).toBe("v1");
+  });
+
+  it("refuses a pruned revision without touching the board, and needs an account", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    await expect(s.restore(9)).rejects.toThrow(/no longer kept/);
+    expect(text(b.doc)).toBe("v1");
+    expect(srv.boards.get("main")!.revision).toBe(1);
+    const out = sync(server(null), browser(snap("x")), false);
+    await out.s.start();
+    await expect(out.s.restore(1)).rejects.toThrow(/account/);
+    expect(await out.s.revisions()).toBeNull();
+  });
 });
+
