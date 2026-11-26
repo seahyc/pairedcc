@@ -3,7 +3,8 @@
 // Starts its own dev server of this checkout with an empty board store. In one tab an agent
 // acts as soon as the tab connects, before the calm first board is laid out (it waits for
 // fonts): it makes a page and a scene over HTTP. Four seconds later the agent's page must still
-// be open, its objects readable, and the calm first board must exist on its own page. In a
+// be open, its objects readable, and the calm first board must exist on its own page (the
+// tab's first page, not a new one, so no empty page is left). In a
 // second, untouched tab the calm board must open on the first page as before.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-early-agent.mjs <screenshot dir>
@@ -78,6 +79,7 @@ try {
       const read = await op('read', { ids: [a] });
       check("the agent can still read what it made", read.ok && read.result.objects.length === 1, read.ok ? `${read.result.objects.length} objects` : read.error);
       check('the calm first board was still laid out, on a page of its own', state.pages.some((pg) => pg.seeded && pg.name !== 'Agent work'), JSON.stringify(state.pages));
+      check('no empty page is left behind: the first page holds the calm board', state.pages.every((pg) => pg.name === 'Agent work' || pg.seeded) && state.pages.length === 2, state.pages.map((pg) => pg.name).join(', '));
       await p.screenshot({ path: `${out}/1-agent-acted-early.png` });
       check('no page errors (early agent)', errs.length === 0, errs.join(' | '));
       await p.close();
