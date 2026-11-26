@@ -10,7 +10,9 @@
     "mcp": "tsx tools/mcp.ts",
     "manifest": "tsx tools/build-manifest.ts",
     "feedback": "tsx tools/pull-feedback.ts",
-    "eval": "tsx eval/run.ts"
+    "eval": "tsx eval/run.ts",
+    "verify:sync-server": "tsx tools/verify-board-sync-server.ts",
+    "agent": "tsx tools/resident-agent.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

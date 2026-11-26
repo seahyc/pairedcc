@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Box, useEditor, useValue, type Editor, type TLShapeId } from "tldraw";
 import { Check, CircleCheck, Download, MessageCircle, PenLine, RotateCcw, X, ClipboardCopy } from "lucide-react";
-import { agentActivity, agentLink } from "./agent-client";
+import { agentActivity, agentLink, agentListeners } from "./agent-client";
 import { boardSync } from "./board-sync-browser";
 import { collectFeedback, collectLooseNotes, resolveMark, HUMAN } from "./scratchbook";
 import {
@@ -124,6 +124,7 @@ export function FeedbackPanel({ onNotice }: { onNotice: (text: string) => void }
                 <span className="feedback-body">
                   <span className={item.kind === "comment" ? "feedback-text hand" : "feedback-text"}>{feedbackTitle(item)}</span>
                   <span className="feedback-meta">
+                    {item.ask ? `ask · ${item.ask} · ` : ""}
                     {item.kind === "comment" &&
                       (item.targets.length ? `on ${item.targets.map((t) => t.name ?? "deleted object").join(", ")} · ` : "pinned to the board · ")}
                     {item.pageName}
@@ -210,16 +211,26 @@ export function SaveState() {
     // Signed in (or the development board store): the account copy is what counts.
     const busy = sync.state === "loading" || sync.state === "saving" || state.saving;
     const offline = sync.state === "offline";
+    // The server refused this board itself (too large, invalid): saying "offline" would be wrong.
+    const refused = sync.state === "refused";
     // The development server keeps boards for one local person, not an account.
     const where = "account" in sync && sync.account === "local" ? "the local server" : "your account";
-    const label = offline
+    const label = refused
+      ? sync.code === 413
+        ? "Too large to save · kept on this device"
+        : "Save refused · kept on this device"
+      : offline
       ? "Offline · saved on this device"
       : busy
         ? sync.state === "loading"
           ? "Loading your board…"
           : "Saving…"
         : `Saved to ${where}${sync.state === "saved" ? ` · ${clock(sync.at)}` : ""}`;
-    const title = offline
+    const title = refused
+      ? `${where === "your account" ? "Your account" : "The local server"} refused this board: ${sync.error.replace(/\.$/, "")}. ${
+          sync.code === 413 ? "Remove large images or objects to save it there. " : ""
+        }Your work is safe in this browser; saving is tried again when the board changes.`
+      : offline
       ? `Could not reach the server (${sync.error}). Your work is safe in this browser and is saved to your account when the connection returns.`
       : sync.state === "saved" && sync.note
         ? sync.note
@@ -227,7 +238,7 @@ export function SaveState() {
           ? "Saved to your account and in this browser. Open it from any browser where you are signed in."
           : "Saved to the development server's board store (.local/boards) and in this browser.";
     return (
-      <span className={`save-state${busy ? " saving" : ""}${offline ? " offline" : ""}`} role="status" title={title}>
+      <span className={`save-state${busy ? " saving" : ""}${offline || refused ? " offline" : ""}`} role="status" title={title}>
         {busy ? <span className="save-dot" /> : <Check size={12} />}
         {label}
       </span>
@@ -247,6 +258,8 @@ export function AgentChip({ onOpen }: { onOpen: () => void }) {
   const link = useValue("agent link", () => agentLink.get(), []);
   const activity = useValue("agent activity", () => agentActivity.get(), []);
   const now = useNow(2000);
+  const listeners = useValue("agent listeners", () => agentListeners.get(), []);
+  const nobody = listeners !== null && listeners.length === 0;
   const down = link.mode === "local" ? link.state === "disconnected" : link.state !== "connected";
   const fresh = activity && now - activity.at < 6000;
   const label = down
@@ -257,19 +270,25 @@ export function AgentChip({ onOpen }: { onOpen: () => void }) {
         : "Agent link down"
     : fresh
       ? `${activity.actor}: ${activity.op}${activity.ok ? "" : " failed"}`
-      : activity
-        ? `Agent ready · ${activity.actor} ${ago(new Date(activity.at).toISOString(), now)}`
-        : "Agent ready";
+      : listeners?.length
+        ? `${listeners[0]} is listening`
+        : nobody
+          ? "No agent listening"
+          : activity
+            ? `Agent ready · ${activity.actor} ${ago(new Date(activity.at).toISOString(), now)}`
+            : "Agent ready";
   return (
     <button
       type="button"
-      className={`agent-chip ${down ? "down" : "up"} ${fresh ? (activity.ok ? "working" : "failed") : ""}`}
+      className={`agent-chip ${down ? "down" : "up"} ${fresh ? (activity.ok ? "working" : "failed") : nobody ? "idle" : ""}`}
       title={
         down
           ? "Agents cannot reach this tab right now. Click for setup."
           : activity && !activity.ok
             ? `Last agent action failed: ${activity.error}`
-            : "Agents can read and write this board while this tab is open. Click for setup."
+            : nobody
+              ? "Nothing will answer an ask until an agent is listening. Click to see how to start one."
+              : "Agents can read and write this board while this tab is open. Click for setup."
       }
       onClick={onOpen}
     >

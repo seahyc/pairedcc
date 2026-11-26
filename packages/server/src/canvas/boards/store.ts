@@ -7,6 +7,14 @@ import { z } from 'zod'
 
 export const MAX_BOARD_BYTES = 10 * 1024 * 1024
 export const KEEP_REVISIONS = 50
+/**
+ * Boards one account may keep. Well above normal use (sync adds a board only when it
+ * cannot merge), and with the 10 MB and 50-revision caps it bounds one account's storage.
+ * Saving an existing board is never limited; only creating one past the cap is refused.
+ */
+export const MAX_BOARDS_PER_ACCOUNT = 50
+export type BoardLimits = { maxBoards: number }
+export const defaultLimits: BoardLimits = { maxBoards: MAX_BOARDS_PER_ACCOUNT }
 
 export const boardIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/, 'Board IDs are 1–64 letters, digits, - or _')
 /** The tldraw document: store records keyed by ID, and the schema they were written with. */
@@ -33,6 +41,7 @@ export type SaveResult =
   | { ok: true; board: BoardSummary }
   | { ok: false; reason: 'stale'; current: BoardSummary }
   | { ok: false; reason: 'missing' }
+  | { ok: false; reason: 'limit'; limit: number }
 export type RemoveResult = { ok: true } | { ok: false; reason: 'stale'; current: BoardSummary } | { ok: false; reason: 'missing' }
 
 export interface BoardStore {
@@ -57,7 +66,16 @@ type Stored = Board & { history: (RevisionSummary & { snapshot: Snapshot })[] }
 /** In-memory store with the same semantics as the Postgres store; used by tests. */
 export class MemoryBoardStore implements BoardStore {
   private boards = new Map<string, Stored>()
-  constructor(private now: () => Date = () => new Date()) {}
+  constructor(
+    private now: () => Date = () => new Date(),
+    private limits: BoardLimits = defaultLimits,
+  ) {}
+  /** The same boards under different limits (tests). */
+  withLimits(limits: BoardLimits) {
+    const view = new MemoryBoardStore(this.now, limits)
+    view.boards = this.boards
+    return view
+  }
   private key = (userId: string, id: string) => `${userId}\u0000${id}`
   private summary = ({ id, name, revision, sizeBytes, updatedAt }: Stored): BoardSummary => ({ id, name, revision, sizeBytes, updatedAt })
 
@@ -78,6 +96,9 @@ export class MemoryBoardStore implements BoardStore {
     const name = input.name ?? documentName(input.snapshot)
     if (!current) {
       if (input.expectedRevision !== 0) return { ok: false, reason: 'missing' }
+      // Counted synchronously, so concurrent creates cannot interleave past the cap.
+      const owned = [...this.boards.keys()].filter((key) => key.startsWith(`${userId}\u0000`)).length
+      if (owned >= this.limits.maxBoards) return { ok: false, reason: 'limit', limit: this.limits.maxBoards }
       const board: Stored = { id, name: name ?? 'Untitled exploration', revision: 1, sizeBytes, updatedAt: at, snapshot: structuredClone(input.snapshot), history: [] }
       board.history.push({ revision: 1, sizeBytes, savedAt: at, snapshot: board.snapshot })
       this.boards.set(k, board)

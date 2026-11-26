@@ -5,3 +5,4 @@ dist/
 !.env.example
 .gstack/
 e2e/test-results/
+packages/canvas/eval/agent-runs/work/
