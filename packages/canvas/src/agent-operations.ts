@@ -357,7 +357,12 @@ export function annotateObject(editor: Editor, value: unknown) {
     target = find(editor, input.targetId),
     bounds = editor.getShapePageBounds(target);
   if (!bounds) throw new Error("Target must have bounds");
-  const x = input.x ?? bounds.x, y = input.y ?? bounds.maxY + 60;
+  // Under the target, then further down past anything already there, unless the agent chose a spot.
+  const lines = Math.ceil(input.text.length / 48) + (input.text.match(/\n/g)?.length ?? 0);
+  const placed = input.x === undefined && input.y === undefined
+    ? freeSpot(editor, { x: bounds.x, y: bounds.maxY + 60, w: agentWidths.agent, h: 28 + 22 * Math.max(1, lines) }, new Set([target.id]))
+    : undefined;
+  const x = input.x ?? placed?.x ?? bounds.x, y = input.y ?? placed?.y ?? bounds.maxY + 60;
   const meta = { name: input.author === HUMAN ? "Feedback" : "Agent note", role: "annotation", targetId: target.id, status: "open", author: input.author };
   editor.markHistoryStoppingPoint("add feedback");
   let id = createShapeId();
