@@ -520,7 +520,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 86. (PR #112 open, awaiting review.) **`canvas_overview` shows what the person left out of asks.** Agents are told to start with `canvas_overview`, which lists no meta, so a left-out object (item 67, `meta.leftOut`) looks like any other there and an agent may read it to answer an ask. Done when overview rows carry `leftOut: true` for left-out objects (as they carry `locked: true`), documented in AGENT_API and unit-tested.
 
-87. **The menu and dialogs work from the keyboard.** (Found while building item 7, #105.) The
+87. (PR #115 open, awaiting review.) **The menu and dialogs work from the keyboard.** (Found while building item 7, #105.) The
     Menu opens with Enter but its items do not move with the arrow keys; Escape closes it and
     leaves focus on the board, not on the Menu button; the shortcut dialog (`?`) and the other
     dialogs open without taking focus, so Tab goes behind them, and closing them does not return
@@ -542,10 +542,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     FAIL per step, exits non-zero on a failure, and a deliberate break of the behaviour fails it.
 
 ## Claims
-87. The menu and dialogs work from the keyboard | claude/sprint-robust-menu | 2026-11-26T13:48Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 
 ## Done
+- 87. Menu and dialogs from the keyboard (build-A): PR #115 (menu pattern for Menu and More, dialogs take focus, trap Tab and give it back; verify-menu-keys 2/16 → 16/16).
 - 89. Log-only checks give a verdict (build-A): PR #116 (data prototype 11 steps, converge 10; a broken Recompute and missing synthesis inputs each fail). After #113 and #116 both merge, drop `log: true` for them in `verify-all.mjs`.
 - 88. Clean-profile image check (build-A): PR #114 (the large image was off screen so tldraw drew no `<img>`; its bytes were in the board; the check now fits the page first, still requiring each image to load at its real width; 3/5 → 5/5).
 - Reviewed and merged 2026-11-26 by the review lane: #85 to #90, 6 more (squash); 52 in this run.
@@ -868,3 +868,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:50Z | build-A | 88 Clean-profile image check | #114 | Not a product regression: the image was off screen in the clean profile; check fits the page before measuring; verify-board-images 3/5 → 5/5 |
 | 2026-11-26T13:50Z | review | Review #85 to #90 | #85 to #90 | 6 merged (squash); workspace build and tests green after each (canvas 428, server 157, e2e 1); live checks re-run for all six. Review fixes: #87 merged with #69 and given the phone selection-bar fix (a regression from #80). Scorecard on 20ccac9: six rows pass; 10k pan 78.5 ms flagged, shown equal to 95a9daf measured back to back (about 100 ms each). Run total: 52 merged, 0 rejected, 16 left open |
 | 2026-11-26T13:54Z | build-A | 89 Log-only checks give a verdict | #116 | verify-data-prototype 11/11, verify-converge 10/10; mutations fail 3 and 1 steps; no product change |
+| 2026-11-26T13:55Z | build-A | 87 Menu and dialogs from the keyboard; #105 keyboard-trap fix | #115 #105 #108 | #115: verify-menu-keys 2/16 → 16/16, 8 unit tests, Escape in a menu no longer clears the selection; #105: found its own keyboard trap (Tab on the page never reached the menu or tools), fixed with two failing-first checks, 16/16, merged with claude/sprint-int and into #108; scorecard unchanged |
