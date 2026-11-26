@@ -17,6 +17,8 @@ import { createFrontendRoutes } from './routes/frontend.js'
 import { oauthRoutes } from './oauth/routes.js'
 import { createMcpRoutes } from './canvas/mcp.js'
 import { CanvasRelay } from './canvas/relay.js'
+import { createBoardRoutes } from './canvas/boards/routes.js'
+import { PostgresBoardStore } from './canvas/boards/postgres-store.js'
 import { DocManager } from './yjs/doc-manager.js'
 import { attachYjsWebSocket } from './yjs/ws-handler.js'
 import { PostgresSnapshotStore } from './yjs/snapshot-store.js'
@@ -60,6 +62,8 @@ app.route('/api/documents', docConnectorRoutes)
 app.route('/api/connectors', connectorRoutes)
 app.route('/api/block-kit', manifestRoutes)
 app.route('/api/keys', apiKeyRoutes)
+// Canvas boards saved per account (the canvas still works without signing in).
+app.route('/api/canvas/boards', createBoardRoutes(new PostgresBoardStore(sql)))
 
 // Agent API
 const agentRoutes = createAgentRoutes(docManager, snapshotStore, presenceTracker)

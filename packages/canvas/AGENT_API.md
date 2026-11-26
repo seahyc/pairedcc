@@ -33,6 +33,8 @@ Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
 
 Data prototype tools: `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` (see [Data prototype](#data-prototype)).
 
+Prototype tools (`canvas_learn` and the data tools) are flagged `prototype` in `tools/tool-defs.ts`. The local stdio server always offers them. The hosted endpoint offers them while `hostedPrototypeTools` is true (the default); set it to false and run `pnpm --filter @pairedcc/canvas manifest` to leave them, and their guidance in the instructions, out of the hosted manifest.
+
 ### Overview, then detail
 
 `canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects.
@@ -53,7 +55,7 @@ A prototype of the working spec's first acceptance scenario: a dataset, a bar ch
 |---|---|---|
 | `dataset` | dataset | `title`, `source`, `columns`, `rowCount`, `version` (content version, bumped only when data changes). `get` adds `rows`; `read` never does. |
 | `widget` | chart | What the chart shows: `state`, `summary` (for example "sum of orders by region; product = Cake; 16 of 48 rows"), `rowsInView`, `bars` (`key`, `value`, `count`), `selected` (selected bars, each with the `rows` behind it), `datasetId`, `datasetVersion` (the dataset version the bars were computed from) and the chart's own content `version`. |
-| `stale` | any derived object | Present only when stale: a list of `{ id, recorded, current }`, one per input whose content version changed since it was used (`current` is `null` if the input was deleted). A chart's input is its dataset; any other object's inputs are its `meta.inputs`. |
+| `stale` | any derived object | Present only when stale: a list of `{ id, recorded, current }`, one per stale input. `current` differs from `recorded` when that input changed since it was used, and is `null` if it was deleted. An input that is unchanged but is itself stale is listed with `upstream`, the same list for that input, so a note derived from a chart is stale as soon as the chart's dataset changes, and `upstream` names the dataset. A chart's input is its dataset; any other object's inputs are its `meta.inputs`. |
 
 When a chart is stale, `widget` still describes what the person sees: the older `bars` and `selected`, without `summary`, `rowsInView` or selected rows, plus a `note` saying so. Set its state (even unchanged) to recompute it on current data. The person sees a dashed chart with a Recompute button, and a "stale" flag on each derived object. A filter or selection on a stale chart, by the person or an agent, also recomputes it.
 

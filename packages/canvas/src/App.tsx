@@ -76,6 +76,7 @@ import {
   HUMAN,
 } from "./scratchbook";
 import { richTextPlain } from "./operations";
+import { canvasOptions } from "./canvas-options";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
@@ -1326,6 +1327,7 @@ function App() {
         <Tldraw
           licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
           persistenceKey="picabird-canvas-v1"
+          options={canvasOptions}
           shapeUtils={scratchShapes}
           getShapeVisibility={learningVisibility}
           tools={scratchTools}
