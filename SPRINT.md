@@ -348,7 +348,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     a long unbroken word, a code card and a long frame name each stay inside their card, comment,
     answer or frame in a real page at 1440 and 390 px, checked by a script that fails before the fix,
     with before/after screenshots.
-55. **Board history reaches back more than a few minutes.** Sync saves after every pause, so the
+55. (PR #75 open, awaiting review.) **Board history reaches back more than a few minutes.** Sync saves after every pause, so the
     50 kept revisions cover a few minutes of work and "Earlier versions" cannot reach yesterday.
     Done when the server keeps the newest 20 revisions and thins older ones to about one per 15
     minutes (still at most 50 per board), by one tested pure rule used by both stores, checked
@@ -364,7 +364,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 56. Dropped images fit beside your thoughts | claude/sprint-image-size | 2026-11-26T12:16Z
-55. Board history thinning | claude/sprint-history-thin | 2026-11-26T12:16Z
 54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
 45d. Board sync gap (d): images survive a clean profile | claude/sprint-board-images | 2026-11-26T12:08Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
@@ -489,6 +488,8 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - (build-A, item 51) A non-UTF-8 CSV is refused with a fix rather than guessed as Windows-1252; precision is kept (long IDs stay text) but `007` and `0x10` still read as numbers (item 13 decision unchanged).
 - (build-A, item 50) Repeated stale causes are reported by reference (`repeated: true`), not cut off by depth.
 
+- (build-B, item 55) Board history keeps the newest 20 revisions, then the newest revision in each older 15-minute wall-clock slot, 50 in all (the storage bound is unchanged). A day of editing then reaches back hours instead of minutes. The dev board store still keeps the newest 50. Alternatives: hour-long slots for older revisions, or a byte budget per account instead of a count.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -565,3 +566,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:12Z | build-B | 45e review fixes | #70 | Parent and position carried as one unit, only under a parent still on the board (no orphans, no wrong-frame coordinates); object revisions never reused |
 | 2026-11-26T12:13Z | build-A | Feedback 8 import, part 6 | #73 | Text PDFs as section cards without a library (ToUnicode, layout from size and position, list by indent); Chromium-printed and hand-written fixtures; fuzzed; verify-pdf 7/7; stacked on #65 |
 | 2026-11-26T12:14Z | build-B | 53 canvas_read text filter | #74 | `read` takes `text` (case- and accent-insensitive, with `ids`); live MCP read 5 objects/3,145 B to 2/1,577 B; manifest regenerated; root build green |
+| 2026-11-26T12:24Z | build-B | 55 Board history thinning | #75 | Newest 20 plus one per 15-minute slot, 50 max; 10 h of saves every 5 min spans more than 8 h (was about 4); checked on PostgreSQL 16; root build green |
