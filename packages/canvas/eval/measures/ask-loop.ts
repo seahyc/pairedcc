@@ -45,25 +45,33 @@ export async function askLoop(browser: Browser, base: string) {
       const now = await status(id);
       return now && (!state || now.state === state) ? now : undefined;
     }, `the ask to show ${state ?? "a status line"}`)) as Status;
-  const ask = async (thought: string, question: string, at: { x: number; y: number }) => {
-    const before = new Set(((await agent.call("canvas_asks", { state: "all" })).asks ?? []).map((a: any) => a.id));
+  const asksNow = async () => ((await agent.call("canvas_asks", { state: "all" })).asks ?? []) as any[];
+  /** The person writes a card at a point (N, click, type) and finishes it with `finish`. */
+  const write = async (text: string, at: { x: number; y: number }, finish: "Escape" | "ControlOrMeta+Enter") => {
     await page.keyboard.press("Escape");
     await page.keyboard.press("n");
     await page.mouse.click(at.x, at.y);
     await sleep(300);
-    await page.keyboard.type(thought, { delay: 2 });
-    await page.keyboard.press("ControlOrMeta+Enter");
-    await page.locator(".selection-bar.asking input").waitFor({ timeout: 5000 });
-    await page.locator(".selection-bar.asking input").fill(question);
-    await page.keyboard.press("Enter");
-    return until(async () => ((await agent.call("canvas_asks", { state: "all" })).asks ?? []).find((a: any) => !before.has(a.id)), "the ask to reach the board");
+    await page.keyboard.type(text, { delay: 2 });
+    await page.keyboard.press(finish);
+    await sleep(400);
+  };
+  /** The card is the question (7cc29ef): what the person writes is the ask, with no box. */
+  const ask = async (text: string, at: { x: number; y: number }, finish: "Escape" | "ControlOrMeta+Enter") => {
+    const before = new Set((await asksNow()).map((a) => a.id));
+    await write(text, at, finish);
+    return until(async () => (await asksNow()).find((a) => !before.has(a.id)), "the ask to reach the board");
   };
   let first: any;
   try {
     await agent.call("canvas_page", { name: "Ask loop" });
 
-    await check(steps, "Person asks about a thought and the ask says who can answer", async () => {
-      first = await ask("Maybe we should charge per seat instead of per job post", "What's missing from this?", { x: 520, y: 360 });
+    await check(steps, "Person writes a question beside a thought; finishing it asks, and the ask says who can answer", async () => {
+      // A thought with no question mark is not sent by finishing it; a question beside it is.
+      const before = (await asksNow()).length;
+      await write("Teams hire in bursts, then not for months", { x: 520, y: 360 }, "Escape");
+      if ((await asksNow()).length !== before) return "a card without a question mark was sent when the person finished it";
+      first = await ask("Should we charge per seat instead of per job post?", { x: 520, y: 470 }, "Escape");
       const s = await waitFor(first.id);
       if (s.state !== "waiting") return `ask state is ${s.state}`;
       if (s.overflow) return `status text overflows: ${s.text}`;
@@ -76,8 +84,9 @@ export async function askLoop(browser: Browser, base: string) {
       const listed = (await agent.call("canvas_asks", {})).asks ?? [];
       const mine = listed.find((a: any) => a.id === first.id);
       if (!mine) return `canvas_asks (waiting) does not list the ask; it lists ${listed.length}`;
-      if (mine.question !== "What's missing from this?") return `question is ${JSON.stringify(mine.question)}`;
-      return (mine.targets ?? []).some((t: any) => (t.text ?? "").includes("charge per seat")) ? true : `targets do not carry the thought: ${JSON.stringify(mine.targets)}`;
+      if (mine.question !== "Should we charge per seat instead of per job post?") return `question is ${JSON.stringify(mine.question)}`;
+      // What sits right beside the question goes with it.
+      return (mine.targets ?? []).some((t: any) => (t.text ?? "").includes("hire in bursts")) ? true : `the thought beside the question is not given: ${JSON.stringify(mine.targets)}`;
     });
 
     await check(steps, "The page shows the agent working, with what it is doing", async () => {
@@ -113,8 +122,9 @@ export async function askLoop(browser: Browser, base: string) {
       return bad.length ? `text spills out of: ${bad.join("; ")}` : true;
     });
 
-    await check(steps, "A failed ask says why and offers Retry, which asks again", async () => {
-      const second = await ask("Hire a second designer before launch", "Poke holes in this", { x: 520, y: 760 });
+    await check(steps, "Any card is sent with ⌘↵; a failed ask says why and offers Retry, which asks again", async () => {
+      const second = await ask("Hire a second designer before launch", { x: 1000, y: 260 }, "ControlOrMeta+Enter");
+      if (second.question !== "Hire a second designer before launch") return `⌘↵ sent ${JSON.stringify(second.question)}`;
       await agent.call("canvas_ask_status", { id: second.id, state: "failed", error: "I could not reach the pricing notes" });
       const s = await waitFor(second.id, "failed");
       if (!/could not reach the pricing notes/.test(s.text)) return `failed line is ${JSON.stringify(s.text)}`;

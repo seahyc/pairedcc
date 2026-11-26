@@ -48,15 +48,18 @@ function startPoint(editor: Editor) {
   return page ? { x: Math.round(page.x), y: Math.round(page.maxY + 220) } : { x: Math.round(view.x + 140), y: Math.round(view.y + 140) };
 }
 
-export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: string; at?: number }): ImportResult {
+export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: string; at?: number; by?: string }): ImportResult {
   const at = origin.at ?? Date.now(), importId = `import:${at.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const base = { importId, from: origin.from, at: new Date(at).toISOString() };
+  // Who placed it: an agent's import is its own work (it may correct it); a person's import has no
+  // creator, so it counts as the person's and agents cannot rewrite it.
+  const by = origin.by ? { createdBy: origin.by } : {};
   const pageId = editor.getCurrentPageId();
   const fromLabel = origin.from === "pasted" ? "paste" : origin.from;
   const summary = summarise(plan, fromLabel);
   const card = (x: number, y: number, w: number, tone: "source" | "sourceTitle" | "sourceNote", richText: TLRichText, name: string, source: Omit<SourceMeta, "importId" | "from" | "at">) => {
     const id = createShapeId();
-    editor.createShape({ id, type: "card", parentId: pageId, x, y, meta: { name: name.slice(0, 80), revision: 0, source: { ...base, ...source } }, props: { w, richText, tone } });
+    editor.createShape({ id, type: "card", parentId: pageId, x, y, meta: { name: name.slice(0, 80), revision: 0, ...by, source: { ...base, ...source } }, props: { w, richText, tone } });
     return id;
   };
   editor.setCurrentTool("select");
@@ -135,7 +138,7 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
         if (ids.length > 1) {
           stepId = createShapeId();
           editor.groupShapes(ids, { groupId: stepId, select: false });
-          editor.updateShape({ id: stepId, type: "group", meta: { name: record.title.slice(0, 80), revision: 0, source: { ...base, ...record_ } } });
+          editor.updateShape({ id: stepId, type: "group", meta: { name: record.title.slice(0, 80), revision: 0, ...by, source: { ...base, ...record_ } } });
         } else editor.updateShape({ id: titleId, type: "card", meta: { ...editor.getShape(titleId)!.meta, source: { ...base, ...record_, chips: record.chips, shown: titleText } } });
         stepIds.push(stepId);
         // First view: the heading and the first record, and the second when it is close.
@@ -171,7 +174,7 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
         parentId: pageId,
         x: start.x,
         y: start.y,
-        meta: { name: title || "Table", revision: 0, source: { ...base, kind: "table" } },
+        meta: { name: title || "Table", revision: 0, ...by, source: { ...base, kind: "table" } },
         props: { w: layout.w, h: layout.h, title: tableTitle, columns: plan.table.columns, rows: plan.table.rows.slice(0, MAX_TABLE_ROWS) },
       });
       width = layout.w;
@@ -274,16 +277,16 @@ function autoFormat(content: string): ImportFormat {
 }
 
 /** Parse, decide the shape and place it: the one importer behind paste, drop, the file chooser and agents. */
-export function importContent(editor: Editor, value: { content: string; format?: ImportFormat | "auto"; from: string; as?: ImportAs }) {
+export function importContent(editor: Editor, value: { content: string; format?: ImportFormat | "auto"; from: string; as?: ImportAs; by?: string }) {
   const format = !value.format || value.format === "auto" ? autoFormat(value.content) : value.format;
   const plan = planImport(parseImport(value.content, format), value.as ?? "auto");
-  return { plan, result: placeImport(editor, plan, { from: value.from }) };
+  return { plan, result: placeImport(editor, plan, { from: value.from, by: value.by }) };
 }
 
 /** The agent operation: bring a table or document onto the board as source material. */
 export function importForAgent(editor: Editor, value: unknown, actor: string) {
   const input = importInput.parse(value);
-  const { plan, result } = importContent(editor, { content: input.content, format: input.format, as: input.as, from: input.name ?? `from ${actor}` });
+  const { plan, result } = importContent(editor, { content: input.content, format: input.format, as: input.as, from: input.name ?? `from ${actor}`, by: actor });
   if (input.focus) showBox(editor, result.focus);
   return {
     importId: result.importId,

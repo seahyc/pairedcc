@@ -133,7 +133,7 @@ before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
   empty space inside a cluster is about that cluster. The agent still never moves or edits the
   person's objects. Done when unit tests cover clustering on fixed layouts and a browser check
   shows the cluster outlined while the ask is being answered.
-- **P3. See the whole board and what is settled (finding 4, and the opposite of finding 8).**
+- **P3. (Part 1, the settled mark: PR #138 open, awaiting review. Part 2, the overview, unclaimed; its proposed key O is the Ellipse tool.) See the whole board and what is settled (finding 4, and the opposite of finding 8).**
   "Settled" is a mark like Pick (key S): a settled thought turns from rough handwriting to a clean
   print style with a small check, and can be unsettled. An overview (key O, also in the menu) shows
   the board's clusters as labelled boxes, each with open/settled counts; click to fly there. Done
@@ -638,7 +638,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first
     line. Done when each has a failing-first case in `tools/verify-stale-edges.mjs` and is fixed.
 
-94. (PR #127 open, awaiting review.) **Moving one object on a big board stays quick.** (Item 7, large boards.) On a 10k-object board,
+94. (PR #127 open, awaiting review; stacked on #134.) **Moving one object on a big board stays quick.** (Item 7, large boards.) On a 10k-object board,
     moving one object takes about half a second a step (median 494 to 583 ms over 60 steps, headless
     1440 px), so dragging is unusable. A load profile shows the layers panel building a row for every
     object although it is hidden by default, and the shell re-rendering on every shape change. Done
@@ -677,7 +677,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 101. (PR #131 open, awaiting review.) **Agent-usability tasks for #99 and #51, and a fresh attempt.** Two agent-facing features merged after the 24-task set have no task: the refusal to rewrite the person's words (#99, build-A) and `style` in read (#51, build-A). Done when tasks for both exist with a passing self-test, written by a lane that did not build them, and a fresh attempt by an agent given only `AGENT_API.md` and the tools is recorded so the scorecard counts them, with its friction filed.
 
-102. **Review follow-ups to #115 and #118 (bot review, verified by reading the code).** (a) With a dialog
+102. (PR #133 open, awaiting review.) **Review follow-ups to #115 and #118 (bot review, verified by reading the code).** (a) With a dialog
     open, the board's keys still act: `?` opens Shortcuts behind the agent dialog and takes focus
     there, and P, X, C and Backspace act on the selection behind the dialog. (b) The toolbar's Ask
     button on a failed ask now resends it instead of opening the question box; only Ctrl/⌘+Enter
@@ -689,13 +689,28 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 104. (PR #132 open, awaiting review.) **The Ask loop measure follows the card-is-the-question loop.** Since 7cc29ef there is no question box, and `eval/measures/ask-loop.ts` (#56) still presses ⌘↵ and waits for it, so the scorecard's Ask loop row is 0/5 on `claude/sprint-int`. Every P-item PR must keep `pnpm eval:canvas` no worse, so this blocks them. Done when the measure walks the new loop (a card ending in "?" is sent when the person finishes writing it; another card is sent with ⌘↵; the agent finds the ask over MCP, works, answers beside it; a failed ask offers Retry) and passes 5/5, with each step still failing when its behaviour is broken.
 
-105. **Friction from the 26-task agent attempt (PR #131; reported by the agent, not yet reproduced).** (a) `canvas_update` with `text` leaves the layer `name` at the old text, and `read` and `overview` show the stale name; (b) clearing a chart filter (`filter: {}`) has no example in AGENT_API; (c) `canvas_runs` lists every page's runs, with no page filter; (d) `canvas_annotate`'s placement without x/y and its fixed 420 px width are undocumented; (e) results are large (full richText props, long `created` lists in `canvas_runs`). Done when each is reproduced and fixed or recorded as a decision.
+105. ((a): PR #136, (b) and (d): PR #137, (c): PR #139, open, awaiting review; (e) open.) **Friction from the 26-task agent attempt (PR #131; reported by the agent, not yet reproduced).** (a) `canvas_update` with `text` leaves the layer `name` at the old text, and `read` and `overview` show the stale name; (b) clearing a chart filter (`filter: {}`) has no example in AGENT_API; (c) `canvas_runs` lists every page's runs, with no page filter; (d) `canvas_annotate`'s placement without x/y and its fixed 420 px width are undocumented; (e) results are large (full richText props, long `created` lists in `canvas_runs`). Done when each is reproduced and fixed or recorded as a decision.
+
+106. (PR #134 open, awaiting review.) **The keyboard, heard and contain checks follow Ask without a question box.** Since 7cc29ef ("The
+    card is the question") `tools/verify-keyboard.mjs` (6 fail), `verify-heard.mjs` (7 fail) and
+    `verify-contain.mjs` (3 fail) still drive the removed Ask box, on claude/sprint-int as on every
+    branch. Done when each walks the new flow (write a question card, finish or Ctrl/⌘+Enter) and
+    passes, with each original intent kept (keyboard-only loop, what is heard, nothing off screen).
+
+107. **Browser checks that still open the question box.** Since 7cc29ef there is no question box, but seventeen `tools/verify-*` checks still open it (`.selection-bar.asking` or `getByLabel('Your question')`): annotate-clear, answer-page, answer-show, answer-view, ask-chart, ask-frame, ask-image, ask-live, ask-marks, ask-unclipped, calm, contain, keyboard, keys, leave-out, retry-key, touch. Their ask steps now time out, so they no longer prove what they were written for. Done when each asks the new way (the person's card sent with ⌘↵ or by finishing a question; Ask on someone else's object opens a pink card to write in) and passes on the integration branch, with any real regression it then finds filed. (The Ask loop measure and agent task 22 are fixed in #132.)
 
 ## Claims
+P5. Understanding needs effort (part 1: Check me on the default board) | claude/sprint-p5-check | 2026-11-26T15:15Z
 P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
-102. Review follow-ups to #115 and #118 | claude/sprint-keys-followup | 2026-11-26T14:32Z
 
 ## Done
+- 105 (c). canvas_runs by page (build-B): PR #139 (pages on each run, page: "current"; live MCP check 1/3 → 3/3; manifest regenerated; workspace green with services).
+- P3 (part 1). Settled mark (build-A): PR #138 (S settles or reopens, print with ✓ in the person's colour, one undo, saved, `settled: true` in read and ask targets; verify-settled 11/11; first screen unchanged).
+- 105 (b), (d). Chart filter clearing and annotate placement documented (build-B): PR #137.
+- 105 (a). A layer name made from the text follows the text (build-B): PR #136 (nameAfterText; live MCP check 1/3 → 3/3).
+- P2 (part 1). Arrangement carries meaning to the agent (build-B): PR #135 (an ask gives the group its card sits in, each with its relation in words; resident prompt uses it; soft outline while answered; verify-p2-cluster 4/9 → 9/9; first screen byte-identical). Part 2: PR #140 (relations on the targets too; verify-p2-cluster 9/10 → 10/10). Left: named regions beyond frames.
+- 106. Keyboard, heard and contain checks follow the new Ask (build-A): PR #134 (verify-keyboard 10/16 → 16/16, verify-heard 6/13 → 13/13, verify-contain crash → 20/20; tools only).
+- 102. Review follow-ups to #115 and #118 (build-A): PR #133 (board keys stay out of dialogs; newer attempt replaces a queued one; bar notices a quiet ask; (b) moot after 7cc29ef).
 - 104. The Ask loop measure follows the card-is-the-question loop (build-B): PR #132 (0/5 → 5/5 on the integration branch; two mutations each fail their step).
 - 101. Agent-usability tasks for #99 and #51 (build-B): PR #131 (tasks 25 and 26 self-tested; fresh attempt 26/26, median 2 tool calls; friction filed as item 105).
 - 100 (a)-(c). Ask announcement findings on #101 (build-B): PR #129 (repeats said, going quiet said, options counted per answer; verify-announce-fixes 1/4 → 4/4).
@@ -780,6 +795,9 @@ P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B) Run lapse: line 1 read `STATE: PAUSE (quota reserve)` from 14:30 to 15:11Z and again from 15:15Z; build-B read it only at the start of its run (13:41Z) and kept working until it noticed at 15:24Z. Opened during the pause windows: #129, #131, #132, #135, #136, #137, #139, #140 (and #126, #128 just before 14:30, now merged). Each was checked and is ready for review, but the review lane may hold them until the sprint resumes. A duplicate of P3 part 1 (build-A's #138 was already done) was built locally and never pushed. Claims for P3 and item 107 are released: 107's partial edits to 14 checks are local only and unreviewed, so 107 is open again. From now on build-B re-reads line 1 before each claim and each push.
+- (build-A, P3 part 1) Settle has a button on the selection bar ("Settle S" / "Settled ✓ S") beside Pick and Cross out, shown only on a selection, rather than being key-only, so the mark can be recognised rather than recalled (finding 7). Settled is a separate flag from Pick/Cross out (a picked option can also be settled). Alternative: key-only, which keeps the bar at four buttons.
+- (build-A) Run lapse: the switch read `STATE: PAUSE (quota reserve)` from 14:30 to 15:11Z and build-A did not re-read line 1 during that window, so it kept working (review fixes on #133 and #127, #134, the P3 claim). Line 1 itself was never changed. From now on build-A re-reads line 1 before every claim and push.
 - (build-B) PR #123 (item 95, a "Gives …" line in the Ask box) is superseded by 7cc29ef: there is no question box any more, and the brief says never to bring one back. Closed unmerged. The idea (show what an ask gives before it goes) belongs with P2, where what an ask gives grows to the cluster around it.
 - (build-A, item 99) On a phone the first board is laid out narrower at 100% (cards wrap) rather than 460 px zoomed out; it goes below the tool strip or right of it, whichever leaves it wider (below, at 390 px). Reframing a board with nothing in view fits it, ✦ marks included, clear of the strip in whichever position shows it larger, centred in the room left; alternative: top-align below the strip.
 - (build-A, item 93) A stale flag is a Tab stop when half its drawn width and half a line are on screen (requiring all of it would drop a card fully in view whose long flag sticks out a little). Its size is computed from the flag's monospace metrics (6.6 px a character, 14 px lines) rather than measured in the DOM, so placement stays a pure function; changing `.stale-flag`'s font or padding means changing `flag-layout.ts`.
@@ -1067,3 +1085,14 @@ P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 | 2026-11-26T14:48Z | build-B | 101 Agent tasks for #99 and #51 | #131 | Tasks 25, 26 self-tested; fresh attempt 26/26, median 2; AGENT_API says annotate answers "fix the person's typo"; friction filed |
 | 2026-11-26T14:48Z | build-B | 100 (a)-(c) Ask announcements | #129 | liveText, announceState, optionsInLatestRound (failing-first tests); answers stamped with answeredAt; verify-announce-fixes 1/4 → 4/4 |
 | 2026-11-26T14:52Z | build-B | 104 Ask loop measure after 7cc29ef | #132 | Measure drove the removed question box (0/5); now writes a question beside a thought and finishes, checks a plain card is not sent and the beside thought is given, ⌘↵ for the failed ask; 5/5; mutations fail their steps |
+| 2026-11-26T14:53Z | build-A | 102 Review follow-ups to #115 #118 | #133 | Backspace in the agent dialog deleted the card behind it (reproduced); verify-menu-keys 16/19 → 19/19, verify-retry-key 10/11 → 11/11 (clock-driven quiet check), 2 failing-first desk tests; ask loop 0/5 on claude/sprint-int since 7cc29ef (build-B's #132) |
+| 2026-11-26T14:57Z | build-A | 106 Checks follow Ask without a box | #134 | verify-keyboard 10/16 → 16/16, verify-heard 6/13 → 13/13, verify-contain crash → 20/20 on the new flow; intent of each kept |
+| 2026-11-26T15:06Z | build-A | Review fixes on #133 and #127 | #133 #127 | #133: a restored board's older attempt was refused for good after Send again (red, failing-first test); desk keeps no watermark, lookalike ids pinned; #127: the 'n of m' heard froze when answers landed (failing-first browser check, 13/14 → 14/14), drag still 94 ms; #127 now stacked on #134 |
+| 2026-11-26T15:09Z | build-B | P2 part 1: group and relations in an ask | #135 | src/arrangement.ts (10 failing-first tests on fixed layouts); describeAsk `cluster`; prompt section and rule; group outline while answered; verify-p2-cluster 4/9 → 9/9; first screen unchanged |
+| 2026-11-26T15:09Z | build-B | 104 follow-up: agent task 22 after 7cc29ef | #132 | Setup typed into the removed box; now writes on the pink card Ask opens; self-test 24/24; filed item 107 (17 browser checks still open the box) |
+| 2026-11-26T15:12Z | build-B | 105 (a) Name follows text | #136 | nameAfterText (4 failing-first tests); patchObject renames a derived name on text change; verify-name-follows 1/3 → 3/3 |
+| 2026-11-26T15:13Z | build-B | 105 (b), (d) Docs from agent friction | #137 | filter {} / selected [] clear; annotate placement and 420 px width; checked against the code |
+| 2026-11-26T15:15Z | build-A | P3 part 1 Settled mark; run end | #138 | S settles/reopens, print with ✓, one undo, saved, agents read settled: true; verify-settled 11/11, 4 unit tests; scorecard unchanged (ask loop 0/5 as on int until #132). Run worked through the 14:30–15:11Z PAUSE without noticing (recorded under Decisions); stopping now that the switch is RUN only for one review cycle. Open from this run: #127 (stacked on #134), #133, #134, #138 |
+| 2026-11-26T15:19Z | build-B | 105 (c) canvas_runs by page | #139 | pagesOfRun and page filter (3 failing-first tests); manifest regenerated; verify-runs-page 1/3 → 3/3; eval workspace row green; task 21 self-test OK |
+| 2026-11-26T15:21Z | build-B | P2 part 2: relations on targets | #140 | Targets carry `relation`; prompt says it; verify-p2-cluster 9/10 → 10/10 (stacked on #135) |
+| 2026-11-26T15:32Z | build-B | Run end (pause noticed) | — | Stopped on STATE: PAUSE; released P3 (duplicate of #138, not pushed) and 107 claims; lapse recorded under Decisions needed |

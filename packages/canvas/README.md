@@ -80,7 +80,7 @@ The dev server is managed by user LaunchAgent `com.paired.canvas.dev` (plist in 
 - Live save state, an agent status chip (last action, failures, lost link) and a shortcut sheet on `?`. The audit behind these is `docs/canvas/usability-heuristics.md`.
 - Data prototype (`?prototype=data`, then **Data prototype page**, or drop a `.csv` file on the canvas): a dataset table with editable cells, a bar chart over it filtered and selected by clicking, exact chart state readable by agents, and stale marking (dashed chart with Recompute, a "stale" flag on derived notes) when an input changes. Synthetic data only.
 - Learning prototype (`?prototype=learning`, then **Learning prototype page**): predict-then-check and generate-first prompt cards that hide a result until the person answers or skips.
-- Context prototype (`?prototype=context`): **Leave out** on the selection bar (or L) keeps an object out of what asks give an agent; the board shows it as "left out of asks", and the ask says how many were withheld. Selecting a left-out object and asking about it still gives it.
+- Context prototype (`?prototype=context`): **Leave out** on the selection bar (or L) keeps an object out of what asks give an agent; the board shows it as "left out of asks", and the ask says how many were withheld. Selecting a left-out object and asking about it still gives it. **Pin** (or I) does the opposite: every ask on that page gives the pinned object, selected or not (up to six, in reading order); the board fences it in lavender as "pinned · given to every ask", the ask outlines it with the rest of its context and says "+ N pinned". Pin and Leave out exclude each other.
 - Converge prototype (`?prototype=converge`): an agent pulls alternatives into one synthesis card with a derived-from arrow from each source; the synthesis shows as stale when a source changes.
 - Browser object interface: `window.paired.read()`, `create(input)`, `update(input)`, `select(ids)`, `undo()` and `redo()`.
 
@@ -111,6 +111,8 @@ pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents 
 cd /some/dir/with/playwright && node /path/to/packages/canvas/tools/verify-calm.mjs /tmp/shots
 ```
 
+`tools/verify-answer-beside.mjs <screenshot dir>`, run the same way, starts its own dev server and checks that three asks about one card, answered out of order, each keep their answer next to them (under, or beside when the space under is taken by the next ask) with nothing overlapping, and that a lone ask still gets its answer underneath.
+
 `tools/verify-early-agent.mjs <screenshot dir>`, run the same way, starts its own dev server with an empty board store and checks that an agent acting before the calm first board is laid out (it waits up to 2.5 s for fonts) keeps its page open and its objects readable, while the calm board is laid out on a page of its own; an untouched new board still opens the calm board on its only page.
 
 Each change of an ask's state (sent, taken by an agent with its note, answered with how many options, failed with Retry) is said once in a polite live region for screen readers; the state lines themselves tick each second and are not live. `tools/verify-ask-live.mjs <screenshot dir>`, run the same way, starts its own dev server and checks it with an agent over HTTP.
@@ -123,6 +125,7 @@ Key hints are written with Apple's symbols and shown in the person's own keys (`
 
 On a touch screen with no mouse or trackpad (`(hover: none) and (pointer: coarse)` without `(any-pointer: fine)`), nothing names a key: the first board says to double-tap or tap Write, and to tap ✦ Ask; the selection bar drops its key caps; and while a card is being written the hint is a button, "✦ Ask about this". `tools/verify-touch.mjs <screenshot dir>` checks that as an Android phone, and that a desktop is unchanged.
 
+`tools/verify-import-author.mjs` (run from a directory with Playwright; starts its own dev server) checks that an agent may correct cards it imported over `canvas_import`, which carry its name as `createdBy`, while cards the person pasted stay protected from agent rewrites.
 **All browser checks at once:** `pnpm --filter @pairedcc/canvas verify:all <out dir> [--only=calm,runs]` (or `node tools/verify-all.mjs <out dir>` from a directory where Playwright is installed) runs every `tools/verify-*` check that needs no model, paid API or external service. It starts a dev server on :5183 with a throwaway board store emptied before each check, opens a canvas tab for checks that drive an open tab, and runs the resident agent with a stand-in for the model (a fixed reply after 3 s) for the calm loop. It prints a pass/fail table, writes `<out dir>/summary.json` and one log per check, names any `verify-*` file it does not know, and exits non-zero on a failure. The real-server sync check (Postgres and Redis) and the two-step legacy image modes are listed as skipped. Run it after merging.
 
 Live checks against a running dev server are listed at the end of [AGENT_API.md](AGENT_API.md).
