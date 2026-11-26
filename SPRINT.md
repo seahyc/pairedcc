@@ -387,7 +387,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested function, with a headless check under a Windows platform finding no ⌘ on the first
     screen or the selection bar, and screenshots.
 
-61. (PR #86 open, awaiting review; stacked on #69, #67, #64.) **An ask about a chart or dataset gives what it shows.** The acceptance scenario's "agent
+61. (#86 merged; stacked on #69, #67, #64.) **An ask about a chart or dataset gives what it shows.** The acceptance scenario's "agent
     reads that exact state" holds for MCP agents (`canvas_chart_state`, `read`'s `widget`), but an
     ask carries only `"(Chart, no text)"`, and the resident agent answers with no tools, so "what
     does this chart show?" is answered blind. `startersFor` withholds chart starters for that
@@ -396,9 +396,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     columns, row count and first rows, as text a model can read, from tested pure functions;
     chart starters are offered; checked in a real tab with `?prototype=data`.
 
-62. (PR #85 open, awaiting review.) **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
+62. (#85 merged.) **Import keeps what the source and the person said (from an automated review of #46, verified by reading the code).** (a) A CSV whose quoted notes hold more semicolons or tabs than the file has commas is split on the wrong delimiter; (b) "Show as table / as cards" deletes and rebuilds an import even after the person edited, picked or commented on it, losing that work; (c) a table over 2,000 rows silently keeps only 2,000 while the summary reports all of them. Done when each has a failing-first test and is fixed (for (b): the switch is refused once the import was changed, and when allowed it is one undo step).
 
-63. (PR #87 open, awaiting review.) **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
+63. (#87 merged.) **An answer lands where the person can see all of it.** `docs/canvas/principles.md`, finding 6
     (comparing beats describing) and "the agent must visibly respond". Sending an ask makes room
     for one 340 px answer, but four options in a row are about 1,060 px: at 1440 px option D lands
     off the right edge, and on a 390 px phone only A is visible, and nothing brings them into view.
@@ -410,9 +410,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     any zero-padded value (`0` followed by a digit, before any decimal point) stays text, plain
     numbers (`0`, `0.5`, `-3`, `1e3`) still become numbers, with unit tests and a drop in the page.
 
-65. (PR #89 open, awaiting review.) **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
+65. (#89 merged.) **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
 
-66. (PR #88 open, awaiting review; #83 has merged and the integration branch is merged into #88, so its diff is the touch change alone, verify-touch 11/11.) **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
+66. (#88 merged; #83 has merged and the integration branch is merged into #88, so its diff is the touch change alone, verify-touch 11/11.) **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
     item 6. A phone has no keyboard, yet the first board says "press ⌘↵ to ask" (with #83, Android
     reads "Ctrl+↵"), the selection bar shows key caps, and while writing a card the hint names
     keys and offers no way to ask. Done when, on a touch-only device, the first board says to tap
@@ -420,7 +420,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     tested rule, checked in a headless phone emulation (failing before, passing after) with
     screenshots; desktop unchanged.
 
-67. (PR #90 open, awaiting review.) **The person chooses what an ask leaves out (prototype, `?prototype=context`).** Solveit:
+67. (#90 merged.) **The person chooses what an ask leaves out (prototype, `?prototype=context`).** Solveit:
     "hidden messages are excluded from AI context"; the brief: "the context the agent sees is
     visible and chosen by the person"; `principles.md` lists hiding objects from context as not
     borrowed yet. An ask sends every text object in the selection's frame and the whole thread,
@@ -542,6 +542,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Done
 - 88. Clean-profile image check (build-A): PR #114 (the large image was off screen so tldraw drew no `<img>`; its bytes were in the board; the check now fits the page first, still requiring each image to load at its real width; 3/5 → 5/5).
+- Reviewed and merged 2026-11-26 by the review lane: #85 to #90, 6 more (squash); 52 in this run.
 - 83. One command runs every browser check (build-A): PR #113 (`pnpm --filter @pairedcc/canvas verify:all <dir>`; first full run 28/31, failing calm (#91), runs (#95) and board-images (filed as item 88)).
 - 86. canvas_overview marks left-out objects (build-B): PR #112 (failing-first test, live MCP check).
 - 84. Ask about an image says what it is (build-B): PR #109 (real tab 2/5 → 5/5 with the tightened frame check).
@@ -606,6 +607,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (review, #80 and #87) #80 placed a wrapped selection bar over the selected card on a phone; fixed in #87 by lifting the bar by its measured height. Browser checks for the bar should include "the bar does not cover the selection".
+- (review) Build lanes: do not merge the integration branch into a PR branch while the review lane is on it (the Log shows which PR is under review by its order; oldest first). Twice the review's merge and fixes were pushed over and had to be redone (#55, #87).
+- (review, item 71) #93 and #98 both do it. The next review run merges one and closes the other.
 - (build-A, item 78) Ask announcements are polite, failures included, so they never interrupt; only asks on the open page are announced (an answer on another page has #69's toast).
 - (review, #67) That merge reverted #63's AGENT_API paragraphs and a table; restored in b8e69de and 3cdc71b. Merges are now checked for removed lines the PR's own commits did not remove. Build lanes that merge the integration branch into a PR branch should not resolve a conflicted file by taking their own older copy whole.
 - (review, #76) Images are stored in the board snapshot; every save re-uploads them and every revision keeps a copy. Alternative: a server asset store.
@@ -856,3 +860,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:49Z | build-A | 83 One command runs every browser check | #113 | 31 checks in one run (about 6 min), stand-in model, throwaway store; found a new regression (board images in a clean profile, filed 88); open branches #87 #91 #95 #99 #101 #88 merged up to the integration branch and re-verified |
 | 2026-11-26T13:49Z | build-B | Review findings on #92 #97 #98 #103 #104 #106 | #98 | Red finding on #98 (legacy "<!--" in a script dropped the page) fixed with two optional ones, failing-first tests, verify-webpage 9/9; the other optional findings verified and recorded under Decisions needed, #104 flagged as needing (a)-(c) |
 | 2026-11-26T13:50Z | build-A | 88 Clean-profile image check | #114 | Not a product regression: the image was off screen in the clean profile; check fits the page before measuring; verify-board-images 3/5 → 5/5 |
+| 2026-11-26T13:50Z | review | Review #85 to #90 | #85 to #90 | 6 merged (squash); workspace build and tests green after each (canvas 428, server 157, e2e 1); live checks re-run for all six. Review fixes: #87 merged with #69 and given the phone selection-bar fix (a regression from #80). Scorecard on 20ccac9: six rows pass; 10k pan 78.5 ms flagged, shown equal to 95a9daf measured back to back (about 100 ms each). Run total: 52 merged, 0 rejected, 16 left open |
