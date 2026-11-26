@@ -8,20 +8,27 @@
 //    board and the account's board is opened; a whole board is never replaced by another.
 // 2. The server rejects a save on a stale revision; the controller then re-reads and decides.
 // 3. Offline is normal: work stays in this browser and is saved when the server is back.
+// 4. A save the server refuses (too large, invalid) is not offline: retrying the same board
+//    cannot succeed, so the controller says why and waits until the board changes.
 
 export type Snapshot = { store: Record<string, unknown>; schema: Record<string, unknown> };
 export type ServerBoard = { revision: number; snapshot: Snapshot };
 export type PutResult =
   | { ok: true; revision: number }
   | { ok: false; stale: true; revision: number }
-  | { ok: false; stale: false; error: string };
+  | { ok: false; stale: false; error: string; /** HTTP status when the server refused this board itself (400, 403 board limit, 413); retrying it unchanged cannot work. */ refused?: number };
 
 export type BoardApi = {
   /** The signed-in account, or null when signed out. Throws when the server is unreachable. */
   account(): Promise<string | null>;
   get(id: string): Promise<ServerBoard | null>;
   put(id: string, expectedRevision: number, snapshot: Snapshot): Promise<PutResult>;
+  /** Kept revisions of a board, newest first, or null if it does not exist. */
+  revisions?(id: string): Promise<RevisionSummary[] | null>;
+  /** One kept revision's snapshot, or null if it was pruned or never existed. */
+  revision?(id: string, revision: number): Promise<ServerBoard | null>;
 };
+export type RevisionSummary = { revision: number; sizeBytes: number; savedAt: string };
 export type LocalBoard = {
   snapshot(): Snapshot;
   load(snapshot: Snapshot): void;
@@ -36,7 +43,8 @@ export type SyncStatus =
   | { state: "local"; note?: string }
   | { state: "loading" | "saving"; account: string }
   | { state: "saved"; account: string; revision: number; at: number; note?: string }
-  | { state: "offline"; account?: string; error: string };
+  | { state: "offline"; account?: string; error: string }
+  | { state: "refused"; account: string; code: number; error: string };
 
 export type SyncOptions = {
   api: BoardApi;
@@ -99,6 +107,13 @@ export function withNewRecords(initial: Snapshot, current: Snapshot, server: Sna
   return { snapshot: { store, schema: server.schema }, kept };
 }
 
+/** The server refused this board itself; trying the same board again cannot succeed. */
+export class SaveRefused extends Error {
+  constructor(readonly code: number, message: string) {
+    super(message);
+  }
+}
+
 export function copyId(boardId: string, at: Date) {
   return `${boardId}-browser-${at.toISOString().slice(0, 16).replace(/[-:T]/g, "")}`;
 }
@@ -122,6 +137,8 @@ export function createBoardSync(o: SyncOptions) {
   let started = false;
   let synced = "";
   let base: Snapshot | null = null;
+  // The board content the server last refused; it is not uploaded again until it changes.
+  let refusedJson = "";
   // The board as it was when sync was created; objects created while the account's board
   // is loading are carried onto it instead of being replaced.
   const initial = o.local.snapshot();
@@ -137,6 +154,10 @@ export function createBoardSync(o: SyncOptions) {
     else if (!m?.dirty) o.memo.set({ account: m?.account ?? "", boardId, revision: m?.revision ?? 0, dirty: true });
   };
   const failed = (error: unknown) => {
+    if (error instanceof SaveRefused && account) {
+      clearTimer(timer);
+      return emit({ state: "refused", account, code: error.code, error: error.message });
+    }
     emit({ state: "offline", ...(account ? { account } : {}), error: error instanceof Error ? error.message : String(error) });
     if (!stopped) timer = setTimer(() => (account ? save() : start()), (retry = Math.min(retry * 2, 30_000)));
   };
@@ -156,11 +177,17 @@ export function createBoardSync(o: SyncOptions) {
       remember(false);
       return emit({ state: "saved", account: account!, revision, at: now().getTime() });
     }
+    if (json === refusedJson && status.state === "refused") return emit(status);
     emit({ state: "saving", account: account! });
     const result = await o.api.put(boardId, revision, snapshot);
+    if (!result.ok && !result.stale && result.refused) {
+      refusedJson = json;
+      throw new SaveRefused(result.refused, result.error);
+    }
     if (result.ok) {
       revision = result.revision;
       synced = json;
+      refusedJson = "";
       base = snapshot;
       remember(again);
       retry = 1000;
@@ -200,6 +227,7 @@ export function createBoardSync(o: SyncOptions) {
   async function setAside(why: string) {
     const id = copyId(boardId, now());
     const copy = await o.api.put(id, 0, o.local.snapshot());
+    if (!copy.ok && !copy.stale && copy.refused) throw new SaveRefused(copy.refused, copy.error);
     if (!copy.ok) throw new Error(copy.stale ? `Board ${id} already exists` : copy.error);
     return `${why} This browser's board was saved to your account as "${id}".`;
   }
@@ -283,9 +311,73 @@ export function createBoardSync(o: SyncOptions) {
     }
   }
 
+  /**
+   * Put an earlier revision back as the board's newest revision. Edits not yet saved are
+   * saved first, so the board as it was before the restore stays in the history and the
+   * restore itself can be undone by restoring that revision.
+   */
+  async function restore(target: number, attempt = 0): Promise<{ revision: number; restoredFrom: number }> {
+    if (!account || !o.api.revision) throw new Error("Revisions are only kept for boards saved to an account.");
+    const elsewhere = "This board changed on another tab or device since this tab last saved. Nothing was restored; reload to see the newest version, then choose again.";
+    // Fetch first: saving this tab's edits adds a revision, which can prune the oldest one.
+    const old = await o.api.revision(boardId, target);
+    if (!old) throw new Error(`Revision ${target} is no longer kept.`);
+    // Save every edit made so far, including any made during the download, so it stays in history.
+    await settle();
+    if (target === revision) {
+      const head = (await o.api.revisions?.(boardId))?.[0]?.revision;
+      if (head === revision) return { revision, restoredFrom: target };
+      throw new Error(elsewhere);
+    }
+    const before = revision;
+    let result: PutResult | undefined;
+    // One exclusive step: autosaves wait for it, and the old version is written exactly,
+    // only on top of the revision this tab saved (never merged into a newer one).
+    const step = (async () => {
+      const current = o.local.snapshot();
+      if (JSON.stringify(current) !== synced) return; // edited again just now: caller retries
+      apply(old.snapshot);
+      result = await o.api.put(boardId, before, old.snapshot);
+      if (!result.ok) {
+        apply(current);
+        return;
+      }
+      revision = result.revision;
+      base = old.snapshot;
+      synced = JSON.stringify(o.local.snapshot());
+      remember(false);
+      retry = 1000;
+      emit({ state: "saved", account: account!, revision, at: now().getTime(), note: `Restored revision ${target}. The board as it was before is revision ${before} in the history.` });
+    })();
+    saving = step.finally(() => {
+      saving = null;
+      if (again) void save();
+    });
+    await saving;
+    if (!result) {
+      if (attempt >= 3) throw new Error("The board keeps changing; try again in a moment.");
+      return restore(target, attempt + 1);
+    }
+    if (!result.ok) throw new Error(result.stale ? elsewhere : result.error);
+    return { revision, restoredFrom: target };
+  }
+
+  /** Save until nothing in this tab is unsaved; fails if the board cannot be saved now. */
+  async function settle() {
+    for (let i = 0; i < 5; i++) {
+      await save();
+      while (saving) await saving;
+      if (status.state !== "saved") throw new Error("Save the board before restoring an earlier version.");
+      if (JSON.stringify(o.local.snapshot()) === synced) return;
+    }
+    throw new Error("The board keeps changing; try again in a moment.");
+  }
+
   return {
     start,
     save,
+    restore,
+    revisions: () => (account && o.api.revisions ? o.api.revisions(boardId) : Promise.resolve(null)),
     status: () => status,
     stop() {
       stopped = true;

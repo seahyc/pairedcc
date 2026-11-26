@@ -57,7 +57,7 @@ export function AskLayer() {
   return (
     <div className="scratch-layer ask-layer">
       {asks.map((a) => {
-        const line = askStatusLine(a.ask, { listeners: hosted ? null : (listeners ?? []), now: Math.max(now, Date.now()), given: a.given });
+        const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given });
         return (
           <div key={a.id}>
             {a.outlines.map((o) => (

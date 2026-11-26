@@ -21,11 +21,11 @@ describe("prototype flags", () => {
     expect(prototypeEnabled("data", "?prototype=learning")).toBe(false);
   });
 
-  it("gates every data and learning operation, and nothing else", () => {
-    expect(Object.keys(PROTOTYPE_OPS).sort()).toEqual(["cell", "chart", "chart_state", "dataset", "learn"]);
+  it("gates every data, learning and converge operation, and nothing else", () => {
+    expect(Object.keys(PROTOTYPE_OPS).sort()).toEqual(["cell", "chart", "chart_state", "converge", "dataset", "learn"]);
     for (const op of commandSchema.shape.op.options) {
       const refusal = prototypeRefusal(op, "");
-      if (op in PROTOTYPE_OPS) expect(refusal, op).toMatch(/is off in this tab\. Nothing was changed\..*\?prototype=(data|learning)/);
+      if (op in PROTOTYPE_OPS) expect(refusal, op).toMatch(/is off in this tab\. Nothing was changed\..*\?prototype=(data|learning|converge)/);
       else expect(refusal, op).toBeNull();
     }
     expect(prototypeRefusal("chart", "?prototype=data")).toBeNull();
