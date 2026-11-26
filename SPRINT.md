@@ -100,6 +100,7 @@ task by which measure is furthest from target, not by backlog order.
     sign-in path and its required services are documented. Do not delete or skip it.
 
 ## Claims
+0. Eval harness and baseline scorecard | claude/sprint-eval | 2026-11-26T09:14Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
