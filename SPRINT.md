@@ -412,7 +412,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 65. **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
 
+66. **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
+    item 6. A phone has no keyboard, yet the first board says "press ⌘↵ to ask" (with #83, Android
+    reads "Ctrl+↵"), the selection bar shows key caps, and while writing a card the hint names
+    keys and offers no way to ask. Done when, on a touch-only device, the first board says to tap
+    Ask, the selection bar drops its key caps, the writing hint is a tappable Ask, all from one
+    tested rule, checked in a headless phone emulation (failing before, passing after) with
+    screenshots; desktop unchanged.
+
 ## Claims
+66. Touch screens say tap | claude/sprint-touch-hints | 2026-11-26T12:42Z
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
