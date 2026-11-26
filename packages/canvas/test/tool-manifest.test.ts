@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { hostedPrototypeTools, instructions, manifestJson, toolDefs, toolManifest } from "../tools/tool-defs";
 
 describe("hosted tool manifest", () => {
+  it("never offers an agent a field that sets authorship (the canvas attributes every write to the caller)", () => {
+    const manifest = JSON.parse(manifestJson());
+    for (const tool of manifest.tools) expect(Object.keys(tool.inputSchema.properties ?? {}), tool.name).not.toContain("author");
+  });
   it("matches the tool definitions (run pnpm --filter @pairedcc/canvas manifest)", () => {
     const committed = readFileSync(new URL("../../server/src/canvas/tool-manifest.json", import.meta.url), "utf8");
     expect(committed).toBe(manifestJson());
