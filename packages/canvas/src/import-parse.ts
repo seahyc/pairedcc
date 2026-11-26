@@ -11,6 +11,9 @@ export type ColumnRole = "title" | "tag" | "field" | "verdict";
 
 export class ImportError extends Error {}
 
+/** A table object keeps at most this many rows; an import says when it kept fewer than the source had. */
+export const MAX_TABLE_ROWS = 2000;
+
 // ---------- delimited text ----------
 
 /** RFC 4180 style parsing: quoted fields, doubled quotes and line breaks inside quotes. */
@@ -55,10 +58,25 @@ export function parseDelimited(text: string, delimiter: "\t" | "," | ";"): strin
 
 /** Which delimiter a text uses: the one that splits its first lines most evenly. */
 export function sniffDelimiter(text: string): "\t" | "," | ";" {
-  const head = text.split(/\r?\n/).filter((l) => l.trim()).slice(0, 8);
-  const count = (d: string) => head.reduce((n, l) => n + l.split(d).length - 1, 0);
-  if (count("\t") >= head.length) return "\t";
-  return count(";") > count(",") ? ";" : ",";
+  // Each candidate is tried with quotes respected (punctuation inside a quoted note is content,
+  // not a separator). The one that splits the most rows into the same number of cells (two or
+  // more) wins; a single-cell title row above the table does not count against it.
+  const head = text.slice(0, 20_000);
+  const score = (d: "\t" | "," | ";") => {
+    // Blank lines (some exports lead with many) carry no evidence, so they are dropped first.
+    const rows = parseDelimited(head, d).filter((r) => r.some((c) => c.trim())).slice(0, 30);
+    const counts = rows.map((r) => r.length).filter((n) => n > 1);
+    if (!counts.length) return 0;
+    const tally = new Map<number, number>();
+    for (const n of counts) tally.set(n, (tally.get(n) ?? 0) + 1);
+    const [width, agree] = [...tally.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0];
+    // A quote left inside a cell means this delimiter cut through a quoted field.
+    const stray = rows.filter((r) => r.some((c) => c.includes('"'))).length;
+    return (Math.max(0, agree - stray) / rows.length) * 1000 + Math.min(width, 50);
+  };
+  const scores = (["\t", ",", ";"] as const).map((d) => [d, score(d)] as const);
+  const best = scores.reduce((a, b) => (b[1] > a[1] ? b : a));
+  return best[1] > 0 ? best[0] : ",";
 }
 
 // ---------- HTML tables (what a spreadsheet puts on the clipboard) ----------
@@ -91,6 +109,14 @@ function cellText(html: string) {
     .trim();
 }
 
+/** True when the first row of the first table is all header cells (<th>). */
+export function htmlTableHasHeader(html: string): boolean {
+  const table = /<table[\s\S]*?<\/table>/i.exec(html)?.[0];
+  const first = table && /<tr[^>]*>([\s\S]*?)<\/tr>/i.exec(table)?.[1];
+  // One <th> on its own (usually spanning the table) is a title above the header, not the header.
+  return Boolean(first && (first.match(/<th\b/gi)?.length ?? 0) > 1 && !/<td\b/i.test(first));
+}
+
 /** The first table in an HTML fragment as rows of cell text, or null when there is none. */
 export function parseHtmlTable(html: string): string[][] | null {
   const table = /<table[\s\S]*?<\/table>/i.exec(html)?.[0];
@@ -118,11 +144,14 @@ export const isNumeric = (value: string) => numberLike.test(value.trim());
  * Title lines above the header (a spreadsheet tab often starts with a title and a note),
  * then the header row, then the data. Empty rows and wholly empty columns are dropped.
  */
-export function toTable(raw: string[][]): Table {
+/** `explicitHeader`: the source marked its first row as the header (an HTML <th> row, a markdown rule). */
+export function toTable(raw: string[][], explicitHeader = false): Table {
   const rows = raw.map((r) => r.map((c) => c.replace(/\r/g, "").trim())).filter((r) => filled(r) > 0);
   if (!rows.length) throw new ImportError("There is nothing in that table");
   const widest = Math.max(...rows.map(filled));
-  const headerAt = Math.max(0, rows.findIndex((r) => filled(r) >= Math.max(2, Math.ceil(widest / 2))));
+  // A header the source marked is the first row, however sparse; otherwise rows above the first
+  // well-filled row are a title and notes.
+  const headerAt = explicitHeader ? 0 : Math.max(0, rows.findIndex((r) => filled(r) >= Math.max(2, Math.ceil(widest / 2))));
   const preamble = rows.slice(0, headerAt).map((r) => r.filter((c) => c).join(" "));
   const body = rows.slice(headerAt);
   const width = Math.max(...body.map((r) => r.length));
@@ -130,7 +159,7 @@ export function toTable(raw: string[][]): Table {
   const keep = Array.from({ length: width }, (_, i) => square.some((r) => r[i]));
   const trimmed = square.map((r) => r.filter((_, i) => keep[i]));
   // A first row made only of numbers is data, not a header.
-  const hasHeader = trimmed.length > 1 && !trimmed[0].every((c) => !c || isNumeric(c));
+  const hasHeader = trimmed.length > 1 && ((explicitHeader && headerAt === 0) || !trimmed[0].every((c) => !c || isNumeric(c)));
   const columns = hasHeader ? trimmed[0].map((c, i) => c.replace(/\s+/g, " ") || `Column ${i + 1}`) : trimmed[0].map((_, i) => `Column ${i + 1}`);
   return {
     ...(preamble[0] ? { title: preamble[0] } : {}),
@@ -155,15 +184,24 @@ const pipeRule = (line: string) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|
 
 /** A markdown pipe table as rows, when the text is mostly one table. */
 export function parseMarkdownTable(text: string): { rows: string[][]; title?: string } | null {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  const tableLines = lines.filter(pipeRow);
-  if (tableLines.length < 3 || !tableLines.some(pipeRule) || tableLines.length < lines.length * 0.6) return null;
+  // The table is the line above the first rule row (--- | ---) and the lines with pipes straight
+  // after it; a heading or a note elsewhere is never a row, even if it holds a pipe. Outer pipes
+  // are optional in markdown.
+  const all = text.split(/\r?\n/);
+  const ruleAt = all.findIndex((l) => pipeRule(l) && l.includes("|"));
+  if (ruleAt < 1 || !/(?<!\\)\|/.test(all[ruleAt - 1]) || /^\s*#/.test(all[ruleAt - 1])) return null;
+  const body: string[] = [];
+  for (let i = ruleAt + 1; i < all.length && all[i].trim() && /(?<!\\)\|/.test(all[i]); i++) body.push(all[i]);
+  const tableLines = [all[ruleAt - 1], ...body];
+  const lines = all.filter((l) => l.trim());
+  if (tableLines.length < 2 || tableLines.length + 1 < lines.length * 0.6) return null;
   const heading = lines.find((l) => /^#{1,6}\s+/.test(l));
-  const rows = tableLines
-    .filter((l) => !pipeRule(l))
-    .map((l) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c) => plainInline(c.replace(/\\\|/g, "|").trim())));
+  const rows = tableLines.map((l) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c) => plainInline(c.replace(/\\\|/g, "|").trim())));
   return { rows, ...(heading ? { title: plainInline(heading.replace(/^#+\s+/, "")) } : {}) };
 }
+
+/** Marks a paragraph that is fenced code inside parseProse; never reaches a card. */
+const CODE = "\u0000code\u0000";
 
 /** Longest stretch of prose that still reads as one card. */
 const SECTION_MAX = 900;
@@ -190,6 +228,12 @@ export function parseProse(text: string): { title?: string; sections: Section[] 
     if (/^\s*(```|~~~)/.test(line)) {
       fenced = !fenced;
       if (fenced) endPara();
+      else {
+        // Code keeps its own lines: marked so the paragraph pass below does not re-wrap it.
+        const code = para.join("\n").replace(/^\n+|\s+$/g, "");
+        if (code.trim()) current.paragraphs.push(CODE + code);
+        para = [];
+      }
       continue;
     }
     if (fenced) {
@@ -216,7 +260,7 @@ export function parseProse(text: string): { title?: string; sections: Section[] 
   const headed = drafts.some((d) => d.heading);
   const sections: Section[] = [];
   for (const d of drafts) {
-    const unwrap = (p: string) => (/^(• |\d+[.)] )/m.test(p) || p.includes("  ") ? p : p.replace(/\n/g, " "));
+    const unwrap = (p: string) => (p.startsWith(CODE) ? p.slice(CODE.length) : /^(• |\d+[.)] )/m.test(p) || p.includes("  ") ? p : p.replace(/\n/g, " "));
     const paragraphs = d.paragraphs.map(unwrap);
     if (!headed) {
       for (const p of paragraphs) sections.push({ text: p });
@@ -275,7 +319,7 @@ export function parseJson(text: string): Table {
 
 // ---------- one entry point ----------
 
-export function formatOfFile(name: string): ImportFormat | "image" | "xlsx" | null {
+export function formatOfFile(name: string): ImportFormat | "image" | "xlsx" | "pdf" | null {
   const ext = /\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase();
   if (!ext) return null;
   if (ext === "csv") return "csv";
@@ -285,6 +329,7 @@ export function formatOfFile(name: string): ImportFormat | "image" | "xlsx" | nu
   if (ext === "json") return "json";
   if (ext === "html" || ext === "htm") return "html";
   if (ext === "xlsx" || ext === "xls" || ext === "numbers" || ext === "ods") return "xlsx";
+  if (ext === "pdf") return "pdf";
   if (["png", "jpg", "jpeg", "gif", "webp", "svg", "avif"].includes(ext)) return "image";
   return null;
 }
@@ -307,7 +352,7 @@ export function parseImport(content: string, format: ImportFormat): Parsed {
   if (format === "json") return { kind: "table", table: parseJson(content) };
   if (format === "html") {
     const rows = parseHtmlTable(content);
-    if (rows) return { kind: "table", table: toTable(rows) };
+    if (rows) return { kind: "table", table: toTable(rows, htmlTableHasHeader(content)) };
     const markdown = htmlToMarkdown(content), doc = parseProse(markdown);
     // A page's one top heading is its title, even with a lead paragraph straight under it.
     const top = doc.sections[0];
@@ -318,7 +363,7 @@ export function parseImport(content: string, format: ImportFormat): Parsed {
   if (format === "tsv") return { kind: "table", table: toTable(parseDelimited(content, "\t")) };
   if (format === "csv") return { kind: "table", table: toTable(parseDelimited(content, sniffDelimiter(content))) };
   const pipes = parseMarkdownTable(content);
-  if (pipes) return { kind: "table", table: { ...toTable(pipes.rows), ...(pipes.title ? { title: pipes.title } : {}) } };
+  if (pipes) return { kind: "table", table: { ...toTable(pipes.rows, true), ...(pipes.title ? { title: pipes.title } : {}) } };
   if (format === "text" && looksDelimited(content, "\t")) return { kind: "table", table: toTable(parseDelimited(content, "\t")) };
   if (format === "text" && looksDelimited(content, ",")) return { kind: "table", table: toTable(parseDelimited(content, ",")) };
   return { kind: "prose", ...parseProse(content) };
@@ -497,7 +542,12 @@ export function planImport(parsed: Parsed, as: ImportAs = "auto"): ImportPlan {
 export function summarise(plan: ImportPlan, from: string) {
   const many = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
   if (plan.kind === "records") return `${many(plan.records.length, "record")} from ${from}, as cards${plan.sorted ? ", most severe first" : ""}`;
-  if (plan.kind === "table") return `${many(plan.table.rows.length, "row")} from ${from}, as a table`;
+  if (plan.kind === "table") {
+    const n = plan.table.rows.length;
+    return n > MAX_TABLE_ROWS
+      ? `${MAX_TABLE_ROWS.toLocaleString("en")} of ${n.toLocaleString("en")} rows from ${from}, as a table (the first ${MAX_TABLE_ROWS.toLocaleString("en")} are kept)`
+      : `${many(n, "row")} from ${from}, as a table`;
+  }
   return `${many(plan.sections.length, "section")} from ${from}, as cards`;
 }
 

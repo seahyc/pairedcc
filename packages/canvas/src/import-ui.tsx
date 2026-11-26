@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useEditor, useValue, type TLShapeId } from "tldraw";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { ImportError, detectPaste, formatOfFile, type ImportAs, type ImportFormat } from "./import-parse";
-import { importContent, importImages, removeImport, showBox, type ImportResult } from "./import-board";
+import { importContent, importFingerprint, importImages, removeImport, showBox, type ImportResult } from "./import-board";
 import { sourceOf } from "./import-meta";
+import { readPdf } from "./import-pdf";
 import { readXlsx, rowsToTsv } from "./xlsx";
 import { importCsvFiles, isCsvFile } from "./data/csv";
 import { dataPrototypeEnabled } from "./data/shapes";
@@ -18,7 +19,7 @@ export const chooseImportFile = () => openPicker?.();
 const typing = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest("input,textarea,select,[contenteditable=true],[contenteditable='']"));
 
-type Last = { result: ImportResult; source: { content: string; format: ImportFormat; from: string } | null; as: "cards" | "table" | null };
+type Last = { result: ImportResult; source: { content: string; format: ImportFormat; from: string } | null; as: "cards" | "table" | null; fingerprint: string };
 
 export function ImportLayer({ onNotice }: { onNotice: (text: string) => void }) {
   const editor = useEditor();
@@ -80,7 +81,7 @@ export function ImportLayer({ onNotice }: { onNotice: (text: string) => void }) 
 
   function done(result: ImportResult, source: Last["source"], as: Last["as"]) {
     showBox(editor, result.focus);
-    setLast({ result, source, as });
+    setLast({ result, source, as, fingerprint: importFingerprint(editor, result.importId) });
     setAt(null);
     setActive(result.importId);
     editor.focus();
@@ -101,6 +102,15 @@ export function ImportLayer({ onNotice }: { onNotice: (text: string) => void }) 
     for (const file of files) {
       const format = formatOfFile(file.name) ?? (file.type.startsWith("image/") ? "image" : file.type.startsWith("text/") ? "text" : null);
       if (format === "image") images.push(file);
+      else if (format === "pdf" && file.size > 20_000_000) onNotice(`${file.name} is too large to lay out as cards (20 MB at most).`);
+      else if (format === "pdf") {
+        try {
+          // The PDF's text, rebuilt as headings and paragraphs, goes through the markdown reader.
+          run({ content: await readPdf(new Uint8Array(await file.arrayBuffer())), format: "markdown", from: file.name });
+        } catch (error) {
+          fail(error);
+        }
+      }
       else if (format === "xlsx" && !/\.xlsx$/i.test(file.name)) onNotice(`${file.name} is not read yet: only .xlsx workbooks are. Save it as .xlsx or CSV, or copy the cells and paste them here.`);
       else if (format === "xlsx" && file.size > 10_000_000) onNotice(`${file.name} is too large to lay out as cards (10 MB at most).`);
       else if (format === "xlsx") {
@@ -114,7 +124,7 @@ export function ImportLayer({ onNotice }: { onNotice: (text: string) => void }) 
           fail(error);
         }
       }
-      else if (!format) onNotice(`Cannot read ${file.name} yet. Try CSV, TSV, Markdown, text, JSON or an image.`);
+      else if (!format) onNotice(`Cannot read ${file.name} yet. Try CSV, TSV, Markdown, text, JSON, HTML, a workbook (.xlsx), PDF or an image.`);
       else if (file.size > 2_000_000) onNotice(`${file.name} is too large to lay out as cards (2 MB at most).`);
       else run({ content: await file.text(), format, from: file.name });
     }
@@ -204,9 +214,16 @@ export function ImportLayer({ onNotice }: { onNotice: (text: string) => void }) 
 
   function showAs(as: "cards" | "table") {
     if (!last?.source) return;
-    // Swapping the view replaces the import in place of adding a second copy.
+    // Rebuilding would throw away what the person did to the import since it came in.
+    if (importFingerprint(editor, last.result.importId) !== last.fingerprint) {
+      onNotice("This import has changed since it came in (edited, moved, judged or commented on), so it is not rebuilt. Import it again to see it the other way.");
+      return;
+    }
+    // Swapping the view replaces the import in place of adding a second copy, as one undo step.
+    const mark = editor.markHistoryStoppingPoint("show import another way");
     removeImport(editor, last.result.importId);
     run(last.source, as);
+    editor.squashToMark(mark);
   }
 
   return (
@@ -214,7 +231,7 @@ export function ImportLayer({ onNotice }: { onNotice: (text: string) => void }) 
       <input
         ref={picker}
         type="file"
-        accept=".csv,.tsv,.tab,.md,.markdown,.txt,.json,.html,.htm,.xlsx,image/*"
+        accept=".csv,.tsv,.tab,.md,.markdown,.txt,.json,.html,.htm,.xlsx,.pdf,image/*"
         multiple
         hidden
         aria-label="Import a file"

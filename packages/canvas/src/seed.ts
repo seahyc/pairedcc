@@ -1,6 +1,7 @@
 import { b64Vecs, createShapeId, toRichText, type Editor, type TLShapeId } from "tldraw";
 import { annotateObject, connect, createCard, image } from "./agent-operations";
 import { HUMAN } from "./scratchbook";
+import { firstBoard, keys } from "./keys";
 
 // The welcome board, laid out like a scratchbook: a handwritten title and a row of
 // pages, one per capability, each showing the thing working rather than describing it.
@@ -195,7 +196,7 @@ export function seed(editor: Editor) {
   const draft = put(e, card(e.x, e.y, "Menu, draft 1\nflat white · toast · one cake", AGENT, 170), 0);
   const draft2 = card(e.x + INNER - 170, e.y - heightOf(draft), "Menu, draft 2\nflat white · toast · soup at night", AGENT, 170);
   e.ids.push(draft2);
-  link(draft, draft2, HUMAN, "⌘D, then edit");
+  link(draft, draft2, HUMAN, keys("⌘D, then edit"));
   e.y += 40;
   const shapes = [
     { geo: "rectangle" as const, w: 140, h: 90, label: "a section", color: "violet" as const },
@@ -217,7 +218,7 @@ export function seed(editor: Editor) {
   for (const line of [
     "drop in images or paste screenshots",
     "frames (F) hold one line of thought",
-    "⌘D duplicates a variant so you can try another way",
+    keys("⌘D duplicates a variant so you can try another way"),
     "pages keep separate explorations apart",
     "export saves the board as an image",
   ])
@@ -283,7 +284,7 @@ export function calmSeed(editor: Editor) {
         x,
         y: hint,
         meta: { name: "How to write", createdBy: AGENT, revision: 0, role: "caption", ...meta },
-        props: { w: 460, richText: toRichText("Double-click anywhere, or press N. Pink handwriting is you."), tone: "caption" },
+        props: { w: 460, richText: toRichText(firstBoard().write), tone: "caption" },
       });
       createCard(
         editor,
@@ -291,7 +292,7 @@ export function calmSeed(editor: Editor) {
           x,
           y: hint + 52,
           width: 400,
-          text: "Then select it and press ⌘↵ to ask. I answer beside it in a few lines; lavender is me. After that you pick (P), cross out (X) or comment (C), and ask again.",
+          text: firstBoard().ask,
         },
         AGENT,
         { name: "How to ask", ...meta },
