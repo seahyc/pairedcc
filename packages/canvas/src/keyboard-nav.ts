@@ -50,3 +50,61 @@ export function firstTabStop<T extends { id: string; box: Box }>(list: T[], view
   const touches = (b: Box) => !clear(b, view, 0);
   return (list.find((o) => inside(o.box, view)) ?? list.find((o) => touches(o.box)) ?? list[0])?.id;
 }
+
+/** One selected object, as a screen reader needs it. */
+export interface Stop {
+  kind: "card" | "ask" | "answer" | "comment" | "other";
+  /** For "answer": the agent asked a clarifying question back instead. */
+  question?: boolean;
+  /** Who made it: the person ("Human") or the agent's name. */
+  author: string;
+  human: boolean;
+  text: string;
+  /** For "other": the object's name, such as "Frame: Pricing". */
+  name?: string;
+  mark?: "picked" | "rejected";
+  ask?: { state: string; agent?: string };
+  index?: number;
+  total?: number;
+}
+
+const SAY_MAX = 140;
+const sentence = (text: string) => (/[.?!…]$/.test(text) ? text : `${text}.`);
+function clipWords(text: string) {
+  const plain = text.replace(/\s+/g, " ").trim();
+  if (plain.length <= SAY_MAX) return plain;
+  const cut = plain.slice(0, SAY_MAX);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), SAY_MAX / 2)).trimEnd()}…`;
+}
+const askState: Record<string, (agent?: string) => string> = {
+  waiting: () => "Waiting for an agent.",
+  working: (agent) => `${agent ?? "An agent"} is working on it.`,
+  answered: (agent) => `Answered by ${agent ?? "an agent"}.`,
+  failed: () => "It failed; Retry is under it.",
+};
+
+/**
+ * What is said when one object is selected: who made it and what kind of thing it is, its
+ * text, its state (an ask's progress, picked or crossed out) and its place in the Tab order.
+ * Finding 4 for the ear: whose is what, and what state it is in.
+ */
+export function stopAnnouncement(stop: Stop): string {
+  const body = clipWords(stop.text) || "(empty)";
+  const lead =
+    stop.kind === "ask" ? (stop.human ? "Your ask" : `Ask from ${stop.author}`)
+    : stop.kind === "answer" ? `${stop.author} ${stop.question ? "asks back" : "answered"}`
+    : stop.kind === "comment" ? (stop.human ? "Your comment" : `Note from ${stop.author}`)
+    : stop.kind === "card" ? (stop.human ? "You wrote" : `${stop.author} wrote`)
+    : undefined;
+  const parts = [sentence(lead ? `${lead}: ${body}` : stop.name || body)];
+  const state = stop.ask && askState[stop.ask.state];
+  if (state) parts.push(state(stop.ask?.agent));
+  if (stop.mark) parts.push(stop.mark === "picked" ? "Picked." : "Crossed out.");
+  if (stop.index && stop.total) parts.push(`${stop.index} of ${stop.total}.`);
+  return parts.join(" ");
+}
+
+/** What is said for a selection of several objects (one object is a `stopAnnouncement`). */
+export function selectionAnnouncement(ids: string[]): string {
+  return ids.length > 1 ? `${ids.length} objects selected.` : "";
+}
