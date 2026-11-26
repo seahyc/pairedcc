@@ -77,6 +77,7 @@ The dev server is managed by user LaunchAgent `com.paired.canvas.dev` (plist in 
 - Live save state, an agent status chip (last action, failures, lost link) and a shortcut sheet on `?`. The audit behind these is `docs/canvas/usability-heuristics.md`.
 - Data prototype (`?prototype=data`, then **Data prototype page**, or drop a `.csv` file on the canvas): a dataset table with editable cells, a bar chart over it filtered and selected by clicking, exact chart state readable by agents, and stale marking (dashed chart with Recompute, a "stale" flag on derived notes) when an input changes. Synthetic data only.
 - Learning prototype (`?prototype=learning`, then **Learning prototype page**): predict-then-check and generate-first prompt cards that hide a result until the person answers or skips.
+- Context prototype (`?prototype=context`): **Leave out** on the selection bar (or L) keeps an object out of what asks give an agent; the board shows it as "left out of asks", and the ask says how many were withheld. Selecting a left-out object and asking about it still gives it.
 - Converge prototype (`?prototype=converge`): an agent pulls alternatives into one synthesis card with a derived-from arrow from each source; the synthesis shows as stale when a source changes.
 - Browser object interface: `window.paired.read()`, `create(input)`, `update(input)`, `select(ids)`, `undo()` and `redo()`.
 
@@ -108,6 +109,12 @@ cd /some/dir/with/playwright && node /path/to/packages/canvas/tools/verify-calm.
 ```
 
 `tools/verify-contain.mjs <screenshot dir>` is run the same way and needs no agent. At 1440 and 390 px it checks that a long URL, a long unbroken word, a code note and plain text stay inside their shapes, that the selection bar and the Ask box (send button included) sit inside the window wherever the selection is, and that an ask's state line wraps under its card rather than running off screen.
+
+Key hints are written with Apple's symbols and shown in the person's own keys (`src/keys.ts`): Ctrl, Shift and Backspace on Windows, Linux and Android, ⌘ ⇧ ⌫ on Apple devices. `tools/verify-keys.mjs <screenshot dir>`, run the same way, starts its own dev server with an empty board store and checks the first board, the selection bar, the typing hint, the Ask tooltips and the shortcut sheet as a Windows and as a Mac browser.
+
+`tools/verify-answer-view.mjs <screenshot dir>`, run the same way, starts its own dev server with an empty board store and checks at 1440 and 390 px that an agent's four options and a one-card answer land wholly in the window (options wrap into rows on a phone), without changing the zoom, and that an answer arriving while the person types elsewhere leaves their view alone.
+
+On a touch screen with no mouse or trackpad (`(hover: none) and (pointer: coarse)` without `(any-pointer: fine)`), nothing names a key: the first board says to double-tap or tap Write, and to tap ✦ Ask; the selection bar drops its key caps; and while a card is being written the hint is a button, "✦ Ask about this". `tools/verify-touch.mjs <screenshot dir>` checks that as an Android phone, and that a desktop is unchanged.
 
 Live checks against a running dev server are listed at the end of [AGENT_API.md](AGENT_API.md).
 

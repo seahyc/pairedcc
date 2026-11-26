@@ -22,6 +22,8 @@ const sourceMeta = z.object({
   values: z.record(z.string(), z.string()).optional(),
   chips: z.array(chip).optional(),
   level: z.number().nullable().optional(),
+  /** A title card's full text as imported, to tell an edited title from an untouched one. */
+  shown: z.string().optional(),
   /** Columns left empty in the source for the person's own verdict. */
   verdictColumns: z.array(z.string()).optional(),
 });
@@ -52,7 +54,15 @@ export function sourceText(shape: TLShape, plain: string): string | undefined {
   }
   if ((source.kind === "title" || source.kind === "record") && source.values) {
     const short = Object.entries(source.values).filter(([, value]) => value.length < 50);
-    return short.map(([column, value]) => `${column}: ${value}`).join(" · ") || plain;
+    // The column names help an agent while the title is as imported. Once the person edits it,
+    // what the board shows is what the agent gets.
+    // Only a title whose text is still exactly as imported is given in the column-named form; any
+    // edit, including text added at the end, gives what the board shows. An import from before
+    // `shown` was kept is compared with its name, the title line as imported.
+    const flat = (t: string) => t.replace(/\s+/g, " ").trim();
+    const name = flat(String(shape.meta.name ?? ""));
+    const unedited = !plain || (source.shown !== undefined ? flat(plain) === flat(source.shown) : !name || flat(plain).startsWith(name));
+    return unedited ? short.map(([column, value]) => `${column}: ${value}`).join(" · ") || plain : plain;
   }
   if (source.kind === "table" && shape.type === "datatable") {
     const props = shape.props as { title: string; columns: string[]; rows: string[][] };
