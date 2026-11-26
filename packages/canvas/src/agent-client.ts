@@ -15,7 +15,7 @@ export type AgentLink =
 export const agentLink = atom<AgentLink>("agent link", { mode: "hosted", state: "signed-out" });
 
 /** The last thing an agent did on this canvas, for the status chip in the top bar. */
-export const agentActivity = atom<{ actor: string; op: string; at: number; ok: boolean; error?: string } | null>("agent activity", null);
+export const agentActivity = atom<{ actor: string; op: string; at: number; ok: boolean; error?: string; via?: "mcp" } | null>("agent activity", null);
 
 /**
  * Agents waiting for asks right now. null where presence cannot be known (on paired.cc,
@@ -31,9 +31,12 @@ export function setListeners(value: string[] | null) {
   agentListeners.set(value);
 }
 
-/** The last agent that acted here, if it is one the person can ask in their own chat. */
-export function chatAgentActivity(activity: { actor: string; at: number } | null) {
-  return activity && !listenedBefore.has(activity.actor) ? activity : null;
+/**
+ * The last agent that acted here, if it is one the person can ask in their own chat: an MCP
+ * client, never a script (such as the feedback export) or an agent that listened for asks.
+ */
+export function chatAgentActivity<T extends { actor: string; at: number; via?: "mcp" }>(activity: T | null) {
+  return activity && activity.via === "mcp" && !listenedBefore.has(activity.actor) ? activity : null;
 }
 
 let sendAsk: ((ask: { id: string; attempt: number }) => void) | undefined;
@@ -56,7 +59,7 @@ function commandRunner(editor: Editor, session: string, isClosed: () => boolean)
   return (raw: unknown, reply: Reply) => {
     const parsed = requestSchema.safeParse(raw);
     if (!parsed.success || parsed.data.sessionId !== session || isClosed()) return;
-    const { id, command, actor, requestId } = parsed.data;
+    const { id, command, actor, requestId, via } = parsed.data;
     let work = seen.get(requestId);
     if (!work) {
       work = runCommand(editor, runs, command, actor, requestId);
@@ -65,12 +68,12 @@ function commandRunner(editor: Editor, session: string, isClosed: () => boolean)
     }
     void work
       .then((result) => {
-        agentActivity.set({ actor, op: command.op, at: Date.now(), ok: true });
+        agentActivity.set({ actor, op: command.op, at: Date.now(), ok: true, via });
         if (!isClosed()) reply({ id, ok: true, result });
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : "Canvas operation failed";
-        agentActivity.set({ actor, op: command.op, at: Date.now(), ok: false, error: message });
+        agentActivity.set({ actor, op: command.op, at: Date.now(), ok: false, error: message, via });
         if (!isClosed()) reply({ id, ok: false, error: message });
       });
   };
@@ -161,7 +164,8 @@ export function connectAgentAccess(editor: Editor, onChange: (link: AgentLink) =
         // Only sent to accounts the resident agent serves; everyone else brings their own agent.
         if (Array.isArray(message.agents)) setListeners(message.agents.filter((a): a is string => typeof a === "string"));
       } else if (message.type === "request") {
-        run(message, (reply) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: "response", ...reply })));
+        // The hosted relay carries only MCP clients' commands (and the resident agent's, which listens).
+        run({ ...message, via: "mcp" }, (reply) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: "response", ...reply })));
       }
     };
     ws.onclose = () => {
