@@ -61,7 +61,7 @@ import { agentLink, connectAgentAccess } from "./agent-client";
 import { createComment } from "./agent-operations";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { isLegacySeed, seed } from "./seed";
-import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
+import { CardShapeUtil, CardShapeTool } from "./card-shape";
 import { PromptShapeUtil, createLearningPrototypePage, learningPrototypeEnabled, learningVisibility } from "./learning/prompt-shape";
 import { ChartShapeUtil, DataLayer, DatasetShapeUtil, createDataPrototypePage, dataPrototypeEnabled } from "./data/shapes";
 import {
@@ -75,6 +75,7 @@ import {
   HUMAN,
 } from "./scratchbook";
 import { richTextPlain } from "./operations";
+import { onlyDerivedChange } from "./revision";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
@@ -1262,6 +1263,8 @@ function App() {
     editor.sideEffects.registerBeforeChangeHandler(
       "shape",
       (previous, next) => {
+        // Re-derived values (a card re-measuring its text) are not edits: leave the revision.
+        if (onlyDerivedChange(previous, next)) return next;
         const version =
           Math.max(
             revisions.get(next.id) ?? 0,
@@ -1288,14 +1291,15 @@ function App() {
     const fresh = editor.getCurrentPageShapes().length === 0 && editor.getPages().length === 1 && !page.meta.seeded;
     // Swap the old starter board for the welcome board, but only if nobody has touched it.
     const legacy = page.meta.seeded === true && isLegacySeed(editor);
-    // Cards size themselves from measured text, so wait for the board's fonts, then
-    // re-measure existing cards and lay out the welcome board if this is a new canvas.
+    // Lay out the welcome board once the board's fonts are in, so its cards measure right.
+    // Existing cards keep their saved heights: a card on screen re-measures itself when
+    // its fonts arrive (useAutoHeight), and re-estimating all of them here changed saved
+    // objects on every reload.
     const fonts = Promise.all(
       ["16px 'Shantell Sans'", "bold 30px 'Shantell Sans'", "27px 'Caveat Brush'", "italic 19px Newsreader", "13px 'JetBrains Mono'"].map((f) => document.fonts.load(f)),
     );
     const timeout = new Promise((done) => setTimeout(done, 2500));
     void Promise.race([fonts, timeout]).catch(() => undefined).then(() => {
-      refitCards(editor);
       if (!(fresh || legacy) || editor.getCurrentPage().meta.seeded === 2) return;
       if (legacy) editor.deleteShapes([...editor.getCurrentPageShapeIds()]);
       else if (editor.getCurrentPageShapes().length) return;
