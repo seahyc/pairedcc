@@ -189,6 +189,7 @@ task by which measure is furthest from target, not by backlog order.
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 
 ## Claims
+9. Editor-level data agent tests | claude/sprint-data-agent-tests | 2026-11-26T10:47Z
 21. Prototype operations behind flags | claude/sprint-proto-gate | 2026-11-26T10:42Z
 18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
