@@ -6,6 +6,7 @@ import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
 import { ANSWER_CHROME, OPTION_GAP, answerLayout, capWords, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
+import { keepForAgent } from "./leave-out";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -51,7 +52,9 @@ export function createAsk(editor: Editor, value: { targetIds: string[]; question
   if (!targets.length) throw new Error("Select what you mean first, then ask");
   const question = value.question.trim();
   if (!question) throw new Error("Type a question first");
-  const frame = frameOf(editor, targets[0]);
+  // A frame the person left out is not part of the context (unless it is itself selected).
+  const around = frameOf(editor, targets[0]);
+  const frame = around && keepForAgent([around], targets.map((t) => t.id)).kept.length ? around : undefined;
   const ask: AskMeta = {
     state: "waiting",
     attempt: 0,
@@ -102,22 +105,24 @@ const given = (editor: Editor, s: TLShape, max = 2000): Given => {
     ...(mark ? { mark } : {}),
   };
 };
-const said = (editor: Editor, s: TLShape, max: number): HistoryEntry => {
+const said = (editor: Editor, s: TLShape, max: number, keep: Keep = (x) => x): HistoryEntry => {
   const mark = markOf(s.meta), source = sourceOf(s);
   // A frame asked about earlier has no text of its own: say what it held, as the ask did then.
   // Imported material is said with its column names, as in the ask itself.
   const text =
     s.type === "frame"
-      ? `the frame "${shapeName(s)}", holding: ${inside(editor, s, new Set()).inside.map((o) => o.text).join("; ") || "nothing with text"}`
+      ? `the frame "${shapeName(s)}", holding: ${inside(editor, s, new Set(), keep).inside.map((o) => o.text).join("; ") || "nothing with text"}`
       : sourceText(s, textOf(s)) || textOf(s);
   return { id: s.id, who: source ? sourceAuthor(source) : authorOf(s), said: clip(text, max), ...(mark ? { mark } : {}) };
 };
 /** A grouped record is given as its parts: the title line, then each field in column order. */
-const parts = (editor: Editor, s: TLShape): TLShape[] => {
+const parts = (editor: Editor, s: TLShape, keep: Keep = (x) => x): TLShape[] => {
   if (s.type !== "group") return [s];
-  const children = editor.getSortedChildIdsForParent(s.id).flatMap((id) => editor.getShape(id) ?? []).filter((c) => c.type !== "arrow");
-  return children.length ? children.flatMap((c) => parts(editor, c)) : [s];
+  const children = keep(editor.getSortedChildIdsForParent(s.id).flatMap((id) => editor.getShape(id) ?? []).filter((c) => c.type !== "arrow"));
+  return children.length ? children.flatMap((c) => parts(editor, c, keep)) : [s];
 };
+/** Drops what the person left out of asks (see leave-out.ts), noting what was withheld. */
+type Keep = (shapes: TLShape[]) => TLShape[];
 
 /**
  * What a selected frame holds, nested frames included: the person put these together, so an
@@ -125,13 +130,15 @@ const parts = (editor: Editor, s: TLShape): TLShape[] => {
  */
 // Objects worth giving with no text of their own: media, and data the ask can describe.
 const media = new Set(["image", "video", "bookmark", "embed", "chart", "dataset"]);
-function inside(editor: Editor, frame: TLShape, skip: Set<string>) {
+function inside(editor: Editor, frame: TLShape, skip: Set<string>, keep: Keep = (x) => x) {
   const found: TLShape[] = [];
   const walk = (id: TLShapeId) => {
     for (const childId of editor.getSortedChildIdsForParent(id)) {
       const child = editor.getShape(childId);
       // Anything a learning prompt still hides stays out of what the agent is given.
       if (!child || skip.has(child.id) || child.type === "arrow" || askOf(child) || editor.isShapeHidden(child)) continue;
+      // What the person left out of asks is not given, and neither is what it holds.
+      if (!keep([child]).length) continue;
       if (child.type === "frame" || child.type === "group") walk(child.id);
       if (textOf(child) || media.has(child.type)) found.push(child);
     }
@@ -143,26 +150,26 @@ function inside(editor: Editor, frame: TLShape, skip: Set<string>) {
 }
 
 /** The exchange that led here, oldest first, when the human asks about an agent's answer. */
-function thread(editor: Editor, shape: TLShape, depth = 0, seen = new Set<string>()): HistoryEntry[] {
+function thread(editor: Editor, shape: TLShape, keep: Keep, depth = 0, seen = new Set<string>()): HistoryEntry[] {
   if (depth > 4 || seen.has(shape.id)) return [];
   seen.add(shape.id);
   const parent = typeof shape.meta.replyTo === "string" ? editor.getShape(shape.meta.replyTo as TLShapeId) : undefined;
   if (!parent || !askOf(parent)) return [];
   const about = targetsOf(parent).flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
-  const earlier = about.flatMap((t) => thread(editor, t, depth + 1, seen));
+  const earlier = about.flatMap((t) => thread(editor, t, keep, depth + 1, seen));
   // The other answers to that ask, so an agent asked about option A knows what B and C were
   // and which of them the person crossed out.
-  const siblings = editor.store
+  const siblings = keep(editor.store
     .allRecords()
     .filter((r): r is TLShape => r.typeName === "shape" && (r as TLShape).meta.replyTo === parent.id && r.id !== shape.id && !askOf(r as TLShape) && !editor.isShapeHidden(r as TLShape))
-    .sort((a, b) => a.y - b.y || a.x - b.x);
+    .sort((a, b) => a.y - b.y || a.x - b.x));
   return [
     ...earlier,
     // A grouped record is said as its parts, as the first ask gave it, not as its textless group.
-    ...about.flatMap((t) => parts(editor, t)).map((t) => said(editor, t, 600)),
+    ...keep(about).flatMap((t) => parts(editor, t, keep)).map((t) => said(editor, t, 600, keep)),
     // The ask card's id keeps two asks with the same words (a starter used twice) apart.
-    { id: parent.id, who: `${HUMAN} asked`, said: clip(textOf(parent), 600) },
-    ...siblings.map((s) => said(editor, s, 600)),
+    ...(keep([parent]).length ? [{ id: parent.id, who: `${HUMAN} asked`, said: clip(textOf(parent), 600) }] : []),
+    ...siblings.map((s) => said(editor, s, 600, keep)),
   ];
 }
 
@@ -172,8 +179,16 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   if (!ask) throw new Error("Not an ask");
   const page = editor.getPage(editor.getAncestorPageId(shape)!);
   const selected = targetsOf(shape).flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
-  const targets = selected.flatMap((s) => parts(editor, s));
-  const frame = selected[0] ? frameOf(editor, selected[0]) : undefined;
+  // What the person selected is given even if left out; around it, left-out objects are not.
+  const withheld = new Set<string>();
+  const keep: Keep = (shapes) => {
+    const result = keepForAgent(shapes, selected.map((s) => s.id));
+    for (const id of result.withheld) withheld.add(id);
+    return result.kept;
+  };
+  const targets = selected.flatMap((s) => parts(editor, s, keep));
+  const around = selected[0] ? frameOf(editor, selected[0]) : undefined;
+  const frame = around && keep([around]).length ? around : undefined;
   const skip = new Set<string>([shape.id, ...targets.map((t) => t.id)]);
   return {
     id: shape.id,
@@ -189,24 +204,28 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     pageName: page?.name,
     targets: targets.map((t) => {
       if (t.type !== "frame") return given(editor, t);
-      const held = inside(editor, t, skip);
+      const held = inside(editor, t, skip, keep);
       return { ...given(editor, t), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
     }),
-    history: mergeHistory(targets.flatMap((t) => thread(editor, t)), targets.map((t) => t.id)),
+    history: mergeHistory(targets.flatMap((t) => thread(editor, t, keep)), targets.map((t) => t.id)),
     ...(frame
       ? {
           frame: {
             id: frame.id,
             name: shapeName(frame),
-            objects: editor
-              .getSortedChildIdsForParent(frame.id)
-              .flatMap((id) => editor.getShape(id) ?? [])
-              .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset"))
+            objects: keep(
+              editor
+                .getSortedChildIdsForParent(frame.id)
+                .flatMap((id) => editor.getShape(id) ?? [])
+                .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset")),
+            )
               .slice(0, 12)
               .map((s) => given(editor, s, 400)),
           },
         }
       : {}),
+    // Counted once the parts above are built: how many objects the person kept out of this ask.
+    ...(withheld.size ? { leftOut: withheld.size } : {}),
   };
 }
 export type AskView = ReturnType<typeof describeAsk>;
