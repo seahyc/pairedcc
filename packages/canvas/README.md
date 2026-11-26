@@ -66,11 +66,11 @@ The dev server is managed by user LaunchAgent `com.paired.canvas.dev` (plist in 
 - The Ask loop: asks are cards that show waiting, working, answered or failed with retry, and what the agent was given.
 - Text stays in its container: cards wrap and grow downward, plain text wraps at 460 px instead of growing sideways, pasted text is brought to the same width.
 - Infinite pan/zoom, selection, snapping, dragging and native resize handles.
-- Frames, rectangles, ellipses, freehand paths, rich text, notes, arrows and image import.
+- Frames, rectangles, ellipses, freehand paths, rich text, notes, arrows and image import. Imported images are kept inside the board (photos over 1.5 MB are scaled to 2048 px), so a board saved to an account opens with its images in a clean browser; images added before this lived only in that browser and move into the board the next time it opens there.
 - Pages, nested layers, collapse/expand, multiselection, alignment/grouping and object properties.
 - Undo/redo, keyboard tool shortcuts and duplicate/delete.
 - Local IndexedDB persistence, JSON file export and validated import.
-- Board sync: the board is also saved to the signed-in account (`/api/canvas/boards`) a moment after each change, and a clean browser opens it. A save on a stale revision merges by object with the newer version (an edit beats a deletion; where both changed one object this tab wins and the other stays in the board's history). The first sign-in moves the browser's board up. When a browser holds work the account does not and the two cannot be merged (its own earlier board, or unsaved edits while the account's board changed elsewhere), that work is saved as a separate board and the account's board is opened; one whole board never replaces another. No screen lists those separate boards yet. The development server keeps boards for one local person in `.local/boards` (`PAIRED_BOARDS_DIR`). See `src/board-sync.ts`. To use the real server and its accounts instead, start the dev canvas with `PAIRED_SERVER_URL=http://localhost:3000` (sign-in and boards are proxied there); `pnpm --filter @pairedcc/canvas verify:sync-server` starts both against throwaway Postgres and Redis and checks sign-in, save, a clean browser on the same account and isolation from another account (see the header of `tools/verify-board-sync-server.ts`).
+- Board sync: the board is also saved to the signed-in account (`/api/canvas/boards`) a moment after each change, and a clean browser opens it. A save on a stale revision merges by object with the newer version (an edit beats a deletion; where both changed one object this tab wins and the other stays in the board's history). The first sign-in moves the browser's board up. When a browser holds work the account does not and the two cannot be merged (its own earlier board, or unsaved edits while the account's board changed elsewhere), that work is saved as a separate board and the account's board is opened; one whole board never replaces another. Menu → Saved boards (shown only when there is more than one) opens such a board, and Menu → Earlier versions restores one of the board's kept revisions as the newest, without losing the current one (`src/history-dialog.tsx`). The development server keeps boards for one local person in `.local/boards` (`PAIRED_BOARDS_DIR`). See `src/board-sync.ts`. To use the real server and its accounts instead, start the dev canvas with `PAIRED_SERVER_URL=http://localhost:3000` (sign-in and boards are proxied there); `pnpm --filter @pairedcc/canvas verify:sync-server` starts both against throwaway Postgres and Redis and checks sign-in, save, a clean browser on the same account and isolation from another account (see the header of `tools/verify-board-sync-server.ts`).
 - Scratchbook visual language: pink handwriting and ink for the human, lavender ✦ cards and violet arrows for agents, pick (P) and reject (X) marks, captions, and an open-marks counter. See AGENT_API.md.
 - Feedback queue: C comments on the selection or pins a comment under the pointer; comments, picks, rejects and ink over objects form one queue across pages. The Feedback tab lists it (jump, resolve, reopen, export as Markdown or JSON). Agents read it with `feedback`, answer with `reply` and close with `resolve`. `pnpm --filter @pairedcc/canvas feedback` prints it from the open tab.
 - Live save state, an agent status chip (last action, failures, lost link) and a shortcut sheet on `?`. The audit behind these is `docs/canvas/usability-heuristics.md`.
@@ -88,7 +88,15 @@ pnpm build:canvas   # from the repository root: type check and production build
 pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents every tool
 ```
 
+`tools/verify-pdf.mjs <screenshot dir> [origin]` checks a PDF (`test/fixtures/notes.pdf`, the synthetic notes printed by Chromium with `test/fixtures/build-pdf.cjs`).
+
+`tools/verify-cite.mjs <screenshot dir> [origin]` checks bringing cited sections beside a record (the synthetic `test/fixtures/pack.md` is the document the review cites).
+
 `tools/verify-compare.mjs <screenshot dir> [origin]` checks Side by side on two pasted records (alignment, order kept, one undo).
+
+`tools/verify-webpage.mjs <screenshot dir> [origin]` checks a saved web page and a stretch copied from one.
+
+`tools/verify-csv-faithful.mjs <screenshot dir> [origin]` checks that a CSV dropped on the data prototype keeps what the file says: a non-UTF-8 file is refused with a fix, long IDs stay text, a quoted empty value keeps its row.
 
 `tools/verify-import.mjs <screenshot dir> [origin]` checks import and paste the same way (a pasted review as ten record clusters, the stepper, undo, pick / cross out / comment, the ask context, a numeric table, a markdown file, an image drop, the agent operation) against a dev server of this checkout, with the synthetic fixtures in `test/fixtures/`.
 
@@ -97,6 +105,8 @@ pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents 
 ```sh
 cd /some/dir/with/playwright && node /path/to/packages/canvas/tools/verify-calm.mjs /tmp/shots
 ```
+
+`tools/verify-contain.mjs <screenshot dir>` is run the same way and needs no agent. At 1440 and 390 px it checks that a long URL, a long unbroken word, a code note and plain text stay inside their shapes, that the selection bar and the Ask box (send button included) sit inside the window wherever the selection is, and that an ask's state line wraps under its card rather than running off screen.
 
 Live checks against a running dev server are listed at the end of [AGENT_API.md](AGENT_API.md).
 
@@ -120,7 +130,7 @@ Browser checks performed 17 Nov 2026: native object dragging, pen drawing, text 
 
 This first pass adopts familiar canvas primitives and interactions. It does not reproduce Paper's CSS-flex layout system, shaders, component system or HTML/React export. Interactive data widgets exist only as the flagged data prototype (one bar chart type). The local agent transport is implemented.
 
-The server now has a per-account board API (`/api/canvas/boards`, `packages/server/src/canvas/boards`). It saves the tldraw document with a revision number, rejects a save on a stale revision with 409 and the current revision, keeps the last 50 revisions, and is covered by tests against memory and a real Postgres (`TEST_DATABASE_URL`). Limits: 10 MB per board (413), and 50 boards per account (`MAX_BOARDS_PER_ACCOUNT`): creating one more is refused with 403 and the limit, while saving an existing board is never limited. Board sync (above) uses it. The development server's file store keeps one local person's boards and has no board limit.
+The server now has a per-account board API (`/api/canvas/boards`, `packages/server/src/canvas/boards`). It saves the tldraw document with a revision number, rejects a save on a stale revision with 409 and the current revision, keeps the newest 20 revisions and then one per 15 minutes of older work (50 at most, so history reaches back hours rather than minutes), and is covered by tests against memory and a real Postgres (`TEST_DATABASE_URL`). Limits: 10 MB per board (413), and 50 boards per account (`MAX_BOARDS_PER_ACCOUNT`): creating one more is refused with 403 and the limit, while saving an existing board is never limited. Board sync (above) uses it. The development server's file store keeps one local person's boards and has no board limit.
 
 The prototype stores work in the current browser profile. Export a file to move work between profiles or devices. Boards are not stored on a server and there is no multiplayer backend; hosted agent access (`https://paired.cc/mcp`) relays commands to a signed-in open tab. tldraw development use works locally; production use requires an appropriate tldraw license. No production deployment was made.
 
