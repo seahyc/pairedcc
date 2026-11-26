@@ -1,12 +1,23 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-26T10:50Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-26T11:00Z by the review lane. Branch: `claude/sprint-int`.
 
 ## Read first
-- **Playtest 1 rejected the build** (`docs/canvas/feedback/2026-11-26-playtest-1.md`): hard to use,
-  noisy, too open-ended, text overflows, no visible way to make the agent respond. Nothing merged so
-  far answers it; the rework is on `yc/calm-canvas`, which has no PR yet. Everything below is
-  plumbing (scorecard, storage, docs), not the experience.
+- **The calm-canvas rework (#21) is merged, combined by the review lane with 16 sprint PRs.** It
+  conflicted in 15 files (21 places in `packages/canvas/src/App.tsx`). Where the two disagreed the
+  calm layout won; board sync, the prototypes, per-run undo and the reload fixes were fitted into
+  it. `App.tsx` and its `mount` function are the first thing to read, and the first screen is the
+  first thing to look at. What the review could and could not show:
+  - Checked by script: the first board holds three things, panels are behind the menu, text wraps
+    in cards, plain text, comments and a 300-word paste, an ask shows working then answered, pick
+    and cross out work, reload keeps everything (33 of 33 checks; the four no-agent checks need
+    the macOS service and were skipped).
+  - **No real model answered an ask.** The resident agent calls the local Claude Code CLI; the
+    sprint does not spend on models, so a stand-in returned a fixed reply.
+  - With `?prototype=data` or `?prototype=learning`, the prototype page button is now under Menu,
+    then Show layers and pages.
+  - Whether it is calm and usable is for the second playtest. Items 3, 5 and 6 of playtest 1 are
+    ticked as mechanically addressed; 1, 2, 4 and 7 are left open for that judgment.
 - **#15 changes how every signed-in board is saved, and is the merge most worth reading**
   (`packages/canvas/src/board-sync.ts`). The board is uploaded to the account 1.2 s after each
   change and a clean browser opens the account's board. Review found and fixed two defects before
@@ -50,11 +61,11 @@ Last updated 2026-11-26T10:50Z by the review lane. Branch: `claude/sprint-int`.
   of the data and learning prototypes are proven by headless scripts, not `pnpm test` (backlog 9).
 
 ## Status
-`pnpm build` passes. `pnpm -r --no-bail test` on `816edb9`:
+`pnpm build` passes. `pnpm -r --no-bail test` on `16ce025`:
 
 | Package | Result |
 |---|---|
-| canvas | 134 passed |
+| canvas | 150 passed |
 | server | 129 passed, 7 skipped (the Postgres board suite; 19 of 19 pass with `TEST_DATABASE_URL` set) |
 | sdk | 12 passed |
 | mcp-server | 4 passed |
@@ -62,7 +73,7 @@ Last updated 2026-11-26T10:50Z by the review lane. Branch: `claude/sprint-int`.
 | e2e | needs Postgres and Redis; 1 passed when they are provided, otherwise stops at start |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T10:49Z on `816edb9`:
+Scorecard from `pnpm eval:canvas` at 2026-11-26T11:00Z on `16ce025`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
@@ -70,7 +81,7 @@ Scorecard from `pnpm eval:canvas` at 2026-11-26T10:49Z on `816edb9`:
 | Agent usability | ≥90% of ≥20 tasks | 0 tasks, no recorded attempt | not run |
 | Safety of shared edits | 0 human edits lost | 0 lost; 3/3 races pass | pass |
 | Persistence | identical in a clean profile | identical | pass |
-| Performance | reported, not worse | 1k: load 1311 ms, pan 16.7 ms/frame; 10k: load 9400 ms, pan 89 ms/frame | reported |
+| Performance | reported, not worse | 1k: load 1358 ms, pan 16.7 ms/frame; 10k: load 7135 ms, pan 40 ms/frame | reported |
 | Existing product | green | build passes; tests: e2e failing | fail |
 <!-- scorecard:end -->
 
@@ -97,6 +108,7 @@ MCP. Agent usability has no tasks yet (backlog 18, claimed).
 - [#18](https://github.com/seahyc/pairedcc/pull/18) Dropping a CSV on the data prototype creates a typed dataset, or nothing with a message naming the row and column (f104315).
 - [#19](https://github.com/seahyc/pairedcc/pull/19) The document collaboration e2e test signs in for real and passes; services documented in `e2e/README.md` (a4b927e).
 - [#20](https://github.com/seahyc/pairedcc/pull/20) Prototype agent operations are refused in a tab without the prototype flag (be3dce9).
+- [#21](https://github.com/seahyc/pairedcc/pull/21) Calm canvas from `yc/calm-canvas`: one Ask loop, a resident agent, text that wraps, panels behind one menu (16ce025, squashed locally with the conflicts resolved; shows as closed, not merged). Review made board sync check the board list before fetching, so a first open no longer logs a 404.
 - Review lane: `packages/cli` and `packages/web` test scripts pass with no test files (a712b50).
 
 How each was checked: the branch was merged with the integration branch, built and tested; every
@@ -133,7 +145,8 @@ None.
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-Open and not yet merged: #21 (the calm-canvas rework that answers playtest 1) and #22 (shared-edit
-gaps). Not started: converge (5), board picker (19). Claimed without a PR: foundational primitives
+Open and not yet reviewed: #22 (shared-edit gaps), #23 (primitives), #24 (agent-usability tasks),
+#25 (data agent tests) and later ones. They were written against the old layout and need re-checking
+on the calm canvas. Not started: converge (5), board picker (19). Claimed without a PR: foundational primitives
 (3), robustness (7), data agent tests (9), agent-usability tasks (18). PR descriptions #9 to #20
 carry a tool footer written before the brief ruled it out; commits do not.

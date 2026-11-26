@@ -2,6 +2,7 @@ import { z } from "zod";
 import { atom, type Editor } from "tldraw";
 import { createRunLedger, runCommand } from "./agent-runs";
 import { envelopeSchema } from "./protocol";
+import { listAsks } from "./asks";
 
 const requestSchema = envelopeSchema.extend({ id: z.string() });
 type Reply = (message: { id: string; ok: boolean; result?: unknown; error?: string }) => void;
@@ -15,6 +16,18 @@ export const agentLink = atom<AgentLink>("agent link", { mode: "hosted", state: 
 
 /** The last thing an agent did on this canvas, for the status chip in the top bar. */
 export const agentActivity = atom<{ actor: string; op: string; at: number; ok: boolean; error?: string } | null>("agent activity", null);
+
+/**
+ * Agents waiting for asks right now. null where presence cannot be known (on paired.cc,
+ * an account the resident agent does not serve), an empty list when nobody is listening.
+ */
+export const agentListeners = atom<string[] | null>("agent listeners", null);
+
+let sendAsk: ((ask: { id: string; attempt: number }) => void) | undefined;
+/** Tell listening agents about an ask. Safe to repeat: the relay ignores an attempt it has seen. */
+export function announceAsk(ask: { id: string; attempt: number }) {
+  sendAsk?.(ask);
+}
 
 function sessionId() {
   const id = sessionStorage.getItem("picabird-agent-session") ?? crypto.randomUUID();
@@ -65,10 +78,20 @@ export function connectAgentAccess(editor: Editor, onChange: (link: AgentLink) =
     onChange({ mode: "local" });
     const hello = () => hot.send("paired:hello", { sessionId: session, title: document.title });
     const request = (raw: unknown) => run(raw, (message) => hot.send("paired:response", message));
-    const up = () => onChange({ mode: "local", state: "connected" });
+    const listeners = (raw: unknown) => {
+      const agents = (raw as { agents?: unknown }).agents;
+      if (Array.isArray(agents)) agentListeners.set(agents.filter((a): a is string => typeof a === "string"));
+    };
+    sendAsk = (ask) => hot.send("paired:ask", { sessionId: session, ask });
+    // Asks still waiting are announced again whenever the link comes up, so none is lost to a restart.
+    const up = () => {
+      onChange({ mode: "local", state: "connected" });
+      for (const ask of listAsks(editor, { state: "waiting" }).asks) announceAsk(ask);
+    };
     const down = () => onChange({ mode: "local", state: "disconnected" });
     hot.on("paired:request", request);
     hot.on("paired:connected", up);
+    hot.on("paired:listeners", listeners);
     hot.on("vite:ws:connect", hello);
     hot.on("vite:ws:disconnect", down);
     hello();
@@ -77,6 +100,8 @@ export function connectAgentAccess(editor: Editor, onChange: (link: AgentLink) =
       closed = true;
       hot.off("paired:request", request);
       hot.off("paired:connected", up);
+      hot.off("paired:listeners", listeners);
+      sendAsk = undefined;
       hot.off("vite:ws:connect", hello);
       hot.off("vite:ws:disconnect", down);
     };
@@ -116,12 +141,22 @@ export function connectAgentAccess(editor: Editor, onChange: (link: AgentLink) =
       if (message.type === "connected") {
         attempts = 0;
         onChange({ mode: "hosted", state: "connected", email });
+        // Asks still waiting are announced again whenever the link comes up, so none is lost to a restart.
+        sendAsk = (ask) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: "ask", ask }));
+        for (const ask of listAsks(editor, { state: "waiting" }).asks) announceAsk(ask);
+      } else if (message.type === "listeners") {
+        // Only sent to accounts the resident agent serves; everyone else brings their own agent.
+        if (Array.isArray(message.agents)) agentListeners.set(message.agents.filter((a): a is string => typeof a === "string"));
       } else if (message.type === "request") {
         run(message, (reply) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: "response", ...reply })));
       }
     };
     ws.onclose = () => {
-      if (socket === ws) socket = undefined;
+      if (socket === ws) {
+        socket = undefined;
+        sendAsk = undefined;
+        agentListeners.set(null);
+      }
       if (closed) return;
       onChange({ mode: "hosted", state: "connecting", email });
       attempts += 1;

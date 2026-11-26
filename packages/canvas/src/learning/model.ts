@@ -45,3 +45,15 @@ export function hiddenBy(meta: Record<string, unknown>, statusOf: (promptId: str
   const id = meta.revealAfter;
   return typeof id === "string" && statusOf(id) === "open";
 }
+
+/**
+ * Why an object may not be hidden behind a prompt, or null if it may. Only an agent's own
+ * output can be held back: the person's work is never hidden from them.
+ */
+export function hideRefusal(shape: { id: string; type: string; isLocked: boolean; meta: Record<string, unknown> }) {
+  if (shape.type === "prompt") return "A prompt cannot hide another prompt";
+  if (shape.isLocked) return `Unlock ${shape.id} before hiding it`;
+  const agentMade = typeof shape.meta.createdBy === "string" || (shape.meta.role === "annotation" && typeof shape.meta.author === "string");
+  if (!agentMade) return `${shape.id} is something the person made; a prompt can hide only an agent's own output`;
+  return null;
+}
