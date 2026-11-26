@@ -65,7 +65,8 @@ import {
   type CanvasBridge,
 } from "./operations";
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
-import { createComment } from "./agent-operations";
+import { convergeForPerson, createComment } from "./agent-operations";
+import { prototypeEnabled } from "./prototype-flags";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog } from "./history-dialog";
@@ -209,6 +210,7 @@ function CopyBlock({ text, onCopied }: { text: string; onCopied: (notice: string
 /** Agent setup on paired.cc: one sentence for the agent, or one command per client. */
 function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void }) {
   const link = useValue("agent link", () => agentLink.get(), []);
+  const listeners = useValue("agent listeners", () => agentListeners.get(), []);
   const origin = location.origin;
   if (link.mode !== "hosted") return null;
   if (link.state === "signed-out")
@@ -232,6 +234,12 @@ function HostedAgentAccess({ onCopied }: { onCopied: (notice: string) => void })
         <span className={`status-dot ${link.state}`} />
         {link.state === "connected" ? `This tab is ready for your agent${link.email ? ` (${link.email})` : ""}.` : "Connecting this tab…"}
       </p>
+      {listeners !== null && (
+        <p className="agent-status">
+          <span className={`status-dot ${listeners.length ? "connected" : "connecting"}`} />
+          {listeners.length ? `${listeners.join(", ")} is listening and answers your asks.` : "The resident agent is offline, so asks wait until it is back or you connect your own."}
+        </p>
+      )}
       <p>Paste this into your agent:</p>
       <CopyBlock text={`Read ${origin}/agent-setup.md and connect me to Paired.`} onCopied={onCopied} />
       <p>Or add it yourself:</p>
@@ -1194,6 +1202,20 @@ function Shell() {
                     Group
                   </button>
                 </div>
+              </div>
+            )}
+            {selected.length > 1 && prototypeEnabled("converge") && (
+              <div className="inspector-section">
+                <div className="section-title">Converge · prototype</div>
+                <p className="inspector-help">
+                  Pull these into one synthesis card that links back to each of them. Write the conclusion in your own words.
+                </p>
+                <button
+                  className="wide-button"
+                  onClick={() => convergeForPerson(editor, editor.getSelectedShapes().filter((s) => s.type !== "arrow").map((s) => s.id))}
+                >
+                  Pull into a synthesis
+                </button>
               </div>
             )}
             <div className="inspector-section">

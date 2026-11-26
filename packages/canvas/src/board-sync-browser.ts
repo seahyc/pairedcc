@@ -3,7 +3,8 @@ import { createBoardSync, type BoardApi, type MemoStore, type PutResult, type Re
 
 // Wires board sync to the editor, the network and localStorage. On paired.cc the account
 // comes from the session (/auth/me) and boards from /api/canvas/boards. The development
-// server serves the same board API for one local person (server/boards-dev.ts).
+// server serves the same board API for one local person (server/boards-dev.ts), unless
+// PAIRED_SERVER_URL proxies it to a real server (vite.config.ts).
 
 export const boardSync = atom<SyncStatus>("board sync", { state: "local" });
 
@@ -32,7 +33,7 @@ const json = { "Content-Type": "application/json" };
 
 export const boardApi: BoardApi = {
   async account() {
-    if (import.meta.env.DEV) {
+    if (!__BOARDS_ON_SERVER__) {
       const r = await fetch("/api/canvas/boards");
       return r.ok ? "local" : null;
     }
@@ -78,7 +79,11 @@ export const boardApi: BoardApi = {
     const body = (await r.json().catch(() => ({}))) as { board?: { revision: number }; current?: { revision: number }; error?: string };
     if (r.ok && body.board) return { ok: true, revision: body.board.revision };
     if (r.status === 409 && body.current) return { ok: false, stale: true, revision: body.current.revision };
-    return { ok: false, stale: false, error: body.error ?? `Saving the board failed (${r.status})` };
+    const error = body.error ?? `Saving the board failed (${r.status})`;
+    // The server refused this board itself (too large, not a valid board, or the account
+    // already keeps as many boards as it may): not offline, and retrying it cannot work.
+    if (r.status === 400 || r.status === 403 || r.status === 413) return { ok: false, stale: false, refused: r.status, error };
+    return { ok: false, stale: false, error };
   },
 };
 

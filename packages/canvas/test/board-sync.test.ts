@@ -10,6 +10,7 @@ function server(signedIn: string | null = "alice", keep = 50) {
   const boards = new Map<string, { revision: number; snapshot: Snapshot; history: Snapshot[]; first: number }>();
   let down = false;
   const hooks: { beforeRevision?: () => Promise<void> } = {};
+  const uploads: string[] = [];
   const api: BoardApi = {
     async account() {
       if (down) throw new Error("offline");
@@ -22,6 +23,8 @@ function server(signedIn: string | null = "alice", keep = 50) {
     },
     async put(id, expectedRevision, snapshot) {
       if (down) throw new Error("offline");
+      uploads.push(id);
+      if (JSON.stringify(snapshot).includes("HUGE")) return { ok: false, stale: false, refused: 413, error: "Boards are limited to 10 MB" };
       const b = boards.get(id);
       if (!b) {
         if (expectedRevision !== 0) return { ok: false, stale: false, error: "Board not found" };
@@ -49,7 +52,7 @@ function server(signedIn: string | null = "alice", keep = 50) {
       return h ? { revision: rev, snapshot: structuredClone(h) } : null;
     },
   };
-  return { api, boards, hooks, setDown: (v: boolean) => (down = v) };
+  return { api, boards, hooks, uploads, setDown: (v: boolean) => (down = v) };
 }
 
 function browser(initial: Snapshot, memo: SyncMemo | null = null) {
@@ -475,5 +478,38 @@ describe("withNewRecords", () => {
     expect(text(b.doc)).toBe("v1");
     expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "v2", "typed during the download", "v1"]);
   });
+  it("says why a refused save failed, and stops retrying until the board changes", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    b.edit("HUGE board");
+    await b.flush();
+    expect(last()).toEqual({ state: "refused", account: "alice", code: 413, error: "Boards are limited to 10 MB" });
+    expect(b.timers).toHaveLength(0); // no retry scheduled
+    const tries = srv.uploads.length;
+    // Saving again with nothing changed does not re-upload the same refused board.
+    await s.save();
+    expect(srv.uploads.length).toBe(tries);
+    expect(last()).toMatchObject({ state: "refused" });
+    expect(b.stored.memo?.dirty).toBe(true); // the work is still only in this browser
+    // A change is tried once more; once the board fits, it saves.
+    b.edit("HUGE but edited");
+    await b.flush();
+    expect(srv.uploads.length).toBe(tries + 1);
+    expect(last()).toMatchObject({ state: "refused" });
+    b.edit("small again");
+    await b.flush();
+    expect(text(srv.boards.get("main")!.snapshot)).toBe("small again");
+    expect(last()).toMatchObject({ state: "saved", revision: 2 });
+  });
+
+  it("reports a refused first save instead of going offline", async () => {
+    const srv = server(), b = browser(snap("HUGE local board"));
+    const { s, last } = sync(srv, b, true);
+    await s.start();
+    expect(last()).toMatchObject({ state: "refused", code: 413 });
+    expect(b.timers).toHaveLength(0);
+  });
+
 });
 

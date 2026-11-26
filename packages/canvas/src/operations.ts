@@ -57,7 +57,7 @@ function styleProps(input: z.infer<typeof patchInput> | z.infer<typeof createInp
   };
 }
 
-export function revision(shape: TLShape) {
+export function revision(shape: Pick<TLShape, "meta">) {
   return typeof shape.meta.revision === "number" ? shape.meta.revision : 0;
 }
 
