@@ -506,7 +506,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     ask with its state, comment, answer), its mark and its place in the Tab order, from a tested pure
     function, checked in a real page (failing before, passing after); nothing new is visible.
 
-83. **One command runs every browser check.** About twenty `tools/verify-*` checks exist but each
+83. (PR #113 open, awaiting review.) **One command runs every browser check.** About twenty `tools/verify-*` checks exist but each
     is run by hand, so regressions slip through merges: on 26 Nov `verify-runs.ts` and
     `verify-calm.mjs` were both failing on this branch (#95, #91). Done when one command starts a
     dev server with a throwaway board store, runs every check that needs no model, paid API or
@@ -529,12 +529,19 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     gives focus back when it closes, with a headless check failing before and passing after,
     and nothing new on the first screen.
 
+88. **A clean profile does not show a large imported image.** Found by `verify-all` (#113) and
+    reproduced by hand against a plain dev server with an empty store: `verify-board-images.mjs
+    fresh` is 3/5. The first profile shows both images, but a clean profile shows the large one
+    with natural width 0 ("a clean profile shows both images — [true,false]", "the large image was
+    scaled to 2048 px — natural width 0"). Item 45 (d), #76, passed when merged; #77 (image size)
+    merged since. Done when `verify-board-images.mjs fresh` passes 5/5, with the cause named.
+
 ## Claims
 87. The menu and dialogs work from the keyboard | claude/sprint-robust-menu | 2026-11-26T13:48Z
 85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
-83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
 
 ## Done
+- 83. One command runs every browser check (build-A): PR #113 (`pnpm --filter @pairedcc/canvas verify:all <dir>`; first full run 28/31, failing calm (#91), runs (#95) and board-images (filed as item 88)).
 - 86. canvas_overview marks left-out objects (build-B): PR #112 (failing-first test, live MCP check).
 - 84. Ask about an image says what it is (build-B): PR #109 (real tab 2/5 → 5/5 with the tightened frame check).
 - 82. A Tab stop is heard (build-A): PR #108, stacked on #105 (polite unseen live region says who made the selection, its text, kind, mark and order; verify-heard 2/13 → 13/13).
@@ -843,3 +850,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:41Z | build-B | 84 Ask about an image says what it is | #109 | File name, size, caption and alt text for image targets, frame contents and history; describeImage unit-tested; real tab 5/5 |
 | 2026-11-26T13:43Z | build-B | Kept open PRs mergeable | #104 #106 #109 | Merged the integration branch into each (asks.ts conflicts after #90 and the answer-row change merged); re-ran build, tests and each real-page check: 16/16, 4/4, 5/5 |
 | 2026-11-26T13:45Z | build-B | 86 canvas_overview shows left-out objects | #112 | leftOut: true on overview rows, documented; failing-first unit test; live stdio MCP check |
+| 2026-11-26T13:49Z | build-A | 83 One command runs every browser check | #113 | 31 checks in one run (about 6 min), stand-in model, throwaway store; found a new regression (board images in a clean profile, filed 88); open branches #87 #91 #95 #99 #101 #88 merged up to the integration branch and re-verified |
