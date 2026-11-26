@@ -198,6 +198,11 @@ task by which measure is furthest from target, not by backlog order.
     the flag names the changed input (and the upstream cause for transitive staleness) in words a
     person can act on, is readable by assistive technology, with before/after screenshots.
 
+30. **A board opened on another device can show nothing.** A board created on a 1440 px screen
+    and opened on a 390 px phone (board sync) opens on an empty view: its cards sit where the first
+    screen's viewport was. Done when opening a board with no object in view frames its objects
+    (never zooming past 100%), tested, with a 390 px screenshot before and after.
+
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 28. **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
     fails only because `pnpm eval:canvas` runs the e2e suite without Postgres, Redis or a matching
@@ -208,6 +213,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 19. Board picker, part 3: list and open saved boards | claude/sprint-board-picker | 2026-11-26T11:09Z
 28. Existing product row runs e2e for real | claude/sprint-eval-services | 2026-11-26T11:06Z
+30. Board opens on an empty view | claude/sprint-reframe | 2026-11-26T11:09Z
 20. Welcome board header overlaps | claude/sprint-welcome-check | 2026-11-26T11:07Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
