@@ -1,0 +1,65 @@
+/* Sign-in page. Light and quiet, to match the canvas it usually leads to. */
+.signin {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background-color: #eff0f2;
+  background-image: radial-gradient(#d3d5da 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: #1f2024;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.signin-card {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 32px 28px 28px;
+  background: #fafafa;
+  border: 1px solid #dcdde2;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(20, 20, 30, 0.04), 0 12px 32px rgba(20, 20, 30, 0.06);
+}
+.signin-logo { width: 36px; height: 36px; }
+.signin-title { margin: 4px 0 0; font-size: 22px; font-weight: 650; letter-spacing: -0.01em; color: #1f2024; }
+.signin-lede { margin: 0 0 12px; font-size: 14px; line-height: 1.45; color: #62646c; }
+.signin-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid #cfd1d7;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1f2024;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 550;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 100ms, border-color 100ms;
+}
+.signin-button:hover { background: #f1f2f4; border-color: #b9bcc4; }
+.signin-button:focus-visible, .signin-input:focus-visible { outline: 2px solid #5b54d6; outline-offset: 2px; }
+.signin-primary { background: #1f2024; border-color: #1f2024; color: #ffffff; }
+.signin-primary:hover { background: #33353b; border-color: #33353b; }
+.signin-form { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.signin-or { margin: 6px 0 2px; font-size: 13px; color: #7a7c85; text-align: center; }
+.signin-label { font-size: 13px; font-weight: 550; color: #3b3d44; }
+.signin-input {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #cfd1d7;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1f2024;
+  font: inherit;
+  font-size: 14px;
+}
+.signin-input::placeholder { color: #9a9ca5; }
+.signin-note { margin: 4px 0 0; font-size: 14px; line-height: 1.45; color: #3b3d44; }
+.signin-error { margin: 4px 0 0; font-size: 13px; color: #b3261e; }
