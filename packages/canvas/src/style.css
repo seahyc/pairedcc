@@ -1692,22 +1692,6 @@ kbd {
 .stale-flag { position: absolute; top: 0; left: 0; padding: 1px 7px; border-radius: 999px; background: #fff1e0; border: 1px dashed #b4540a; color: #8a3f06; font: 600 11px 'JetBrains Mono', monospace; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; cursor: help; }
 .prototype-row { color: #3a2fd0; }
 
-/* Phones: the zoom bar sits just right of undo instead of leaving room for the desktop
-   panel, which pushed it over the undo button. The licence watermark stays uncovered. */
-@media (max-width: 520px) {
-  .zoom-controls,
-  .right-closed .zoom-controls {
-    left: 92px;
-    right: auto;
-  }
-}
-
-/* Below 800 px the side panel is hidden, so the canvas keeps the full width even when the
-   panel is "shown" (it otherwise kept 264 px for a panel nobody could see). */
-@media (max-width: 800px) {
-  .app .canvas-stage {
-    right: 0;
-  }
 /* Earlier versions dialog */
 .history-list {
   list-style: none;
@@ -1761,4 +1745,22 @@ kbd {
 .subtle-button.history-restore {
   font-size: 12px;
   gap: 5px;
+}
+
+/* Phones: the zoom bar sits just right of undo instead of leaving room for the desktop
+   panel, which pushed it over the undo button. The licence watermark stays uncovered. */
+@media (max-width: 520px) {
+  .zoom-controls,
+  .right-closed .zoom-controls {
+    left: 92px;
+    right: auto;
+  }
+}
+
+/* Below 800 px the side panel is hidden, so the canvas keeps the full width even when the
+   panel is "shown" (it otherwise kept 264 px for a panel nobody could see). */
+@media (max-width: 800px) {
+  .app .canvas-stage {
+    right: 0;
+  }
 }
