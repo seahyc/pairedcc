@@ -203,8 +203,8 @@ describe("what an agent is given", () => {
     expect(prompt).toContain('card written by the imported source material (review.tsv, row 3): """Gap / exposure: silent on timing"""');
   });
   it("offers a record its own first question, and has an import tool", () => {
-    expect(startersFor({ record: true })[0]).toBe("Is this point valid?");
-    expect(startersFor({ record: false })[0]).toBe("What's missing?");
+    expect(startersFor([], true)[0]).toBe("Is this point valid?");
+    expect(startersFor([], false)[0]).toBe("What's missing?");
     expect(toolDefs.find((t) => t.name === "canvas_import")?.op).toBe("import");
   });
 });

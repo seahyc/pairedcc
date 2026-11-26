@@ -5,7 +5,7 @@ import { HUMAN } from "./scratchbook";
 import { planImport, parseImport, summarise, type ImportAs, type ImportFormat, type ImportPlan } from "./import-parse";
 import { sourceOf, type SourceMeta } from "./import-meta";
 import { tableLayout } from "./table-shape";
-import { planSideBySide, type RecordBox } from "./import-compare";
+import { fieldSlots, planSideBySide, type RecordBox } from "./import-compare";
 import { citationsOf, planCited, sectionKey, type SectionBox } from "./import-cite";
 
 // Putting an import on the board. Everything made here is an ordinary object: it moves,
@@ -87,7 +87,10 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
     };
 
     if (plan.kind === "records") {
-      const columns = Math.min(4, Math.max(1, ...plan.records.map((r) => r.fields.length)));
+      // One slot per field column for the whole import, so a blank cell leaves a gap instead of
+      // shifting the record's later cards into another column's place.
+      const slots = fieldSlots(plan.records, plan.table.columns);
+      const columns = slots.perRow;
       const w = FIELD_W[columns], rowW = columns * w + (columns - 1) * GAP;
       width = rowW;
       const verdict = plan.verdictColumns.length
@@ -112,9 +115,10 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
         });
         y += heightOf(editor, titleId) + 10;
         const ids = [titleId];
-        for (let i = 0; i < record.fields.length; i += 4) {
-          const row = record.fields.slice(i, i + 4).map((field, j) =>
-            card(start.x + j * (w + GAP), y, w, "source", labelled(field.column, field.text), `${field.column} · ${record.title}`, {
+        const slotRows = [...new Set(record.fields.map((f) => slots.place(f.column).row))].sort((a, b) => a - b);
+        for (const slotRow of slotRows) {
+          const row = record.fields.filter((f) => slots.place(f.column).row === slotRow).map((field) =>
+            card(start.x + slots.place(field.column).col * (w + GAP), y, w, "source", labelled(field.column, field.text), `${field.column} · ${record.title}`, {
               kind: "field",
               row: record.row,
               column: field.column,
@@ -262,7 +266,6 @@ export function importForAgent(editor: Editor, value: unknown, actor: string) {
     }),
   };
 }
-
 /** The record an object belongs to: the record itself, or the record its title or field card sits in. */
 export function recordOf(editor: Editor, shape: TLShape | undefined): TLShape | undefined {
   const kind = sourceOf(shape)?.kind;

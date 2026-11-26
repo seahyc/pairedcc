@@ -18,7 +18,7 @@ Set `PAIRED_SESSION` to target a particular tab. Its ID persists across reloads 
 
 Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_update`, `canvas_image`, `canvas_connect`, `canvas_annotate`, `canvas_asks`, `canvas_ask_status`, `canvas_answer`, `canvas_import`, `canvas_feedback`, `canvas_reply`, `canvas_resolve`, `canvas_remove`, `canvas_focus`, `canvas_page`, `canvas_screenshot`.
 
-Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`.
+Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`, `canvas_group`.
 
 ### Learning prompts (prototype)
 
@@ -39,7 +39,7 @@ Prototype tools (`canvas_learn`, `canvas_converge` and the data tools) are flagg
 
 ### Overview, then detail
 
-`canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects.
+`canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. It also returns `clusters`: piles of nearby objects at that level, each with `ids` (the first 50 members), `count` and `bounds`, largest first (at most 50 clusters). Objects are in one cluster when their edges are within 60 px of a neighbour's, in chains, and arrows are left out. Arrangement is often how the person groups ideas without drawing a frame, so treat a cluster as a likely group and ask before acting on it. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects.
 
 ### Data prototype
 
@@ -65,9 +65,12 @@ Suggested loop: read the chart's `widget`, cite `summary` and the selected value
 
 ### Converge (prototype)
 
-`canvas_converge` pulls several alternatives, branches or hypotheses into one synthesis. It runs only in a tab opened with `?prototype=converge`. Pass `sourceIds` (2 to 20 objects on the open page, each once, none hidden) and `text` (what they add up to and where they still disagree). Optionally pass a `name` and an `x`, `y` position; by default the card goes 80 px right of the sources, aligned with their top.
+`canvas_converge` pulls several alternatives, branches or hypotheses into one synthesis. It runs only in a tab opened with `?prototype=converge`. Pass `sourceIds` (2 to 20 objects on the open page, each once, none hidden) and `text` (what they add up to and where they still disagree). Optionally pass `points`, claims that each cite the `sourceIds` they rest on, a `name`, and an `x`, `y` position. By default the card goes 80 px right of a column of sources (top-aligned) or 80 px below a row of them (left-aligned), so no arrow crosses a source.
 
-It creates one agent card with `meta.role: "synthesis"`, `meta.convergedFrom` (the source IDs) and `meta.inputs` (each source's version at that moment), plus a derived-from arrow from each source. The result is `{ synthesis, sources, connections }`. Because the sources are recorded as inputs, `read` reports the synthesis as `stale` once any source changes, and the board flags it. Revise it then. The sources are never moved or deleted, and the whole operation is one run, so `canvas_undo_run` removes the card and arrows together.
+It creates one agent card with `meta.role: "synthesis"`, `meta.convergedFrom` (the source IDs) and `meta.inputs` (each source's version at that moment), plus a derived-from arrow from each source labelled A, B, C… The card lists each point with the letters of the sources it cites, and keeps `meta.points`. The result is `{ synthesis, sources, labels, connections }`, where `labels` maps each source ID to its letter. Because the sources are recorded as inputs, `read` reports the synthesis as `stale` once any source changes, and the board flags it. Revise it then. The sources are never moved or deleted, and the whole operation is one run, so `canvas_undo_run` removes the card and arrows together.
+
+The person can converge too: open the canvas with `?prototype=converge`, select two or more objects and press **Pull into a synthesis** in Properties. That makes the same linked card, in their handwriting and empty, ready for them to write their own conclusion.
+
 ### Relationships, sources and transformations (prototype)
 
 `canvas_get` adds three read-only fields from the working spec's proposed primitives. They are derived from what the board already records, so they never disagree with it:
@@ -219,6 +222,8 @@ Primitive creation and updates accept `font` (draw/sans/serif/mono), `size` (s/m
 
 `canvas_duplicate` accepts the same guarded `objects` list plus optional `offsetX` (default 320) and `offsetY` (default 0). Frames bring their descendants. Include arrows in the duplicated set to preserve bindings between copies. The result contains copied objects and the new selection; originals remain intact.
 
+`canvas_group` wraps objects in a named frame without moving them, to show they belong together. Pass the same guarded `objects` list, a `name` for the frame, and optional `padding` (default 40) around their combined bounds. The objects must share a parent: all on the page, or all in one frame, in which case the new frame nests inside it. A stale revision or a locked object rejects the whole call. The result has the `frame` and the `objects`, now inside it, with their new revisions. It is one run, so `canvas_undo_run` takes it back.
+
 A useful first request:
 
 > Read the current canvas. Create three visual alternatives beside the reference. Preserve all originals. Read the annotations attached to those alternatives before making revisions, and use a screenshot to inspect your results.
@@ -289,11 +294,12 @@ The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. F
 | `scene` | `nodes` with unique keys, optional frame parentKey; optional connections between keys |
 | `arrange` | Guarded objects, `layout` (row/column/grid), page-space x/y, optional gap/columns |
 | `duplicate` | Guarded objects, optional offsetX/offsetY |
+| `group` | Guarded objects, `name`, optional `padding`; wraps them in a frame in place |
 | `learn` | Prototype: `mode` (predict/generate), `question`, `x`, `y`, optional `width`, `hideIds` |
 | `overview` | Optional `parentId`, `limit`, `cursor`; compact listing of one level |
 | `runs` | Optional `limit`; recent agent runs in this tab |
 | `undo_run` | `runId`; reverses that run only, or fails listing conflicts |
-| `converge` | Prototype: `sourceIds`, `text`, optional `name`, `x`, `y`; synthesis card with derived-from arrows |
+| `converge` | Prototype: `sourceIds`, `text`, optional `points` (each `text` and its `sourceIds`), `name`, `x`, `y`; synthesis card with lettered derived-from arrows |
 | `dataset` | Prototype: `x`, `y`, optional size; `synthetic: "orders"` or `columns`, `rows`, `title`, `source` |
 | `chart` | Prototype: `x`, `y`, optional size, `datasetId`, `state` (x, y, aggregate, filter, selected) |
 | `chart_state` | Prototype: `id`, `expectedRevision`, partial `state`; recomputes on current data |
@@ -304,6 +310,8 @@ Mutations operate on the browser's current page. Read before changing objects; i
 ### Retry and revision behaviour
 
 Keep the same `requestId` and request content when retrying an HTTP operation. Within one development-server run, identical retries reuse the original result; changed content with the same ID is rejected. The ledger holds the newest 1,000 requests and is in memory. Restarting the server resets it. This is not durable exactly-once execution across server restarts.
+
+An optional `"via": "mcp"` marks a request from an MCP client, a chat agent the person talks to; the bundled MCP server sends it. When no agent is listening for asks, an ask names the last such agent and tells the person to ask it in their chat. Scripts leave `via` out, so they are never offered that way.
 
 Updates/removals require the object's current revision. A stale revision fails without applying that operation. If a request times out or the browser disconnects before acknowledgement, its outcome may be unknown: read the canvas before issuing a new mutation. All connected agents are trusted local processes; the actor label is attribution, not authenticated identity. The API rejects remote and cross-origin requests. No secrets or paid providers are configured.
 
