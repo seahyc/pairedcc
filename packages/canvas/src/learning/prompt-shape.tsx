@@ -53,6 +53,8 @@ function answer(editor: Editor, shape: PromptShape, next: PromptProps) {
   editor.updateShape<PromptShape>({ id: shape.id, type: "prompt", props: next, meta: { ...shape.meta, answeredBy: "Human" } });
 }
 
+const checkCopy = { label: "Check me · explain it first", field: "From memory, in your own words", commit: "Show me the answer", committed: "You said" };
+
 export class PromptShapeUtil extends BaseBoxShapeUtil<PromptShape> {
   static override type = "prompt" as const;
   static override props: RecordProps<PromptShape> = {
@@ -84,12 +86,14 @@ function PromptView({ shape }: { shape: PromptShape }) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const hidden = useValue("prompt hides", () => waitingOn(editor, shape.id).length, [editor, shape.id]);
-  const copy = modeCopy[shape.props.mode];
+  // A check the person asked for (Check me) is part of the default board, not the prototype.
+  const check = typeof shape.meta.check === "string";
+  const copy = check ? checkCopy : modeCopy[shape.props.mode];
   const { status } = shape.props;
   const stop = (e: React.PointerEvent | React.KeyboardEvent) => editor.markEventAsHandled(e);
   return (
-    <HTMLContainer className={`learn-prompt is-${status}`} style={{ width: shape.props.w, height: shape.props.h }}>
-      <div className="learn-kind">✦ {copy.label} · learning prototype</div>
+    <HTMLContainer className={`learn-prompt is-${status}${check ? " is-check" : ""}`} data-prompt={shape.id} style={{ width: shape.props.w, height: shape.props.h }}>
+      <div className="learn-kind">✦ {copy.label}{check ? "" : " · learning prototype"}</div>
       <p className="learn-question">{shape.props.question}</p>
       {status === "open" ? (
         <div className="learn-form" onPointerDown={stop}>
@@ -101,7 +105,15 @@ function PromptView({ shape }: { shape: PromptShape }) {
               setDraft(e.target.value);
               setError("");
             }}
-            onKeyDown={stop}
+            onKeyDown={(e) => {
+              stop(e);
+              // Changed your mind before writing anything: Ctrl/⌘+Z takes the check back in one step.
+              if (check && !draft && (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
+                e.preventDefault();
+                editor.undo();
+                editor.focus();
+              }
+            }}
           />
           {error && <span className="learn-error">{error}</span>}
           <div className="learn-actions">
@@ -127,16 +139,17 @@ function PromptView({ shape }: { shape: PromptShape }) {
         <div className="learn-answer">
           <span>{copy.committed}:</span>
           <p>{shape.props.response}</p>
+          {check && <span className="learn-compare">The answer is back beside this: compare the two.</span>}
         </div>
       ) : (
-        <div className="learn-answer skipped">Skipped; shown directly.</div>
+        <div className="learn-answer skipped">{check ? "Skipped; the answer is back beside this." : "Skipped; shown directly."}</div>
       )}
     </HTMLContainer>
   );
 }
 
 /** Create a prompt and hide the given objects until it is answered, as one undo step. */
-export function createPrompt(editor: Editor, value: unknown, actor: string) {
+export function createPrompt(editor: Editor, value: unknown, actor: string, extraMeta: Record<string, unknown> = {}, height = 250) {
   const input = learnInput.parse(value);
   const shapes = input.hideIds.map((id) => {
     const s = editor.getCurrentPageShapes().find((s) => s.id === id);
@@ -154,8 +167,8 @@ export function createPrompt(editor: Editor, value: unknown, actor: string) {
       type: "prompt",
       x: input.x,
       y: input.y,
-      meta: { name: modeCopy[input.mode].label, revision: 0, createdBy: actor, learning: true },
-      props: { w: input.width, h: 250, mode: input.mode, question: input.question, response: "", status: "open" },
+      meta: { name: modeCopy[input.mode].label, revision: 0, createdBy: actor, learning: true, ...extraMeta },
+      props: { w: input.width, h: height, mode: input.mode, question: input.question, response: "", status: "open" },
     });
     for (const s of shapes) editor.updateShape({ id: s.id, type: s.type, meta: { ...s.meta, revealAfter: id } });
     editor.deselect(...shapes.map((s) => s.id));

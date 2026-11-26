@@ -29,6 +29,8 @@ Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`, `canvas
 
 Only objects an agent made can be hidden; the person's own work is refused. The person can always skip in one click, and the hidden objects then appear directly. Their layer names are hidden too. Agents cannot answer a prompt. Read its `props.status` (open, committed or skipped) and `props.response`, then compare the answer with the outcome. To try it by hand, open the canvas with `?prototype=learning` and use **Learning prototype page**.
 
+On every board the person can also ask to be checked on one of your answers (**Check me**, key E). That makes a prompt with `meta.check` set to the answer's id and `createdBy: "Human"`; your answer is hidden from the person (not from you) until they commit or skip, and `meta.revealAfter` on it names the prompt. Do not repeat the answer elsewhere while such a prompt is open; read its `props.response` afterwards if the person asks how they did.
+
 Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
 
 Data prototype tools: `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` (see [Data prototype](#data-prototype)).

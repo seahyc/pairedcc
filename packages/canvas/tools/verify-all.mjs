@@ -68,6 +68,7 @@ const CHECKS = [
   { name: 'connector-follow', file: 'verify-connector-follow.ts', args: (d) => [join(d, 'connector')] },
   { name: 'answer-show', file: 'verify-answer-show.mjs', args: (d) => [d] },
   { name: 'retry-key', file: 'verify-retry-key.mjs', args: (d) => [d] },
+  { name: 'check-me', file: 'verify-check-me.mjs', args: (d) => [d] },
   { name: 'menu-keys', file: 'verify-menu-keys.mjs', args: (d) => [d] },
   { name: 'import-follow', file: 'verify-import-follow.mjs', args: (d) => [d, ORIGIN] },
   { name: 'stale-edges', file: 'verify-stale-edges.mjs', args: (d) => [d] },

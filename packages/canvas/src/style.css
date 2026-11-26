@@ -1763,7 +1763,9 @@ kbd {
 .learn-skip { pointer-events: all; font: inherit; font-size: 13px; background: none; border: 0; color: #55524c; text-decoration: underline; cursor: pointer; }
 .learn-hidden, .learn-error { font-size: 12px; color: #6b66a8; }
 .learn-error { color: #a50f4d; }
+.learn-answer { flex: 1; min-height: 0; overflow-y: auto; overflow-wrap: anywhere; display: flex; flex-direction: column; gap: 4px; }
 .learn-answer span { font-size: 12px; color: #6b66a8; }
+.learn-compare { margin-top: auto; }
 .learn-answer p { margin: 2px 0 0; font: 24px/1.2 'Caveat Brush', cursive; color: #a50f4d; }
 .learn-answer.skipped { font-size: 13px; color: #55524c; }
 /* Data prototype: dataset and chart objects (behind ?prototype=data). */
