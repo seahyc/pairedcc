@@ -61,13 +61,16 @@ export function sniffDelimiter(text: string): "\t" | "," | ";" {
   // more) wins; a single-cell title row above the table does not count against it.
   const head = text.slice(0, 20_000);
   const score = (d: "\t" | "," | ";") => {
-    const rows = parseDelimited(head, d).slice(0, 30).filter((r) => r.some((c) => c.trim()));
+    // Blank lines (some exports lead with many) carry no evidence, so they are dropped first.
+    const rows = parseDelimited(head, d).filter((r) => r.some((c) => c.trim())).slice(0, 30);
     const counts = rows.map((r) => r.length).filter((n) => n > 1);
     if (!counts.length) return 0;
     const tally = new Map<number, number>();
     for (const n of counts) tally.set(n, (tally.get(n) ?? 0) + 1);
     const [width, agree] = [...tally.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0];
-    return (agree / rows.length) * 1000 + Math.min(width, 50);
+    // A quote left inside a cell means this delimiter cut through a quoted field.
+    const stray = rows.filter((r) => r.some((c) => c.includes('"'))).length;
+    return (Math.max(0, agree - stray) / rows.length) * 1000 + Math.min(width, 50);
   };
   const scores = (["\t", ",", ";"] as const).map((d) => [d, score(d)] as const);
   const best = scores.reduce((a, b) => (b[1] > a[1] ? b : a));

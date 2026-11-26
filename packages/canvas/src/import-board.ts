@@ -1,7 +1,7 @@
 import { createShapeId, toRichText, type Editor, type TLRichText, type TLShape, type TLShapeId } from "tldraw";
 import { z } from "zod";
 import { atomic, connect } from "./agent-operations";
-import { HUMAN } from "./scratchbook";
+import { HUMAN, inkTargets } from "./scratchbook";
 import { MAX_TABLE_ROWS, planImport, parseImport, summarise, type ImportAs, type ImportFormat, type ImportPlan } from "./import-parse";
 import { sourceOf, type SourceMeta } from "./import-meta";
 import { tableLayout } from "./table-shape";
@@ -204,6 +204,8 @@ export function importFingerprint(editor: Editor, importId: string) {
     .filter((r) => {
       if (r.typeName === "binding") return ids.has((r as { toId: string }).toId);
       if (r.typeName !== "shape" || ids.has(r.id)) return false;
+      // Pen feedback is tied to what it covers, not by reference.
+      if ((r as TLShape).type === "draw") return inkTargets(editor, r as TLShape, shapes).length > 0;
       const meta = JSON.stringify((r as TLShape).meta ?? {});
       return [...ids].some((id) => meta.includes(id));
     })

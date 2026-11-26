@@ -84,6 +84,23 @@ check('after a pick, Show as table is refused and says why', toasts.some(t => t.
 check('the cards and the pick are still there', records(objs).length === 10 && objs.find(o => o.id === first.id)?.meta.mark === 'picked');
 await shot('01-switch-refused');
 
+// (b) A pen stroke across an imported card also counts as feedback on it.
+await pasteReview();
+objs = await objects();
+const newest = objs.filter(o => o.meta.source).map(o => o.meta.source.at).sort().pop();
+const target = objs.filter(o => o.meta.source?.kind === 'field' && o.meta.source.at === newest).sort((a, b) => a.y - b.y || a.x - b.x)[0];
+const box = await p.evaluate((id) => { const el = document.querySelector(`[data-shape-id="${id}"]`); const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }, target.id);
+await p.keyboard.press('Escape'); await p.evaluate(() => { window.__pairedEditor.selectNone(); window.__pairedEditor.setCurrentTool('draw'); });
+await p.mouse.move(box.x + box.w * 0.2, box.y + box.h * 0.3); await p.mouse.down();
+for (let k = 1; k <= 10; k++) await p.mouse.move(box.x + box.w * (0.2 + 0.06 * k), box.y + box.h * (0.3 + 0.04 * k));
+await p.mouse.up(); await p.waitForTimeout(300);
+await p.keyboard.press('Escape'); await p.keyboard.press('v');
+const drew = await p.evaluate(() => window.__pairedEditor.getCurrentPageShapes().some((s) => s.type === 'draw'));
+await summaryButton('Show as table instead').click(); await p.waitForTimeout(800);
+objs = await objects();
+const toasts2 = await p.locator('.toast').allTextContents();
+check('after a pen stroke across a card, Show as table is refused', drew && toasts2.some(t => t.includes('has changed since it came in')) && objs.some(o => o.id === target.id), `drew=${drew} ${JSON.stringify(toasts2)}`);
+
 // (a) Quoted semicolons do not split a comma file.
 await p.locator('input[aria-label="Import a file"]').setInputFiles({ name: 'packing.csv', mimeType: 'text/csv', buffer: Buffer.from('id,notes\n1,"Ready; reviewed; approved"\n2,"Packed; labeled; shipped"\n') });
 await p.waitForTimeout(1200);

@@ -34,3 +34,15 @@ describe("a table's measured height is derived", () => {
     expect(isDerivedField("datatable", "props.rows")).toBe(false);
   });
 });
+
+describe("delimiter guess (review of #85)", () => {
+  it("is not fooled by leading blank lines in a semicolon export", () => {
+    expect(sniffDelimiter(`${"\n".repeat(35)}id;amount\n1;3,50\n2;4,00\n`)).toBe(";");
+  });
+  it("prefers the delimiter whose quotes are well formed", () => {
+    const csv = 'ID,"Notes; next steps; owner"\n1,"Checked, ship; label, close; Mina"\n2,"Packed, load; book, notify; Jay"\n';
+    expect(sniffDelimiter(csv)).toBe(",");
+    const parsed = parseImport(csv, "csv");
+    expect(parsed.kind === "table" && parsed.table.columns).toEqual(["ID", "Notes; next steps; owner"]);
+  });
+});
