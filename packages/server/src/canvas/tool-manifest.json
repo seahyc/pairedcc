@@ -270,6 +270,7 @@
                 },
                 "relation": {
                   "default": "derived-from",
+                  "description": "What the arrow means. reference: one supports, cites or is evidence for the other (use it for 'supports', with a label); alternative: both are options for the same thing; derived-from (the default): one was made from the other, drawn from the source to what was made; feedback: a comment on the other.",
                   "type": "string",
                   "enum": [
                     "reference",
@@ -406,9 +407,11 @@
             }
           },
           "offsetX": {
+            "description": "Leave both offsets out to place the copy just right of the originals: their combined width plus 40, so a wide frame never overlaps its copy.",
             "type": "number"
           },
           "offsetY": {
+            "description": "Default 0, or below the originals when a copy beside them would leave the frame that holds them.",
             "type": "number"
           }
         },
@@ -914,6 +917,7 @@
           },
           "relation": {
             "default": "derived-from",
+            "description": "What the arrow means. reference: one supports, cites or is evidence for the other (use it for 'supports', with a label); alternative: both are options for the same thing; derived-from (the default): one was made from the other, drawn from the source to what was made; feedback: a comment on the other.",
             "type": "string",
             "enum": [
               "reference",
@@ -1102,6 +1106,15 @@
               "answered",
               "failed",
               "all"
+            ]
+          },
+          "page": {
+            "default": "all",
+            "description": "all (default): asks on every page, each with pageName. current: only the page open in the tab.",
+            "type": "string",
+            "enum": [
+              "all",
+              "current"
             ]
           }
         }
