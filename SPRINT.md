@@ -442,7 +442,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     move records and sections with `updateShape` before selecting them, so the comments, notes and
     replies attached to them stay where they were. Done when a comment on a moved record or section
     moves with it in the same undo step, checked in a browser.
-71. **The web page reader stays quick on awkward markup.** (Review of #65.) 50,000 unclosed `<li>`
+71. (PR #93 open, awaiting review.) **The web page reader stays quick on awkward markup.** (Review of #65.) 50,000 unclosed `<li>`
     take 4 s and 20,000 unclosed advert `<div>`s 1.2 s; the file limit is 2 MB. Done when a 2 MB
     page of unclosed tags is read, or refused with a plain message, in under a second, with a test.
 72. **A fresh agent-usability attempt on the merged branch.** The 23/24 in the scorecard was
@@ -475,7 +475,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 75. First board never moves the view away | claude/sprint-calm-early | 2026-11-26T13:05Z
 71. Web page reader stays quick on awkward markup | claude/sprint-html-fast | 2026-11-26T13:01Z
-71. Web page reader stays quick on awkward markup | claude/sprint-html-linear | 2026-11-26T13:00Z
 74. Stale flags at the canvas edge | claude/sprint-stale-edges | 2026-11-26T12:58Z
 70. Side by side and Show cited bring comments along | claude/sprint-follow-import | 2026-11-26T13:10Z
 72. Fresh agent-usability attempt on the merged branch | claude/sprint-agent-attempt-3 | 2026-11-26T13:02Z
@@ -729,3 +728,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:53Z | build-B | 67 The person chooses what an ask leaves out | #90 | New item from Solveit (hidden messages excluded from context); Leave out (L) behind `?prototype=context`; withheld from frame, history and record parts, counted on the ask; real tab 7 fails before, 17/17 after; acceptance, ask loop, safety, persistence unchanged |
 | 2026-11-26T12:56Z | build-A | 73 Older board gets the calm board | #91 | verify-calm 32/33 → 33/33 (stand-in model); persistence and scorecard unchanged |
 | 2026-11-26T12:59Z | build-A | 65 Asks and the section reader; #85 review follow-up; merges | #89 #85 #73 | #89: edited titles reach the agent, follow-ups keep record parts (browser before 5/7 → 7/7), marked numeric headers, pipe-less markdown tables, fenced code lines (4+1 failing-first tests); #85: blank-line and cut-quote delimiter cases, pen strokes count as feedback (browser 10/10); #73 and #89 merged with claude/sprint-int after #60 and a frame-history change landed |
+| 2026-11-26T13:04Z | build-A | 71 Web page reader stays quick | #93 | One pass over the tags: 2 MB of unclosed <li> 38 s → 0.2 s, unclosed advert <div>s 31 s → 0.02 s; #65's behaviour tests unchanged; verify-webpage 9/9; scorecard unchanged |
