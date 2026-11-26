@@ -114,11 +114,11 @@ task by which measure is furthest from target, not by backlog order.
 2. (Merged, see Done.) **The first end-to-end acceptance scenario** in the working spec, built as a prototype: dataset
    object, chart view, direct filtering, agent reads exact widget state, stale marking when an input
    changes. Synthetic data.
-3. (PRs #23 #26 open, awaiting review; #26 stacked on #23.) **Foundational primitives** from the spec as typed objects with tests: Relationship, Source,
+3. (#23 #26 merged; #26 stacked on #23.) **Foundational primitives** from the spec as typed objects with tests: Relationship, Source,
    Transformation and Agent run (request, scope, progress, attributable and reversible changes).
 4. (Merged, see Done.) **Agent interface.** Overview-then-detail reads so agents never need a full-board dump; an agent
    operation undoable as one unit without undoing human edits; tests over HTTP and MCP.
-5. (PR #27 open, awaiting review; stacked on #20.) **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
+5. (#27 merged; stacked on #20.) **Converge.** A way to pull branches of alternatives into a synthesis card that keeps links to
    what it came from.
 6. (Merged, see Done.) **Learning mode prototypes** from the spec: predict-then-check and generate-first.
 7. **Robustness.** Import validation fuzz tests, large-board performance measured and recorded
@@ -126,7 +126,7 @@ task by which measure is furthest from target, not by backlog order.
 8. (Merged, see Done.) **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
    AGENT_API.md does not yet describe `canvas_dataset`, `canvas_chart`, `canvas_chart_state`,
    `canvas_cell`, the `inputs` field on create, or the `dataset` / `widget` / `stale` read fields.
-9. (PR #25 open, awaiting review.) **Editor-level tests for the data prototype's agent operations.** `test/data-agent.test.ts`
+9. (#25 merged.) **Editor-level tests for the data prototype's agent operations.** `test/data-agent.test.ts`
    checks schemas only; stale-write rejection, locked-object rejection, partial chart state and
    `read` omitting rows are proven only by `tools/verify-data-agent.cjs`, which `pnpm test` does not
    run. Done when breaking any of those behaviours fails `pnpm test:canvas` (or the eval).
@@ -134,7 +134,7 @@ task by which measure is furthest from target, not by backlog order.
     (`test-token-1`) that the server never issues, so it fails at the first step even with Postgres,
     Redis and `JWT_SECRET` available. Done when it passes against a local server with a real
     sign-in path and its required services are documented. Do not delete or skip it.
-11. (PR #22 open, awaiting review.) **Shared-edit gaps found in review of per-run undo.** (a) Undoing a run that deleted a shape
+11. (#22 merged.) **Shared-edit gaps found in review of per-run undo.** (a) Undoing a run that deleted a shape
     puts it back even when its parent frame has since been deleted, leaving an orphan; (b) any
     agent can list and undo another agent's runs in the same tab; (c) an agent can hide an object
     the person made behind a learning prompt. Done when each has a scripted race in the eval's
@@ -184,7 +184,7 @@ task by which measure is furthest from target, not by backlog order.
 25. (Merged, see Done.) **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
     "Offline · saved on this device" and retries for ever, re-uploading each time. Done when a
     refused save says why on the chip, stops retrying until the board changes, and has a test.
-26. (PR #28 open, awaiting review.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
+26. (#28 merged.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
     Done when the server enforces a per-account limit with a test and the choice is recorded.
 
 27. (Merged, see Done.) **Group objects through a structured operation.** The spec's agent interface asks for
@@ -231,7 +231,7 @@ task by which measure is furthest from target, not by backlog order.
     as text. (b) A one-column file drops rows whose value is a quoted empty string. (c) A
     Windows-1252 file imports with replacement characters: decode strictly and say to re-export as
     UTF-8. Done when each has a failing-first test and is fixed.
-52. (PR #72 open, awaiting review.) **Stale flags never spoil a hidden answer, and are readable by keyboard.** (From an automated
+52. (#72 merged.) **Stale flags never spoil a hidden answer, and are readable by keyboard.** (From an automated
     review of #34.) The stale reason quotes an input's name even when that input is hidden behind
     a learning prompt; and the full reason is only in a hover tooltip. Done when hidden inputs are
     unnamed in the flag and the full reason is reachable without a pointer.
@@ -310,7 +310,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     sibling options with their marks, the resident agent's prompt says to build on picks and not
     offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
 
-45. ((a) to (c): #66 merged; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): PR #70 open, awaiting review. (d): PR #76 open, awaiting review.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
+45. ((a) to (c): #66 merged; (b) and (c) reproduced and fixed, (a) recorded as a decision. (e): #70 merged. (d): #76 merged.) **Board sync gaps from review of #12 and #15 (bot review, not yet reproduced).** Each needs a
     failing test first, then a fix or a recorded decision: (a) after a board is deleted and
     recreated under the same ID, a save or delete holding the old revision number is accepted
     (revisions restart at 1); (b) PostgreSQL `JSONB` rejects a snapshot holding an unpaired UTF-16
@@ -321,7 +321,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     made while the account's board is loading are replaced (only objects created in that window are
     carried over).
 
-47. (Renumbered from 45 to avoid a clash. PR #67 open, awaiting review; stacked on #64.) **An ask about a frame is about what it holds.** `docs/canvas/principles.md`, finding 3
+47. (Renumbered from 45 to avoid a clash. #67 merged; stacked on #64.) **An ask about a frame is about what it holds.** `docs/canvas/principles.md`, finding 3
     (spatial thinking comes first: inside) and finding 2 (moving things is thinking). Selecting a
     frame and asking gives the agent only "(Pricing, no text)": an ask's `frame` field is the
     frame the selection sits in, so a selected frame's own contents are never sent, though the
@@ -330,31 +330,31 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     left out), the resident prompt lists them under the frame, documented, unit-tested and checked
     in a real tab.
 
-46. (PR #69 open, awaiting review; stacked on #64 and #67.) **An answer lands on its ask's page.** `docs/canvas/principles.md`, "Not done": "An ask on a
+46. (#69 merged; stacked on #64 and #67.) **An answer lands on its ask's page.** `docs/canvas/principles.md`, "Not done": "An ask on a
     page that is not open fails with a message and a retry." If the person asks, then opens another
     page while waiting (the ask loop invites moving on), `answer` throws "That ask is on another
     page" and the ask shows failed although the agent answered. Done when an answer is placed under
     its ask on the ask's own page whatever page is open, the person on another page is told who
     answered and where, the principles' "Not done" line is updated, unit-tested, and checked in a
     real tab (failing before, passing after).
-53. (PR #74 open, awaiting review.) **`canvas_read` can find objects by their text.** The fresh agent reported that `canvas_read`
+53. (#74 merged.) **`canvas_read` can find objects by their text.** The fresh agent reported that `canvas_read`
     is large and has no text filter (Decisions needed, 13), so finding "the card about pricing"
     means reading everything. Done when `read` accepts a `text` filter (case-insensitive, matched
     against an object's text and name) that combines with `ids`, the tool definition and AGENT_API
     document it, unit tests cover matching, and a live MCP call shows the smaller result.
 
-54. (PR #80 open, awaiting review.) **Text never leaves its container, even without spaces.** The brief's rule ("Text never leaves
+54. (#80 merged.) **Text never leaves its container, even without spaces.** The brief's rule ("Text never leaves
     its container") is checked only with ordinary prose (`verify-calm.mjs`). Done when a long URL,
     a long unbroken word, a code card and a long frame name each stay inside their card, comment,
     answer or frame in a real page at 1440 and 390 px, checked by a script that fails before the fix,
     with before/after screenshots.
-55. (PR #75 open, awaiting review.) **Board history reaches back more than a few minutes.** Sync saves after every pause, so the
+55. (#75 merged.) **Board history reaches back more than a few minutes.** Sync saves after every pause, so the
     50 kept revisions cover a few minutes of work and "Earlier versions" cannot reach yesterday.
     Done when the server keeps the newest 20 revisions and thins older ones to about one per 15
     minutes (still at most 50 per board), by one tested pure rule used by both stores, checked
     against real Postgres, with the choice recorded.
 
-56. (PR #77 open, awaiting review.) **A dropped or pasted image arrives at a size that fits beside your thoughts.** Feedback 8
+56. (#77 merged.) **A dropped or pasted image arrives at a size that fits beside your thoughts.** Feedback 8
     ("it should render in a way that's super intuitive") and the calm brief (one obvious thing on
     screen). An image is placed at its pixel size, so a 3000 px photo covers the whole board and
     every card on it (seen while checking item 45 (d)). Done when an image the person adds is
@@ -369,17 +369,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     only combining diacritics (U+0300 to U+036F). Done when each has a failing test, then a fix.
     Build on #74 once it merges.
 
-57. (PR #81 open, awaiting review.) **The development board store survives its folder being removed.** Deleting
+57. (#81 merged.) **The development board store survives its folder being removed.** Deleting
     `packages/canvas/.local/boards` (or `PAIRED_BOARDS_DIR`) while `pnpm dev:canvas` runs makes
     every board call fail with ENOENT, shown as a Vite error overlay, until the folder is made by
     hand (seen while resetting boards for item 46's screenshots). Done when list answers empty and
     the next save recreates the folder, with a failing-first test.
-59. (PR #82 open, awaiting review.) **The safety measure covers restoring an earlier version.** Restore (#32, #35) can lose another
+59. (#82 merged.) **The safety measure covers restoring an earlier version.** Restore (#32, #35) can lose another
     browser's newer edit if it ever merges or overwrites. Done when the eval's Safety row has a race:
     browser A restores an earlier revision after browser B saved a newer edit; the restore is
     refused and B's edit is still on the server and in A after reload (0 human edits lost).
 
-60. (Renumbered from 59 to avoid a clash. PR #83 open, awaiting review.) **Key hints name the person's own keys.** `docs/canvas/principles.md`, finding 7 (recognising
+60. (Renumbered from 59 to avoid a clash. #83 merged.) **Key hints name the person's own keys.** `docs/canvas/principles.md`, finding 7 (recognising
     beats recalling) and playtest item 6 ("I don't know how to trigger the agent"). Every hint on
     screen says ⌘↵ (selection bar, typing hint, tooltips, shortcut sheet, the first board's card),
     but on Windows and Linux the key is Ctrl, so the one way to ask is named in a key those people
@@ -405,7 +405,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     Done when an answer that lands while the person is looking at its ask (not typing or dragging)
     is brought wholly into view, options wrap into rows that fit the window when one row cannot,
     unit-tested, and checked in a real page at 1440 and 390 px (failing before, passing after).
-64. (PR #84 open, awaiting review.) **CSV codes keep their leading zeros.** Decisions needed 11: an all-numeric column becomes
+64. (#84 merged.) **CSV codes keep their leading zeros.** Decisions needed 11: an all-numeric column becomes
     numbers, so codes such as `007` or the ZIP `02139` lose their zeros. Done when a column holding
     any zero-padded value (`0` followed by a digit, before any decimal point) stays text, plain
     numbers (`0`, `0.5`, `-3`, `1e3`) still become numbers, with unit tests and a drop in the page.
@@ -497,6 +497,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Done
 - 78. Ask progress announced (build-A): PR #101 (one polite live region says each change of an ask's state once; verify-ask-live 3/8 → 8/8).
+- Reviewed and merged 2026-11-26 by the review lane: #67 to #84 and #96, 19 more (squash), each after merging in the integration branch and re-running its proof; review fixes are in the Log.
 - 76. Agent never rewrites the person's words (build-A): PR #99 (text change to a person's object refused; new safety race 9/10 → 10/10; agent tasks self-test 24/24).
 - 72. Fresh agent-usability attempt (build-B): PR #97 (23/24, median 2 tool calls; task 14's check corrected to accept a fuller answer naming the top region first as highest; friction filed as item 77).
 - 71. Web page reader stays quick (build-B): PR #98, duplicate of #93 from another lane (2 MB of unclosed tags: 145 s worst before, under 0.5 s after; failing-first tests).
@@ -551,6 +552,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Decisions needed
 - (build-A, item 78) Ask announcements are polite, failures included, so they never interrupt; only asks on the open page are announced (an answer on another page has #69's toast).
+- (review, #67) That merge reverted #63's AGENT_API paragraphs and a table; restored in b8e69de and 3cdc71b. Merges are now checked for removed lines the PR's own commits did not remove. Build lanes that merge the integration branch into a PR branch should not resolve a conflicted file by taking their own older copy whole.
+- (review, #76) Images are stored in the board snapshot; every save re-uploads them and every revision keeps a copy. Alternative: a server asset store.
+- (review, #73) The PDF reader is built in and refuses PDFs with compressed object streams. Alternative: pdf.js.
 - (build-A, item 76) An agent may not change the words of anything the person made (`authorOf` Human). It may still move, restyle or delete those objects, which `arrange`, `group` and the agent-usability tasks rely on; principles finding 2 says it should not move them either. To go further, extend `rewriteRefusal` (`src/authorship.ts`) to position and removal and re-record the agent-usability attempt.
 - (build-A) Regression sweep of the browser checks on `claude/sprint-int` at 12:59Z (connector-follow and feedback-mcp, the latter after a hand-made comment, also pass): verify-import 51/51, webpage 9/9, cite 15/15, compare 14/14, csv-faithful 5/5, ask-frame 8/8, ask-marks 8/8, answer-page 11/11, api, mcp, composition, converge, board-sync, data-agent, data-prototype, group and learning all pass; verify-calm 32/33 (fixed by #91) and verify-runs failing (fixed by #95). verify-feedback-mcp needs a hand-made comment first and was not run.
 - (build-A, item 73) A board saved before the calm canvas now gets the calm board right after the first load from the account (the alternative named in the review of #21), because the recorded "on the next reload" no longer happened at all since #59. Offline at start: on the next reload instead.
@@ -773,3 +777,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:14Z | build-A | 76 Agent never rewrites the person's words | #99 | Agent could rewrite a pink card's text; refused now; safety 9/10 (1 lost) → 10/10 (0 lost) with the new race; agent tasks 24/24; root build and package tests green |
 | 2026-11-26T13:17Z | build-A | 69 10k pan survives a slow-mode run | #100 | Lower quartile of twelve 40-frame samples; three back-to-back runs on one commit 38.2, 41.0, 36.1 ms (13.6% spread; run 1 had 7/12 slow samples, old median ~74.6); threshold unchanged |
 | 2026-11-26T13:19Z | build-A | 78 Ask progress announced | #101 | Screen readers heard nothing of an ask's progress; live region says sent, working, answered, failed once each; verify-ask-live 3/8 → 8/8; first screen unchanged; scorecard unchanged |
+| 2026-11-26T13:18Z | review | Review #67 to #84, #96 | #67 to #84 #96 | 19 merged (squash); workspace build and tests green after each (canvas 377, server 157 on Postgres 16, e2e 1); live checks re-run for #67 #68 #69 #70 #72 #73 #76 #77 #80 #82 #83. Review fixes: #73 page-tree cycle guard with a test, #80 keeps #55's vertical clamp, AGENT_API paragraphs lost in the #67 merge restored. Scorecard on 8da6809: six rows pass, safety 10/10, 10k pan 49 ms |
