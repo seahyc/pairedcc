@@ -369,7 +369,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     only combining diacritics (U+0300 to U+036F). Done when each has a failing test, then a fix.
     Build on #74 once it merges.
 
+57. **The development board store survives its folder being removed.** Deleting
+    `packages/canvas/.local/boards` (or `PAIRED_BOARDS_DIR`) while `pnpm dev:canvas` runs makes
+    every board call fail with ENOENT, shown as a Vite error overlay, until the folder is made by
+    hand (seen while resetting boards for item 46's screenshots). Done when list answers empty and
+    the next save recreates the folder, with a failing-first test.
+
 ## Claims
+57. Dev board store survives its folder being removed | claude/sprint-dev-store-dir | 2026-11-26T12:19Z
 56. Dropped images fit beside your thoughts | claude/sprint-image-size | 2026-11-26T12:16Z
 54. Text never leaves its container (unbroken text) | claude/sprint-text-contain | 2026-11-26T12:20Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
