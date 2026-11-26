@@ -1,0 +1,153 @@
+{
+  "recordedAt": "2026-11-26T11:10:54.082Z",
+  "agent": "fresh general-purpose subagent given only AGENT_API.md and the mcp-call client",
+  "results": [
+    {
+      "task": "01-create-note",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 60
+    },
+    {
+      "task": "02-arrange-row",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 13
+    },
+    {
+      "task": "03-annotate",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 13
+    },
+    {
+      "task": "04-connect",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 13
+    },
+    {
+      "task": "05-retext",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 13
+    },
+    {
+      "task": "06-picked-done",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 16
+    },
+    {
+      "task": "07-duplicate-frame",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 12
+    },
+    {
+      "task": "08-grid",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 16
+    },
+    {
+      "task": "09-scene-frame",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 14
+    },
+    {
+      "task": "10-recolour-after-human",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 12
+    },
+    {
+      "task": "11-locked",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 19
+    },
+    {
+      "task": "12-resolve-marks",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 5,
+      "seconds": 29
+    },
+    {
+      "task": "13-dataset-chart",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 19
+    },
+    {
+      "task": "14-read-chart",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 14
+    },
+    {
+      "task": "15-edit-cell",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 13
+    },
+    {
+      "task": "16-clear-filter",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 12
+    },
+    {
+      "task": "17-new-page",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 19
+    },
+    {
+      "task": "18-delete-one",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 13
+    },
+    {
+      "task": "19-image-caption",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 14
+    },
+    {
+      "task": "20-find-in-many",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 17
+    },
+    {
+      "task": "21-undo-run",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 4,
+      "seconds": 24
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import type postgres from 'postgres'
-import { KEEP_REVISIONS, byteSize, documentName, type BoardStore, type BoardSummary, type RemoveResult, type SaveInput, type SaveResult, type Snapshot } from './store.js'
+import { KEEP_REVISIONS, byteSize, defaultLimits, documentName, type BoardLimits, type BoardStore, type BoardSummary, type RemoveResult, type SaveInput, type SaveResult, type Snapshot } from './store.js'
 
 // Postgres board store (migration 007). Every save is one transaction: a conditional
 // UPDATE on the expected revision (or an INSERT for revision 0), a revision row, and
@@ -9,7 +9,10 @@ type Row = { id: string; name: string; revision: number; size_bytes: number; upd
 const summary = (r: Row): BoardSummary => ({ id: r.id, name: r.name, revision: r.revision, sizeBytes: r.size_bytes, updatedAt: r.updated_at.toISOString() })
 
 export class PostgresBoardStore implements BoardStore {
-  constructor(private sql: postgres.Sql) {}
+  constructor(
+    private sql: postgres.Sql,
+    private limits: BoardLimits = defaultLimits,
+  ) {}
 
   async list(userId: string) {
     const rows = await this.sql<Row[]>`
@@ -34,6 +37,12 @@ export class PostgresBoardStore implements BoardStore {
       const tx = t as unknown as postgres.Sql
       let row: Row | undefined
       if (input.expectedRevision === 0) {
+        // Creates for one account queue on a lock, so concurrent creates cannot pass the cap together.
+        await tx`SELECT pg_advisory_xact_lock(hashtext(${`canvas_boards:${userId}`}))`
+        const [{ count }] = await tx<{ count: number }[]>`
+          SELECT count(*)::int AS count FROM canvas_boards WHERE user_id = ${userId} AND id <> ${id}`
+        const [exists] = await tx`SELECT 1 FROM canvas_boards WHERE user_id = ${userId} AND id = ${id}`
+        if (!exists && count >= this.limits.maxBoards) return { ok: false as const, reason: 'limit' as const, limit: this.limits.maxBoards }
         ;[row] = await tx<Row[]>`
           INSERT INTO canvas_boards (user_id, id, name, revision, snapshot, size_bytes)
           VALUES (${userId}, ${id}, ${name ?? 'Untitled exploration'}, 1, ${json}, ${sizeBytes})
