@@ -194,8 +194,14 @@ task by which measure is furthest from target, not by backlog order.
     run, and is tested at editor level and live over HTTP and MCP.
 
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
+28. **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
+    fails only because `pnpm eval:canvas` runs the e2e suite without Postgres, Redis or a matching
+    Chromium; with them it passes. Done when the workspace measure uses `DATABASE_URL`/`REDIS_URL`
+    when set, otherwise starts throwaway services when the binaries exist, points Playwright at a
+    preinstalled Chromium when needed, cleans up, and reports why when it cannot.
 
 ## Claims
+28. Existing product row runs e2e for real | claude/sprint-eval-services | 2026-11-26T11:06Z
 27. Group operation | claude/sprint-group | 2026-11-26T11:00Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
