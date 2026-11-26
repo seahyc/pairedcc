@@ -8,7 +8,7 @@ import {
 } from "tldraw";
 import { isLeftOut, isPinned } from "./leave-out";
 import { revision, richTextPlain, shapeName } from "./operations";
-import { buildFeedback, type FeedbackSource } from "./feedback";
+import { buildFeedback, mayBeFeedback, type FeedbackSource } from "./feedback";
 
 // Scratchbook visual language: human marks are pink ink and handwriting;
 // agent work is lavender, plain type and carries a ✦. See docs/canvas/working-spec.md.
@@ -149,27 +149,31 @@ export function resolveMark(editor: Editor, shape: TLShape, status: MarkStatus, 
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText) : "");
 
+function sourceOf(editor: Editor, s: TLShape, page: { id: string; name: string }, pageShapes: () => TLShape[]): FeedbackSource {
+  const b = editor.getShapePageBounds(s);
+  return {
+    id: s.id,
+    type: s.type,
+    pageId: page.id,
+    pageName: page.name,
+    name: shapeName(s),
+    text: textOf(s),
+    author: authorOf(s),
+    revision: revision(s),
+    meta: s.meta,
+    bounds: b ? { x: b.x, y: b.y, w: b.w, h: b.h } : undefined,
+    inkTargets: s.type === "draw" && !isAgentShape(s) ? inkTargets(editor, s, pageShapes()) : undefined,
+  };
+}
+
 function sourcesOf(editor: Editor, allPages: boolean): { sources: FeedbackSource[]; shapes: TLShape[] } {
   const pages = allPages ? editor.getPages() : [editor.getCurrentPage()];
   const sources: FeedbackSource[] = [], all: TLShape[] = [];
   for (const page of pages) {
     const shapes = [...editor.getPageShapeIds(page.id)].flatMap((id) => editor.getShape(id) ?? []);
     for (const s of shapes) {
-      const b = editor.getShapePageBounds(s);
       all.push(s);
-      sources.push({
-        id: s.id,
-        type: s.type,
-        pageId: page.id,
-        pageName: page.name,
-        name: shapeName(s),
-        text: textOf(s),
-        author: authorOf(s),
-        revision: revision(s),
-        meta: s.meta,
-        bounds: b ? { x: b.x, y: b.y, w: b.w, h: b.h } : undefined,
-        inkTargets: s.type === "draw" && !isAgentShape(s) ? inkTargets(editor, s, shapes) : undefined,
-      });
+      sources.push(sourceOf(editor, s, page, () => shapes));
     }
   }
   return { sources, shapes: all };
@@ -179,6 +183,26 @@ function sourcesOf(editor: Editor, allPages: boolean): { sources: FeedbackSource
 export function collectFeedback(editor: Editor, opts: { allPages?: boolean } = {}) {
   return buildFeedback(sourcesOf(editor, opts.allPages ?? true).sources);
 }
+
+/**
+ * How many feedback items are open, on every page: the same as counting `collectFeedback`'s
+ * open items, without describing every object on a big board each time one of them changes.
+ */
+export function openFeedbackCount(editor: Editor) {
+  let query = allShapes.get(editor);
+  if (!query) allShapes.set(editor, (query = editor.store.query.records("shape")));
+  // One read of every shape record, then work only on the few that can be items.
+  const candidates = (query.get() as TLShape[]).filter(mayBeFeedback);
+  if (!candidates.length) return 0;
+  const sources = candidates.flatMap((s) => {
+    const pageId = editor.getAncestorPageId(s);
+    const page = pageId && editor.getPage(pageId);
+    if (!page) return [];
+    return [sourceOf(editor, s, page, () => [...editor.getPageShapeIds(page.id)].flatMap((id) => editor.getShape(id) ?? []))];
+  });
+  return buildFeedback(sources).filter((i) => i.status === "open").length;
+}
+const allShapes = new WeakMap<Editor, { get(): unknown[] }>();
 
 /**
  * Things the human wrote on the board that are not in the queue: plain notes and text
@@ -349,14 +373,15 @@ export function ScratchbookLayer() {
         collectMarks(editor).filter((m) => m.status === "resolved").map((m) => m.id),
       );
       return editor.getCurrentPageShapes().flatMap((s) => {
-        const b = editor.getShapePageBounds(s);
-        if (!b || editor.isShapeHidden(s)) return [];
         const textual = s.type === "card" || s.type === "note" || s.type === "text" || (s.type === "geo" && "richText" in s.props && richTextPlain(s.props.richText));
         const agent = isAgentShape(s) && Boolean(textual);
         const mark = s.meta.mark === "picked" || s.meta.mark === "rejected" ? s.meta.mark : undefined;
         const comment = s.meta.role === "annotation" && !isAgentShape(s);
         const leftOut = isLeftOut(s.meta), pinned = !leftOut && isPinned(s.meta);
         if (!agent && !mark && !comment && !leftOut && !pinned && !resolved.has(s.id)) return [];
+        // Bounds and visibility only for what is drawn: on a big board most objects are not.
+        const b = editor.getShapePageBounds(s);
+        if (!b || editor.isShapeHidden(s)) return [];
         return [{ leftOut, pinned, comment, id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, type: s.type, caption: s.meta.role === "caption", heading: s.type === "card" && s.props.tone === "heading", agent, mark, resolved: resolved.has(s.id) }];
       });
     },
