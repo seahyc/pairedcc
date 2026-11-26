@@ -24,6 +24,7 @@ import {
   createObject,
   patchObject,
   describeObject,
+  shapeName,
   createBridge,
   richTextPlain,
   revision,
@@ -32,7 +33,7 @@ import { createPrompt } from "./learning/prompt-shape";
 import { bendFor, chooseAnchors } from "./connector-follow";
 import { convergeInput, placeBeside, synthesisText } from "./converge/model";
 import { overview } from "./overview";
-import { matchesText } from "./read-filter";
+import { matchesText, richTextSearch } from "./read-filter";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, listAsks, setAskStatus } from "./asks";
@@ -467,6 +468,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
   const objects = editor
     .getCurrentPageShapesSorted()
     .filter((s) => !input.ids || input.ids.includes(s.id))
+    .filter((s) => !input.text || matchesText(input.text, "richText" in s.props ? richTextSearch(s.props.richText) : undefined, shapeName(s)))
     .map((s) => {
       const object = describeObject(editor, s.id);
       let asset;
@@ -495,8 +497,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         meta: s.meta,
         asset,
       };
-    })
-    .filter((o) => !input.text || matchesText(input.text, o.text, o.name as string | undefined));
+    });
   const annotations = editor
     .getCurrentPageShapes()
     .filter((s) => s.meta.role === "annotation")
