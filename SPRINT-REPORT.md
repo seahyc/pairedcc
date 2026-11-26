@@ -4,9 +4,11 @@ Last updated 2026-11-26T12:50Z by the review lane. Branch: `claude/sprint-int`.
 
 ## Read first
 - **This run (2026-11-26T12:50Z): 27 PRs reviewed and merged, #40 to #66; none rejected.** Each was merged with
-  the integration branch, built and tested across the workspace (Postgres 16 and Redis running), and
-  its headline claim re-run. Seven rows of the scorecard pass on `95a9daf`. What to look at first:
-  - **Import and paste (#46) is on the branch**, from your `yc/import-paste`, with five follow-ups:
+  the integration branch, then built and tested across the workspace (Postgres 16 and Redis
+  running). Fourteen had their browser or live check re-run by the review; the rest rest on unit
+  tests the review read (the Merged list says which). On `95a9daf` six scorecard rows pass and
+  Performance is reported. What to look at first:
+  - **Import and paste (#46) is on the branch**, from your `yc/import-paste`, with four follow-ups:
     side by side (#55), cited sections beside a record (#58), `.xlsx` (#60) and web pages (#65).
     It adds one menu item, "Import a file", and two buttons that appear on the selection bar only
     for imported records ("Side by side" with two records selected, "Show Q56, Q16" for a record
