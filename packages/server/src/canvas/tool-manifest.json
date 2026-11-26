@@ -473,7 +473,7 @@
     },
     {
       "name": "canvas_get",
-      "description": "Get one object with revision and properties. Set includeAsset only when you need raw asset data; use canvas_screenshot for visual inspection.",
+      "description": "Get one object with revision and properties, plus (prototype) its relationships on the page (incoming and outgoing: kind, via, label, author), its source and the transformation behind it. Set includeAsset only when you need raw asset data; use canvas_screenshot for visual inspection.",
       "op": "get",
       "output": "json",
       "inputSchema": {

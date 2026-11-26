@@ -94,7 +94,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_get",
     op: "get",
     description:
-      "Get one object with revision and properties. Set includeAsset only when you need raw asset data; use canvas_screenshot for visual inspection.",
+      "Get one object with revision and properties, plus (prototype) its relationships on the page (incoming and outgoing: kind, via, label, author), its source and the transformation behind it. Set includeAsset only when you need raw asset data; use canvas_screenshot for visual inspection.",
     input: { id: z.string(), includeAsset: z.boolean().default(false) },
     output: "json",
   },
