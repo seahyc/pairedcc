@@ -193,6 +193,12 @@ export function elsewhereShow(
 /** How long a notice stays: long enough to read, and to press its button when it has one. */
 export const noticeMs = (hasAction: boolean) => (hasAction ? 12000 : 3500);
 
+/**
+ * When a notice goes: never while the pointer is over it or focus is in it (the person is
+ * reading it or about to press Show), and its full time again once they leave it.
+ */
+export const noticeDelay = (hasAction: boolean, held: boolean) => (held ? null : noticeMs(hasAction));
+
 /** Gap kept between the selection bar and the window's edges. */
 export const BAR_MARGIN = 8;
 /** Left edge that keeps the bar clear of the tool strip, when the window has room for that. */

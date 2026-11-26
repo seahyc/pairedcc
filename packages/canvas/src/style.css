@@ -609,6 +609,8 @@ p {
   width: max-content;
   max-width: min(640px, calc(100vw - 32px));
   box-sizing: border-box;
+  /* The pointer over it holds it up, so it must receive the pointer (the chrome passes it through). */
+  pointer-events: auto;
 }
 .toast-action {
   flex: none;
