@@ -33,3 +33,17 @@ describe("what follows a moved object", () => {
     expect(followers(["shape:a"], loop, new Set(["shape:a"]))).toEqual(["shape:b"]);
   });
 });
+
+describe("moving a frame or group", () => {
+  const board = [
+    { id: "shape:frame", meta: {} },
+    { id: "shape:child", meta: {} },
+    { id: "shape:inside-about-frame", meta: { targetId: "shape:frame" } },
+    { id: "shape:outside-about-child", meta: { targetId: "shape:child" } },
+  ];
+  it("brings comments on its children and never moves what it already carries", () => {
+    // The frame moves; its subtree (child and the comment inside it) moves with it anyway.
+    const subtree = ["shape:frame", "shape:child", "shape:inside-about-frame"];
+    expect(followers(subtree, board, new Set(subtree))).toEqual(["shape:outside-about-child"]);
+  });
+});

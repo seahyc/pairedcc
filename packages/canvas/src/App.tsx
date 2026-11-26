@@ -1479,7 +1479,10 @@ function App() {
       if ((!dx && !dy) || previous.parentId !== next.parentId) return;
       const selected = new Set<string>(editor.getSelectedShapeIds());
       if (!selected.has(next.id)) return;
-      const ids = followers([next.id], editor.getCurrentPageShapes(), selected);
+      // A frame or group carries its subtree: comments on its children follow, and nothing
+      // inside it (say a comment about the frame placed in the frame) is moved a second time.
+      const subtree = [...editor.getShapeAndDescendantIds([next.id])] as string[];
+      const ids = followers(subtree, editor.getCurrentPageShapes(), new Set([...selected, ...subtree]));
       if (!ids.length) return;
       editor.updateShapes(
         ids.flatMap((id) => {
