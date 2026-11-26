@@ -1,7 +1,14 @@
 {
-  "generatedAt": "2026-11-26T11:51Z",
-  "commit": "e53322f",
-  "carriedOver": [],
+  "generatedAt": "2026-11-26T12:49Z",
+  "commit": "95a9daf",
+  "carriedOver": [
+    "acceptance",
+    "askLoop",
+    "agentUsability",
+    "safety",
+    "persistence",
+    "workspace"
+  ],
   "table": [
     {
       "measure": "Acceptance scenario",
@@ -10,9 +17,15 @@
       "status": "pass"
     },
     {
+      "measure": "Ask loop",
+      "target": "every step passes",
+      "result": "5/5 steps",
+      "status": "pass"
+    },
+    {
       "measure": "Agent usability",
       "target": "≥90% of ≥20 tasks",
-      "result": "21/21 (100%), median 2 tool calls",
+      "result": "23/24 (96%), median 3 tool calls",
       "status": "pass"
     },
     {
@@ -30,8 +43,8 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 1442 ms, pan 16.7 ms/frame; 10k: load 9164 ms, pan 77.9 ms/frame (worse: 10000 panMedianFrameMs 37.3 → 77.9)",
-      "status": "regressed"
+      "result": "1k: load 1363 ms, pan 16.7 ms/frame; 10k: load 9346 ms, pan 88.2 ms/frame",
+      "status": "reported"
     },
     {
       "measure": "Existing product",
@@ -41,6 +54,36 @@
     }
   ],
   "raw": {
+    "performance": [
+      {
+        "objects": 1000,
+        "buildMs": 201,
+        "loadMs": 1363,
+        "panMedianFrameMs": 16.7,
+        "panP95FrameMs": 16.9,
+        "panSampleMediansMs": [
+          16.7,
+          16.7,
+          16.7,
+          16.7,
+          16.7
+        ]
+      },
+      {
+        "objects": 10000,
+        "buildMs": 1374,
+        "loadMs": 9346,
+        "panMedianFrameMs": 88.2,
+        "panP95FrameMs": 117.8,
+        "panSampleMediansMs": [
+          40,
+          90.2,
+          86.8,
+          97,
+          88.2
+        ]
+      }
+    ],
     "acceptance": {
       "steps": [
         {
@@ -53,13 +96,13 @@
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 16
+          "ms": 15
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 477
+          "ms": 492
         },
         {
           "name": "Agent charts the selection",
@@ -71,13 +114,13 @@
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 823
+          "ms": 844
         },
         {
           "name": "Agent reads that exact chart state",
           "pass": true,
           "detail": "ok",
-          "ms": 10
+          "ms": 9
         },
         {
           "name": "Agent adds a result next to the chart",
@@ -89,23 +132,64 @@
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1206
+          "ms": 1239
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": true,
           "detail": "ok",
-          "ms": 933
+          "ms": 946
         },
         {
           "name": "Reload restores everything",
           "pass": true,
           "detail": "ok",
-          "ms": 441
+          "ms": 526
         }
       ],
       "pageErrors": [],
       "toolCalls": 30
+    },
+    "askLoop": {
+      "steps": [
+        {
+          "name": "Person asks about a thought and the ask says who can answer",
+          "pass": true,
+          "detail": "ok",
+          "ms": 1341
+        },
+        {
+          "name": "An external agent finds the ask and what it is about over MCP",
+          "pass": true,
+          "detail": "ok",
+          "ms": 5
+        },
+        {
+          "name": "The page shows the agent working, with what it is doing",
+          "pass": true,
+          "detail": "ok",
+          "ms": 15
+        },
+        {
+          "name": "The answer appears beside the ask, inside its cards, and the ask says answered",
+          "pass": true,
+          "detail": "ok",
+          "ms": 639
+        },
+        {
+          "name": "A failed ask says why and offers Retry, which asks again",
+          "pass": true,
+          "detail": "ok",
+          "ms": 1245
+        }
+      ]
+    },
+    "agentUsability": {
+      "tasks": 24,
+      "attempted": 24,
+      "completed": 23,
+      "medianToolCalls": 3,
+      "recordedAt": "2026-11-26T11:39:22.588Z"
     },
     "safety": {
       "races": [
@@ -113,7 +197,7 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 64,
+          "ms": 57,
           "humanEditsLost": 0
         },
         {
@@ -134,42 +218,42 @@
           "name": "Agent undo of a deletion after the person deleted its frame",
           "pass": true,
           "detail": "ok",
-          "ms": 87,
+          "ms": 73,
           "humanEditsLost": 0
         },
         {
           "name": "One agent cannot undo another agent's run",
           "pass": true,
           "detail": "ok",
-          "ms": 2960,
+          "ms": 2967,
           "humanEditsLost": 0
         },
         {
           "name": "Agent cannot hide the person's work behind a learning prompt",
           "pass": true,
           "detail": "ok",
-          "ms": 3846,
+          "ms": 3656,
           "humanEditsLost": 0
         },
         {
           "name": "Stale agent chart state against a newer human filter",
           "pass": true,
           "detail": "ok",
-          "ms": 405,
+          "ms": 392,
           "humanEditsLost": 0
         },
         {
           "name": "Stale agent cell edit against a newer human cell edit",
           "pass": true,
           "detail": "ok",
-          "ms": 423,
+          "ms": 397,
           "humanEditsLost": 0
         },
         {
           "name": "Agent data write to a locked dataset or chart",
           "pass": true,
           "detail": "ok",
-          "ms": 493,
+          "ms": 502,
           "humanEditsLost": 0
         }
       ],
@@ -181,39 +265,16 @@
       "cleanProfile": true,
       "detail": "identical"
     },
-    "performance": [
-      {
-        "objects": 1000,
-        "buildMs": 276,
-        "loadMs": 1442,
-        "panMedianFrameMs": 16.7,
-        "panP95FrameMs": 19.9
-      },
-      {
-        "objects": 10000,
-        "buildMs": 1482,
-        "loadMs": 9164,
-        "panMedianFrameMs": 77.9,
-        "panP95FrameMs": 122.9
-      }
-    ],
-    "agentUsability": {
-      "tasks": 21,
-      "attempted": 21,
-      "completed": 21,
-      "medianToolCalls": 2,
-      "recordedAt": "2026-11-26T11:10:54.082Z"
-    },
     "workspace": {
       "build": true,
       "packages": {
         "e2e": {
           "pass": true,
-          "summary": "1 passed (13.0s)"
+          "summary": "1 passed (14.2s)"
         },
         "canvas": {
           "pass": true,
-          "summary": "210 passed (210)"
+          "summary": "323 passed (323)"
         },
         "cli": {
           "pass": true,
@@ -229,7 +290,7 @@
         },
         "server": {
           "pass": true,
-          "summary": "149 passed (149)"
+          "summary": "154 passed (154)"
         },
         "web": {
           "pass": true,

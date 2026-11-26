@@ -6,6 +6,7 @@ import {
   PageRecordType,
   toRichText,
   type Editor,
+  type TLPageId,
   type TLShape,
   type TLShapeId,
 } from "tldraw";
@@ -64,13 +65,15 @@ export function cardStyle(tone: unknown): string | undefined {
 }
 
 /** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
-export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}) {
+export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}, pageId?: TLPageId) {
   const input = cardInput.parse(value), id = createShapeId(), human = author === HUMAN;
   // The human always writes by hand; agents pick a text style for what they are writing.
   const tone = human ? "human" : input.style && input.style !== "note" ? input.style : "agent";
   editor.createShape({
     id,
     type: "card",
+    // A page other than the one on screen (an answer to an ask on another page).
+    ...(pageId ? { parentId: pageId } : {}),
     x: input.x,
     y: input.y,
     meta: {
@@ -372,9 +375,9 @@ type Rect = { x: number; y: number; w: number; h: number };
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
 /** Nudge a new card down until it no longer sits on top of something else. */
-export function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set()) {
-  const others = editor
-    .getCurrentPageShapes()
+export function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set(), pageId: TLPageId = editor.getCurrentPageId()) {
+  const others = [...editor.getPageShapeIds(pageId)]
+    .flatMap((id) => editor.getShape(id) ?? [])
     .filter((s) => s.type !== "frame" && s.type !== "arrow" && !ignore.has(s.id))
     .flatMap((s) => editor.getShapePageBounds(s) ?? []);
   const spot = { ...box };
@@ -498,7 +501,8 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         meta: s.meta,
         asset,
       };
-    });
+    })
+    .filter((o) => !input.text || matchesText(input.text, o.text, o.name as string | undefined));
   const annotations = editor
     .getCurrentPageShapes()
     .filter((s) => s.meta.role === "annotation")

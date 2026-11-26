@@ -1,6 +1,7 @@
 // Finding objects by their words, for `read`'s `text` filter: an agent can ask for "the card
 // about pricing" without reading the whole board.
 
+<<<<<<< HEAD
 /**
  * Lower case without accents, for matching. Only combining diacritics (U+0300 to U+036F)
  * are dropped, so "Café" matches "cafe" while vowel signs in scripts such as Devanagari are
@@ -9,6 +10,9 @@
  */
 const fold = (s: string) =>
   s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ς/g, "σ").replace(/\s+/g, " ").trim();
+=======
+const fold = (s: string) => s.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
+>>>>>>> origin/claude/sprint-int
 
 /** Whether any of the fields contains the query, ignoring case, accents and spacing. */
 export function matchesText(query: string, ...fields: (string | undefined | null)[]) {
@@ -16,6 +20,7 @@ export function matchesText(query: string, ...fields: (string | undefined | null
   if (!q) return true;
   return fields.some((f) => typeof f === "string" && fold(f).includes(q));
 }
+<<<<<<< HEAD
 
 type Node = { type?: unknown; text?: unknown; content?: unknown };
 const inline = (n: Node) => n.type === "text" || n.type === "hardBreak" || typeof n.text === "string";
@@ -34,3 +39,5 @@ export function richTextSearch(value: unknown): string {
   const children = node.content as Node[];
   return children.map(richTextSearch).join(children.every(inline) ? "" : " ");
 }
+=======
+>>>>>>> origin/claude/sprint-int
