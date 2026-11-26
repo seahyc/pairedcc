@@ -54,6 +54,8 @@ import {
   Layers,
   FilePlus2,
   Map as MapIcon,
+  History,
+  FolderOpen,
 } from "lucide-react";
 import {
   createObject,
@@ -64,9 +66,12 @@ import {
   type CanvasBridge,
 } from "./operations";
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
-import { createComment } from "./agent-operations";
+import { convergeForPerson, createComment } from "./agent-operations";
+import { prototypeEnabled } from "./prototype-flags";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
-import { startBoardSync } from "./board-sync-browser";
+import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
+import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
+import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
@@ -333,6 +338,21 @@ function Shell() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [asking, setAsking] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [boardsOpen, setBoardsOpen] = useState(false);
+  const sync = useValue("board sync", () => boardSync.get(), []);
+  // Versions are kept only for boards saved to an account (or the local dev server).
+  const historyWhere = sync.state === "local" ? null : "account" in sync && sync.account === "local" ? "the local server" : "your account";
+  // "Saved boards" appears only when the account holds more than one board.
+  const [savedBoards, setSavedBoards] = useState(0);
+  useEffect(() => {
+    if (!menuOpen || !historyWhere) return;
+    let live = true;
+    boardHistory.boards().then((list) => live && setSavedBoards(list?.length ?? 0), () => live && setSavedBoards(0));
+    return () => {
+      live = false;
+    };
+  }, [menuOpen, historyWhere]);
   const openCount = useValue("open feedback", () => collectFeedback(editor).filter((i) => i.status === "open").length, [editor]);
   const link = useValue("agent link", () => agentLink.get(), []);
   const listeners = useValue("agent listeners", () => agentListeners.get(), []);
@@ -813,6 +833,16 @@ function Shell() {
               <Keyboard size={14} /> Shortcuts <kbd>?</kbd>
             </button>
             <div className="menu-rule" />
+            {historyWhere && savedBoards > 1 && (
+              <button role="menuitem" onClick={() => { setBoardsOpen(true); setMenuOpen(false); }}>
+                <FolderOpen size={14} /> Saved boards
+              </button>
+            )}
+            {historyWhere && (
+              <button role="menuitem" onClick={() => { setHistoryOpen(true); setMenuOpen(false); }}>
+                <History size={14} /> Earlier versions
+              </button>
+            )}
             <button role="menuitem" onClick={() => { void exportFile(); setMenuOpen(false); }}>
               <Download size={14} /> Export board file
             </button>
@@ -1192,6 +1222,20 @@ function Shell() {
                 </div>
               </div>
             )}
+            {selected.length > 1 && prototypeEnabled("converge") && (
+              <div className="inspector-section">
+                <div className="section-title">Converge · prototype</div>
+                <p className="inspector-help">
+                  Pull these into one synthesis card that links back to each of them. Write the conclusion in your own words.
+                </p>
+                <button
+                  className="wide-button"
+                  onClick={() => convergeForPerson(editor, editor.getSelectedShapes().filter((s) => s.type !== "arrow").map((s) => s.id))}
+                >
+                  Pull into a synthesis
+                </button>
+              </div>
+            )}
             <div className="inspector-section">
               <div className="section-title">Shortcuts</div>
               <dl className="shortcuts">
@@ -1298,6 +1342,8 @@ function Shell() {
         </div>
       )}
       {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
+      {historyOpen && historyWhere && <HistoryDialog where={historyWhere} onClose={() => setHistoryOpen(false)} />}
+      {boardsOpen && historyWhere && <SavedBoardsDialog where={historyWhere} onClose={() => setBoardsOpen(false)} />}
       {agentOpen && (
         <div className="modal-backdrop" onClick={() => setAgentOpen(false)}>
           <section
@@ -1445,7 +1491,7 @@ function App() {
     const fresh = editor.getCurrentPageShapes().length === 0 && editor.getPages().length === 1 && !page.meta.seeded;
     // Plain text wraps at a reading width and grows downward instead of running off the board.
     const wrapText = (shape: TLShape) => {
-      if (shape.type !== "text" || !("autoSize" in shape.props) || !shape.props.autoSize) return;
+      if (shape.type !== "text" || !("autoSize" in shape.props) || !shape.props.autoSize || shape.meta.fixedWidth) return;
       const scale = "scale" in shape.props && typeof shape.props.scale === "number" ? shape.props.scale : 1;
       if (editor.getShapeGeometry(shape).bounds.w <= TEXT_WRAP * scale) return;
       editor.updateShape({ id: shape.id, type: "text", props: { autoSize: false, w: TEXT_WRAP } });
@@ -1453,7 +1499,7 @@ function App() {
     editor.sideEffects.registerAfterCreateHandler("shape", (shape) => {
       wrapText(shape);
       // Pasted text arrives at a fixed width close to the whole screen; bring it to a reading width.
-      if (shape.type === "text" && "w" in shape.props && !shape.props.autoSize && shape.props.w > TEXT_WRAP)
+      if (shape.type === "text" && "w" in shape.props && !shape.props.autoSize && shape.props.w > TEXT_WRAP && !shape.meta.fixedWidth)
         editor.updateShape({ id: shape.id, type: "text", props: { w: TEXT_WRAP } });
     });
     editor.sideEffects.registerAfterChangeHandler("shape", (_previous, next) => wrapText(next));
@@ -1498,6 +1544,8 @@ function App() {
     let stopSync: (() => void) | undefined;
     void Promise.race([fonts, timeout]).catch(() => undefined).then(() => {
       prepare();
+      // A board laid out on a wider screen can open with nothing in view here.
+      bringContentIntoView(editor);
       // Then keep the board saved to the account; a brand-new board holds no work of its own.
       if (!disposed) stopSync = startBoardSync(editor, !fresh);
     });
