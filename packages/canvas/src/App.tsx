@@ -76,6 +76,7 @@ import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
+import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
 import { elsewhereNotice } from "./ask-rules";
 import { askOf } from "./asks";
@@ -1406,7 +1407,7 @@ function Shell() {
   );
 }
 import { GeoShapeGeoStyle, PageRecordType, createShapeId, react } from "tldraw";
-const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil];
+const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil, BoardImageShapeUtil];
 const TEXT_WRAP = 460;
 // One set of editor options: the page limit, and double-click writes a card rather than plain text.
 const editorOptions = { ...canvasOptions, createTextOnCanvasDoubleClick: false };
