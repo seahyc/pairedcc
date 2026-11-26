@@ -516,7 +516,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 84. (PR #109 open, awaiting review.) **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
 
+85. **An answer on another page is one step away.** `docs/canvas/principles.md`, "Not done": "they are told who answered and on which page, but the board does not take them there." The toast (#69) names the page, disappears after 3.5 s and offers nothing to press, so the person has to find the page in a hidden menu and then find the answer on it (finding 7, recognising beats recalling; "the agent must visibly respond"). Done when that notice carries a **Show** button (reachable by keyboard, with a key) that opens the ask's page, selects the answer (or the failed ask) and brings it into view, the notice stays long enough to press it, the view never moves unless the person presses it, from a tested pure function, checked in a real page (failing before, passing after), with before/after screenshots.
+
 ## Claims
+85. An answer on another page is one step away | claude/sprint-answer-show | 2026-11-26T13:55Z
 83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
 
 ## Done
