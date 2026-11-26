@@ -965,6 +965,55 @@ p {
 .wide-button.dark { background: #1f1d2c; color: white; border-color: #1f1d2c; }
 .wide-button.dark:hover { background: #3a2fd0; }
 
+/* Learning prompts (prototype, ?prototype=learning). Agent-asked, human-answered. */
+.learn-prompt { pointer-events: all; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; background: #f4f1ff; border: 1.5px dashed #3a2fd0; border-radius: 10px; font-family: 'Shantell Sans', sans-serif; color: #22203a; overflow: hidden; }
+.learn-prompt.is-committed, .learn-prompt.is-skipped { border-style: solid; }
+.learn-kind { font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: #3a2fd0; }
+.learn-question { margin: 0; font-size: 16px; line-height: 1.4; }
+.learn-form { display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
+.learn-form textarea { flex: 1; min-height: 56px; resize: none; padding: 8px 10px; border: 1.5px solid #c8125a; border-radius: 8px; background: #fff0f5; font: 22px/1.2 'Caveat Brush', cursive; color: #a50f4d; }
+.learn-form textarea:focus { outline: 2px solid #f6b5cf; }
+.learn-actions { display: flex; gap: 8px; align-items: center; }
+.learn-commit { pointer-events: all; font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 0; background: #3a2fd0; color: #fff; cursor: pointer; }
+.learn-skip { pointer-events: all; font: inherit; font-size: 13px; background: none; border: 0; color: #55524c; text-decoration: underline; cursor: pointer; }
+.learn-hidden, .learn-error { font-size: 12px; color: #6b66a8; }
+.learn-error { color: #a50f4d; }
+.learn-answer span { font-size: 12px; color: #6b66a8; }
+.learn-answer p { margin: 2px 0 0; font: 24px/1.2 'Caveat Brush', cursive; color: #a50f4d; }
+.learn-answer.skipped { font-size: 13px; color: #55524c; }
+/* Data prototype: dataset and chart objects (behind ?prototype=data). */
+.data-object { pointer-events: all; display: flex; flex-direction: column; background: #fffdf8; border: 1.5px solid #3a2fd0; border-radius: 8px; box-shadow: 0 2px 0 rgba(58, 47, 208, 0.15); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #22203a; overflow: hidden; }
+.data-object.is-stale { border-style: dashed; border-color: #b4540a; }
+.data-object.is-stale .chart-bars { opacity: 0.55; }
+.data-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 10px 12px 8px; border-bottom: 1px solid #e4e0f5; }
+.data-head strong { font-family: 'Shantell Sans', sans-serif; font-size: 16px; }
+.data-kind { flex-basis: 100%; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: #6b66a8; }
+.data-meta { color: #6b66a8; }
+.data-source { flex-basis: 100%; font-size: 10px; color: #7a766c; }
+.data-stale { flex-basis: 100%; display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; background: #fff1e0; color: #8a3f06; font-weight: 600; }
+.data-stale button, .chip { pointer-events: all; font: inherit; border: 1px solid currentColor; border-radius: 999px; background: #fff; padding: 1px 9px; cursor: pointer; }
+.data-table { flex: 1; overflow: auto; }
+.data-table table { width: 100%; border-collapse: collapse; }
+.data-table th { position: sticky; top: 0; background: #f3f0ff; text-align: left; padding: 4px 8px; font-weight: 600; }
+.data-table td { padding: 2px 8px; border-top: 1px solid #f0ece2; }
+.data-table .num { text-align: right; }
+.data-table input { width: 64px; font: inherit; text-align: right; border: 1px solid transparent; border-radius: 4px; background: transparent; padding: 1px 4px; }
+.data-table input:hover, .data-table input:focus { border-color: #3a2fd0; background: #fff; outline: none; }
+.chart-filters { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; }
+.chart-facet { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.chart-facet > span { width: 64px; color: #6b66a8; }
+.chip { color: #3a2fd0; border-color: #c9c3f0; }
+.chip.on { background: #3a2fd0; border-color: #3a2fd0; color: #fff; }
+.chart-bars { flex: 1; display: flex; align-items: stretch; gap: 14px; padding: 8px 16px 12px; min-height: 0; }
+.bar { pointer-events: all; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; background: none; border: 0; border-radius: 6px; padding: 4px; font: inherit; color: inherit; cursor: pointer; }
+.bar:hover { background: #f3f0ff; }
+.bar-fill { width: 100%; min-height: 2px; background: #b9b2ee; border-radius: 4px 4px 0 0; }
+.bar.on .bar-fill { background: #3a2fd0; }
+.bar.on .bar-key { font-weight: 700; color: #3a2fd0; }
+.chart-empty { margin: auto; color: #7a766c; }
+.stale-flag { position: absolute; top: 0; left: 0; padding: 1px 7px; border-radius: 999px; background: #fff1e0; border: 1px dashed #b4540a; color: #8a3f06; font: 600 11px 'JetBrains Mono', monospace; }
+.prototype-row { color: #3a2fd0; }
+
 /* Feedback queue, status chips and the shortcut sheet. Pink is the human, lavender the agent. */
 button.marks-counter {
   border: 0;

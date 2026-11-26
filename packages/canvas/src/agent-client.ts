@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { atom, type Editor } from "tldraw";
-import { executeCommand } from "./agent-operations";
+import { createRunLedger, runCommand } from "./agent-runs";
 import { envelopeSchema } from "./protocol";
 
 const requestSchema = envelopeSchema.extend({ id: z.string() });
@@ -26,13 +26,14 @@ function sessionId() {
 /** Runs agent commands against the editor, once per requestId. */
 function commandRunner(editor: Editor, session: string, isClosed: () => boolean) {
   const seen = new Map<string, Promise<unknown>>();
+  const runs = createRunLedger();
   return (raw: unknown, reply: Reply) => {
     const parsed = requestSchema.safeParse(raw);
     if (!parsed.success || parsed.data.sessionId !== session || isClosed()) return;
     const { id, command, actor, requestId } = parsed.data;
     let work = seen.get(requestId);
     if (!work) {
-      work = executeCommand(editor, command, actor);
+      work = runCommand(editor, runs, command, actor, requestId);
       seen.set(requestId, work);
       if (seen.size > 500) seen.delete(seen.keys().next().value!);
     }

@@ -25,6 +25,9 @@ import {
   richTextPlain,
   revision,
 } from "./operations";
+import { createPrompt } from "./learning/prompt-shape";
+import { overview } from "./overview";
+import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell } from "./data/agent";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
 
@@ -386,8 +389,14 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
             isAnimated: a.props.isAnimated,
           };
       }
+      // Data objects are summarised: rows and bars appear in dataset/widget, rows only via get.
+      const props = object && (s.type === "dataset" || s.type === "chart")
+        ? Object.fromEntries(Object.entries(object.props).filter(([k]) => k !== "data" && k !== "bars"))
+        : object?.props;
       return {
         ...object,
+        props,
+        ...dataFields(editor, s),
         text:
           "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
         author: authorOf(s),
@@ -480,6 +489,11 @@ export async function executeCommand(
         return { objects: created.map(shape => describeObject(editor, shape.id)), selection: editor.getSelectedShapeIds() };
       });
     }
+    case "overview":
+      return overview(editor, command.input ?? {});
+    case "runs":
+    case "undo_run":
+      throw new Error("Agent runs are handled by the command runner");
     case "read":
       return readCanvas(editor, command.input ?? {});
     case "get": {
@@ -493,21 +507,34 @@ export async function executeCommand(
       return {
         ...result,
         meta: s.meta,
+        ...dataFields(editor, s, true),
         ...(asset && includeAsset ? { asset } : {}),
       };
     }
     case "create": {
+      const inputIds = z.object({ inputs: z.array(z.string().startsWith("shape:")).max(50).optional() }).parse(command.input ?? {}).inputs;
+      const inputs = inputIds ? recordInputs(editor, inputIds) : undefined;
       const id = createFor(editor, command.input, actor);
       const s = find(editor, id);
       editor.updateShape({
         id: s.id,
         type: s.type,
-        meta: { ...s.meta, createdBy: actor },
+        meta: { ...s.meta, createdBy: actor, ...(inputs ? { inputs } : {}) },
       });
       return describeObject(editor, id);
     }
     case "update":
       return patchObject(editor, command.input);
+    case "learn":
+      return createPrompt(editor, command.input, actor);
+    case "dataset":
+      return createDataset(editor, command.input, actor);
+    case "chart":
+      return createChart(editor, command.input, actor);
+    case "chart_state":
+      return setChartState(editor, command.input);
+    case "cell":
+      return setDatasetCell(editor, command.input);
     case "image":
       return image(editor, command.input, actor);
     case "connect":
