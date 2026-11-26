@@ -594,15 +594,15 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     while a person's import stays protected, and click-only activation opens the Ask box, each
     with a failing-first test or check.
 
-97. **verify-answer-page's frame step after #104.** On `claude/sprint-int` at 8cea125, `tools/verify-answer-page.mjs` fails "an answer that lands inside a frame on the open page belongs to the frame" (10/11); #104 made answers land clear of frames so they are never clipped. Done when the product choice (answer inside the frame, unclipped, or beside it) is recorded and the check asserts that choice, passing on the branch.
+97. (PR #126 open, awaiting review.) **verify-answer-page's frame step after #104.** On `claude/sprint-int` at 8cea125, `tools/verify-answer-page.mjs` fails "an answer that lands inside a frame on the open page belongs to the frame" (10/11); #104 made answers land clear of frames so they are never clipped. Done when the product choice (answer inside the frame, unclipped, or beside it) is recorded and the check asserts that choice, passing on the branch.
 
 ## Claims
 99. The first board keeps a margin on a phone | claude/sprint-phone-margin | 2026-11-26T14:29Z
-97. verify-answer-page's frame step after #104 | claude/sprint-answer-page-frame | 2026-11-26T14:27Z
 98. Follow-ups to bot review of #99 and #88 | claude/sprint-review-followups-a | 2026-11-26T14:23Z
 94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
 
 ## Done
+- 97. verify-answer-page's frame step after #104 (build-B): PR #126 (the check now asserts #104's recorded choice, on the page and following the frame; 10/11 → 12/12).
 - 93. Stale flag placement follows the drawn flag (build-A): PR #124 (placement and Tab stops from the flag's drawn size; room measured at the current zoom; a focused flag kept inside the view; verify-stale-edges 5/10 → 10/10).
 - 95. Before sending, the person sees what an ask will give (build-B): PR #123, stacked on #121 (Ask box line and board outlines from the same code as the sent ask; verify-ask-preview 6/16 → 16/16; first screen byte-identical).
 - 96. #104 follow-ups (build-B): PR #122 (frame asks give attached comments; canvas_arrange brings them; verify-ask-unclipped 22/29 → 30/30).
@@ -955,3 +955,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:24Z | build-B | 96 #104 follow-ups | #122 | (b) frame asks include comments attached to its contents, (c) canvas_arrange moves them in the same undo step, selected objects left to the drag follower; real page 22/29 → 30/30; scorecard rows unchanged |
 | 2026-11-26T14:25Z | build-B | 95 Preview what an ask will give | #123 | Ask box says "Gives …" and the board outlines it, from describeSelection/askContextIds/contextSummary shared with the sent ask; verify-ask-preview 6/16 → 16/16; pin, leave-out, ask-frame/marks/chart/record/live, touch green; first screen unchanged; filed item 97 (verify-answer-page 10/11 on int) |
 | 2026-11-26T14:40Z | build-A | 93 Stale flag placement follows the drawn flag | #124 | (a) Tab stops and focus shift by drawn size, (b) opened-reason room at the current zoom, (c) focused flag grows down from the top edge; verify-stale-edges 5/10 → 10/10, verify-stale-flag 8/8, 473 unit tests; scorecard rows unchanged except 10k pan noise (105.7 ms) |
+| 2026-11-26T14:27Z | build-B | 97 verify-answer-page after #104 | #126 | Check was wrong, not the board: asserts answers near a frame sit on the page and move with the frame; 10/11 → 12/12 |
