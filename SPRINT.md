@@ -553,7 +553,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 90. **The person pins what every ask should see (prototype, `?prototype=context`).** Solveit, in `docs/canvas/principles.md`: "Not borrowed yet: pinning objects into context." Leave out (#90's item 67) lets the person withhold; nothing lets them include a brief, a constraint or a goal card without selecting it every time. Done when, in the context prototype, **Pin** (I) on the selection bar marks the selection "given to every ask" on the board (pin and leave out exclude each other), every ask on that page gives the pinned objects as their own section (hidden objects never), outlines them with the rest of its context, says how many were pinned, the resident agent's prompt names them as pinned by the person, a pin already on a board is always honoured and drawn, the logic is in tested pure functions, a real page check fails before and passes after, and the first screen is unchanged.
 
-92. **Each answer stays with its own ask.** `docs/canvas/principles.md`, finding 3 ("Its answer sits
+92. (PR #120 open, awaiting review.) **Each answer stays with its own ask.** `docs/canvas/principles.md`, finding 3 ("Its answer sits
     under it"). Three asks about one card stack under each other; their answers (three options
     each) then all land in rows below the last ask, so nothing on the board says which row answers
     which question (found by build-A at 14:05Z: 16 cards, no overlaps, but the rows for "Which is
@@ -563,11 +563,18 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     asks answered out of order, with before/after screenshots. Touches `answerAsk` placement
     (#87's rows).
 
+93. **Stale flag placement follows the drawn flag (review of #94, merged before the fix).** (a) Tab
+    eligibility uses the card's span, not the drawn flag: a card half off the right edge keeps an
+    offscreen flag tabbable, and a selected flag opened into view can be skipped; (b) the fixed
+    120 px room can clip a long reason at high zoom, since the flag scales with the canvas;
+    (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first
+    line. Done when each has a failing-first case in `tools/verify-stale-edges.mjs` and is fixed.
+
 ## Claims
-92. Each answer stays with its own ask | claude/sprint-answer-beside | 2026-11-26T14:08Z
 90. The person pins what every ask should see | claude/sprint-pin-context | 2026-11-26T14:05Z
 
 ## Done
+- 92. Each answer stays with its own ask (build-A): PR #120 (beside the ask when the space under it is taken; verify-answer-beside 3/6 → 6/6).
 - 86. Principles status table says what the build does now (build-B): PR #117 (rows 2, 3, 5, 6, 7 and 9 checked against the code and merged PRs; docs only).
 - 85. An answer on another page is one step away (build-B): PR #119 (Show (G) on the notice opens the page with the answer selected beside its ask; verify-answer-show 5/15 → 17/17; first screen byte-identical).
 - 91. A failed ask is retried from the keyboard (build-A): PR #118 (bar's first button is Retry / Send again with its key; Ctrl/⌘+Enter resends; verify-retry-key 2/9 → 9/9).
@@ -639,6 +646,9 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 92) An answer whose space under its ask is taken (later asks stacked below) sits beside its ask, to the right and level with it; no arrow joins a displaced row, to keep ink off the board. Alternative: an arrow from ask to its row.
+- (build-A) `tools/verify-all.mjs` (#113) on `claude/sprint-int` at 14:00Z: 29/32 pass or ran; calm (#91, since merged), runs (#95) and board-images (the check, #114) failing; verify-ask-record and verify-leave-out added to its list.
+- (build-A) Keyboard PRs #105, #108 (stacked on #105), #115 and #118 were combined on `claude/sprint-keyboard-combined` at 14:12Z. #115 and #118 conflict with #105 only in adjacent added lines (an import, the shortcut sheet's first two rows, README lines), and the resolution is to keep both. On the combination: verify-keyboard 16/16, verify-heard 13/13, verify-menu-keys 16/16, verify-retry-key 9/9, verify-keys 16/16, verify-contain 20/20, and 467 unit tests.
 - (build-B, item 85) G goes to an answer on another page only while its notice is up; otherwise the key stays with the canvas. A notice with a button stays 12 s (3.5 s otherwise) and does not pause on hover. The board still never moves without the person pressing Show.
 - (build-B, item 85) The 10k pan median measured 93.9 ms (committed 49 ms) on a run that shared the container with a dev server and headless browsers; the change touches only the notice. Read that row with the known spread in mind; scorecard not committed.
 - (review, #80 and #87) #80 placed a wrapped selection bar over the selected card on a phone; fixed in #87 by lifting the bar by its measured height. Browser checks for the bar should include "the bar does not cover the selection".
@@ -902,3 +912,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:02Z | build-A | 91 (filed as 88) Retry a failed ask from the keyboard | #118 | ⌘↵ on a failed ask opened a new ask about it; now resends; verify-retry-key 2/9 → 9/9; 4 unit tests; ask loop's Retry step still passes; first screen unchanged; scorecard unchanged |
 | 2026-11-26T14:03Z | build-B | 85 An answer on another page is one step away | #119 | Notice carries Show (G), stays 12 s, opens the page and centres the answer with its ask; failed ask selects the ask; verify-answer-show 5/15 → 17/17; 440 unit tests; verify-answer-page/keys/touch green; first screen unchanged; scorecard unchanged except 10k pan noise |
 | 2026-11-26T14:03Z | build-B | 86 Principles status table | #117 | Six rows brought up to date with merged PRs (#6 #42 #47 #55 #64 #67 #83 #86 #88); nothing unmerged claimed |
+| 2026-11-26T14:11Z | build-A | 92 Each answer stays with its own ask | #120 | Three asks on one card: answers piled under the last ask; now beside their own; verify-answer-beside 3/6 → 6/6; answer-view 14/14, answer-page 11/11, calm 33/33; scorecard unchanged |
