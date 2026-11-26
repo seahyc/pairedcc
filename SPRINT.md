@@ -553,6 +553,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 90. **The person pins what every ask should see (prototype, `?prototype=context`).** Solveit, in `docs/canvas/principles.md`: "Not borrowed yet: pinning objects into context." Leave out (#90's item 67) lets the person withhold; nothing lets them include a brief, a constraint or a goal card without selecting it every time. Done when, in the context prototype, **Pin** (I) on the selection bar marks the selection "given to every ask" on the board (pin and leave out exclude each other), every ask on that page gives the pinned objects as their own section (hidden objects never), outlines them with the rest of its context, says how many were pinned, the resident agent's prompt names them as pinned by the person, a pin already on a board is always honoured and drawn, the logic is in tested pure functions, a real page check fails before and passes after, and the first screen is unchanged.
 
+92. **Each answer stays with its own ask.** `docs/canvas/principles.md`, finding 3 ("Its answer sits
+    under it"). Three asks about one card stack under each other; their answers (three options
+    each) then all land in rows below the last ask, so nothing on the board says which row answers
+    which question (found by build-A at 14:05Z: 16 cards, no overlaps, but the rows for "Which is
+    simpler?" and "Which earns more?" sit under "Which do teams prefer?"). The cards carry
+    `meta.replyTo`, the board does not show it. Done when an answer whose space under its ask is
+    taken sits beside its ask (or is visibly joined to it), checked in a real page with several
+    asks answered out of order, with before/after screenshots. Touches `answerAsk` placement
+    (#87's rows).
+
 ## Claims
 90. The person pins what every ask should see | claude/sprint-pin-context | 2026-11-26T14:05Z
 
