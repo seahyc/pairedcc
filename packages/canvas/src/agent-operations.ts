@@ -370,6 +370,12 @@ export function annotateObject(editor: Editor, value: unknown) {
   editor.run(() => {
     // On the page, above any frame there: a frame would clip a note that runs past its edge.
     id = createCard(editor, { x, y, text: input.text }, input.author, meta, editor.getCurrentPageId());
+    // The height above was a guess; the card sizes to its text when made. Check again with its real size.
+    const made = placed && editor.getShapePageBounds(id);
+    if (made) {
+      const clear = freeSpot(editor, { x: made.x, y: made.y, w: made.w, h: made.h }, new Set([target.id, id]));
+      if (clear.y !== made.y) editor.updateShape({ id, type: "card", y: clear.y });
+    }
     connect(
       editor,
       { fromId: id, toId: target.id, relation: "feedback" },
