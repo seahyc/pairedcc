@@ -75,6 +75,7 @@ import {
   HUMAN,
 } from "./scratchbook";
 import { richTextPlain } from "./operations";
+import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
 import "./style.css";
 
@@ -1159,10 +1160,7 @@ function Shell() {
               your edits.
             </p>
             <CopyBlock
-              text={JSON.stringify({ mcpServers: { paired: { command: "node", args: [
-                "/Users/yingcong/Code/tools/pairedcc/packages/canvas/node_modules/tsx/dist/cli.mjs",
-                "/Users/yingcong/Code/tools/pairedcc/packages/canvas/tools/mcp.ts",
-              ], env: { PAIRED_SESSION: sessionStorage.getItem("picabird-agent-session") ?? "" } } } }, null, 2)}
+              text={JSON.stringify(localMcpConfig(__CANVAS_DIR__, sessionStorage.getItem("picabird-agent-session") ?? ""), null, 2)}
               onCopied={setNotice}
             />
             <p className="inspector-help">
