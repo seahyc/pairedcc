@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { deflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { ImportError, parseImport, planImport } from "../src/import-parse";
 import { readPdf } from "../src/import-pdf";
@@ -87,5 +88,65 @@ describe("readPdf on a plain hand-written PDF", () => {
     expect(plan.sections).toEqual([
       { heading: "Fleet costs", text: "The quote is 9.2m (two vessels) and the budget says 8.1m.\n\nA second paragraph follows a wider gap." },
     ]);
+  });
+});
+
+describe("readPdf on files that are awkward or hostile", () => {
+  const latin = (s: string) => Uint8Array.from(s, (c) => c.charCodeAt(0));
+  const join = (...parts: Uint8Array[]) => {
+    const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let at = 0;
+    for (const p of parts) (out.set(p, at), (at += p.length));
+    return out;
+  };
+  const head = (font = "") =>
+    [
+      "%PDF-1.4",
+      "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
+      "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
+      "3 0 obj << /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /Contents 6 0 R >> endobj",
+      `4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica ${font} >> endobj`,
+      "",
+    ].join("\n");
+  const content = "BT /F1 11 Tf 72 760 Td (Hello world) Tj ET";
+  const tail = "trailer << /Root 1 0 R >>\n%%EOF";
+  const deflate = (text: string) => new Uint8Array(deflateSync(Buffer.from(text, "latin1")));
+  const within = async <T>(ms: number, work: Promise<T>) => {
+    const t = performance.now();
+    const value = await work.catch((error: unknown) => error);
+    expect(performance.now() - t).toBeLessThan(ms);
+    return value;
+  };
+
+  it("reads a stream whose /Length is kept in another object, as office suites write it", async () => {
+    const data = deflate(content);
+    const pdf = join(latin(`${head()}6 0 obj << /Length 12 0 R /Filter /FlateDecode >> stream\n`), data, latin(`\nendstream endobj\n12 0 obj ${data.length} endobj\n${tail}`));
+    expect(await readPdf(pdf)).toBe("Hello world\n");
+  });
+  it("reads a stream with no usable /Length", async () => {
+    const data = deflate(content);
+    const pdf = join(latin(`${head()}6 0 obj << /Filter /FlateDecode >> stream\n`), data, latin(`\r\nendstream endobj\n${tail}`));
+    expect(await readPdf(pdf)).toBe("Hello world\n");
+  });
+  it("is not stopped by a large image beside the text", async () => {
+    const image = deflate("\0".repeat(25_000_000));
+    const pdf = join(latin(`${head()}6 0 obj << /Length ${content.length} >> stream\n${content}\nendstream endobj\n8 0 obj << /Subtype /Image /Filter /FlateDecode /Length ${image.length} >> stream\n`), image, latin(`\nendstream endobj\n${tail}`));
+    expect(await readPdf(pdf)).toBe("Hello world\n");
+  }, 20_000);
+  it("does not hang on a character map with codes too large to count", async () => {
+    const cmap = `1 beginbfrange\n<${"f".repeat(20)}> <${"f".repeat(20)}> <0041>\nendbfrange`;
+    const pdf = latin(`${head("/ToUnicode 7 0 R")}6 0 obj << /Length ${content.length} >> stream\n${content}\nendstream endobj\n7 0 obj << /Length ${cmap.length} >> stream\n${cmap}\nendstream endobj\n${tail}`);
+    expect(await within(2000, readPdf(pdf))).toBe("Hello world\n");
+  });
+  it("does not slow down on a long run of digits", async () => {
+    expect(await within(2000, readPdf(latin(`%PDF-1.4\n${"1".repeat(300_000)}`)))).toBeInstanceOf(ImportError);
+  });
+  it("refuses a small file whose one stream is read by many pages' worth of references", async () => {
+    const data = deflate(`${content}\n`.repeat(350_000));
+    const page = head().replace("/Contents 6 0 R", `/Contents [${"6 0 R ".repeat(20)}]`);
+    const pdf = join(latin(`${page}6 0 obj << /Length ${data.length} /Filter /FlateDecode >> stream\n`), data, latin(`\nendstream endobj\n${tail}`));
+    const error = await within(4000, readPdf(pdf));
+    expect(error).toBeInstanceOf(ImportError);
+    expect(String(error)).toContain("too large");
   });
 });
