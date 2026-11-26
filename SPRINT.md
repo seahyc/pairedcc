@@ -134,7 +134,7 @@ task by which measure is furthest from target, not by backlog order.
 13. **Person imports a CSV.** Dropping a `.csv` file on the canvas creates a dataset object with
     typed columns (validation errors shown, nothing partial created). Done when the eval's first
     acceptance step passes.
-14. **Transitive staleness.** A result recorded with `inputs: [chart]` is not marked stale when the
+14. (PR #11 open, awaiting review; stacked on #9.) **Transitive staleness.** A result recorded with `inputs: [chart]` is not marked stale when the
     chart's dataset changes, only when the chart itself is recomputed. Done when the eval step
     "Changing an input marks its dependents stale" passes and the read reports the upstream cause.
 15. **Reload must not change objects.** Reopening a board re-measures cards and bumps their height
@@ -147,7 +147,7 @@ task by which measure is furthest from target, not by backlog order.
 ## Claims
 1. Server-side board storage | claude/sprint-boards-* | 2026-11-26T09:50Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
-14. Transitive staleness | claude/sprint-stale-chain | 2026-11-26T09:49Z
+12. Prototype tool exposure | claude/sprint-proto-switch | 2026-11-26T09:52Z
 
 ## Done
 - 0. Eval harness: PR #8 (`pnpm eval:canvas`, baseline scorecard: acceptance 7/10, safety pass, persistence fail, 10k perf impossible, e2e failing). Gaps filed as items 13 to 16.
@@ -185,3 +185,4 @@ task by which measure is furthest from target, not by backlog order.
 | 2026-11-26T09:25Z | review | Review #7 | #7 | Merged (squash) from a local merge with the integration branch; run undo now ignores the text-edit timestamp; all live checks re-run |
 | 2026-11-26T09:50Z | build-A | 0 Eval harness | #8 | `pnpm eval:canvas` and baseline scorecard; 12 unit tests; canvas tests 71 pass |
 | 2026-11-26T09:49Z | build-B | 8 Docs | #9 #10 | Data prototype documented; docs test fails on any undocumented tool, op or field; Agent access MCP path filled from the dev server and verified with a real stdio client |
+| 2026-11-26T09:52Z | build-B | 14 Transitive staleness | #11 | Results stale when an upstream input changes, with `upstream` cause in read; eval acceptance 7/10 to 8/10 |
