@@ -130,7 +130,9 @@ export function toTable(raw: string[][], explicitHeader = false): Table {
   const rows = raw.map((r) => r.map((c) => c.replace(/\r/g, "").trim())).filter((r) => filled(r) > 0);
   if (!rows.length) throw new ImportError("There is nothing in that table");
   const widest = Math.max(...rows.map(filled));
-  const headerAt = Math.max(0, rows.findIndex((r) => filled(r) >= Math.max(2, Math.ceil(widest / 2))));
+  // A header the source marked is the first row, however sparse; otherwise rows above the first
+  // well-filled row are a title and notes.
+  const headerAt = explicitHeader ? 0 : Math.max(0, rows.findIndex((r) => filled(r) >= Math.max(2, Math.ceil(widest / 2))));
   const preamble = rows.slice(0, headerAt).map((r) => r.filter((c) => c).join(" "));
   const body = rows.slice(headerAt);
   const width = Math.max(...body.map((r) => r.length));
@@ -163,15 +165,19 @@ const pipeRule = (line: string) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|
 
 /** A markdown pipe table as rows, when the text is mostly one table. */
 export function parseMarkdownTable(text: string): { rows: string[][]; title?: string } | null {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  // Outer pipes are optional in markdown; a rule row (--- | ---) is what makes it a table.
-  const ruleAt = lines.findIndex(pipeRule);
-  const tableLines = lines.filter((l) => pipeRow(l) || (ruleAt > 0 && /(?<!\\)\|/.test(l)));
-  if (tableLines.length < 3 || ruleAt < 1 || !lines[ruleAt].includes("|") || !tableLines.includes(lines[ruleAt - 1]) || tableLines.length < lines.length * 0.6) return null;
+  // The table is the line above the first rule row (--- | ---) and the lines with pipes straight
+  // after it; a heading or a note elsewhere is never a row, even if it holds a pipe. Outer pipes
+  // are optional in markdown.
+  const all = text.split(/\r?\n/);
+  const ruleAt = all.findIndex((l) => pipeRule(l) && l.includes("|"));
+  if (ruleAt < 1 || !/(?<!\\)\|/.test(all[ruleAt - 1]) || /^\s*#/.test(all[ruleAt - 1])) return null;
+  const body: string[] = [];
+  for (let i = ruleAt + 1; i < all.length && all[i].trim() && /(?<!\\)\|/.test(all[i]); i++) body.push(all[i]);
+  const tableLines = [all[ruleAt - 1], ...body];
+  const lines = all.filter((l) => l.trim());
+  if (tableLines.length < 2 || tableLines.length + 1 < lines.length * 0.6) return null;
   const heading = lines.find((l) => /^#{1,6}\s+/.test(l));
-  const rows = tableLines
-    .filter((l) => !pipeRule(l))
-    .map((l) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c) => plainInline(c.replace(/\\\|/g, "|").trim())));
+  const rows = tableLines.map((l) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c) => plainInline(c.replace(/\\\|/g, "|").trim())));
   return { rows, ...(heading ? { title: plainInline(heading.replace(/^#+\s+/, "")) } : {}) };
 }
 

@@ -108,6 +108,7 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
         const titleText = record.details ? `${record.title}\n${record.details}` : record.title;
         const titleId = card(start.x, y, Math.max(200, Math.round(rowW - chipRoom(record.chips))), "sourceTitle", toRichText(titleText), record.title, {
           kind: "title",
+          shown: titleText,
           row: record.row,
           values: record.values,
           chips: record.chips,
@@ -134,7 +135,7 @@ export function placeImport(editor: Editor, plan: ImportPlan, origin: { from: st
           stepId = createShapeId();
           editor.groupShapes(ids, { groupId: stepId, select: false });
           editor.updateShape({ id: stepId, type: "group", meta: { name: record.title.slice(0, 80), revision: 0, source: { ...base, ...record_ } } });
-        } else editor.updateShape({ id: titleId, type: "card", meta: { ...editor.getShape(titleId)!.meta, source: { ...base, ...record_, chips: record.chips } } });
+        } else editor.updateShape({ id: titleId, type: "card", meta: { ...editor.getShape(titleId)!.meta, source: { ...base, ...record_, chips: record.chips, shown: titleText } } });
         stepIds.push(stepId);
         // First view: the heading and the first record, and the second when it is close.
         if (order === 0 || (order === 1 && y - start.y < 760)) focusBottom = y;
