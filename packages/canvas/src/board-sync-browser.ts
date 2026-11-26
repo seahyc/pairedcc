@@ -3,7 +3,8 @@ import { createBoardSync, type BoardApi, type MemoStore, type PutResult, type Sn
 
 // Wires board sync to the editor, the network and localStorage. On paired.cc the account
 // comes from the session (/auth/me) and boards from /api/canvas/boards. The development
-// server serves the same board API for one local person (server/boards-dev.ts).
+// server serves the same board API for one local person (server/boards-dev.ts), unless
+// PAIRED_SERVER_URL proxies it to a real server (vite.config.ts).
 
 export const boardSync = atom<SyncStatus>("board sync", { state: "local" });
 
@@ -32,7 +33,7 @@ const json = { "Content-Type": "application/json" };
 
 export const boardApi: BoardApi = {
   async account() {
-    if (import.meta.env.DEV) {
+    if (!__BOARDS_ON_SERVER__) {
       const r = await fetch("/api/canvas/boards");
       return r.ok ? "local" : null;
     }

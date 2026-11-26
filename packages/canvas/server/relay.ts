@@ -14,6 +14,11 @@ import {
 } from "../src/protocol";
 
 const API = "/api/canvas";
+
+/** Paths this relay answers. Boards are a separate API (server/boards-dev.ts, or the real server via PAIRED_SERVER_URL). */
+export function isRelayPath(pathname: string) {
+  return pathname.startsWith(API) && pathname !== `${API}/boards` && !pathname.startsWith(`${API}/boards/`);
+}
 const localHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
 export function isLocalRequest(req: {
   headers: Pick<IncomingHttpHeaders, "host" | "origin">;
@@ -121,7 +126,7 @@ export function canvasRelay(): Plugin {
       });
       server.middlewares.use((req, res, next) => {
         const url = new URL(req.url ?? "/", "http://localhost");
-        if (!url.pathname.startsWith(API)) return next();
+        if (!isRelayPath(url.pathname)) return next();
         if (!isLocalRequest(req))
           return reply(res, 403, {
             error: "Canvas API accepts same-origin loopback requests only",
