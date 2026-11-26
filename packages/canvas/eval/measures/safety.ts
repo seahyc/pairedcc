@@ -1,4 +1,4 @@
-import { check, find, mcpAgent, openCanvas, ready, savedToAccount, sleep, type Browser, type Check } from "../lib";
+import { check, find, mcpAgent, openCanvas, ready, savedToAccount, sleep, startServer, type Browser, type Check } from "../lib";
 
 // Scripted races between a person and an agent on shared objects. Each race counts
 // the human edits that did not survive; the target is zero.
@@ -171,7 +171,14 @@ export async function safety(browser: Browser, base: string) {
     await context.close();
   }
   await dataRaces(browser, base, race);
-  await restoreRace(browser, base, race);
+  // The restore race saves to the board store; on a reused EVAL_URL server that is someone's
+  // real board, whose kept history it would prune. It always gets a throwaway server.
+  const own = process.env.EVAL_URL ? await startServer(Number(process.env.EVAL_PORT ?? 5191) + 2, true) : null;
+  try {
+    await restoreRace(browser, own?.base ?? base, race);
+  } finally {
+    own?.stop();
+  }
   return { races, humanEditsLost: races.reduce((n, r) => n + r.humanEditsLost, 0) };
 }
 
