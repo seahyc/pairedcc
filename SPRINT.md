@@ -286,7 +286,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     when a scripted check restores, reloads at once and still sees the restored board, for example
     by recording in the memo what content was synced and re-reading the account when it differs.
 
+44. **Asks carry the person's picks and cross-outs.** `docs/canvas/principles.md`, finding 6
+    (comparing beats describing): "picking one does not carry it forward." An ask's context lists
+    the selected objects and the exchange behind them, but not which options the person picked (P)
+    or crossed out (X), although the board shows both; an agent asked to "take this further" about
+    option A does not know B and C were rejected. Done when every object an ask gives (targets,
+    frame objects, history) reports the person's mark, an ask about one option also gives its
+    sibling options with their marks, the resident agent's prompt says to build on picks and not
+    offer crossed-out ideas again, documented in AGENT_API, unit-tested, and checked in a real tab.
+
 ## Claims
+44. Asks carry picks and cross-outs | claude/sprint-ask-marks | 2026-11-26T11:55Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
