@@ -39,7 +39,7 @@ Prototype tools (`canvas_learn`, `canvas_converge` and the data tools) are flagg
 
 ### Overview, then detail
 
-`canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count, `locked: true` when the object or a frame around it is locked, and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. It also returns `clusters`: piles of nearby objects at that level, each with `ids` (the first 50 members), `count` and `bounds`, largest first (at most 50 clusters). Objects are in one cluster when their edges are within 60 px of a neighbour's, in chains, and arrows are left out. Arrangement is often how the person groups ideas without drawing a frame, so treat a cluster as a likely group and ask before acting on it. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects.
+`canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. It also returns `clusters`: piles of nearby objects at that level, each with `ids` (the first 50 members), `count` and `bounds`, largest first (at most 50 clusters). Objects are in one cluster when their edges are within 60 px of a neighbour's, in chains, and arrows are left out. Arrangement is often how the person groups ideas without drawing a frame, so treat a cluster as a likely group and ask before acting on it. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects.
 
 ### Data prototype
 
@@ -85,7 +85,7 @@ Use `relationships` to see what an object depends on and what depends on it befo
 
 ### Undo one agent operation
 
-Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists your own recent runs, newest first, with the object IDs each run created, updated and removed, and `fields`: for each updated object, the fields that run changed (for example `props.color`), so you can tell which run made a change. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
+Every operation from an agent that changes the document is recorded in the tab as a *run*: a scene, a layout, an update or a removal. Camera, selection and other per-tab state are not recorded. `canvas_runs` lists your own recent runs, newest first, with the object IDs each run created, updated and removed. `canvas_undo_run` with a `runId` reverses that run as one unit and leaves everything else alone. Only the fields that run changed are restored, so a human's later move of an object the run recoloured is kept.
 
 The undo is all-or-nothing. If the human or a later run has changed a field the run set, edited an object the run created, deleted an object the run changed, or locked one, or if something the run deleted can no longer go back (its frame or page, or the other end of its arrow, was deleted since), nothing is changed and the error names each conflicting object and field. Undo the later run first, or leave it. The canvas's own derived values (the revision counter, the text-edit timestamp and auto-sized card height) do not count as conflicts.
 
@@ -98,7 +98,7 @@ The canvas uses Thariq's scratchbook visual language, so authorship shows at a g
 - **Matches Thariq's board** on dot-grid paper. Notes are `card` shapes that grow to fit their text.
 - **Human work:** crimson brush handwriting (Caveat Brush) on pink cards with a crimson border; the Note tool (N) drops one. Pen ink is crimson. Picks get a crimson box; rejects get a crimson X and fade.
 - **Agent work:** agent `note`s and annotations become lavender cards in plain type with an indigo ✦. Connections are thin indigo curves with filled arrowheads; arrows leaving the same side of a card share one anchor, so they fan out from it. `image` accepts a `caption`, shown underneath with a ✦.
-- **Open marks:** human feedback notes, picks, rejects and pen ink drawn over an object are *marks*. `read` returns them in `marks` (`kind`: `comment`, `pick`, `reject` or `ink`, the same words as the feedback queue; `status`, `targetIds`, `revision`), and every object reports its `author`. The header shows "N items · M open marks".
+- **Open marks:** human feedback notes, picks, rejects and pen ink drawn over an object are *marks*. `read` returns them in `marks` (`kind`, `status`, `targetIds`, `revision`), and every object reports its `author`. The header shows "N items · M open marks".
 - **Judgement is human-only:** the human selects and presses P (pick) or X (reject), or uses Judge in Properties. Agents read picks and rejects but cannot set them.
 - **Closing the loop:** `resolve` accepts any mark: a feedback note, a picked/rejected object (pass the object ID) or an ink stroke. Resolved marks show a ✓.
 
@@ -132,12 +132,12 @@ An ask carries everything the human sees as its context, and nothing else needs 
 | `id`, `revision`, `attempt` | The ask card. `attempt` rises on each retry. |
 | `question` | What the human asked |
 | `state`, `agent`, `note`, `error` | Where it stands and who has it |
-| `targets` | The selected objects: `id`, `type`, `author`, `text`, and `mark` when the person judged it |
+| `targets` | The selected objects: `id`, `type`, `author`, `text`, and `mark` when the person judged it. A selected frame also has `inside`: the objects it holds (nested frames included), in reading order, up to 20, with `insideMore` counting the rest |
 | `frame` | The frame the selection sits in, with `name` and the text of up to 12 other objects in it (each with its `mark`) |
 | `history` | When the ask is about an agent's answer: the exchange that led to it, oldest first, then the other answers to that ask (an option's siblings). Entries are `who`, `said`, and for objects `id` and `mark`. Each object appears once, and never when it is already in `targets` |
-| `pageId`, `pageName`, `askedAt` | Where and when |
 
 `mark` is `picked` (the person boxed it with Pick, P) or `rejected` (struck through with Cross out, X), and is absent otherwise. It is the person's judgement, shown on the board: build on what they picked, and do not offer a crossed-out idea again. Asked to take option A further after crossing out B, an agent sees A in `targets` with `mark: "picked"` and B in `history` with `mark: "rejected"`.
+| `pageId`, `pageName`, `askedAt` | Where and when |
 
 Asks are also items in the feedback queue (`ask` holds the state), so nothing is lost if no agent was waiting. Keep answers to one step: the human does the thinking and judges each answer before asking again. See `docs/canvas/principles.md`.
 
@@ -222,7 +222,7 @@ Primitive creation and updates accept `font` (draw/sans/serif/mono), `size` (s/m
 
 `canvas_arrange` accepts `objects: [{id, expectedRevision}]`, `layout: "row" | "column" | "grid"`, page-space `x`, `y`, optional `gap` (default 40) and `columns` (default 3). It sizes cells using actual object bounds, including rotated objects. Input order determines placement. A stale revision or locked object rejects the entire layout. Pass a frame or its children, never both.
 
-`canvas_duplicate` accepts the same guarded `objects` list plus optional `offsetX` and `offsetY`. Without them the copy goes just right of the originals (their width plus 40), or below them when a copy beside would leave the frame that holds them; a copy keeps its parent frame, which hides anything outside it, so if neither fits the call is refused and nothing changes. `locked: true` in `canvas_overview` also covers children of a locked frame. Frames bring their descendants. Include arrows in the duplicated set to preserve bindings between copies. The result contains copied objects and the new selection; originals remain intact.
+`canvas_duplicate` accepts the same guarded `objects` list plus optional `offsetX` (default 320) and `offsetY` (default 0). Frames bring their descendants. Include arrows in the duplicated set to preserve bindings between copies. The result contains copied objects and the new selection; originals remain intact.
 
 `canvas_group` wraps objects in a named frame without moving them, to show they belong together. Pass the same guarded `objects` list, a `name` for the frame, and optional `padding` (default 40) around their combined bounds. The objects must share a parent: all on the page, or all in one frame, in which case the new frame nests inside it. A stale revision or a locked object rejects the whole call. The result has the `frame` and the `objects`, now inside it, with their new revisions. It is one run, so `canvas_undo_run` takes it back.
 
