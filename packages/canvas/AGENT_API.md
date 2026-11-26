@@ -117,7 +117,7 @@ An ask carries everything the human sees as its context, and nothing else needs 
 
 Asks are also items in the feedback queue (`ask` holds the state), so nothing is lost if no agent was waiting. Keep answers to one step: the human does the thinking and judges each answer before asking again. See `docs/canvas/principles.md`.
 
-Presence is known only on the local server. On paired.cc the three operations work, but there is no wait endpoint and tabs cannot tell whether an agent is listening; read `canvas_asks` when the human tells you they asked.
+On paired.cc the three operations work over MCP, but MCP clients have no wait endpoint and are not shown as listening; read `canvas_asks` when the human tells you they asked. The one exception is the site's resident agent, described in the README: it holds a server secret, long-polls `POST /api/canvas/asks/wait` and may only call `ask_status` and `answer`, and only for accounts on the server's allowlist. Those accounts see whether it is listening; every other account sees that no agent is listening for it.
 
 ### The feedback queue
 

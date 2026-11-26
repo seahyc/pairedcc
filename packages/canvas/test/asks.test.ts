@@ -86,6 +86,12 @@ describe("ask rules", () => {
     expect(nobody.text).toContain("No agent is listening");
     expect(nobody.text).toContain("pnpm --filter @pairedcc/canvas agent");
     expect(nobody.retry).toBe(true);
+    // On paired.cc: no local command to offer, and an account nobody serves is told to bring an agent.
+    const away = askStatusLine({ ...base, state: "waiting" }, { ...opts, hosted: true, listeners: [] });
+    expect(away).toMatchObject({ tone: "nobody", retry: true });
+    expect(away.text).not.toContain("pnpm");
+    expect(askStatusLine({ ...base, state: "waiting" }, { ...opts, hosted: true, listeners: null }).text).toContain("Connect an agent");
+    expect(askStatusLine({ ...base, state: "waiting" }, { ...opts, hosted: true }).text).toContain("Waiting for Claude");
     expect(askStatusLine({ ...base, state: "working", agent: "Claude", note: "reading 1 object", startedAt: 1000 }, opts).text).toBe("Claude: reading 1 object · 3s");
     expect(askStatusLine({ ...base, state: "working", agent: "Claude", startedAt: 0 }, { ...opts, now: 130_000 }).retry).toBe(true);
     expect(askStatusLine({ ...base, state: "failed", error: "Claude took longer than 90 seconds" }, opts)).toMatchObject({ tone: "failed", retry: true });

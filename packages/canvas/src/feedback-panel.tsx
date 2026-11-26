@@ -249,7 +249,7 @@ export function AgentChip({ onOpen }: { onOpen: () => void }) {
   const activity = useValue("agent activity", () => agentActivity.get(), []);
   const now = useNow(2000);
   const listeners = useValue("agent listeners", () => agentListeners.get(), []);
-  const nobody = link.mode === "local" && listeners !== null && listeners.length === 0;
+  const nobody = listeners !== null && listeners.length === 0;
   const down = link.mode === "local" ? link.state === "disconnected" : link.state !== "connected";
   const fresh = activity && now - activity.at < 6000;
   const label = down
