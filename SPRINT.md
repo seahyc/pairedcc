@@ -638,7 +638,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     (c) a compact flag straddling the top edge grows down from above the canvas, clipping its first
     line. Done when each has a failing-first case in `tools/verify-stale-edges.mjs` and is fixed.
 
-94. (PR #127 open, awaiting review.) **Moving one object on a big board stays quick.** (Item 7, large boards.) On a 10k-object board,
+94. (PR #127 open, awaiting review; stacked on #134.) **Moving one object on a big board stays quick.** (Item 7, large boards.) On a 10k-object board,
     moving one object takes about half a second a step (median 494 to 583 ms over 60 steps, headless
     1440 px), so dragging is unusable. A load profile shows the layers panel building a row for every
     object although it is hidden by default, and the shell re-rendering on every shape change. Done
@@ -677,7 +677,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 101. (PR #131 open, awaiting review.) **Agent-usability tasks for #99 and #51, and a fresh attempt.** Two agent-facing features merged after the 24-task set have no task: the refusal to rewrite the person's words (#99, build-A) and `style` in read (#51, build-A). Done when tasks for both exist with a passing self-test, written by a lane that did not build them, and a fresh attempt by an agent given only `AGENT_API.md` and the tools is recorded so the scorecard counts them, with its friction filed.
 
-102. **Review follow-ups to #115 and #118 (bot review, verified by reading the code).** (a) With a dialog
+102. (PR #133 open, awaiting review.) **Review follow-ups to #115 and #118 (bot review, verified by reading the code).** (a) With a dialog
     open, the board's keys still act: `?` opens Shortcuts behind the agent dialog and takes focus
     there, and P, X, C and Backspace act on the selection behind the dialog. (b) The toolbar's Ask
     button on a failed ask now resends it instead of opening the question box; only Ctrl/⌘+Enter
@@ -687,16 +687,24 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 103. (Renumbered from 102 to avoid a clash. PR #128 open, awaiting review.) **A notice stays while the person is on it.** (Follow-up to #119.) Notices disappear on a timer (3.5 s, or 12 s with Show), even while the pointer is over one or its Show button has keyboard focus, so a slow reader or a keyboard user reaching Show can lose it mid-press (WCAG 2.2.1, timing adjustable; "the agent must visibly respond"). Done when the timer pauses while the pointer is over the notice or focus is inside it and restarts when they leave, from a tested pure function, checked in a real page (failing before, passing after).
 
-104. **The Ask loop measure follows the card-is-the-question loop.** Since 7cc29ef there is no question box, and `eval/measures/ask-loop.ts` (#56) still presses ⌘↵ and waits for it, so the scorecard's Ask loop row is 0/5 on `claude/sprint-int`. Every P-item PR must keep `pnpm eval:canvas` no worse, so this blocks them. Done when the measure walks the new loop (a card ending in "?" is sent when the person finishes writing it; another card is sent with ⌘↵; the agent finds the ask over MCP, works, answers beside it; a failed ask offers Retry) and passes 5/5, with each step still failing when its behaviour is broken.
+104. (PR #132 open, awaiting review.) **The Ask loop measure follows the card-is-the-question loop.** Since 7cc29ef there is no question box, and `eval/measures/ask-loop.ts` (#56) still presses ⌘↵ and waits for it, so the scorecard's Ask loop row is 0/5 on `claude/sprint-int`. Every P-item PR must keep `pnpm eval:canvas` no worse, so this blocks them. Done when the measure walks the new loop (a card ending in "?" is sent when the person finishes writing it; another card is sent with ⌘↵; the agent finds the ask over MCP, works, answers beside it; a failed ask offers Retry) and passes 5/5, with each step still failing when its behaviour is broken.
 
 105. **Friction from the 26-task agent attempt (PR #131; reported by the agent, not yet reproduced).** (a) `canvas_update` with `text` leaves the layer `name` at the old text, and `read` and `overview` show the stale name; (b) clearing a chart filter (`filter: {}`) has no example in AGENT_API; (c) `canvas_runs` lists every page's runs, with no page filter; (d) `canvas_annotate`'s placement without x/y and its fixed 420 px width are undocumented; (e) results are large (full richText props, long `created` lists in `canvas_runs`). Done when each is reproduced and fixed or recorded as a decision.
 
+106. (PR #134 open, awaiting review.) **The keyboard, heard and contain checks follow Ask without a question box.** Since 7cc29ef ("The
+    card is the question") `tools/verify-keyboard.mjs` (6 fail), `verify-heard.mjs` (7 fail) and
+    `verify-contain.mjs` (3 fail) still drive the removed Ask box, on claude/sprint-int as on every
+    branch. Done when each walks the new flow (write a question card, finish or Ctrl/⌘+Enter) and
+    passes, with each original intent kept (keyboard-only loop, what is heard, nothing off screen).
+
 ## Claims
-104. The Ask loop measure follows the card-is-the-question loop | claude/sprint-askloop-card | 2026-11-26T14:48Z
-100 (f)-(g). Answer rows and panning findings on #87 | claude/sprint-answer-rows | 2026-11-26T14:48Z
-102. Review follow-ups to #115 and #118 | claude/sprint-keys-followup | 2026-11-26T14:32Z
+P2. Arrangement carries meaning to the agent | claude/sprint-p2-cluster | 2026-11-26T15:01Z
+P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
 
 ## Done
+- 106. Keyboard, heard and contain checks follow the new Ask (build-A): PR #134 (verify-keyboard 10/16 → 16/16, verify-heard 6/13 → 13/13, verify-contain crash → 20/20; tools only).
+- 102. Review follow-ups to #115 and #118 (build-A): PR #133 (board keys stay out of dialogs; newer attempt replaces a queued one; bar notices a quiet ask; (b) moot after 7cc29ef).
+- 104. The Ask loop measure follows the card-is-the-question loop (build-B): PR #132 (0/5 → 5/5 on the integration branch; two mutations each fail their step).
 - 101. Agent-usability tasks for #99 and #51 (build-B): PR #131 (tasks 25 and 26 self-tested; fresh attempt 26/26, median 2 tool calls; friction filed as item 105).
 - 100 (a)-(c). Ask announcement findings on #101 (build-B): PR #129 (repeats said, going quiet said, options counted per answer; verify-announce-fixes 1/4 → 4/4).
 - 99 (filed as 97). The first board keeps a margin on a phone (build-A): PR #130 (new board narrows right of or below the tool strip at 100%; reframe fits marks included, clear of the strip; verify-phone-margin 3/5 → 5/5; desktop unchanged; verify-all 46/47, answer-page is item 97).
@@ -1066,3 +1074,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:46Z | build-A | 99 (filed as 97) First board keeps a margin on a phone | #130 | A board made at 390 px ran off both edges (−57/−35 px) and under the tool strip; a desktop board reframed at 78% put marks at −1 px; verify-phone-margin 3/5 → 5/5; 559 unit tests; verify-all 46/47 (answer-page = item 97, known) |
 | 2026-11-26T14:48Z | build-B | 101 Agent tasks for #99 and #51 | #131 | Tasks 25, 26 self-tested; fresh attempt 26/26, median 2; AGENT_API says annotate answers "fix the person's typo"; friction filed |
 | 2026-11-26T14:48Z | build-B | 100 (a)-(c) Ask announcements | #129 | liveText, announceState, optionsInLatestRound (failing-first tests); answers stamped with answeredAt; verify-announce-fixes 1/4 → 4/4 |
+| 2026-11-26T14:52Z | build-B | 104 Ask loop measure after 7cc29ef | #132 | Measure drove the removed question box (0/5); now writes a question beside a thought and finishes, checks a plain card is not sent and the beside thought is given, ⌘↵ for the failed ask; 5/5; mutations fail their steps |
+| 2026-11-26T14:53Z | build-A | 102 Review follow-ups to #115 #118 | #133 | Backspace in the agent dialog deleted the card behind it (reproduced); verify-menu-keys 16/19 → 19/19, verify-retry-key 10/11 → 11/11 (clock-driven quiet check), 2 failing-first desk tests; ask loop 0/5 on claude/sprint-int since 7cc29ef (build-B's #132) |
+| 2026-11-26T14:57Z | build-A | 106 Checks follow Ask without a box | #134 | verify-keyboard 10/16 → 16/16, verify-heard 6/13 → 13/13, verify-contain crash → 20/20 on the new flow; intent of each kept |
+| 2026-11-26T15:06Z | build-A | Review fixes on #133 and #127 | #133 #127 | #133: a restored board's older attempt was refused for good after Send again (red, failing-first test); desk keeps no watermark, lookalike ids pinned; #127: the 'n of m' heard froze when answers landed (failing-first browser check, 13/14 → 14/14), drag still 94 ms; #127 now stacked on #134 |
