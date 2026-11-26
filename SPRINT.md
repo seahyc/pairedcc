@@ -700,6 +700,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 107. **Browser checks that still open the question box.** Since 7cc29ef there is no question box, but seventeen `tools/verify-*` checks still open it (`.selection-bar.asking` or `getByLabel('Your question')`): annotate-clear, answer-page, answer-show, answer-view, ask-chart, ask-frame, ask-image, ask-live, ask-marks, ask-unclipped, calm, contain, keyboard, keys, leave-out, retry-key, touch. Their ask steps now time out, so they no longer prove what they were written for. Done when each asks the new way (the person's card sent with ⌘↵ or by finishing a question; Ask on someone else's object opens a pink card to write in) and passes on the integration branch, with any real regression it then finds filed. (The Ask loop measure and agent task 22 are fixed in #132.)
 
 ## Claims
+P3. See the whole board and what is settled (part 1: the Settled mark) | claude/sprint-p3-settled | 2026-11-26T15:22Z
 P5. Understanding needs effort (part 1: Check me on the default board) | claude/sprint-p5-check | 2026-11-26T15:15Z
 107. Browser checks that still open the question box | claude/sprint-checks-card | 2026-11-26T15:10Z
 P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
