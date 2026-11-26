@@ -168,7 +168,7 @@ task by which measure is furthest from target, not by backlog order.
     the tools. Done when the scorecard reports a completion rate and median tool calls.
 19. **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
-    their boards, open one, and restore an earlier revision from the canvas.21. **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
+    their boards, open one, and restore an earlier revision from the canvas.21. (PR #20 open, awaiting review.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
     the default view must be behind flags. The flagged buttons are, but any agent can still put a
     dataset, chart or learning prompt on a default board: the tab runs `dataset`, `chart`,
     `chart_state`, `cell` and `learn` whatever its flags. Done when a tab without `?prototype=data`
@@ -190,7 +190,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 9. Editor-level data agent tests | claude/sprint-data-agent-tests | 2026-11-26T10:47Z
-21. Prototype operations behind flags | claude/sprint-proto-gate | 2026-11-26T10:42Z
 18. Agent-usability tasks and first recorded attempt | claude/sprint-agent-tasks | 2026-11-26T10:24Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 11. Shared-edit gaps | claude/sprint-shared-edit | 2026-11-26T10:37Z
@@ -237,6 +236,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-B, item 15) A card's auto-sized `props.h` no longer bumps the revision (one definition of derived fields in `src/revision.ts`, shared with run-undo), and reload no longer re-estimates card heights; cards on screen re-measure once fonts load.
 - (build-B, item 13) Dropping a CSV creates a dataset only with `?prototype=data`, since the scenario is still proposed; without the flag a CSV drop does what it did before. The dataset's top-left corner lands at the drop point; a column is numeric only if every value is.
 - (build-B, item 10) The e2e spec signs in by reading the real magic link from the server log (email sending is not built) and invites the second user through Share, because a signed-in user's document is private. Mismatch found, not changed: the editor tells the owner "anyone with this link can edit", but the API returns 404 to signed-in non-collaborators and the page stays on "Loading document...". Product choice needed: make link access real, or change the banner.
+- (build-A, item 21) A tab without `?prototype=data` refuses `dataset`, `chart`, `chart_state` and `cell`, and one without `?prototype=learning` refuses `learn`, before touching the board. Prototype objects already on a saved board still show everywhere. Agents still see the tools (hosted manifest under `hostedPrototypeTools`, still on; local stdio lists all); alternative: turn `hostedPrototypeTools` off too.
+- (build-A) Two build-A runs overlapped on 26 Nov: this run duplicated the eval board-store fix on #15 and the agent-usability tasks (item 18) before seeing the other run's pushes, and withdrew both without pushing. Lanes should re-read Claims after every pull, not only at the start.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -257,3 +258,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T10:29Z | build-B | 13 CSV import | #18 | CSV drop creates a typed dataset or reports row/column errors; eval CSV step passes; with #17 the acceptance scenario is 10/10 |
 | 2026-11-26T10:37Z | build-B | 10 Repair e2e spec | #19 | Real magic-link sign-in and Share invite; passes 3/3 against local Postgres and Redis; root `pnpm build && pnpm test` green with services |
 | 2026-11-26T10:45Z | review | Review #8 to #15 | #8 #9 #10 #11 #12 #13 #14 #15 | All eight merged (squash) after re-running each proof on the combined branch; two defects fixed in #15 (whole-board overwrite, stray welcome cards); scorecard on 8708875: acceptance 8/10, safety pass, persistence pass (dev store), 10k reported |
+| 2026-11-26T10:58Z | build-A | 21 Prototype ops behind flags | #20 | Unflagged tabs refuse the five prototype ops and change nothing; test fails without the gate; live HTTP check; scorecard unchanged |
