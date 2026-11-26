@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { detectPaste, parseImport, planImport } from "../src/import-parse";
+import { ImportError, detectPaste, parseImport, planImport } from "../src/import-parse";
 import { htmlToMarkdown } from "../src/import-html";
 
 const article = readFileSync(new URL("./fixtures/article.html", import.meta.url), "utf8");
@@ -45,5 +45,35 @@ describe("pasting from a web page", () => {
   });
   it("still leaves one paragraph of copied text as ordinary text", () => {
     expect(detectPaste({ html: "<p>Charge per seat, not per company.</p>", text: "Charge per seat, not per company." })).toBeNull();
+  });
+});
+
+describe("awkward markup stays quick (item 71)", () => {
+  const timed = (html: string) => {
+    const started = performance.now();
+    let error: unknown;
+    try {
+      parseImport(html, "html");
+    } catch (e) {
+      error = e;
+    }
+    return { ms: performance.now() - started, error };
+  };
+  it("2 MB of unclosed <li> is read in under a second", () => {
+    const html = `<h1>List</h1><ul>${"<li>item text ".repeat(Math.floor(2_000_000 / 14))}</ul>`;
+    const { ms, error } = timed(html);
+    expect(ms).toBeLessThan(1000);
+    expect(error === undefined || error instanceof ImportError).toBe(true);
+  });
+  it("2 MB of unclosed advert <div>s is read in under a second", () => {
+    const html = `<h1>Ads</h1>${'<div class="ad">x '.repeat(Math.floor(2_000_000 / 18))}<p>real text</p>`;
+    const { ms, error } = timed(html);
+    expect(ms).toBeLessThan(1000);
+    expect(error === undefined || error instanceof ImportError).toBe(true);
+  });
+  it("2 MB of unclosed <nav> and <script> is read in under a second", () => {
+    const html = `<h1>Mess</h1>${"<nav><script>x ".repeat(Math.floor(2_000_000 / 16))}`;
+    const { ms } = timed(html);
+    expect(ms).toBeLessThan(1000);
   });
 });
