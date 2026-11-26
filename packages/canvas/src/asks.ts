@@ -319,6 +319,8 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     editor.run(() => void (result = work()), { history: "ignore" });
     return result;
   };
+  // One answer's cards share its time, so a later answer is never counted with an earlier one.
+  const answeredAt = Date.now();
   const ids = place(() => {
     // Rows stack under the measured height of the row above (a card sizes to its text when made).
     let rowY = spot.y, rowBottom = spot.y, row = 0;
@@ -334,12 +336,13 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         author: actor,
         targetId: shape.id,
         replyTo: shape.id,
+        answeredAt,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
       }, pageId);
       rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
       return id;
     });
-    setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt: Date.now(), read: input.read, note: undefined, error: undefined });
+    setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt, read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.
     if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
     return made;

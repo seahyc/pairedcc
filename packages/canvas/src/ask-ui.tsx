@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
 import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
-import { askAnnouncement, askStatusLine, retryLabel, BAR_MARGIN, placeBar, startersFor, statusWidth, suggestQuestion } from "./ask-rules";
+import { announceState, askAnnouncement, liveText, optionsInLatestRound, askStatusLine, retryLabel, BAR_MARGIN, placeBar, startersFor, statusWidth, suggestQuestion } from "./ask-rules";
 import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
@@ -76,7 +76,7 @@ export function AskLayer() {
           : [];
         // What the person kept back from this ask, as an agent reading it now would be given it.
         const kept = anyLeftOut ? leftOutLabel(describeAsk(editor, s).leftOut ?? 0) : "";
-        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds)}${kept ? ` · ${kept}` : ""}`, outlines }];
+        return [{ id: s.id, ask, question: textOf(s), answers: optionsInLatestRound(answers.map((r) => ({ answeredAt: typeof r.meta.answeredAt === "number" ? r.meta.answeredAt : undefined, at: typeof r.meta.createdAt === "number" ? r.meta.createdAt : undefined }))), x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds)}${kept ? ` · ${kept}` : ""}`, outlines }];
       });
     },
     [editor],
@@ -87,16 +87,6 @@ export function AskLayer() {
   const pageId = useValue("ask page", () => editor.getCurrentPageId(), [editor]);
   const heard = useRef<{ page: string; states: Map<string, string> } | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  useEffect(() => {
-    const states = new Map(asks.map((a) => [a.id, a.ask.state]));
-    if (!heard.current || heard.current.page !== pageId) {
-      heard.current = { page: pageId, states };
-      return;
-    }
-    const said = asks.flatMap((a) => askAnnouncement(heard.current!.states.get(a.id), { ...a.ask, question: a.question }, a.answers) ?? []);
-    heard.current.states = states;
-    if (said.length) setAnnouncement(said.join(" "));
-  }, [asks, pageId]);
   const active = asks.some((a) => a.ask.state === "waiting" || a.ask.state === "working");
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -104,6 +94,19 @@ export function AskLayer() {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [active]);
+  useEffect(() => {
+    // An agent that goes quiet past the timeout is news too (its line then offers Retry).
+    const at = Math.max(now, Date.now());
+    const states = new Map(asks.map((a) => [a.id, announceState(a.ask, at)]));
+    if (!heard.current || heard.current.page !== pageId) {
+      heard.current = { page: pageId, states };
+      return;
+    }
+    const said = asks.flatMap((a) => askAnnouncement(heard.current!.states.get(a.id), { ...a.ask, state: states.get(a.id) ?? a.ask.state, question: a.question }, a.answers) ?? []);
+    heard.current.states = states;
+    // The same words twice in a row still have to change the region to be said.
+    if (said.length) setAnnouncement((previous) => liveText(previous, said.join(" ")));
+  }, [asks, pageId, now]);
   return (
     <div className="scratch-layer ask-layer">
       {createPortal(
