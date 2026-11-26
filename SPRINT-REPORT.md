@@ -100,7 +100,7 @@ Last updated 2026-11-26T11:35Z by the review lane. Branch: `claude/sprint-int`.
 | e2e | needs Postgres and Redis; 1 passed when they are provided, otherwise stops at start |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T11:25Z on `f81ae2a`:
+Scorecard from `pnpm eval:canvas` at 2026-11-26T11:43Z on `54a0c3d`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
@@ -108,8 +108,8 @@ Scorecard from `pnpm eval:canvas` at 2026-11-26T11:25Z on `f81ae2a`:
 | Agent usability | ≥90% of ≥20 tasks | 21/21 (100%), median 2 tool calls | pass |
 | Safety of shared edits | 0 human edits lost | 0 lost; 9/9 races pass | pass |
 | Persistence | identical in a clean profile | identical | pass |
-| Performance | reported, not worse | 1k: load 1247 ms, pan 16.7 ms/frame; 10k: load 6940 ms, pan 40.3 ms/frame | reported |
-| Existing product | green | build passes; tests: e2e failing | fail |
+| Performance | reported, not worse | 1k: load 1270 ms, pan 16.7 ms/frame; 10k: load 8582 ms, pan 36.5 ms/frame | reported |
+| Existing product | green | build passes; tests: all packages pass | pass |
 <!-- scorecard:end -->
 
 The acceptance scenario passes all ten steps, driven by a person in the page and an agent over
