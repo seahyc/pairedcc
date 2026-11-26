@@ -514,7 +514,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     pass/fail table, writes it as JSON, exits non-zero on any failure, and is documented for the
     review lane.
 
+84. **An ask about an image says what the image is.** `docs/canvas/principles.md`, "Not done": "The resident agent sees text only." Selecting an image and asking gives the agent "(Image, no text)" even when the image has a caption, alt text or a file name, so "what is this sketch for?" is answered blind. Done when an image target (and an image in a frame's contents or the history) is given as its file name, size, caption and alt text where present, from a tested pure function, and checked in a real tab.
+
 ## Claims
+84. Ask about an image says what the image is | claude/sprint-ask-image | 2026-11-26T13:37Z
 83. One command runs every browser check | claude/sprint-verify-all | 2026-11-26T13:34Z
 82. A Tab stop is heard | claude/sprint-robust-heard | 2026-11-26T13:40Z
 
