@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-<<<<<<< HEAD
 import { matchesText, richTextSearch } from "../src/read-filter";
-=======
-import { matchesText } from "../src/read-filter";
->>>>>>> origin/claude/sprint-int
 import { readInput } from "../src/agent-operations";
 import { toolDefs } from "../tools/tool-defs";
 
@@ -16,7 +12,6 @@ describe("finding objects by their text", () => {
     expect(matchesText("x", undefined, null)).toBe(false);
     expect(matchesText("   ", "anything")).toBe(true);
   });
-<<<<<<< HEAD
   it("matches a Greek query ending in sigma inside a word, either case", () => {
     expect(matchesText("ΟΣ", "ΟΣΑ")).toBe(true);
     expect(matchesText("ος", "οσα")).toBe(true);
@@ -38,8 +33,6 @@ describe("finding objects by their text", () => {
     expect(richTextSearch(doc)).toBe("pricing for teams line one line two");
     expect(matchesText("pricing", richTextSearch(doc), "Notes")).toBe(true);
   });
-=======
->>>>>>> origin/claude/sprint-int
   it("is part of read's input and its tool", () => {
     expect(readInput.parse({ text: "pricing", ids: ["shape:a"] })).toEqual({ text: "pricing", ids: ["shape:a"] });
     expect(readInput.safeParse({ text: "x".repeat(201) }).success).toBe(false);
