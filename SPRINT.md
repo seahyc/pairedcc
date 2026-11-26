@@ -213,8 +213,16 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     at 35.7 and 69.1 ms, so the scorecard's 25% "worse" flag fires on noise. Done when the
     performance measure repeats its pan sample and reports a figure whose spread across three
     back-to-back runs on one commit is under the flag threshold, with the spread recorded.
+32. **An ask says "no agent" while the person's agent is connected.** When nothing long-polls for
+    asks (every paired.cc account the resident agent does not serve, and any local board without
+    `pnpm agent`), an ask reads "No agent is listening for this account. Connect yours" even while
+    an MCP agent is connected and acting on the board, so the person reconnects instead of asking
+    their agent. Done when an ask names the agent that recently acted on the tab and says the
+    one thing to do (ask it in your chat to read your asks), the no-agent wording stays when no
+    agent has acted, and both cases are unit-tested and shown in a headless screenshot.
 
 ## Claims
+32. Ask names the connected agent | claude/sprint-ask-recent-agent | 2026-11-26T11:17Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 31. Stable performance numbers | claude/sprint-perf-stable | 2026-11-26T11:13Z
 30. Board opens on an empty view | claude/sprint-reframe | 2026-11-26T11:09Z
