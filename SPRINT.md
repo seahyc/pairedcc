@@ -330,7 +330,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     left out), the resident prompt lists them under the frame, documented, unit-tested and checked
     in a real tab.
 
-46. **An answer lands on its ask's page.** `docs/canvas/principles.md`, "Not done": "An ask on a
+46. (PR #69 open, awaiting review; stacked on #64 and #67.) **An answer lands on its ask's page.** `docs/canvas/principles.md`, "Not done": "An ask on a
     page that is not open fails with a message and a retry." If the person asks, then opens another
     page while waiting (the ask loop invites moving on), `answer` throws "That ask is on another
     page" and the ask shows failed although the agent answered. Done when an answer is placed under
@@ -342,12 +342,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 52. Stale flags never spoil a hidden answer | claude/sprint-stale-hidden | 2026-11-26T12:00Z
 50. Stale checks on shared inputs stay linear | claude/sprint-stale-linear | 2026-11-26T12:02Z
 45. Board sync gap (e): edits while the account's board loads | claude/sprint-load-edits | 2026-11-26T11:59Z
-46. Answer lands on its ask's page | claude/sprint-answer-page | 2026-11-26T11:57Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 46. Answer lands on its ask's page (build-B): PR #69, stacked on #64 and #67.
 - 47. Ask about a frame gives its contents (build-B): PR #67, stacked on #64.
 - 44. Asks carry picks and cross-outs (build-B): PR #64.
 - 40. Say which tool answers feedback (build-A): PR #53.
@@ -379,6 +379,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B, item 46) An answer to an ask on another page is placed on the ask's page, and the person sees a toast naming who answered and on which page. The board never switches their page for them, because moving their view uninvited would undo their own navigation. Alternative: a "Go there" button in the toast.
 - (build-B, item 47) A selected frame's contents go to the agent as `inside` on that target: up to 20 objects in reading order, with nested frames walked into and `insideMore` counting the rest. Objects with neither text nor media (ink strokes, empty shapes) are left out, as `frame.objects` already does.
 - (build-B, item 44) An ask gives the person's marks on every object it hands over, and an ask about one option also gives that answer's other options (each object once). The resident prompt tells the model to build on picks and not re-offer crossed-out ideas. Marks are not a filter: crossed-out objects are still sent, labelled, because the board still shows them.
 - (build-A, item 35) Every connector made by `connect` (agent connections, annotations, feedback) now re-picks facing sides when an end moves, not only annotations; connectors given explicit anchors (converge) and arrows the person draws are left alone. #31 and #48 both touch `connect`; whichever merges second rebases. Claim 36 (comments move with their target, `claude/sprint-follow`) is next to #48: #48 re-picks arrow sides when either end moves, it does not move the comment.
@@ -525,3 +526,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:58Z | build-A | Feedback 8 import, parts 4 and 5 | #60 #65 | #60 .xlsx workbooks read without a dependency (same plan as the paste, fuzzed; verify-import 51/51); #65 web pages and copied web content as section cards (verify-webpage 9/9, verify-import 47/47); both stacked on #46 only |
 | 2026-11-26T11:58Z | build-A | 51 CSV keeps what the file says | #68 | Long IDs stay text, quoted-empty rows kept, non-UTF-8 refused with a fix; 5 failing-first tests, 3 mutations each fail; browser check 5/5; scorecard unchanged |
 | 2026-11-26T11:59Z | build-B | 42 review fixes, 41 review fix | #59 #56 | #59: second-reload, in-flight-save and connecting-edit gaps fixed with failing-first tests, merged with #39; #56: the Ask loop runs on its own dev server so a resident agent never gets the fixture asks |
+| 2026-11-26T12:02Z | build-B | 46 Answer lands on its ask's page | #69 | Answer placed on the ask's page with a toast where the person is; real tab 2/7 before, 7/7 after; first screen unchanged; scorecard unchanged apart from 10k pan noise |
