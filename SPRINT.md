@@ -203,6 +203,12 @@ task by which measure is furthest from target, not by backlog order.
     screen's viewport was. Done when opening a board with no object in view frames its objects
     (never zooming past 100%), tested, with a 390 px screenshot before and after.
 
+34. **Ask starters fit the selection.** `docs/canvas/principles.md`, finding 7 (recognising beats
+    recalling): "Starters are fixed; they do not adapt to what is selected." Done when the Ask box
+    offers starters chosen from the selection (several objects: compare them and name the
+    dimensions they differ on; a question: answer it; a frame: the group; a chart: what it shows),
+    keeps today's three otherwise, is unit-tested, and shown in screenshots.
+
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 28. (PR #36 open, awaiting review.) **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
     fails only because `pnpm eval:canvas` runs the e2e suite without Postgres, Redis or a matching
@@ -237,6 +243,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 32. Ask names the connected agent | claude/sprint-ask-recent-agent | 2026-11-26T11:17Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 31. Stable performance numbers | claude/sprint-perf-stable | 2026-11-26T11:13Z
+34. Ask starters fit the selection | claude/sprint-starters | 2026-11-26T11:17Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
