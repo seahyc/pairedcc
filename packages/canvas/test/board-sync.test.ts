@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { copyId, createBoardSync, mergeSnapshots, withNewRecords, type BoardApi, type Snapshot, type SyncMemo, type SyncStatus } from "../src/board-sync";
+import { contentHash, copyId, createBoardSync, mergeSnapshots, withNewRecords, type BoardApi, type Snapshot, type SyncMemo, type SyncStatus } from "../src/board-sync";
 
 const snap = (text: string): Snapshot => ({ store: { "shape:a": { id: "shape:a", typeName: "shape", text } }, schema: { schemaVersion: 2 } });
 const text = (s: Snapshot) => (s.store["shape:a"] as { text: string }).text;
@@ -116,7 +116,7 @@ describe("board sync", () => {
     await s.start();
     expect(text(srv.boards.get("main")!.snapshot)).toBe("local work");
     expect(last()).toMatchObject({ state: "saved", revision: 1, note: expect.stringContaining("Moved") });
-    expect(b.stored.memo).toEqual({ account: "alice", boardId: "main", revision: 1, dirty: false });
+    expect(b.stored.memo).toEqual({ account: "alice", boardId: "main", revision: 1, dirty: false, hash: contentHash(snap("local work")) });
   });
 
   it("loads the account's board into a clean browser without making a copy", async () => {
@@ -511,5 +511,42 @@ describe("withNewRecords", () => {
     expect(b.timers).toHaveLength(0);
   });
 
+
+  it("reopens the restored board when the tab reloads before the browser stored it", async () => {
+    const srv = server(), b = browser(snap("v1"));
+    const { s } = sync(srv, b, true);
+    await s.start();
+    b.edit("v2");
+    await b.flush();
+    await s.restore(1); // the server and the memo now say "v1" at revision 3
+    expect(b.stored.memo).toMatchObject({ revision: 3, dirty: false, hash: contentHash(snap("v1")) });
+    // Reload at once: tldraw had not yet written the restored board, so this browser still holds v2.
+    const again = browser(snap("v2"), b.stored.memo);
+    const reopened = sync(srv, again, true);
+    await reopened.s.start();
+    expect(text(again.doc)).toBe("v1");
+    again.edit("v1, then edited");
+    await again.flush();
+    expect(srv.boards.get("main")!.history.map(text)).toEqual(["v1", "v2", "v1", "v1, then edited"]);
+  });
+
+  it("keeps this browser's copy when it matches the last sync, and trusts memos without a hash", async () => {
+    const srv = server();
+    await srv.api.put("main", 0, snap("on the server"));
+    const same = browser(snap("on the server"), { account: "alice", boardId: "main", revision: 1, dirty: false, hash: contentHash(snap("on the server")) });
+    await sync(srv, same, true).s.start();
+    expect(text(same.doc)).toBe("on the server");
+    // A memo written before hashes existed behaves as before: the local copy is trusted.
+    const old = browser(snap("local copy"), { account: "alice", boardId: "main", revision: 1, dirty: false });
+    await sync(srv, old, true).s.start();
+    expect(text(old.doc)).toBe("local copy");
+  });
+
+  it("hashes board content the same whatever the key order", () => {
+    const a: Snapshot = { store: { "shape:a": { id: "shape:a", x: 1, props: { w: 2, h: 3 } } }, schema: {} };
+    const b: Snapshot = { store: { "shape:a": { props: { h: 3, w: 2 }, x: 1, id: "shape:a" } }, schema: { other: true } };
+    expect(contentHash(a)).toBe(contentHash(b));
+    expect(contentHash(a)).not.toBe(contentHash(snap("x")));
+  });
 });
 
