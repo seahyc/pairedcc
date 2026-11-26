@@ -1,7 +1,7 @@
 import { createShapeId, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { z } from "zod";
 import { describeObject, revision } from "../operations";
-import { aggregate, chartStateSchema, datasetSchema, describeChart, syntheticOrders } from "./model";
+import { aggregate, chartStateSchema, datasetSchema, describeChart, syntheticOrders, type ChartState } from "./model";
 import { contentVersion, editCell, runChart, staleness, type ChartShape, type DatasetShape } from "./shapes";
 
 // PROTOTYPE agent operations for the data acceptance scenario. Agents create datasets
@@ -48,13 +48,41 @@ export const cellInput = z.object({
   value: z.union([z.string().max(500), z.number().finite()]),
 });
 
+/**
+ * Why an agent may not write to a data object, or undefined if it may. A write needs the
+ * right type, an unlocked object (and frame), and the revision the agent last read.
+ */
+export function writeRefusal(
+  s: { type: string; meta: TLShape["meta"] } | undefined,
+  id: string,
+  type: "dataset" | "chart",
+  expectedRevision: number,
+  locked: boolean,
+): string | undefined {
+  if (!s) return `Object not found: ${id}`;
+  if (s.type !== type) return `${id} is not a ${type}`;
+  if (locked) return "Unlock this object before changing it";
+  if (revision(s) !== expectedRevision) return "Object changed. Read its current revision before updating.";
+  return undefined;
+}
+
 function guarded(editor: Editor, id: string, expectedRevision: number, type: "dataset" | "chart") {
   const s = editor.getCurrentPageShapes().find((s) => s.id === id);
-  if (!s) throw new Error(`Object not found: ${id}`);
-  if (s.type !== type) throw new Error(`${id} is not a ${type}`);
-  if (s.isLocked || editor.isShapeOrAncestorLocked(s)) throw new Error("Unlock this object before changing it");
-  if (revision(s) !== expectedRevision) throw new Error("Object changed. Read its current revision before updating.");
-  return s;
+  const refusal = writeRefusal(s, id, type, expectedRevision, Boolean(s && (s.isLocked || editor.isShapeOrAncestorLocked(s))));
+  if (refusal) throw new Error(refusal);
+  return s!;
+}
+
+/** Apply a partial chart state: omitted fields keep their current value; filter and selected are replaced whole. */
+export function mergeChartState(current: ChartState, change: z.infer<typeof chartStateInput>["state"]): ChartState {
+  return chartStateSchema.parse({ ...current, ...change });
+}
+
+/** Props of a data object as a summary read shows them: rows and bars are left out (they are in dataset/widget, rows only via get). */
+export function summaryProps(type: string, props: Record<string, unknown>) {
+  if (type !== "dataset" && type !== "chart") return props;
+  const { data: _data, bars: _bars, ...rest } = props;
+  return rest;
 }
 
 export function createDataset(editor: Editor, value: unknown, actor: string) {
@@ -98,7 +126,7 @@ export function setChartState(editor: Editor, value: unknown) {
   const input = chartStateInput.parse(value);
   const chart = guarded(editor, input.id, input.expectedRevision, "chart") as ChartShape;
   editor.markHistoryStoppingPoint("agent chart state");
-  runChart(editor, chart, chartStateSchema.parse({ ...chart.props.state, ...input.state }));
+  runChart(editor, chart, mergeChartState(chart.props.state, input.state));
   return describeData(editor, editor.getShape(chart.id)!);
 }
 
@@ -152,6 +180,5 @@ export function dataFields(editor: Editor, s: TLShape, full = false) {
 function describeData(editor: Editor, s: TLShape) {
   const object = describeObject(editor, s.id)!;
   const { props, ...rest } = object;
-  const { data: _data, bars: _bars, ...size } = props as Record<string, unknown>;
-  return { ...rest, props: size, ...dataFields(editor, s) };
+  return { ...rest, props: summaryProps(s.type, props as Record<string, unknown>), ...dataFields(editor, s) };
 }
