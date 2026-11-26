@@ -50,7 +50,7 @@ export function inkTargets(editor: Editor, ink: TLShape, shapes = editor.getCurr
 export type MarkSummary = {
   id: string;
   revision: number;
-  kind: "note" | "pick" | "reject" | "ink";
+  kind: "comment" | "pick" | "reject" | "ink";
   status: MarkStatus;
   targetIds: string[];
   text?: string;
@@ -76,7 +76,8 @@ export function collectMarks(editor: Editor): MarkSummary[] {
       marks.push({
         id: s.id,
         revision: revision(s),
-        kind: "note",
+        // Same word as the feedback queue, so an agent sees one kind of item under one name.
+        kind: "comment",
         status: s.meta.status === "resolved" ? "resolved" : "open",
         targetIds: typeof s.meta.targetId === "string" ? [s.meta.targetId] : [],
         text: "richText" in s.props ? richTextPlain(s.props.richText) : "",

@@ -50,10 +50,21 @@ export function hiddenBy(meta: Record<string, unknown>, statusOf: (promptId: str
  * Why an object may not be hidden behind a prompt, or null if it may. Only an agent's own
  * output can be held back: the person's work is never hidden from them.
  */
-export function hideRefusal(shape: { id: string; type: string; isLocked: boolean; meta: Record<string, unknown> }) {
+export function hideRefusal(
+  shape: { id: string; type: string; isLocked: boolean; meta: Record<string, unknown> },
+  descendants: readonly { id: string; meta: Record<string, unknown> }[] = [],
+) {
   if (shape.type === "prompt") return "A prompt cannot hide another prompt";
   if (shape.isLocked) return `Unlock ${shape.id} before hiding it`;
-  const agentMade = typeof shape.meta.createdBy === "string" || (shape.meta.role === "annotation" && typeof shape.meta.author === "string");
-  if (!agentMade) return `${shape.id} is something the person made; a prompt can hide only an agent's own output`;
+  if (!agentMade(shape.meta)) return `${shape.id} is something the person made; a prompt can hide only an agent's own output`;
+  // Hiding a frame hides everything in it, so it may hold only agent work too.
+  const mine = descendants.filter((d) => !agentMade(d.meta));
+  if (mine.length) return `${shape.id} holds ${mine.map((d) => d.id).join(", ")}, which the person made; a prompt can hide only an agent's own output`;
   return null;
+}
+
+/** The same authorship rule as the board's (scratchbook authorOf): anything not by an agent is the person's. */
+function agentMade(meta: Record<string, unknown>) {
+  const author = meta.role === "annotation" && typeof meta.author === "string" ? meta.author : typeof meta.createdBy === "string" ? meta.createdBy : "Human";
+  return author !== "Human";
 }

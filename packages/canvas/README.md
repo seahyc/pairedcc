@@ -66,7 +66,7 @@ The dev server is managed by user LaunchAgent `com.paired.canvas.dev` (plist in 
 - The Ask loop: asks are cards that show waiting, working, answered or failed with retry, and what the agent was given.
 - Text stays in its container: cards wrap and grow downward, plain text wraps at 460 px instead of growing sideways, pasted text is brought to the same width.
 - Infinite pan/zoom, selection, snapping, dragging and native resize handles.
-- Frames, rectangles, ellipses, freehand paths, rich text, notes, arrows and image import.
+- Frames, rectangles, ellipses, freehand paths, rich text, notes, arrows and image import. Imported images are kept inside the board (photos over 1.5 MB are scaled to 2048 px), so a board saved to an account opens with its images in a clean browser; images added before this lived only in that browser and move into the board the next time it opens there.
 - Pages, nested layers, collapse/expand, multiselection, alignment/grouping and object properties.
 - Undo/redo, keyboard tool shortcuts and duplicate/delete.
 - Local IndexedDB persistence, JSON file export and validated import.
@@ -88,7 +88,15 @@ pnpm build:canvas   # from the repository root: type check and production build
 pnpm test:canvas    # unit tests, including a check that AGENT_API.md documents every tool
 ```
 
+`tools/verify-pdf.mjs <screenshot dir> [origin]` checks a PDF (`test/fixtures/notes.pdf`, the synthetic notes printed by Chromium with `test/fixtures/build-pdf.cjs`).
+
+`tools/verify-cite.mjs <screenshot dir> [origin]` checks bringing cited sections beside a record (the synthetic `test/fixtures/pack.md` is the document the review cites).
+
 `tools/verify-compare.mjs <screenshot dir> [origin]` checks Side by side on two pasted records (alignment, order kept, one undo).
+
+`tools/verify-webpage.mjs <screenshot dir> [origin]` checks a saved web page and a stretch copied from one.
+
+`tools/verify-csv-faithful.mjs <screenshot dir> [origin]` checks that a CSV dropped on the data prototype keeps what the file says: a non-UTF-8 file is refused with a fix, long IDs stay text, a quoted empty value keeps its row.
 
 `tools/verify-import.mjs <screenshot dir> [origin]` checks import and paste the same way (a pasted review as ten record clusters, the stepper, undo, pick / cross out / comment, the ask context, a numeric table, a markdown file, an image drop, the agent operation) against a dev server of this checkout, with the synthetic fixtures in `test/fixtures/`.
 
@@ -107,19 +115,20 @@ Browser checks performed 17 Nov 2026: native object dragging, pen drawing, text 
 `pnpm eval:canvas` (from the repository root) starts its own dev server on port 5191, drives headless Chromium and a real stdio MCP client, and writes `eval/scorecard.json` plus the scorecard table in `SPRINT-REPORT.md`:
 
 - **Acceptance**: the working spec's first scenario step by step; the person clicks, types and drops files in the page, the agent uses MCP. Expected values are computed from the fixture, not read back from the canvas.
+- **Ask loop**: the calm canvas's core loop. The person writes a thought and asks about it with the keyboard; an MCP agent finds it with `canvas_asks`, reports progress and answers with `canvas_answer`. Each step checks what the page shows: waiting with a way to an answer, working with the agent's note, answered with its name, the answer cards beside the ask with their text inside them, and a failed ask with Retry. No resident agent or model runs.
 - **Safety**: stale agent write against a newer human edit, agent undo (`canvas_undo_run`) with interleaved human edits, and agent writes to a locked object; counts human edits lost.
 - **Persistence**: a board saved in one browser profile, compared through `read` in a clean profile.
 - **Performance**: load time and median pan frame time at 1k and 10k objects, compared with the previous scorecard (more than 25% slower is flagged). The pan figure is the median of five 120-frame samples after a discarded warm-up (`EVAL_PAN_SAMPLES` changes the count), and each sample's median is kept in the scorecard, because one sample can swing by 2x on a busy machine. Boards are built with the editor directly through `window.__pairedEditor`, which only development builds expose.
 - **Agent usability**: tasks in `eval/tasks/` with machine-checked end states; the script reports the latest recorded attempt (`eval/agent-runs/latest.json`) and never calls a model.
 - **Existing product**: `pnpm build` and `pnpm -r --no-bail test`, per package. The e2e suite gets `DATABASE_URL` and `REDIS_URL` from the environment when both are set; otherwise the eval starts throwaway Postgres and Redis when `initdb`, `pg_ctl`, `createdb` and `redis-server` are installed (as `nobody` when run as root), and deletes them afterwards. Without either, the row says the suite had no database (`eval/services.ts`).
 
-`--only=acceptance,safety,…` runs a subset and carries the other measures over from the previous scorecard, labelled as such. `--no-write` prints without writing. `EVAL_URL` reuses a running dev server; `CHROMIUM_PATH` points at a browser if Playwright has none installed.
+`--only=acceptance,askLoop,safety,…` runs a subset and carries the other measures over from the previous scorecard, labelled as such. `--no-write` prints without writing. `EVAL_URL` reuses a running dev server; `CHROMIUM_PATH` points at a browser if Playwright has none installed.
 
 ## Scope and limitations
 
 This first pass adopts familiar canvas primitives and interactions. It does not reproduce Paper's CSS-flex layout system, shaders, component system or HTML/React export. Interactive data widgets exist only as the flagged data prototype (one bar chart type). The local agent transport is implemented.
 
-The server now has a per-account board API (`/api/canvas/boards`, `packages/server/src/canvas/boards`). It saves the tldraw document with a revision number, rejects a save on a stale revision with 409 and the current revision, keeps the last 50 revisions, and is covered by tests against memory and a real Postgres (`TEST_DATABASE_URL`). Limits: 10 MB per board (413), and 50 boards per account (`MAX_BOARDS_PER_ACCOUNT`): creating one more is refused with 403 and the limit, while saving an existing board is never limited. Board sync (above) uses it. The development server's file store keeps one local person's boards and has no board limit.
+The server now has a per-account board API (`/api/canvas/boards`, `packages/server/src/canvas/boards`). It saves the tldraw document with a revision number, rejects a save on a stale revision with 409 and the current revision, keeps the newest 20 revisions and then one per 15 minutes of older work (50 at most, so history reaches back hours rather than minutes), and is covered by tests against memory and a real Postgres (`TEST_DATABASE_URL`). Limits: 10 MB per board (413), and 50 boards per account (`MAX_BOARDS_PER_ACCOUNT`): creating one more is refused with 403 and the limit, while saving an existing board is never limited. Board sync (above) uses it. The development server's file store keeps one local person's boards and has no board limit.
 
 The prototype stores work in the current browser profile. Export a file to move work between profiles or devices. Boards are not stored on a server and there is no multiplayer backend; hosted agent access (`https://paired.cc/mcp`) relays commands to a signed-in open tab. tldraw development use works locally; production use requires an appropriate tldraw license. No production deployment was made.
 
