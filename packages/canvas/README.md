@@ -112,6 +112,8 @@ Key hints are written with Apple's symbols and shown in the person's own keys (`
 
 `tools/verify-answer-view.mjs <screenshot dir>`, run the same way, starts its own dev server with an empty board store and checks at 1440 and 390 px that an agent's four options and a one-card answer land wholly in the window (options wrap into rows on a phone), without changing the zoom, and that an answer arriving while the person types elsewhere leaves their view alone.
 
+On a touch screen with no mouse or trackpad (`(hover: none) and (pointer: coarse)` without `(any-pointer: fine)`), nothing names a key: the first board says to double-tap or tap Write, and to tap ✦ Ask; the selection bar drops its key caps; and while a card is being written the hint is a button, "✦ Ask about this". `tools/verify-touch.mjs <screenshot dir>` checks that as an Android phone, and that a desktop is unchanged.
+
 Live checks against a running dev server are listed at the end of [AGENT_API.md](AGENT_API.md).
 
 Browser checks performed 17 Nov 2026: native object dragging, pen drawing, text editing, inspector width/color edits, pan/zoom controls, keyboard undo, revision-aware object operations, stale-write rejection, local reload persistence, export and re-import of the exported document. The 390px layout was checked for horizontal overflow. No quantified latency or frame-rate benchmark was run.

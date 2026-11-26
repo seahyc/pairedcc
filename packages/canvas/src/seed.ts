@@ -1,7 +1,7 @@
 import { b64Vecs, createShapeId, toRichText, type Editor, type TLShapeId } from "tldraw";
 import { annotateObject, connect, createCard, image } from "./agent-operations";
 import { HUMAN } from "./scratchbook";
-import { keys } from "./keys";
+import { firstBoard, keys } from "./keys";
 
 // The welcome board, laid out like a scratchbook: a handwritten title and a row of
 // pages, one per capability, each showing the thing working rather than describing it.
@@ -284,7 +284,7 @@ export function calmSeed(editor: Editor) {
         x,
         y: hint,
         meta: { name: "How to write", createdBy: AGENT, revision: 0, role: "caption", ...meta },
-        props: { w: 460, richText: toRichText("Double-click anywhere, or press N. Pink handwriting is you."), tone: "caption" },
+        props: { w: 460, richText: toRichText(firstBoard().write), tone: "caption" },
       });
       createCard(
         editor,
@@ -292,7 +292,7 @@ export function calmSeed(editor: Editor) {
           x,
           y: hint + 52,
           width: 400,
-          text: keys("Then select it and press ⌘↵ to ask. I answer beside it in a few lines; lavender is me. After that you pick (P), cross out (X) or comment (C), and ask again."),
+          text: firstBoard().ask,
         },
         AGENT,
         { name: "How to ask", ...meta },
