@@ -424,6 +424,31 @@ describe("withNewRecords", () => {
     expect(welcome.snapshot.store["shape:c"]).toBeUndefined();
   });
 
+  it("moves parent and position together, and never leaves a card under a frame that is gone", () => {
+    const shape = (id: string, over: Record<string, unknown> = {}, meta: Record<string, unknown> = {}) => ({ id, typeName: "shape", type: id.includes("frame") ? "frame" : "card", x: 0, y: 0, rotation: 0, parentId: "page:1", props: {}, meta: { revision: 10, ...meta }, ...over });
+    const page = { id: "page:1", typeName: "page" };
+    const board = (...rs: object[]): Snapshot => ({ store: Object.fromEntries(rs.map((r) => [(r as { id: string }).id, r])), schema: { schemaVersion: 2 } });
+    // The account grouped the card into a frame (x 50 inside it); this tab moved it on the page to 600.
+    const frame = shape("shape:frame", { x: 450 });
+    const initial = board(page, frame, shape("shape:c", { x: 500 }));
+    const moved = board(page, frame, shape("shape:c", { x: 600 }, { revision: 11 }));
+    const grouped = board(page, frame, shape("shape:c", { x: 50, parentId: "shape:frame" }, { revision: 11 }));
+    const a = withNewRecords(initial, moved, grouped).snapshot.store["shape:c"] as Record<string, unknown>;
+    expect([a.parentId, a.x]).toEqual(["page:1", 600]); // the person's placement, whole: still at page x 600
+    // This tab dropped the card into a frame the account has since deleted: the account's placement stands.
+    const dropped = board(page, frame, shape("shape:c", { x: 20, parentId: "shape:frame" }, { revision: 11 }));
+    const frameGone = board(page, shape("shape:c", { x: 500 }));
+    const b = withNewRecords(initial, dropped, frameGone).snapshot.store["shape:c"] as Record<string, unknown>;
+    expect([b.parentId, b.x]).toEqual(["page:1", 500]);
+  });
+
+  it("never issues an object revision twice when the account changed it and changed it back", () => {
+    const card = (meta: Record<string, unknown>, props: Record<string, unknown> = {}) => ({ id: "shape:c", typeName: "shape", type: "card", x: 0, y: 0, parentId: "page:1", props: { color: "black", ...props }, meta });
+    const board = (r: object): Snapshot => ({ store: { "page:1": { id: "page:1", typeName: "page" }, "shape:c": r }, schema: { schemaVersion: 2 } });
+    const merged = withNewRecords(board(card({ revision: 10 })), board(card({ revision: 11 }, { color: "red" })), board(card({ revision: 12 })));
+    expect((merged.snapshot.store["shape:c"] as { meta: { revision: number } }).meta.revision).toBe(13);
+  });
+
   it("restores an earlier revision as the newest one, keeping the board before it in history", async () => {
     const srv = server(), b = browser(snap("v1"));
     const { s, last } = sync(srv, b, true);

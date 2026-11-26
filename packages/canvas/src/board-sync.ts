@@ -91,6 +91,7 @@ export function mergeSnapshots(base: Snapshot, mine: Snapshot, theirs: Snapshot)
 }
 
 type Rec = Record<string, unknown>;
+const PLACEMENT = new Set(["parentId", "x", "y", "rotation"]);
 const revisionOf = (r: Rec) => ((r.meta as { revision?: unknown } | undefined)?.revision as number | undefined) ?? 0;
 function setPath(rec: Rec, path: string, value: unknown) {
   const [head, tail] = path.split(/\.(.*)/s);
@@ -135,12 +136,24 @@ export function withNewRecords(initial: Snapshot, current: Snapshot, server: Sna
   for (const [id, now] of Object.entries(current.store) as [string, Rec][]) {
     const before = initial.store[id] as Rec | undefined, theirs = server.store[id] as Rec | undefined;
     if (!before || !theirs || now.typeName === "user") continue;
-    const edited = changedPaths(before as never, now as never);
+    let edited = changedPaths(before as never, now as never);
+    if (!edited.length) continue;
+    // Position is relative to the parent, so parent and position move as one: the person's
+    // placement is carried whole, and only if its parent is still on the merged board;
+    // otherwise the account's placement stands (no orphan, no coordinates in the wrong frame).
+    if (edited.some((p) => PLACEMENT.has(p))) {
+      const parent = now.parentId as string | undefined;
+      const placeable = !parent || parent in store;
+      edited = edited.filter((p) => !PLACEMENT.has(p));
+      if (placeable) edited.push(...PLACEMENT);
+    }
     if (!edited.length) continue;
     const merged = structuredClone(theirs);
     for (const path of edited) setPath(merged, path, structuredClone(getPath(now, path)));
-    // The object moved on in this tab; if the account changed it too, past both.
-    const revision = changedPaths(before as never, theirs as never).length ? Math.max(revisionOf(theirs), revisionOf(now)) + 1 : revisionOf(now);
+    // The object moved on in this tab; if the account's copy moved on too (even back to the
+    // same content), past both, so no revision is issued twice for different content.
+    const theirsChanged = revisionOf(theirs) !== revisionOf(before) || changedPaths(before as never, theirs as never).length > 0;
+    const revision = theirsChanged ? Math.max(revisionOf(theirs), revisionOf(now)) + 1 : revisionOf(now);
     merged.meta = { ...((merged.meta as Rec | undefined) ?? {}), revision };
     store[id] = merged;
     kept++;
