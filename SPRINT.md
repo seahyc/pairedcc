@@ -166,7 +166,7 @@ task by which measure is furthest from target, not by backlog order.
     `packages/canvas/eval/tasks/`, each with a machine-checked end state, a runner that sets each
     one up in a real tab, and a recorded attempt by a fresh agent that has only `AGENT_API.md` and
     the tools. Done when the scorecard reports a completion rate and median tool calls.
-19. (PRs #32, #35, #39, stacked in that order, open and awaiting review: restore from Menu → Earlier versions, open from Menu → Saved boards. Complete once all three merge.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
+19. (#32 merged; PRs #35, #39, stacked in that order, open and awaiting review: restore from Menu → Earlier versions, open from Menu → Saved boards. Complete once all three merge.) **Board picker and history.** Server boards other than `main` (a browser's earlier work kept
     by sync) and earlier revisions are reachable only through the API. Done when a person can list
     their boards, open one, and restore an earlier revision from the canvas.
 21. (Merged, see Done.) **Prototype operations behind their flags.** The brief says merged prototypes that add noise to
@@ -176,12 +176,12 @@ task by which measure is furthest from target, not by backlog order.
     (or `?prototype=learning`) refuses those operations with an error that says how to turn them
     on, flagged tabs and saved boards behave as before, and a test fails if the gate is removed.
 
-24. (PR #30 open, awaiting review.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
+24. (#30 merged; PR #45 open, awaiting review, now merged up to the integration branch.) **Board sync against the real server, in a browser.** Sync has only run in a browser against
     the development board store. Done when a scripted check signs in to a local server (Postgres,
     Redis), opens the canvas, saves, and a second clean browser on the same account opens the same
     board, without needing a tldraw licence key (for example the dev canvas proxying `/auth` and
     `/api/canvas/boards` to the server behind an environment switch).
-25. (PR #29 open, awaiting review.) **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
+25. (Merged, see Done.) **Board too large is not "Offline".** A save refused with 413 (over 10 MB) or 400 shows
     "Offline · saved on this device" and retries for ever, re-uploading each time. Done when a
     refused save says why on the chip, stops retrying until the board changes, and has a test.
 26. (PR #28 open, awaiting review.) **Limits on stored boards.** No cap on boards per account, and 50 full snapshots per board.
@@ -208,6 +208,18 @@ task by which measure is furthest from target, not by backlog order.
     offers starters chosen from the selection (several objects: compare them and name the
     dimensions they differ on; a question: answer it; a frame: the group; a chart: what it shows),
     keeps today's three otherwise, is unit-tested, and shown in screenshots.
+
+35. (PR #47 open, awaiting review.) **Agents see what the person put together.** `docs/canvas/principles.md`, finding 2 (moving
+    things is thinking): "The agent does not read meaning from arrangement (what is near what)."
+    Done when `canvas_overview` reports clusters of nearby objects at the level it lists (frames
+    already show explicit grouping), computed by a tested pure function, documented, and checked
+    live over HTTP.
+
+36. (PR #52 open, awaiting review.) **Comments and replies move with what they are about.** `usability-heuristics.md`, what
+    remains, item 10: "Replies and comments do not move with their target; they keep their arrow
+    but stay where they were placed." Done when moving an object moves the comments, agent notes
+    and replies attached to it by the same amount (not those also being moved, not ones about
+    several objects), as one undo step, tested, with before/after screenshots.
 
 Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate of 17.
 28. (PR #36 open, awaiting review.) **Existing product row runs the e2e suite for real.** The scorecard's "Existing product" row
@@ -242,13 +254,53 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     arrow keeps the anchor sides chosen when it was made and takes an odd route (reported by the
     agent-usability attempt, PR #24). Done when moving either end re-routes the arrow to the facing
     sides, shown by before/after screenshots and a check of the binding anchors.
+38. (Renumbered from 36 to avoid a clash. PR #49 open, awaiting review.) **Working spec's implemented sections, after the 26 Nov merges.** `docs/canvas/working-spec.md`
+    still lists server-side storage, file import and a general Transformation object as not built,
+    and says nothing of #11 to #30. Done when each merged PR's user- or agent-visible effect is in an
+    implemented section with its PR number, no "not built" claim contradicts the code, and
+    `principles.md`'s "Not done" list matches the code.
+
+37. **`read` reports a card's style.** Agents create notes with `style` (note, heading, quote,
+    code) but `read` shows it only as `props.tone`, so checking it took a `canvas_get` (PR #24
+    attempt). Done when `read` and `get` report `style` on cards, documented and tested.
+39. (PR #57 open, awaiting review.) **Agent-usability tasks for features merged after #24.** The 21 tasks predate the Ask loop
+    (#21), comment replies in the queue, and converge (#27). Done when tasks for those exist with
+    a passing self-test (check fails on setup, passes after the reference solution), written by a
+    lane that did not build them, and the scorecard's task count reflects them.
+
+40. **Say which tool answers feedback.** The PR #24 agent could not tell whether to answer the
+    person's comment with `canvas_reply` or `canvas_annotate`. Done when the tool descriptions and
+    AGENT_API say which to use, checked by a test.
+41. (PR #56 open, awaiting review.) **The scorecard measures the Ask loop.** The calm canvas's core loop (write, select, Ask, see
+    the agent respond) has no eval measure; the scorecard checks only the data scenario. Done when
+    `pnpm eval:canvas` has an "Ask loop" row whose steps run in a real page and a real stdio MCP
+    client: a person's ask shows a waiting state that names who can answer; an external agent finds
+    it with `canvas_asks`, reports progress (the page shows working) and answers with
+    `canvas_answer`; the page shows answered with the agent's name; the answer sits beside the ask
+    and its text stays inside its card; a failed ask offers Retry. Unit tests cover the new row.
+
+42. **A restored or freshly loaded board survives an immediate reload.** After `restore(revision)`
+    (or the first load of an account's board) the sync memo says this browser is in step with the
+    server before the browser's own copy is written; a reload inside that moment (measured: lost at
+    0 and 300 ms, kept at 1,000 ms) shows the old board, and the next edit saves it on top. Done
+    when a scripted check restores, reloads at once and still sees the restored board, for example
+    by recording in the memo what content was synced and re-reading the account when it differs.
+43. **Agent friction found in the 24-task attempt (#57).** A fresh agent reported: feedback items
+    say `kind: "comment"` where read `marks` say `"note"`; `locked` is missing from
+    `canvas_overview`; `canvas_duplicate`'s default offset (320) ignores the object's width, so a
+    600-wide frame's copy overlaps it; `canvas_runs` names the op but not the fields a run changed.
+    Done when each is fixed or documented in AGENT_API.md, with a test for each fix.
 
 ## Claims
-35. Annotation arrows follow their note | claude/sprint-annotation-arrows | 2026-11-26T11:22Z
+43. Agent friction from the 24-task attempt | claude/sprint-agent-friction | 2026-11-26T11:41Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 40. Say which tool answers feedback (build-A): PR #53.
+- Reviewed and merged 2026-11-26 by the review lane: #24 as 984374b, #29 as 2a36db5, #30 as e8b3218, #31 as 66678b5, #32 as b8b30a3 (each after merging in the integration branch and re-running its proof; fixes noted in the Log).
+- 37. read reports card style (build-A): PR #51.
+- 35. Annotation arrows follow their note (build-A): PR #48 (connectors re-pick facing sides when either end moves; explicit anchors kept).
 - 33. Agent tools never offer authorship (build-A): PR #44 (`canvas_annotate` no longer advertises `author`; manifest test guards every tool).
 - Reviewed and merged 2026-11-26 by the review lane: #22 as 2b33d8c, #23 as 8daf8d3, #25 as a7c8505, #26 as 5f9f355, #27 as 12abf62, #28 as eb63f9b. Agent-usability attempt re-recorded on the calm canvas (21/21).
 - 5. Converge, part 2 (build-A): PR #31, built on build-B's #27: the person's own synthesis from a selection (empty card in typing mode), claims citing sources by arrow letter, placement that keeps arrows clear of sources.
@@ -272,6 +324,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 35) Every connector made by `connect` (agent connections, annotations, feedback) now re-picks facing sides when an end moves, not only annotations; connectors given explicit anchors (converge) and arrows the person draws are left alone. #31 and #48 both touch `connect`; whichever merges second rebases. Claim 36 (comments move with their target, `claude/sprint-follow`) is next to #48: #48 re-picks arrow sides when either end moves, it does not move the comment.
 - (review, #26) `canvas_get`'s prototype fields (relationships, source, transformation) are not behind a flag; they are read-only and add nothing to the board.
 - (build-A, item 5) The person's synthesis card starts empty so the conclusion is theirs (augmentation principle); alternative: prefill an agent draft to edit. build-A had built converge in parallel before seeing #27; rather than open a competing PR it rebuilt its additions on #27 as #31.
 - (review, #21) How the calm canvas was combined with the sprint work: the calm layout, menu and first board win wherever the two disagreed; the legacy welcome-board swap is dropped (an older board is kept as its own page, as #21 does); board sync starts after the calm first board is laid out; the prototype page buttons stay in the pages list, which is now behind Menu → Show layers and pages, so with a prototype flag on they are two clicks away. Alternative: a flagged entry in the menu itself.
@@ -335,6 +388,13 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 
 - (build-B, item 32) An agent counts as connected for an ask's status if it acted on the tab within the last 10 minutes (`RECENT_MS`). An agent that ever listened for asks in this tab is never offered as a chat agent. The wording is "<agent> was here 7s ago. In your chat, ask it to answer this." Alternative: the hosted relay reports MCP presence per account from `/mcp` calls, which needs server changes.
 - (build-A, item 31) The pan figure is the median of five 120-frame samples after a discarded warm-up, with each sample kept in the scorecard; three back-to-back runs agree within 3% at 10k (was 2x). Costs about 35 s per 10k run. The 25% threshold is unchanged.
+- (build-B, item 36) Following applies only to the person's moves (the moved object is selected), keeps multi-target comments in place, and pauses during undo/redo by wrapping the editor instance's `undo`/`redo` (tldraw's replay flag is private).
+
+- (review, #29) A 403 from the board limit (#28) counts as a refused save, like 400 and 413: the chip reads "Save refused", the tooltip gives the server's sentence, and nothing is re-uploaded until the board changes.
+- (review, #31) With `?prototype=converge` the person's "Pull into a synthesis" is in Properties, which the calm layout keeps behind the menu (three clicks). Alternative: a flagged entry on the selection bar, next to Ask. The letters on the arrows are small and partly covered by the arrow line.
+
+- (build-B, item 41) The scorecard gains an "Ask loop" row next to the maintainer's measures (target: every step passes). It runs with no resident agent, so step 1 accepts any line that gives a way to an answer ("pnpm …", "chat", "Connect an agent" or "Waiting for …"). Answer cards may sit up to 400 px from their ask.
+- (build-A, item 39) Agent-usability tasks missing from the recorded attempt now count as not completed. Task 14's check (from #24) fails an agent note that names East as highest but also lists the other regions; left unchanged, since loosening another lane's check would weaken the measure.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |
@@ -382,3 +442,16 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T11:20Z | build-B | 34 Ask starters fit the selection | #42 | Starters from the selection (compare on dimensions for several objects); chips wrap inside the box; screenshots |
 | 2026-11-26T11:21Z | build-A | 31 Stable performance numbers | #43 | 10k pan = median of 5 samples after warm-up; three runs 39.3/38.6/39.8 ms (was 35.7 vs 69.1) |
 | 2026-11-26T11:21Z | build-A | 33 No authorship field for agents | #44 | Schema fix with a failing-then-passing test; live MCP and HTTP check; scorecard unchanged |
+| 2026-11-26T11:23Z | build-A | 24 Sync against the real server (race) | #45 | Real server refuses a stale save with 409 and the canvas merges; both browsers' changes on the server |
+| 2026-11-26T11:24Z | build-B | 35 Agents see clusters | #47 | `canvas_overview` reports piles of nearby objects; tested pure function; live HTTP check; root build and test green |
+| 2026-11-26T11:25Z | build-A | 35 Annotation arrows follow | #48 | Side effect re-picks connector sides; before/after anchors and screenshots; scorecard unchanged |
+| 2026-11-26T11:26Z | build-A | 38 Working spec implemented sections | #49 | #11 to #30 recorded with PR numbers; stale "not built" claims (server storage, file import, transformations, hosted presence) corrected |
+| 2026-11-26T11:33Z | build-B | 19 review fixes, 25 follow-up | #32 #35 #39 #50 | Seven verified review findings fixed with failing-first tests: restore against stale tabs, pruning and in-flight edits; board switch across tabs (reproduced in two real tabs), undo after a switch, offline edits; a refusal no longer cancels a newer edit's save (#50) |
+| 2026-11-26T11:28Z | build-A | 37 Card style in read | #51 | `style` on cards in read/get; live MCP check; scorecard unchanged |
+| 2026-11-26T11:31Z | build-B | 36 Comments move with their target | #52 | Comment, reply and agent note move with the card; one undo keeps them together; acceptance 10/10, safety 9/9 |
+| 2026-11-26T11:31Z | build-A | 40 Reply guidance | #53 | Tool descriptions and AGENT_API say canvas_reply answers feedback; test; scorecard unchanged |
+| 2026-11-26T11:35Z | review | Review #29 to #32 | #29 #30 #31 #32 | All four merged (squash) after merging in the integration branch; #29 gained the 403 board-limit case; #30 reproduced against Postgres 16 and Redis; #31 refitted to #27 as merged and the calm layout; #32 driven in a real tab, reload-after-restore gap filed as 42; build and all package tests green after each |
+| 2026-11-26T11:34Z | build-A | 21 follow-up; 28 review fixes | #54 #36 | Sign-in keeps the tab's prototype flags (regression from #20 found in review); #36 services hardened: passwords, loopback, trusted pid file, cleanup on Ctrl+C, real headless-launch probe |
+| 2026-11-26T11:41Z | build-B | 41 Scorecard measures the Ask loop | #56 | New eval row, 5/5 steps in a real page and stdio MCP client; four UI mutations each fail a step; other measures unchanged |
+| 2026-11-26T11:40Z | build-A | 39 Agent-usability tasks for newer features | #57 | Tasks for the Ask loop, threaded replies and converge; self-test 24/24; fresh-agent attempt 23/24, median 3 calls; row counts missing tasks |
+| 2026-11-26T11:40Z | build-A | Feedback 8 import and paste, parts 1 to 3 | #46 #55 #58 | #46 brings yc/import-paste in (CSV drop under ?prototype=data kept: acceptance 9/10→10/10; verify-import 47/47); #55 side by side for two records (13/13 browser checks); #58 cited sections beside a record with reference arrows (15/15); first screen unchanged; stacked 46←55←58 |
