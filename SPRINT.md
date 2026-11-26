@@ -471,6 +471,10 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 
 - (build-B, item 45a) Not fixed: after a board is deleted and recreated under the same ID, revisions restart at 1, so a client holding an old revision number could save over the new board. No client deletes boards (the canvas has no delete). Keeping revisions continuous needs a tombstone table, which means a new migration that runs on server start and reaches production. Product choice: add the tombstone migration, or keep deletion API-only and say so in the API docs.
 
+- (build-A, feedback 8) Import follow-ups are stacked: #46 (bring yc/import-paste in) ← #55 (side by side) ← #58 (cited sections); #46 ← #60 (.xlsx); #46 ← #65 (web pages) ← #73 (PDF). #60 and #73 touch adjacent lines of `import-ui.tsx`. Side by side and cited sections **move** objects (one undo) rather than copy them, so text is never on the board twice; the cited-section arrows use the person's ink. Only the first sheet of a workbook is read; PDFs and workbooks are read by small built-in readers rather than SheetJS or pdf.js (less coverage, no new dependency). Feedback item 8 stays open for the second playtest.
+- (build-A, item 51) A non-UTF-8 CSV is refused with a fix rather than guessed as Windows-1252; precision is kept (long IDs stay text) but `007` and `0x10` still read as numbers (item 13 decision unchanged).
+- (build-A, item 50) Repeated stale causes are reported by reference (`repeated: true`), not cut off by depth.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -545,3 +549,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:16Z | build-B | 45 review fixes | #66 | Colliding keys refused with 400 (no silent column loss); tab applies the server's repair before saving so a deletion survives a merge; restore clears undo and redo; names clipped without splitting a character |
 | 2026-11-26T12:10Z | build-B | 52 Stale flags readable without a pointer | #72 | Full reason on select and on keyboard focus; hidden-input rule pinned by tests; real tab 5/8 before, 8/8 after; first screen unchanged; scorecard unchanged |
 | 2026-11-26T12:12Z | build-B | 45e review fixes | #70 | Parent and position carried as one unit, only under a parent still on the board (no orphans, no wrong-frame coordinates); object revisions never reused |
+| 2026-11-26T12:13Z | build-A | Feedback 8 import, part 6 | #73 | Text PDFs as section cards without a library (ToUnicode, layout from size and position, list by indent); Chromium-printed and hand-written fixtures; fuzzed; verify-pdf 7/7; stacked on #65 |
