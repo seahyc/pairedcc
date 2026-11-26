@@ -412,7 +412,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 65. **Asks and the section reader use what is on the board (rest of the automated review of #46).** (a) Asking about a record sends the title's original row values even after the person edited the title; (b) a follow-up ask on an answer about a record loses the record's text (the thread reads the textless group); (c) numeric headers in Markdown or HTML tables (`<th>2024</th>`) become a data row; (d) a Markdown table without outer pipes is read as prose; (e) fenced code without double spaces is flattened into one line. Done when each has a failing-first test and is fixed.
 
-66. **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
+66. (PR #88 open, awaiting review; stacked on #83.) **On a touch screen, say tap, not a key.** Finding 7 (recognising beats recalling) and playtest
     item 6. A phone has no keyboard, yet the first board says "press ⌘↵ to ask" (with #83, Android
     reads "Ctrl+↵"), the selection bar shows key caps, and while writing a card the hint names
     keys and offers no way to ask. Done when, on a touch-only device, the first board says to tap
@@ -433,13 +433,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 67. The person chooses what an ask leaves out | claude/sprint-context-leave-out | 2026-11-26T12:50Z
-66. Touch screens say tap | claude/sprint-touch-hints | 2026-11-26T12:42Z
 65. Asks and the section reader use what is on the board | claude/sprint-import-board-truth | 2026-11-26T12:39Z
 39. Agent-usability tasks for newer features | claude/sprint-more-tasks | 2026-11-26T11:30Z
 Feedback 8. Import and paste on the integration branch, then build on it | claude/sprint-import-* | 2026-11-26T11:20Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
 ## Done
+- 66. Touch screens say tap (build-A): PR #88, stacked on #83 (first board says tap, no key caps, writing hint is a tappable Ask; verify-touch 7/11 → 11/11).
 - 63. Answer lands in view (build-A): PR #87 (options wrap into rows that fit the window, cards narrow on a phone, the view pans to a landed answer; verify-answer-view 11/14 → 14/14).
 - 61. Ask about a chart or dataset gives what it shows (build-B): PR #86, stacked on #69.
 - 60. Key hints in the person's own keys (build-A): PR #83 (Ctrl on Windows, Linux and Android, ⌘ on Apple; verify-keys 10/16 → 16/16).
@@ -480,6 +480,7 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 66) "Touch-only" is a coarse pointer with no fine pointer anywhere; a tablet with a trackpad keeps keyboard hints. On touch the writing hint becomes a primary "✦ Ask about this" button (the only way to ask while writing); on a desktop it stays a passive key hint. Alternative: a button everywhere.
 - (build-A, item 63) When an answer lands and the person can see its ask (not typing, dragging or asking), the view pans to show all of it, never zooming. On a phone, options wrap one per row, so comparing means scrolling down. Alternatives: a "4 options below →" pointer instead of panning; zooming out to fit a row.
 - (build-B, item 61) An ask about a chart gives its bars as text (up to 40, then a count) and, when stale, the bars still drawn with the reason, rather than bars recomputed from current data, so the agent sees what the person sees. A dataset gives its first five rows. Chart and dataset starters are offered (behind `?prototype=data`, where these objects exist).
 - (build-A, item 60) The first board's "How to ask" card is board text, written in the keys of the device that laid it out; a board seeded on a Mac and opened on Windows keeps ⌘↵ on that card while the bar and hints say Ctrl. Alternative: render that card's key at display time.
@@ -668,3 +669,4 @@ Feedback 8. Import and paste on the integration branch, then build on it | claud
 | 2026-11-26T12:39Z | build-B | Process slip, fixed | #64 #67 #69 #72 #76 #77 #81 #86 | The PR tool added a tool-link footer to these descriptions, against the hard rules; removed from all eight (re-read to confirm). The edit also escaped the inner HTML of another bot's Devin review badge in those bodies; the PR text is unchanged |
 | 2026-11-26T12:40Z | build-A | 63 Answer lands in view | #87 | 1440 px: option D landed off screen; 390 px: only A visible; now all in view, zoom unchanged, typing elsewhere undisturbed; verify-answer-view 11/14 → 14/14; 9 failing-first unit tests; scorecard unchanged |
 | 2026-11-26T12:44Z | build-B | 64 review fix | #84 | CSV number pattern no longer backtracks (40,000-digit malformed cell: 762 ms before, under 200 ms test bound after) |
+| 2026-11-26T12:45Z | build-A | 66 Touch screens say tap | #88 | Phone saw key names on the first board, bar and writing hint, with no way to ask while writing; verify-touch 7/11 → 11/11; desktop unchanged; scorecard unchanged |
