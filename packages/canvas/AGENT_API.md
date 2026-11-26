@@ -12,7 +12,7 @@ The equivalent stdio process is:
 node <repo>/packages/canvas/node_modules/tsx/dist/cli.mjs <repo>/packages/canvas/tools/mcp.ts
 ```
 
-where `<repo>` is the absolute path of your checkout. The local configuration shown in Agent access currently contains one development machine's paths; replace them with yours. From the repository root, `pnpm mcp:canvas` runs the same process.
+where `<repo>` is the absolute path of your checkout; the configuration in Agent access fills it in from the running dev server. From the repository root, `pnpm mcp:canvas` runs the same process.
 
 Set `PAIRED_SESSION` to target a particular tab. Its ID persists across reloads in that tab's session storage. `canvas_sessions` lists connections. If several are open, requests without a session ID fail rather than selecting a canvas arbitrarily.
 
