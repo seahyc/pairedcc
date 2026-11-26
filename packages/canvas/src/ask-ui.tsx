@@ -1,14 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { atom, useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
-import { askOf, createAsk, describeAsk, retryAsk } from "./asks";
+import { askOf, createAsk, describeAsk, previewAsk, retryAsk } from "./asks";
 import { askAnnouncement, askStatusLine, retryLabel, BAR_MARGIN, placeBar, startersFor, statusWidth, suggestQuestion } from "./ask-rules";
 import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
-import { isLeftOut, isPinned, leftOutLabel, pinnedLabel, toggleLeftOut, togglePinned } from "./leave-out";
+import { contextSummary, isLeftOut, isPinned, toggleLeftOut, togglePinned } from "./leave-out";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
 
@@ -24,6 +24,15 @@ function givenLabel(editor: Editor, ids: string[]) {
   const frames = shapes.filter((s) => s.type === "frame"), things = shapes.filter((s) => s.type !== "frame");
   const first = things[0] ? `“${short(textOf(things[0]) || shapeName(things[0]))}”` : "nothing";
   return `${first}${things.length > 1 ? ` + ${things.length - 1} more` : ""}${frames[0] ? ` + frame “${short(shapeName(frames[0]), 20)}”` : ""}`;
+}
+
+/** The selection the Ask box is open on, so the board can outline what the ask would give. */
+const askBoxOn = atom<string[] | null>("ask box selection", null);
+
+/** What an ask about these objects would give, said as the ask's line will say it once sent. */
+function previewLine(editor: Editor, ids: string[]) {
+  const view = previewAsk(editor, ids);
+  return { ...view, text: `Gives ${contextSummary(givenLabel(editor, view.contextIds), view.pinnedCount, view.leftOut)}` };
 }
 
 export function sendAsk(editor: Editor, id: string) {
@@ -79,9 +88,8 @@ export function AskLayer() {
             })
           : [];
         // What the person kept back from this ask, as an agent reading it now would be given it.
-        const kept = view ? leftOutLabel(view.leftOut ?? 0) : "";
-        const pins = view ? pinnedLabel(pinnedIds.length + (view.pinnedMore ?? 0)) : "";
-        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given: `${givenLabel(editor, ask.contextIds)}${pins ? ` + ${pins}` : ""}${kept ? ` · ${kept}` : ""}`, outlines }];
+        const given = contextSummary(givenLabel(editor, ask.contextIds), pinnedIds.length + (view?.pinnedMore ?? 0), view?.leftOut ?? 0);
+        return [{ id: s.id, ask, question: textOf(s), answers: answers.length, x: b.x, y: b.maxY, w: b.w, given, outlines }];
       });
     },
     [editor],
@@ -102,6 +110,20 @@ export function AskLayer() {
     heard.current.states = states;
     if (said.length) setAnnouncement(said.join(" "));
   }, [asks, pageId]);
+  // While the Ask box is open: outline what the ask would give, as the sent ask will be outlined.
+  const preview = useValue(
+    "ask box outlines",
+    () => {
+      const ids = askBoxOn.get();
+      if (!ids?.length) return [];
+      const view = previewAsk(editor, ids);
+      return [...view.contextIds, ...view.pinnedIds].flatMap((id) => {
+        const box = editor.getShapePageBounds(id as TLShapeId);
+        return box ? [{ id, x: box.x, y: box.y, w: box.w, h: box.h }] : [];
+      });
+    },
+    [editor],
+  );
   const active = asks.some((a) => a.ask.state === "waiting" || a.ask.state === "working");
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -111,6 +133,9 @@ export function AskLayer() {
   }, [active]);
   return (
     <div className="scratch-layer ask-layer">
+      {preview.map((o) => (
+        <div key={`preview-${o.id}`} className="ask-given preview" style={{ transform: `translate(${o.x - 6}px, ${o.y - 6}px)`, width: o.w + 12, height: o.h + 12 }} />
+      ))}
       {createPortal(
         <div className="visually-hidden" role="status" aria-live="polite" data-ask-announcer>
           {announcement}
@@ -229,6 +254,12 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
   useEffect(() => {
     if (asking && !ids) setAsking(false);
   }, [asking, ids, setAsking]);
+  // The board outlines what this ask would give while the box is open.
+  useEffect(() => {
+    askBoxOn.set(asking && ids ? ids.split(",") : null);
+    return () => void askBoxOn.set(null);
+  }, [asking, ids]);
+  const gives = useValue("ask box gives", () => (asking && ids ? previewLine(editor, ids.split(",")).text : ""), [editor, asking, ids]);
   useEffect(() => {
     if (!asking) return;
     setQuestion(suggestQuestion(state?.text ?? ""));
@@ -347,6 +378,11 @@ export function SelectionBar({ asking, setAsking, onComment, onNotice, keepInVie
             Ask ↵
           </button>
         </div>
+        {gives && (
+          <div className="ask-gives" data-ask-gives>
+            {gives}
+          </div>
+        )}
         <div className="ask-starters">
           {(state?.starters.split("\n") ?? []).map((s) => (
             <button key={s} type="button" onClick={() => submit(s)}>

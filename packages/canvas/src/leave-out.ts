@@ -73,6 +73,15 @@ export function pinnedLabel(count: number) {
   return count > 0 ? `${count} pinned` : "";
 }
 
+/**
+ * What an ask gives, in a few words: what it is about, then "+ N pinned" and "· N left out".
+ * The ask's line and the Ask box's preview both say it this way.
+ */
+export function contextSummary(base: string, pinned: number, leftOut: number) {
+  const pins = pinnedLabel(pinned), kept = leftOutLabel(leftOut);
+  return `${base}${pins ? ` + ${pins}` : ""}${kept ? ` · ${kept}` : ""}`;
+}
+
 /** Next state for a selection: pin all, or unpin all when every one is already pinned. */
 export function nextPinned(metas: Meta[]) {
   return !metas.every((m) => isPinned(m));

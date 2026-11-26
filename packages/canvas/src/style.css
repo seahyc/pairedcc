@@ -1616,6 +1616,13 @@ kbd {
 .ask-send:disabled {
   background: #c9c6ea;
 }
+/* What the ask would give, said before it is sent: muted, one line, wraps rather than overflows. */
+.ask-gives {
+  padding-left: 23px;
+  color: #6b6880;
+  font: 400 11.5px/1.4 Inter, -apple-system, sans-serif;
+  overflow-wrap: anywhere;
+}
 .ask-starters {
   display: flex;
   flex-wrap: wrap;

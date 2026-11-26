@@ -46,19 +46,25 @@ function setAsk(editor: Editor, shape: TLShape, ask: AskMeta) {
   editor.run(() => editor.updateShape({ id: shape.id, type: shape.type, meta: { ...shape.meta, ask: clean } }), { history: "ignore" });
 }
 
+/** What an ask about these objects is outlined as: the selection plus the frame it sits in. */
+function askContextIds(editor: Editor, targets: TLShape[]) {
+  if (!targets.length) return [];
+  // A frame the person left out is not part of the context (unless it is itself selected).
+  const around = frameOf(editor, targets[0]);
+  const frame = around && keepForAgent([around], targets.map((t) => t.id)).kept.length ? around : undefined;
+  return [...targets.map((t) => t.id), ...(frame ? [frame.id] : [])];
+}
+
 /** Ask an agent about the given objects. The context is the selection plus the frame it sits in. */
 export function createAsk(editor: Editor, value: { targetIds: string[]; question: string }) {
   const targets = value.targetIds.flatMap((id) => editor.getShape(id as TLShapeId) ?? []).filter((s) => s.type !== "arrow");
   if (!targets.length) throw new Error("Select what you mean first, then ask");
   const question = value.question.trim();
   if (!question) throw new Error("Type a question first");
-  // A frame the person left out is not part of the context (unless it is itself selected).
-  const around = frameOf(editor, targets[0]);
-  const frame = around && keepForAgent([around], targets.map((t) => t.id)).kept.length ? around : undefined;
   const ask: AskMeta = {
     state: "waiting",
     attempt: 0,
-    contextIds: [...targets.map((t) => t.id), ...(frame ? [frame.id] : [])],
+    contextIds: askContextIds(editor, targets),
     askedAt: Date.now(),
   };
   return createComment(editor, { targetIds: targets.map((t) => t.id), text: question }, { name: "Ask", ask }) as TLShapeId;
@@ -195,6 +201,28 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   if (!ask) throw new Error("Not an ask");
   const page = editor.getPage(editor.getAncestorPageId(shape)!);
   const selected = targetsOf(shape).flatMap((id) => editor.getShape(id as TLShapeId) ?? []);
+  return {
+    id: shape.id,
+    revision: revision(shape),
+    question: textOf(shape),
+    state: ask.state,
+    attempt: ask.attempt,
+    askedAt: new Date(ask.askedAt).toISOString(),
+    ...(ask.agent ? { agent: ask.agent } : {}),
+    ...(ask.note ? { note: ask.note } : {}),
+    ...(ask.error ? { error: ask.error } : {}),
+    pageId: page?.id,
+    pageName: page?.name,
+    ...describeSelection(editor, selected, page?.id, shape.id),
+  };
+}
+
+/**
+ * What an ask about `selected` gives, before or after it is sent: the targets, the exchange
+ * behind them, the frame they sit in, what is pinned on the page and how much was withheld.
+ * describeAsk and the Ask box's preview both use this, so the preview is what is sent.
+ */
+function describeSelection(editor: Editor, selected: TLShape[], pageId: TLPageId | undefined, askId?: string) {
   // What the person selected is given even if left out; around it, left-out objects are not.
   const withheld = new Set<string>();
   const keep: Keep = (shapes) => {
@@ -205,7 +233,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   const targets = selected.flatMap((s) => parts(editor, s, keep));
   const around = selected[0] ? frameOf(editor, selected[0]) : undefined;
   const frame = around && keep([around]).length ? around : undefined;
-  const skip = new Set<string>([shape.id, ...targets.map((t) => t.id)]);
+  const skip = new Set<string>([...(askId ? [askId] : []), ...targets.map((t) => t.id)]);
   const givenTargets = targets.map((t) => {
     if (t.type !== "frame") return given(editor, t);
     const held = inside(editor, t, skip, keep);
@@ -221,19 +249,8 @@ export function describeAsk(editor: Editor, shape: TLShape) {
     : [];
   // Pinned for every ask on this page, unless this ask already gives it.
   const alreadyGiven = [...skip, ...(frame ? [frame.id] : []), ...frameObjects.map((s) => s.id), ...givenTargets.flatMap((t) => t.inside?.map((i) => i.id) ?? [])];
-  const pins = page ? pinnedOnPage(editor, page.id, alreadyGiven) : { pinned: [], more: 0 };
+  const pins = pageId ? pinnedOnPage(editor, pageId, alreadyGiven) : { pinned: [], more: 0 };
   return {
-    id: shape.id,
-    revision: revision(shape),
-    question: textOf(shape),
-    state: ask.state,
-    attempt: ask.attempt,
-    askedAt: new Date(ask.askedAt).toISOString(),
-    ...(ask.agent ? { agent: ask.agent } : {}),
-    ...(ask.note ? { note: ask.note } : {}),
-    ...(ask.error ? { error: ask.error } : {}),
-    pageId: page?.id,
-    pageName: page?.name,
     targets: givenTargets,
     history: mergeHistory(targets.flatMap((t) => thread(editor, t, keep)), targets.map((t) => t.id)),
     ...(frame
@@ -251,6 +268,18 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   };
 }
 export type AskView = ReturnType<typeof describeAsk>;
+
+/**
+ * What an ask about these objects would give if sent now, for the Ask box: the ids it would be
+ * outlined by (selection, frame, pins) and the counts its line would say.
+ */
+export function previewAsk(editor: Editor, targetIds: string[]) {
+  const targets = targetIds.flatMap((id) => editor.getShape(id as TLShapeId) ?? []).filter((s) => s.type !== "arrow");
+  const contextIds = askContextIds(editor, targets);
+  const pageId = targets[0] ? editor.getAncestorPageId(targets[0]) : undefined;
+  const view = describeSelection(editor, targets, pageId);
+  return { contextIds, pinnedIds: view.pinned?.map((p) => p.id) ?? [], pinnedCount: (view.pinned?.length ?? 0) + (view.pinnedMore ?? 0), leftOut: view.leftOut ?? 0 };
+}
 
 const allAsks = (editor: Editor) =>
   editor.store.allRecords().filter((r): r is TLShape => r.typeName === "shape" && Boolean(askOf(r as TLShape)));

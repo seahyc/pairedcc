@@ -60,3 +60,13 @@ describe("pinning objects into every ask", () => {
     expect(prompt.indexOf("pinned")).toBeLessThan(prompt.indexOf("The ask:"));
   });
 });
+
+import { contextSummary } from "../src/leave-out";
+describe("saying what an ask gives", () => {
+  it("adds pins and what was left out to what is given", () => {
+    expect(contextSummary("“Charge per seat”", 0, 0)).toBe("“Charge per seat”");
+    expect(contextSummary("“Charge per seat” + frame “Pricing”", 1, 0)).toBe("“Charge per seat” + frame “Pricing” + 1 pinned");
+    expect(contextSummary("“Charge per seat”", 0, 2)).toBe("“Charge per seat” · 2 left out");
+    expect(contextSummary("“Charge per seat”", 3, 1)).toBe("“Charge per seat” + 3 pinned · 1 left out");
+  });
+});
