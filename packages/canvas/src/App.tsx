@@ -53,6 +53,7 @@ import {
   Sparkles,
   Layers,
   FilePlus2,
+  FileInput,
   Map as MapIcon,
 } from "lucide-react";
 import {
@@ -69,6 +70,8 @@ import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
 import { CardShapeUtil, CardShapeTool, refitCards } from "./card-shape";
+import { DataTableShapeUtil } from "./table-shape";
+import { ImportLayer, chooseImportFile } from "./import-ui";
 import {
   PaperBackground,
   ScratchbookLayer,
@@ -246,6 +249,8 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
       ["Open or close the feedback queue", "Shift C"],
+      ["Bring in a table or document as cards", "⌘ V, or drop a file"],
+      ["Next / previous imported record", "J / K"],
       ["Finish typing", "Esc"],
     ],
   },
@@ -355,8 +360,9 @@ function Shell() {
         mod = event.metaKey || event.ctrlKey;
       if (mod) {
         if (key === "z") {
+          // The canvas's own shortcut has usually undone already; a second undo here would take two steps.
+          if (!event.defaultPrevented) event.shiftKey ? editor.redo() : editor.undo();
           event.preventDefault();
-          event.shiftKey ? editor.redo() : editor.undo();
         } else if (key === "d") {
           event.preventDefault();
           editor.markHistoryStoppingPoint("duplicate");
@@ -772,6 +778,9 @@ function Shell() {
               <Keyboard size={14} /> Shortcuts <kbd>?</kbd>
             </button>
             <div className="menu-rule" />
+            <button role="menuitem" onClick={() => { chooseImportFile(); setMenuOpen(false); }}>
+              <FileInput size={14} /> Import a file
+            </button>
             <button role="menuitem" onClick={() => { void exportFile(); setMenuOpen(false); }}>
               <Download size={14} /> Export board file
             </button>
@@ -902,6 +911,7 @@ function Shell() {
           }}
         />
       </nav>
+      <ImportLayer onNotice={setNotice} />
       <SelectionBar asking={asking} setAsking={setAsking} onComment={addComment} onNotice={setNotice} keepInView={keepInView} />
       <aside className="right-panel">
         <div className="panel-tabs right-tabs" role="tablist">
@@ -1302,7 +1312,7 @@ function BoardLayers() {
     </>
   );
 }
-const scratchShapes = [CardShapeUtil];
+const scratchShapes = [CardShapeUtil, DataTableShapeUtil];
 const TEXT_WRAP = 460;
 const calmOptions = { createTextOnCanvasDoubleClick: false };
 const scratchTools = [CardShapeTool];

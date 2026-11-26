@@ -94,6 +94,7 @@ export const commandSchema = z.object({
     "asks",
     "ask_status",
     "answer",
+    "import",
   ]),
   input: z.record(z.string(), z.unknown()).optional(),
 });

@@ -28,6 +28,9 @@ export function suggestQuestion(selectedText: string) {
 }
 
 export const starters = ["What's missing?", "Give me alternatives", "Poke holes in this"];
+/** An imported record is an argument to judge, so its first starter asks exactly that. */
+export const recordStarters = ["Is this point valid?", "Is the defence enough?", "Poke holes in this"];
+export const startersFor = (selection: { record: boolean }) => (selection.record ? recordStarters : starters);
 
 /** What an ask shows under itself, for each state. */
 export function askStatusLine(
