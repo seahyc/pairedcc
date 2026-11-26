@@ -133,8 +133,9 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_annotate",
     op: "annotate",
     description:
-      "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. Rendered as agent work (lavender, ✦). Humans add pink handwritten feedback through the toolbar.",
-    input: annotationInput.shape,
+      "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar.",
+    // Authorship is never the caller's to set: the canvas attributes the note to the agent.
+    input: annotationInput.omit({ author: true }).shape,
     output: "json",
   },
   {
