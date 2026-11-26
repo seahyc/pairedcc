@@ -1701,3 +1701,11 @@ kbd {
     right: auto;
   }
 }
+
+/* Below 800 px the side panel is hidden, so the canvas keeps the full width even when the
+   panel is "shown" (it otherwise kept 264 px for a panel nobody could see). */
+@media (max-width: 800px) {
+  .app .canvas-stage {
+    right: 0;
+  }
+}
