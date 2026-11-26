@@ -563,7 +563,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
     asks answered out of order, with before/after screenshots. Touches `answerAsk` placement
     (#87's rows).
 
-93. **Stale flag placement follows the drawn flag (review of #94, merged before the fix).** (a) Tab
+93. (PR #124 open, awaiting review.) **Stale flag placement follows the drawn flag (review of #94, merged before the fix).** (a) Tab
     eligibility uses the card's span, not the drawn flag: a card half off the right edge keeps an
     offscreen flag tabbable, and a selected flag opened into view can be skipped; (b) the fixed
     120 px room can clip a long reason at high zoom, since the flag scales with the canvas;
@@ -599,10 +599,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 97. verify-answer-page's frame step after #104 | claude/sprint-answer-page-frame | 2026-11-26T14:27Z
 98. Follow-ups to bot review of #99 and #88 | claude/sprint-review-followups-a | 2026-11-26T14:23Z
-93. Stale flag placement follows the drawn flag | claude/sprint-stale-drawn | 2026-11-26T14:20Z
 94. Moving one object on a big board stays quick | claude/sprint-big-edit | 2026-11-26T14:16Z
 
 ## Done
+- 93. Stale flag placement follows the drawn flag (build-A): PR #124 (placement and Tab stops from the flag's drawn size; room measured at the current zoom; a focused flag kept inside the view; verify-stale-edges 5/10 → 10/10).
 - 95. Before sending, the person sees what an ask will give (build-B): PR #123, stacked on #121 (Ask box line and board outlines from the same code as the sent ask; verify-ask-preview 6/16 → 16/16; first screen byte-identical).
 - 96. #104 follow-ups (build-B): PR #122 (frame asks give attached comments; canvas_arrange brings them; verify-ask-unclipped 22/29 → 30/30).
 - 90. The person pins what every ask should see (build-B): PR #121 (`?prototype=context`: Pin (I) gives an object to every ask on its page, fenced on the board, outlined and counted on the ask, named in the resident prompt; verify-pin-context 7/18 → 18/18; first screen byte-identical).
@@ -678,6 +678,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-A, item 93) A stale flag is a Tab stop when half its drawn width and half a line are on screen (requiring all of it would drop a card fully in view whose long flag sticks out a little). Its size is computed from the flag's monospace metrics (6.6 px a character, 14 px lines) rather than measured in the DOM, so placement stays a pure function; changing `.stale-flag`'s font or padding means changing `flag-layout.ts`.
 - (build-B, item 95) The Ask box's "Gives …" line is in the default flow, not behind a flag: one muted line inside the open box, serving the Solveit principle in the brief; the first screen is unchanged. It outlines targets, frame and pins (as the sent ask does), not the thread behind an answer.
 - (build-B) `verify-answer-page.mjs` is 10/11 on `claude/sprint-int` at 8cea125: "an answer that lands inside a frame on the open page belongs to the frame" fails, most likely because #104 now places answers clear of frames. Either the check or the placement needs updating; filed as item 97 below.
 - (build-B, item 90) Pinning is a prototype under `?prototype=context` beside Leave out, not a default feature: page-scoped, up to six per ask in reading order (the rest counted as `pinnedMore`), Leave out wins over Pin, and setting either clears the other. Key I ("in", opposite L). Product choice for the maintainer: whether pins belong in the default loop, and whether they should be per page or per board.
@@ -952,3 +953,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T14:20Z | build-A | Upkeep of open PRs | #95 #99 #101 #113 #114 #116 #120 | Integration branch merged into each (conflicts with #69, #91 and the Retry button resolved); each re-verified with its own check; #95 now reuses only the tab's own empty first page (with #91 the layout also runs after an account load); filed 97 |
 | 2026-11-26T14:24Z | build-B | 96 #104 follow-ups | #122 | (b) frame asks include comments attached to its contents, (c) canvas_arrange moves them in the same undo step, selected objects left to the drag follower; real page 22/29 → 30/30; scorecard rows unchanged |
 | 2026-11-26T14:25Z | build-B | 95 Preview what an ask will give | #123 | Ask box says "Gives …" and the board outlines it, from describeSelection/askContextIds/contextSummary shared with the sent ask; verify-ask-preview 6/16 → 16/16; pin, leave-out, ask-frame/marks/chart/record/live, touch green; first screen unchanged; filed item 97 (verify-answer-page 10/11 on int) |
+| 2026-11-26T14:40Z | build-A | 93 Stale flag placement follows the drawn flag | #124 | (a) Tab stops and focus shift by drawn size, (b) opened-reason room at the current zoom, (c) focused flag grows down from the top edge; verify-stale-edges 5/10 → 10/10, verify-stale-flag 8/8, 473 unit tests; scorecard rows unchanged except 10k pan noise (105.7 ms) |
