@@ -38,6 +38,33 @@ defensible option, record the choice and the reason under Decisions needed, and 
 6. If time remains, take another task. When the backlog runs low, add tasks that follow from the
    working spec, each with a testable definition of done.
 
+## Goal and eval (added 26 Nov; read before choosing a task)
+**Goal for the sprint:** the working spec's first end-to-end acceptance scenario runs for real on
+this branch, driven both by a person in the browser and by an external agent over MCP, with boards
+saved on the server.
+
+Whether the canvas is good to think with is a judgment only the maintainer can make, so it is not
+measured here. The sprint is judged on this scorecard, produced by `pnpm eval:canvas` and committed
+as `packages/canvas/eval/scorecard.json` plus a table in `SPRINT-REPORT.md`:
+
+| Measure | How it is measured | Target |
+|---|---|---|
+| Acceptance scenario | One headless-browser script walks the spec scenario step by step: import dataset, select a subset, chart it, filter the chart directly, agent reads that exact state, agent adds a result nearby, a manual annotation survives an agent revision, changing an input marks dependents stale, reload restores everything | every step passes |
+| Agent usability | A fresh subagent given only `AGENT_API.md` and the MCP tools attempts a fixed set of at least 20 board tasks stored in `packages/canvas/eval/tasks/`; each task has a machine-checked end state | at least 90% completed, median tool calls per task reported |
+| Safety of shared edits | Scripted races: stale agent write against a newer human edit, agent undo with interleaved human edits, write to a locked object | 0 human edits lost |
+| Persistence | Save, reload in a clean browser profile, and compare the board through the object interface | identical |
+| Performance | Time to load and median frame time while panning at 1k and 10k objects | reported, and not worse between runs |
+| Existing product | `pnpm build && pnpm test` for the whole workspace | green |
+
+Rules for the eval: whoever implements a feature must not write the agent-usability tasks that
+test it. Never weaken a check to make it pass; if a check is wrong, fix it and say why in the PR.
+A PR that lowers any measure says so in `## Proof` and explains why.
+
+**Backlog item 0, before anything else: build `pnpm eval:canvas`** and record the baseline
+scorecard (failing steps are expected at first). From then on every PR pastes the scorecard before
+and after, and the review lane re-runs it on `claude/sprint-int` after each merge. Choose the next
+task by which measure is furthest from target, not by backlog order.
+
 ## Backlog (highest value first)
 1. **Server-side board storage.** Boards live only in the browser today. Add authenticated save and
    load per account in the server, with revisions and stale-write rejection matching the browser
