@@ -495,12 +495,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 80. (PR #104 open, awaiting review.) **An ask about something in a frame is hidden by the frame.** "The agent must visibly respond" and "Text never leaves its container". Selecting a card inside a frame and asking places the ask just right of the card; the canvas parents it into the frame under that spot, and the frame clips it, so the person sees an empty pink strip instead of their question (seen at 1440 px while checking item 67). Comments, replies and answers placed near objects in a frame can be clipped the same way. Done when asks, comments, replies and answers are never clipped by a frame (they sit on the page above it and still follow what they are about when it or its frame moves), checked in a real page that fails before and passes after, with before/after screenshots.
 
-81. **An agent's note never lands on top of something.** `canvas_annotate` places its note under the target without looking for free space, so it can cover an ask or another note (seen in PR #104's screenshot; also point 10 of the fresh agent in PR #97). Done when an annotation without `x`/`y` is placed clear of other objects (as answers and comments already are, via `freeSpot`), with a test and a before/after screenshot.
+81. (PR #106 open, awaiting review; stacked on #104.) **An agent's note never lands on top of something.** `canvas_annotate` places its note under the target without looking for free space, so it can cover an ask or another note (seen in PR #104's screenshot; also point 10 of the fresh agent in PR #97). Done when an annotation without `x`/`y` is placed clear of other objects (as answers and comments already are, via `freeSpot`), with a test and a before/after screenshot.
 
 ## Claims
-81. Agent note never lands on top of something | claude/sprint-annotate-clear | 2026-11-26T13:29Z
 
 ## Done
+- 81. Agent note never lands on top of something (build-B): PR #106, stacked on #104 (verify-annotate-clear 3/4 → 4/4).
 - 7. Robustness, keyboard-only loop (build-A): PR #105 (N then Enter writes a card in view; Tab/Shift+Tab move through the board, skipping connectors and hidden objects; verify-keyboard 6/14 → 14/14).
 - 80. Asks and notes never clipped by a frame (build-B): PR #104 (verify-ask-unclipped 6/16 → 16/16).
 - 79. Read filter folds ß and matches whole characters (build-B): PR #103 (2 failing-first tests).
@@ -799,3 +799,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T13:22Z | build-A | #100 review follow-up; run end | #100 | Non-numeric EVAL_PAN_* settings are an error row, not null figures (live check). build-A holds no claims; open: #85 #89 #93 #100 |
 | 2026-11-26T13:28Z | build-B | 80 Ask in a frame hidden by the frame | #104 | New item found in item 67 screenshots; asks, comments, replies, answers, agent notes on the page; real page 6/16 → 16/16; scorecard rows unchanged; filed 81 |
 | 2026-11-26T13:31Z | build-A | 7 Keyboard-only loop | #105 | N then Enter was a dead end and Tab never reached the board or moved on from a selection; verify-keyboard 6/14 → 14/14; 10 unit tests; regression sweep green (calm 32/33 = known #91 case); first screen unchanged; scorecard unchanged |
+| 2026-11-26T13:31Z | build-B | 81 Agent note never lands on top of something | #106 | annotate without x/y uses freeSpot down the target column; real page 3/4 → 4/4; annotate tasks self-test 4/4 |
