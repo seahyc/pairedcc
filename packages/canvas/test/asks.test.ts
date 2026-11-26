@@ -186,6 +186,11 @@ describe("asks carry the person's picks and cross-outs", () => {
     const merged = mergeHistory([asked, b, c, asked, a, b], ["shape:a", "shape:c"]);
     expect(merged).toEqual([asked, b]);
   });
+  it("keeps two asks with the same words, and one ask reached twice once", () => {
+    const first = { id: "shape:ask1", who: "Human asked", said: "Give me alternatives" };
+    const again = { id: "shape:ask2", who: "Human asked", said: "Give me alternatives" };
+    expect(mergeHistory([first, again, first], [])).toEqual([first, again]);
+  });
   it("tells the model what was picked and crossed out, wherever it sits", () => {
     const prompt = buildPrompt({
       question: "Take this further",

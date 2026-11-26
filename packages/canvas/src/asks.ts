@@ -81,9 +81,14 @@ const given = (s: TLShape, max = 2000): Given => {
     ...(mark ? { mark } : {}),
   };
 };
-const said = (s: TLShape, max: number): HistoryEntry => {
+const said = (editor: Editor, s: TLShape, max: number): HistoryEntry => {
   const mark = markOf(s.meta);
-  return { id: s.id, who: authorOf(s), said: clip(textOf(s), max), ...(mark ? { mark } : {}) };
+  // A frame asked about earlier has no text of its own: say what it held, as the ask did then.
+  const text =
+    s.type === "frame"
+      ? `the frame "${shapeName(s)}", holding: ${inside(editor, s, new Set()).inside.map((o) => o.text).join("; ") || "nothing with text"}`
+      : textOf(s);
+  return { id: s.id, who: authorOf(s), said: clip(text, max), ...(mark ? { mark } : {}) };
 };
 /** A grouped record is given as its parts: the title line, then each field in column order. */
 const parts = (editor: Editor, s: TLShape): TLShape[] => {
@@ -102,7 +107,8 @@ function inside(editor: Editor, frame: TLShape, skip: Set<string>) {
   const walk = (id: TLShapeId) => {
     for (const childId of editor.getSortedChildIdsForParent(id)) {
       const child = editor.getShape(childId);
-      if (!child || skip.has(child.id) || child.type === "arrow" || askOf(child)) continue;
+      // Anything a learning prompt still hides stays out of what the agent is given.
+      if (!child || skip.has(child.id) || child.type === "arrow" || askOf(child) || editor.isShapeHidden(child)) continue;
       if (child.type === "frame" || child.type === "group") walk(child.id);
       if (textOf(child) || media.has(child.type)) found.push(child);
     }
@@ -125,13 +131,14 @@ function thread(editor: Editor, shape: TLShape, depth = 0, seen = new Set<string
   // and which of them the person crossed out.
   const siblings = editor.store
     .allRecords()
-    .filter((r): r is TLShape => r.typeName === "shape" && (r as TLShape).meta.replyTo === parent.id && r.id !== shape.id && !askOf(r as TLShape))
+    .filter((r): r is TLShape => r.typeName === "shape" && (r as TLShape).meta.replyTo === parent.id && r.id !== shape.id && !askOf(r as TLShape) && !editor.isShapeHidden(r as TLShape))
     .sort((a, b) => a.y - b.y || a.x - b.x);
   return [
     ...earlier,
-    ...about.map((t) => said(t, 600)),
-    { who: `${HUMAN} asked`, said: clip(textOf(parent), 600) },
-    ...siblings.map((s) => said(s, 600)),
+    ...about.map((t) => said(editor, t, 600)),
+    // The ask card's id keeps two asks with the same words (a starter used twice) apart.
+    { id: parent.id, who: `${HUMAN} asked`, said: clip(textOf(parent), 600) },
+    ...siblings.map((s) => said(editor, s, 600)),
   ];
 }
 
@@ -170,7 +177,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
             objects: editor
               .getSortedChildIdsForParent(frame.id)
               .flatMap((id) => editor.getShape(id) ?? [])
-              .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && textOf(s))
+              .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && textOf(s))
               .slice(0, 12)
               .map((s) => given(s, 400)),
           },
