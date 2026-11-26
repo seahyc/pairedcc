@@ -5,6 +5,7 @@ import {
   datasetSchema,
   describeChart,
   setCell,
+  staleChain,
   staleInputs,
   syntheticOrders,
   toggleFilter,
@@ -97,5 +98,47 @@ describe("inputs and stale marking", () => {
     expect(staleInputs([{ id: "shape:gone", version: 0 }], versions)).toEqual([
       { id: "shape:gone", recorded: 0, current: null },
     ]);
+  });
+});
+
+describe("transitive staleness", () => {
+  // A note derived from a chart, which is derived from a dataset.
+  type Node = { version: number; inputs: { id: string; version: number }[] };
+  const graph = (nodes: Record<string, Node>) => (id: string) => nodes[id];
+  const fresh = {
+    "shape:data": { version: 1, inputs: [] },
+    "shape:chart": { version: 4, inputs: [{ id: "shape:data", version: 1 }] },
+  };
+  const note = [{ id: "shape:chart", version: 4 }];
+
+  it("is not stale while every input up the chain is current", () => {
+    expect(staleChain(note, graph(fresh))).toEqual([]);
+  });
+
+  it("marks a result stale when its input's own input changed, naming the upstream cause", () => {
+    const changed = { ...fresh, "shape:data": { version: 2, inputs: [] } };
+    expect(staleChain(note, graph(changed))).toEqual([
+      { id: "shape:chart", recorded: 4, current: 4, upstream: [{ id: "shape:data", recorded: 1, current: 2 }] },
+    ]);
+  });
+
+  it("reports a direct change without upstream detail once the input itself moved on", () => {
+    const recomputed = { "shape:data": { version: 2, inputs: [] }, "shape:chart": { version: 5, inputs: [{ id: "shape:data", version: 2 }] } };
+    expect(staleChain(note, graph(recomputed))).toEqual([{ id: "shape:chart", recorded: 4, current: 5 }]);
+  });
+
+  it("follows chains longer than two and reports a deleted upstream input", () => {
+    const nodes = {
+      a: { version: 0, inputs: [{ id: "gone", version: 0 }] },
+      b: { version: 0, inputs: [{ id: "a", version: 0 }] },
+    };
+    expect(staleChain([{ id: "b", version: 0 }], graph(nodes))).toEqual([
+      { id: "b", recorded: 0, current: 0, upstream: [{ id: "a", recorded: 0, current: 0, upstream: [{ id: "gone", recorded: 0, current: null }] }] },
+    ]);
+  });
+
+  it("terminates on a cycle and does not call it stale", () => {
+    const nodes = { a: { version: 0, inputs: [{ id: "b", version: 0 }] }, b: { version: 0, inputs: [{ id: "a", version: 0 }] } };
+    expect(staleChain([{ id: "a", version: 0 }], graph(nodes))).toEqual([]);
   });
 });
