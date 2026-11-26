@@ -126,7 +126,7 @@ task by which measure is furthest from target, not by backlog order.
 8. (Merged, see Done.) **Docs.** Keep README, AGENT_API and the working spec's "implemented" sections true to the code.
    AGENT_API.md does not yet describe `canvas_dataset`, `canvas_chart`, `canvas_chart_state`,
    `canvas_cell`, the `inputs` field on create, or the `dataset` / `widget` / `stale` read fields.
-9. **Editor-level tests for the data prototype's agent operations.** `test/data-agent.test.ts`
+9. (PR #25 open, awaiting review.) **Editor-level tests for the data prototype's agent operations.** `test/data-agent.test.ts`
    checks schemas only; stale-write rejection, locked-object rejection, partial chart state and
    `read` omitting rows are proven only by `tools/verify-data-agent.cjs`, which `pnpm test` does not
    run. Done when breaking any of those behaviours fails `pnpm test:canvas` (or the eval).
@@ -190,7 +190,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 3. Foundational primitives | claude/sprint-primitives-* | 2026-11-26T10:46Z
-9. Editor-level data agent tests | claude/sprint-data-agent-tests | 2026-11-26T10:47Z
 5. Converge | claude/sprint-converge | 2026-11-26T10:50Z
 7. Robustness | claude/sprint-robust-* | 2026-11-26T09:10Z
 
@@ -242,6 +241,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-A) Two build-A runs overlapped on 26 Nov: this run duplicated the eval board-store fix on #15 and the agent-usability tasks (item 18) before seeing the other run's pushes, and withdrew both without pushing. Lanes should re-read Claims after every pull, not only at the start.
 - (build-B, item 11) (a) Undo of a deletion is refused when the restored object's parent frame or page, or an arrow's other end, was deleted since (consistent with all-or-nothing undo), rather than re-parenting it. (b) Runs belong to their actor label: an agent lists and undoes only its own. Labels are not authenticated, and local MCP agents share "MCP agent" unless `PAIRED_ACTOR` is set, so this prevents mistakes, not misuse. (c) `canvas_learn` hides only objects an agent made.
 
+- (build-B, item 9) A real tldraw `Editor` needs a DOM, and adding a DOM library (jsdom) as a dev dependency was refused in the build environment, so the editor-path checks for item 9 are eval checks (three data races in Safety, two strengthened acceptance steps) and the rules themselves are pure functions with unit tests. A lock bypass in the editor path fails only the eval. Alternative: add jsdom and test `executeCommand` against a real editor in `pnpm test`.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
@@ -264,3 +265,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-26T10:43Z | build-A | 21 Prototype ops behind flags | #20 | Unflagged tabs refuse the five prototype ops and change nothing; test fails without the gate; live HTTP check; scorecard unchanged |
 | 2026-11-26T10:44Z | build-B | 11 Shared-edit gaps | #22 | Three races added; safety measure 3/6 (1 human edit lost) on the old code to 6/6 (0 lost) |
 | 2026-11-26T10:50Z | build-A | 18 Agent-usability tasks | #24 | 21 tasks, self-test 21/21, attempt 20/21 (95%), median 3 calls; scorecard agent usability not run→pass |
+| 2026-11-26T10:50Z | build-B | 9 Editor-level data agent tests | #25 | Pure write rules unit-tested; safety 3/3 to 6/6 races with data races; four mutations each fail a check |
