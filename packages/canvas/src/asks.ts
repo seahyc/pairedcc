@@ -134,7 +134,7 @@ export function retryAsk(editor: Editor, id: string) {
   if (shape.meta.role === "annotation" && shape.meta.status === "resolved") resolveMark(editor, editor.getShape(shape.id)!, "open", HUMAN);
 }
 
-type Given = { id: string; type: string; author: string; text: string; mark?: AskMark; inside?: Given[]; insideMore?: number };
+type Given = { id: string; type: string; author: string; text: string; mark?: AskMark; settled?: true; inside?: Given[]; insideMore?: number };
 /** How many of a selected frame's objects an ask gives, in reading order. */
 export const INSIDE_LIMIT = 20;
 // Imported material is given with its column names and where it came from.
@@ -185,6 +185,7 @@ const given = (editor: Editor, s: TLShape, max = 2000, keep: Keep = (x) => x): G
     author: source ? sourceAuthor(source) : authorOf(s),
     text: clip(sourceText(s, textOf(s)) || textOf(s) || dataText(editor, s) || mediaText(editor, s, keep) || `(${shapeName(s)}, no text)`, max),
     ...(mark ? { mark } : {}),
+    ...(s.meta.settled === true ? { settled: true as const } : {}),
   };
 };
 const said = (editor: Editor, s: TLShape, max: number, keep: Keep = (x) => x): HistoryEntry => {

@@ -936,6 +936,20 @@ p {
   border: 2.5px solid #c8125a;
   box-shadow: 0 2px 8px rgba(160, 20, 80, 0.12);
 }
+/* Settled (S): the same card, done — a calmer edge and a small check instead of rough handwriting. */
+.scrap--settled {
+  border-width: 1.5px;
+  box-shadow: none;
+}
+.scrap--settled::after {
+  content: "✓";
+  position: absolute;
+  top: 6px;
+  right: 9px;
+  font: 600 13px Inter, system-ui, sans-serif;
+  color: #a50f4d;
+  pointer-events: none;
+}
 .scrap--caption,
 .scrap--heading {
   background: transparent;

@@ -105,6 +105,7 @@ import { onlyDerivedChange } from "./revision";
 import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followers } from "./follow";
+import { toggleSettled } from "./settled";
 import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
 import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
@@ -282,6 +283,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Comment on the selection, or pin one at the pointer", "C"],
       ["Pick the selection (again to undo)", "P"],
       ["Cross out the selection (again to undo)", "X"],
+      ["Settle it: done for now (again to reopen)", "S"],
       ...(prototypeEnabled("context") ? [["Leave the selection out of asks (again to bring it back)", "L"] as [string, string]] : []),
       ["Open or close the feedback queue", "Shift C"],
       ["Bring in a table or document as cards", keys("⌘ V, or drop a file")],
@@ -623,12 +625,14 @@ function Shell() {
         if (!event.repeat) toggleLeftOut(editor, chosen);
         return;
       }
-      if (key !== "p" && key !== "x") return;
+      if (key !== "p" && key !== "x" && key !== "s") return;
       const picked = editor.getSelectedShapes();
       if (!picked.length) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      toggleMark(editor, picked, key === "p" ? "picked" : "rejected");
+      // S settles (or reopens) what is selected; P and X judge it.
+      if (key === "s") toggleSettled(editor, picked);
+      else toggleMark(editor, picked, key === "p" ? "picked" : "rejected");
     }
     let swallowEnterUp = false, swallowTabUp = false;
     const enterUp = (event: KeyboardEvent) => {

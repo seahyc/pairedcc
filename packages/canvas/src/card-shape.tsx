@@ -49,6 +49,13 @@ export const cardType: Record<CardTone, { font: string; size: number; lineHeight
   sourceNote: { font: print, size: 13, lineHeight: 1.5, pad: 0, weight: "400", style: "normal", color: "#6b675e" },
 };
 const unboxed = new Set<CardTone>(["caption", "heading", "sourceTitle", "sourceNote"]);
+/** A thought the person has settled: their colour, in a clean print hand instead of a rough one. */
+const settledHuman = { ...cardType.human, font: print, size: 19, lineHeight: 1.4, weight: "500" };
+/** How a card looks: its tone, except that a settled thought of the person's is printed. */
+export function cardLook(tone: CardTone, settled: boolean) {
+  return settled && tone === "human" ? settledHuman : cardType[tone];
+}
+const lookOf = (shape: CardShape) => cardLook(shape.props.tone, shape.meta.settled === true);
 
 export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
   static override type = "card" as const;
@@ -66,7 +73,7 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
   }
   /** Grow height to fit the text, like a sticky note, so cards never clip. */
   fit(shape: CardShape): CardShape {
-    const t = cardType[shape.props.tone];
+    const t = lookOf(shape);
     const html = renderHtmlFromRichTextForMeasurement(this.editor, shape.props.richText);
     const size = this.editor.textMeasure.measureHtml(html || "&nbsp;", {
       fontFamily: t.font,
@@ -88,18 +95,19 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
     // Re-estimate only when the content or width changes; a height-only update is
     // the rendered-size correction from useAutoHeight and must stick.
     const p = prev.props, n = next.props;
-    if (p.richText === n.richText && p.w === n.w && p.tone === n.tone) return next;
+    if (p.richText === n.richText && p.w === n.w && p.tone === n.tone && prev.meta.settled === next.meta.settled) return next;
     return this.fit(next);
   }
   override component(shape: CardShape) {
-    const t = cardType[shape.props.tone];
+    const t = lookOf(shape);
+    const settled = shape.props.tone === "human" && shape.meta.settled === true;
     const isSelected = useValue("card selected", () => this.editor.getOnlySelectedShapeId() === shape.id, [this.editor, shape.id]);
     const ref = useAutoHeight(this.editor, shape, t.pad * 2 + (unboxed.has(shape.props.tone) ? 2 : 4));
     // Imported material carries its tags (such as severity) as chips and a quiet edge.
     const source = sourceOf(shape), level = source?.level;
     return (
       <HTMLContainer style={{ width: shape.props.w, height: shape.props.h }}>
-        <div ref={ref} className={`scrap scrap--${shape.props.tone}${typeof level === "number" ? ` sev sev-${Math.min(level, 4)}` : ""}`} style={{ fontStyle: t.style, fontWeight: t.weight }}>
+        <div ref={ref} className={`scrap scrap--${shape.props.tone}${settled ? " scrap--settled" : ""}${typeof level === "number" ? ` sev sev-${Math.min(level, 4)}` : ""}`} style={{ fontStyle: t.style, fontWeight: t.weight }}>
         {source?.chips && source.chips.length > 0 && (
           <div className="source-chips">
             {source.chips.map((chip, i) => (
