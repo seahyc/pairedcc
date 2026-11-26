@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T10:15Z",
-  "commit": "164b3ed",
+  "generatedAt": "2026-11-26T10:21Z",
+  "commit": "f017203",
   "carriedOver": [],
   "table": [
     {
@@ -30,7 +30,7 @@
     {
       "measure": "Performance",
       "target": "reported, not worse",
-      "result": "1k: load 2487 ms, pan 16.7 ms/frame; 10k: error",
+      "result": "1k: load 2432 ms, pan 16.7 ms/frame; 10k: error",
       "status": "fail"
     },
     {
@@ -47,61 +47,61 @@
           "name": "Person imports a dataset by dropping a CSV file",
           "pass": false,
           "detail": "no dataset object after the drop (0 other objects added)",
-          "ms": 1511
+          "ms": 1514
         },
         {
           "name": "Agent imports a dataset over MCP",
           "pass": true,
           "detail": "ok",
-          "ms": 34
+          "ms": 38
         },
         {
           "name": "Person selects a subset of the board and the agent sees it",
           "pass": true,
           "detail": "ok",
-          "ms": 491
+          "ms": 497
         },
         {
           "name": "Agent charts the selection",
           "pass": true,
           "detail": "ok",
-          "ms": 31
+          "ms": 38
         },
         {
           "name": "Person filters the chart directly",
           "pass": true,
           "detail": "ok",
-          "ms": 843
+          "ms": 855
         },
         {
           "name": "Agent reads that exact chart state",
           "pass": true,
           "detail": "ok",
-          "ms": 3
+          "ms": 5
         },
         {
           "name": "Agent adds a result next to the chart",
           "pass": true,
           "detail": "ok",
-          "ms": 40
+          "ms": 44
         },
         {
           "name": "A manual annotation survives an agent revision",
           "pass": true,
           "detail": "ok",
-          "ms": 1569
+          "ms": 1755
         },
         {
           "name": "Changing an input marks its dependents stale",
           "pass": false,
           "detail": "a result derived from the chart is not marked stale when the chart's dataset changes",
-          "ms": 939
+          "ms": 963
         },
         {
           "name": "Reload restores everything",
           "pass": false,
           "detail": "1 of 5 objects differ after reload: card revision/props/meta (props h); 5 objects now",
-          "ms": 525
+          "ms": 555
         }
       ],
       "pageErrors": [],
@@ -113,21 +113,21 @@
           "name": "Stale agent write against a newer human edit",
           "pass": true,
           "detail": "ok",
-          "ms": 93,
+          "ms": 85,
           "humanEditsLost": 0
         },
         {
           "name": "Agent undo with interleaved human edits",
           "pass": true,
           "detail": "ok",
-          "ms": 208,
+          "ms": 218,
           "humanEditsLost": 0
         },
         {
           "name": "Agent write to a locked object",
           "pass": true,
           "detail": "ok",
-          "ms": 269,
+          "ms": 276,
           "humanEditsLost": 0
         }
       ],
@@ -142,10 +142,10 @@
     "performance": [
       {
         "objects": 1000,
-        "buildMs": 505,
-        "loadMs": 2487,
+        "buildMs": 432,
+        "loadMs": 2432,
         "panMedianFrameMs": 16.7,
-        "panP95FrameMs": 16.9
+        "panP95FrameMs": 17.8
       },
       {
         "objects": 10000,
@@ -168,15 +168,15 @@
         },
         "canvas": {
           "pass": true,
-          "summary": "101 passed (101)"
-        },
-        "mcp-server": {
-          "pass": true,
-          "summary": "4 passed (4)"
+          "summary": "103 passed (103)"
         },
         "cli": {
           "pass": true,
           "summary": "no test files"
+        },
+        "mcp-server": {
+          "pass": true,
+          "summary": "4 passed (4)"
         },
         "sdk": {
           "pass": true,

@@ -36,7 +36,7 @@ Last updated 2026-11-26T09:25Z by the review lane. Branch: `claude/sprint-int`.
 | e2e | fails, pre-existing (see above) |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T10:15Z on `164b3ed`:
+Scorecard from `pnpm eval:canvas` at 2026-11-26T10:21Z on `f017203`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
@@ -44,7 +44,7 @@ Scorecard from `pnpm eval:canvas` at 2026-11-26T10:15Z on `164b3ed`:
 | Agent usability | ≥90% of ≥20 tasks | 0 tasks, no recorded attempt | not run |
 | Safety of shared edits | 0 human edits lost | 0 lost; 3/3 races pass | pass |
 | Persistence | identical in a clean profile | identical | pass |
-| Performance | reported, not worse | 1k: load 2487 ms, pan 16.7 ms/frame; 10k: error | fail |
+| Performance | reported, not worse | 1k: load 2432 ms, pan 16.7 ms/frame; 10k: error | fail |
 | Existing product | green | build passes; tests: e2e failing | fail |
 <!-- scorecard:end -->
 
