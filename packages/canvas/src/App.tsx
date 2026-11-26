@@ -76,6 +76,7 @@ import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
 import { AskLayer, SelectionBar } from "./ask-ui";
+import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
 import { elsewhereNotice } from "./ask-rules";
 import { askOf } from "./asks";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
@@ -1404,7 +1405,7 @@ function Shell() {
     </div>
   );
 }
-import { GeoShapeGeoStyle, PageRecordType, createShapeId } from "tldraw";
+import { GeoShapeGeoStyle, PageRecordType, createShapeId, react } from "tldraw";
 const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil];
 const TEXT_WRAP = 460;
 // One set of editor options: the page limit, and double-click writes a card rather than plain text.
@@ -1499,6 +1500,19 @@ function App() {
       return { ...next, meta: { ...next.meta, updatedAt: Date.now() } };
     });
     window.paired = createBridge(editor);
+    // Images from before boards kept them: copy them into the board so the next save carries
+    // them. Done once sync is listening (after a save or load), so the copy is itself saved;
+    // a board with no account gets it after a few seconds. A no-op when there is nothing to move.
+    let moving = false;
+    const moveImages = () => {
+      if (moving) return;
+      moving = true;
+      void moveLocalImagesIntoBoard(editor).finally(() => (moving = false));
+    };
+    const stopImageMove = react("move older images into the board", () => {
+      if (boardSync.get().state === "saved") moveImages();
+    });
+    const imageMoveTimer = setTimeout(moveImages, 8000);
     if (import.meta.env.DEV) window.__pairedEditor = editor;
     setAgentEditor(editor);
     const page = editor.getCurrentPage();
@@ -1605,6 +1619,8 @@ function App() {
       editor.off("event", writeOnDoubleClick);
       delete window.paired;
       delete window.__pairedEditor;
+      stopImageMove();
+      clearTimeout(imageMoveTimer);
     };
   }
   return (
@@ -1613,6 +1629,7 @@ function App() {
         <Tldraw
           licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
           persistenceKey="picabird-canvas-v1"
+          assets={boardImageStore}
           shapeUtils={scratchShapes}
           getShapeVisibility={learningVisibility}
           tools={scratchTools}

@@ -1,5 +1,5 @@
 import type postgres from 'postgres'
-import { KEEP_REVISIONS, byteSize, defaultLimits, documentName, type BoardLimits, type BoardStore, type BoardSummary, type RemoveResult, type SaveInput, type SaveResult, type Snapshot, storable } from './store.js'
+import { byteSize, revisionsToKeep, defaultLimits, documentName, type BoardLimits, type BoardStore, type BoardSummary, type RemoveResult, type SaveInput, type SaveResult, type Snapshot, storable } from './store.js'
 
 // Postgres board store (migration 007). Every save is one transaction: a conditional
 // UPDATE on the expected revision (or an INSERT for revision 0), a revision row, and
@@ -64,9 +64,12 @@ export class PostgresBoardStore implements BoardStore {
       await tx`
         INSERT INTO canvas_board_revisions (user_id, board_id, revision, snapshot, size_bytes)
         VALUES (${userId}, ${id}, ${row.revision}, ${json}, ${sizeBytes})`
+      const history = await tx<{ revision: number; saved_at: Date }[]>`
+        SELECT revision, saved_at FROM canvas_board_revisions WHERE user_id = ${userId} AND board_id = ${id}`
+      const keep = [...revisionsToKeep(history.map((h) => ({ revision: h.revision, savedAt: h.saved_at.toISOString() })))]
       await tx`
         DELETE FROM canvas_board_revisions
-        WHERE user_id = ${userId} AND board_id = ${id} AND revision <= ${row.revision - KEEP_REVISIONS}`
+        WHERE user_id = ${userId} AND board_id = ${id} AND NOT (revision = ANY(${keep}::int[]))`
       return { ok: true as const, board: summary(row) }
     }) as Promise<SaveResult>
   }
