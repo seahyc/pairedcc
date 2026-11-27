@@ -57,8 +57,12 @@ export const starters = ["What's missing?", "Give me alternatives", "Poke holes 
 /** An imported record is an argument to judge, so its first starter asks exactly that. */
 export const recordStarters = ["Is this point valid?", "Is the defence enough?", "Poke holes in this"];
 
+/** A whole word in any script: no letter, mark or digit right before or after it. */
+const word = (alternatives: string) => new RegExp(`(?<![\\p{L}\\p{M}\\p{N}])(?:${alternatives})(?![\\p{L}\\p{M}\\p{N}])`, "iu");
 /** Abstract nouns: a short thought made of them is a claim that needs an example. */
-const ABSTRACT = /\b(\w+(ity|ness|ism|ance|ence)|quality|quantity|value|strategy|vision|culture|growth|freedom|focus)\b/i;
+const ABSTRACT = word("\\p{L}+(?:ity|ness|ism|ance|ence)|quality|quantity|value|strategy|vision|culture|growth|freedom|focus");
+const REASON = word("because|since|so|therefore|thus|hence");
+const PROPOSAL = word("should|must|ought|need to|needs to|let['’]s");
 
 /**
  * What one thought's own words invite, if anything (principles row 7, recognising beats
@@ -71,9 +75,9 @@ export function textCue(text: string): string | undefined {
   if (!t) return undefined;
   const lines = t.split(/\n+/).map((l) => l.trim()).filter(Boolean);
   if (lines.length >= 2) return "Which of these matters most?";
-  if (/\d/.test(t)) return "Where does this number come from?";
-  if (/\b(because|since|so|therefore|thus|hence)\b/i.test(t)) return "What's the strongest objection?";
-  if (/\b(should|must|ought|need to|needs to|let's|lets)\b/i.test(t)) return "What would make this wrong?";
+  if (/\p{Nd}/u.test(t)) return "Where does this number come from?";
+  if (REASON.test(t)) return "What's the strongest objection?";
+  if (PROPOSAL.test(t)) return "What would make this wrong?";
   const words = t.split(/\s+/).length;
   if (words <= 6 && ABSTRACT.test(t)) return "Give me a concrete example";
   return undefined;

@@ -72,13 +72,17 @@ export function suggestSpot(
   selection: Rect,
   size: { w: number; h: number },
   others: readonly Rect[],
-  opts: { under?: number; view?: Rect; scale?: number } = {},
+  opts: { under?: number; view?: Rect; scale?: number; room?: { w: number; h: number }; chrome?: readonly Rect[] } = {},
 ): { x: number; y: number } | null {
   const scale = opts.scale ?? 1, air = SUGGEST_AIR * scale, gap = SUGGEST_GAP * scale, step = STEP * scale, view = opts.view;
+  // The suggestions must fit the window and keep off its controls; the card one becomes (`room`,
+  // board-sized) must only keep off objects, since the view can follow it once it is made.
+  const room = { w: Math.max(size.w, opts.room?.w ?? 0), h: Math.max(size.h, opts.room?.h ?? 0) };
+  const around = (x: number, y: number, s: { w: number; h: number }) => ({ x: x - air, y: y - air, w: s.w + 2 * air, h: s.h + 2 * air });
   const clear = (x: number, y: number) => {
     if (view && (x < view.x || y < view.y || x + size.w > view.x + view.w || y + size.h > view.y + view.h)) return false;
-    const box = { x: x - air, y: y - air, w: size.w + 2 * air, h: size.h + 2 * air };
-    return !others.some((o) => hits(box, o));
+    if ((opts.chrome ?? []).some((c) => hits(around(x, y, size), c))) return false;
+    return !others.some((o) => hits(around(x, y, room), o));
   };
   const below = selection.y + selection.h + gap + (opts.under ?? 0);
   for (let i = 0; i <= SLIDE; i++) if (clear(selection.x, below + i * step)) return { x: selection.x, y: below + i * step };
