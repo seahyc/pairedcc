@@ -486,6 +486,12 @@ export function readFeedback(editor: Editor, value: unknown = {}) {
   };
 }
 
+function withoutRichText(props: Record<string, unknown>) {
+  if (!("richText" in props)) return props;
+  const { richText: _richText, ...rest } = props;
+  return rest;
+}
+
 export function readCanvas(editor: Editor, value: unknown = {}) {
   const input = readInput.parse(value);
   const objects = editor
@@ -508,13 +514,14 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
           };
       }
       // Data objects are summarised: rows and bars appear in dataset/widget, rows only via get.
-      const props = object && summaryProps(s.type, object.props as Record<string, unknown>);
+      // Rich text is given once, as plain `text`; canvas_get has the structured form.
+      const props = object && withoutRichText(summaryProps(s.type, object.props as Record<string, unknown>));
       return {
         ...object,
         props,
         ...dataFields(editor, s),
         text:
-          "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
+          "richText" in s.props ? richTextSearch(s.props.richText) : undefined,
         author: authorOf(s),
         ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         ...(s.meta.settled === true ? { settled: true } : {}),
@@ -533,7 +540,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
       targetId: s.meta.targetId,
       status: s.meta.status,
       author: s.meta.author,
-      text: "richText" in s.props ? richTextPlain(s.props.richText) : "",
+      text: "richText" in s.props ? richTextSearch(s.props.richText) : "",
     }));
   return {
     page: editor.getCurrentPage(),
