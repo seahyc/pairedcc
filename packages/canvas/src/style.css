@@ -2125,6 +2125,7 @@ kbd {
 }
 @media (prefers-reduced-motion: reduce) {
   .suggestions { animation: none; }
+}
 
 /* P5: a settled thought face down while the person explains it from memory (Check me). */
 .check-cover {
