@@ -1,5 +1,6 @@
 import type { Editor, TLShape, TLShapeId } from "tldraw";
 import { learningVisibility } from "./learning/prompt-shape";
+import { richTextSearch } from "./read-filter";
 
 /**
  * P1, few things in view (finding 1: working memory holds about four things). A finished thread
@@ -110,6 +111,18 @@ export function foldedForAgent(editor: Editor, shape: TLShape) {
   const ask = threadAsk(editor, shape);
   if (!ask) return false;
   return foldedSaved(ask.meta, answersOf(editor, ask).map((a) => a.meta));
+}
+
+/**
+ * For an agent's overview or read of a folded thread's ask: the answer the person picked (the one
+ * shown on the folded line), so the agent can build on it without reading the thread.
+ */
+export function foldedPick(editor: Editor, shape: TLShape): { id: string; text: string } | undefined {
+  if (!isAsk(shape) || !foldedForAgent(editor, shape)) return undefined;
+  const picked = answersOf(editor, shape).find((a) => a.meta.mark === "picked");
+  if (!picked) return undefined;
+  const text = "richText" in picked.props ? richTextSearch(picked.props.richText) : "";
+  return { id: picked.id, text: text.length > 120 ? `${text.slice(0, 119)}…` : text };
 }
 
 /** Fold or unfold a thread, as one undo step. Nothing moves: folding only takes it out of view. */

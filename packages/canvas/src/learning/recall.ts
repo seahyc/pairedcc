@@ -16,6 +16,15 @@ export function recallOf(meta: Record<string, unknown>): Recall | undefined {
 }
 
 /**
+ * For agents: when a settled thought next comes back for review, as an ISO date, or undefined when
+ * it has no schedule (only Check me starts one) or is no longer settled.
+ */
+export function reviewDate(meta: Record<string, unknown>): string | undefined {
+  const r = recallOf(meta);
+  return r && meta.settled === true && Number.isFinite(r.due) ? new Date(r.due).toISOString() : undefined;
+}
+
+/**
  * After the person checks themselves on a settled thought: when it comes back next, or undefined
  * when it has come back enough (after the last spacing it is left alone).
  */

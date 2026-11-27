@@ -1,5 +1,6 @@
 import { isLeftOut } from "./leave-out";
-import { foldedForAgent } from "./fold";
+import { foldedForAgent, foldedPick } from "./fold";
+import { reviewDate } from "./learning/recall";
 import { z } from "zod";
 import type { Editor, TLShape } from "tldraw";
 import { cardStyle, revision, richTextPlain, shapeName } from "./operations";
@@ -85,10 +86,14 @@ export function overview(editor: Editor, value: unknown = {}) {
         ...(isLeftOut(s.meta) ? { leftOut: true } : {}),
         // A finished thread folded to one line on the board (the question and the pick).
         ...(foldedForAgent(editor, s) ? { folded: true } : {}),
+        // On a folded thread's ask: the answer the person picked, as the folded line shows it.
+        ...(foldedPick(editor, s) ? { pick: foldedPick(editor, s) } : {}),
         // What would otherwise take a full read: the person's judgement, the card's style, settled, what a chart shows.
         ...(s.meta.mark === "picked" || s.meta.mark === "rejected" ? { mark: s.meta.mark } : {}),
         ...(s.type === "card" && cardStyle((s.props as { tone?: unknown }).tone) ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         ...(s.meta.settled === true ? { settled: true } : {}),
+        // A settled thought the person checked themselves on comes back for review on this date.
+        ...(reviewDate(s.meta) ? { review: reviewDate(s.meta) } : {}),
         ...(s.type === "chart" ? { chart: chartLine(editor, s) } : {}),
         ...(snippet(s) ? { text: snippet(s) } : {}),
       };

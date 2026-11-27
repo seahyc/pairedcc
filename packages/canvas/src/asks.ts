@@ -9,6 +9,7 @@ import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
 import { hiddenFromAgents } from "./fold";
+import { reviewDate } from "./learning/recall";
 import { unclipFromFrame } from "./frame-edge";
 import { clusterAround, relation } from "./arrangement";
 import { groupName } from "./overview";
@@ -151,7 +152,7 @@ export function retryAsk(editor: Editor, id: string) {
   if (shape.meta.status === "resolved") resolveMark(editor, editor.getShape(shape.id)!, "open", HUMAN);
 }
 
-type Given = { id: string; type: string; author: string; text: string; mark?: AskMark; settled?: true; inside?: Given[]; insideMore?: number };
+type Given = { id: string; type: string; author: string; text: string; mark?: AskMark; settled?: true; review?: string; inside?: Given[]; insideMore?: number };
 /** How many of a selected frame's objects an ask gives, in reading order. */
 export const INSIDE_LIMIT = 20;
 // Imported material is given with its column names and where it came from.
@@ -203,6 +204,7 @@ const given = (editor: Editor, s: TLShape, max = 2000, keep: Keep = (x) => x): G
     text: clip(sourceText(s, textOf(s)) || textOf(s) || dataText(editor, s) || mediaText(editor, s, keep) || `(${shapeName(s)}, no text)`, max),
     ...(mark ? { mark } : {}),
     ...(s.meta.settled === true ? { settled: true as const } : {}),
+    ...(reviewDate(s.meta) ? { review: reviewDate(s.meta) } : {}),
   };
 };
 const said = (editor: Editor, s: TLShape, max: number, keep: Keep = (x) => x): HistoryEntry => {
