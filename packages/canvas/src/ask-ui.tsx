@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { atom, startEditingShapeWithRichText, useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { agentActivity, agentListeners, agentLink, announceAsk, chatAgentActivity } from "./agent-client";
 import { askDirect, askOf, createAsk, describeAsk, retryAsk, shouldSend, writtenByPerson } from "./asks";
-import { announceState, askAnnouncement, askStatusLine, isQuestion, liveText, optionsInLatestRound, retryLabel, BAR_MARGIN, placeBar, statusWidth } from "./ask-rules";
+import { announceState, askAnnouncement, askStatusLine, isQuestion, liveText, optionsInLatestRound, retryLabel, BAR_MARGIN, placeBar, statusRoom, statusWidth, STATUS_ROOM } from "./ask-rules";
 import { sourceOf } from "./import-meta";
 import { bringCited, citedBy, selectedRecords, sideBySide } from "./import-board";
 import { richTextPlain, shapeName } from "./operations";
@@ -99,7 +99,7 @@ export function AskLayer() {
         // A finished thread folded away is one line where its question was: nothing else is drawn.
         const finished = threadFinished(s.meta, answers.map((r) => r.meta));
         if (isFoldedNow(editor, s))
-          return [{ id: s.id, ask, question: textOf(s), answers: 0, x: b.x, y: b.y, w: foldWidth(b, answers.flatMap((r) => editor.getShapePageBounds(r) ?? [])), given: "", outlines: [] as Outline[], group: undefined as Group | undefined, finished, fold: foldLine(textOf(s), answers.map((r) => ({ text: textOf(r), meta: r.meta }))) }];
+          return [{ id: s.id, ask, tight: false, question: textOf(s), answers: 0, x: b.x, y: b.y, w: foldWidth(b, answers.flatMap((r) => editor.getShapePageBounds(r) ?? [])), given: "", outlines: [] as Outline[], group: undefined as Group | undefined, finished, fold: foldLine(textOf(s), answers.map((r) => ({ text: textOf(r), meta: r.meta }))) }];
         const focused = selected.has(s.id) || answers.some((r) => selected.has(r.id)) || ask.state === "working";
         const view = focused || anyLeftOut || anyPinned ? describeAsk(editor, s) : undefined;
         const pinnedIds = view?.pinned?.map((p) => p.id) ?? [];
@@ -124,7 +124,11 @@ export function AskLayer() {
         const pins = anyPinned && view ? pinnedLabel(pinnedIds.length + (view.pinnedMore ?? 0)) : "";
         const groupSaid = group ? `${group.count} more in its group` : "";
         const base = [givenLabel(editor, ask.contextIds.filter((id) => id !== s.id)), groupSaid].filter(Boolean).join(" + ");
-        return [{ id: s.id, ask, question: textOf(s), answers: optionsInLatestRound(answers.map((r) => ({ answeredAt: typeof r.meta.answeredAt === "number" ? r.meta.answeredAt : undefined, at: typeof r.meta.createdAt === "number" ? r.meta.createdAt : undefined }))), x: b.x, y: b.maxY, w: b.w, given: givenWith(base, pins, kept), outlines, group, finished, fold: undefined as ReturnType<typeof foldLine> | undefined }];
+        // Something written close under the question (the next question, say) leaves the state
+        // line no room for a second line: it keeps to one, and never runs over that card.
+        const near = editor.getCurrentPageShapes().filter((o) => o.id !== s.id && o.type !== "arrow" && o.type !== "frame" && o.meta.replyTo !== s.id).flatMap((o) => editor.getShapePageBounds(o) ?? []);
+        const tight = statusRoom(b, near, statusWidth(b.w)) < STATUS_ROOM;
+        return [{ id: s.id, ask, tight, question: textOf(s), answers: optionsInLatestRound(answers.map((r) => ({ answeredAt: typeof r.meta.answeredAt === "number" ? r.meta.answeredAt : undefined, at: typeof r.meta.createdAt === "number" ? r.meta.createdAt : undefined }))), x: b.x, y: b.maxY, w: b.w, given: givenWith(base, pins, kept), outlines, group, finished, fold: undefined as ReturnType<typeof foldLine> | undefined }];
       });
     },
     [editor],
@@ -194,9 +198,9 @@ export function AskLayer() {
             {a.outlines.map((o) => (
               <div key={o.id} className="ask-given" style={{ transform: `translate(${o.x - 6}px, ${o.y - 6}px)`, width: o.w + 12, height: o.h + 12 }} />
             ))}
-            <div className={`ask-status ${line.tone}`} data-ask-state={a.ask.state} data-ask-tone={line.tone} style={{ transform: `translate(${a.x}px, ${a.y + 6}px)`, maxWidth: statusWidth(a.w) }}>
+            <div className={`ask-status ${line.tone}${a.tight ? " ask-status--tight" : ""}`} data-ask-state={a.ask.state} data-ask-tone={line.tone} style={{ transform: `translate(${a.x}px, ${a.y + 6}px)`, maxWidth: statusWidth(a.w) }}>
               {(line.tone === "working" || line.tone === "waiting") && <span className="ask-pulse" />}
-              <span>
+              <span className="ask-status-text" title={a.tight ? `${line.text}${line.tone !== "done" && line.tone !== "failed" && line.tone !== "nobody" && a.given ? ` · with ${a.given}` : ""}` : undefined}>
                 {line.tone === "working" || line.tone === "done" ? "✦ " : ""}
                 {line.text}
                 {line.tone !== "done" && line.tone !== "failed" && line.tone !== "nobody" && a.given ? ` · with ${a.given}` : ""}

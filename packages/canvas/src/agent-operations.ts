@@ -394,7 +394,7 @@ type Rect = { x: number; y: number; w: number; h: number };
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
 /** The boxes of everything a new card must not cover on a page: not frames or arrows. */
-function othersOnPage(editor: Editor, ignore: Set<string>, pageId: TLPageId = editor.getCurrentPageId()) {
+export function othersOnPage(editor: Editor, ignore: Set<string>, pageId: TLPageId = editor.getCurrentPageId()) {
   return [...editor.getPageShapeIds(pageId)]
     .flatMap((id) => editor.getShape(id) ?? [])
     .filter((s) => s.type !== "frame" && s.type !== "arrow" && !ignore.has(s.id))
