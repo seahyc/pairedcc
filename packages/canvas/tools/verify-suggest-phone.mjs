@@ -119,7 +119,65 @@ const seen = (p) => p.evaluate(() => {
   s = await seen(p);
   await p.screenshot({ path: `${out}/3-phone-bottom.png` });
   check('near the bottom edge, suggestions are wholly in view and cover nothing, or are not shown', !s.shown || (s.inView && s.chrome.length === 0 && s.covered.length === 0), JSON.stringify(s));
+  // A swipe that starts on a suggestion moves on without sending it (item 128 (b)).
+  await p.evaluate((id) => {
+    const ed = window.__pairedEditor, v = ed.getViewportPageBounds(), b = ed.getShapePageBounds(id);
+    ed.updateShape({ id, type: 'card', x: v.x + v.w / 2 - b.w / 2, y: v.y + 140 / ed.getZoomLevel() });
+    ed.selectNone();
+  }, card);
+  await p.waitForTimeout(300);
+  await p.evaluate((id) => { window.__pairedEditor.select(id); }, card);
+  await p.waitForTimeout(PAUSE);
+  const target = await p.evaluate(() => { const r = document.querySelector('.suggestions button')?.getBoundingClientRect(); return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null; });
+  check('suggestions are back for the swipe step', Boolean(target));
+  if (target) {
+    const asksBefore = await p.evaluate(() => window.__pairedEditor.getCurrentPageShapes().filter((s) => s.meta.ask).length);
+    const cdp = await ctx.newCDPSession(p);
+    const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    await touch('touchStart', target.x, target.y);
+    for (let i = 1; i <= 6; i++) await touch('touchMove', target.x, target.y - i * 15);
+    await touch('touchEnd', target.x, target.y - 90);
+    await p.waitForTimeout(600);
+    const asksAfter = await p.evaluate(() => window.__pairedEditor.getCurrentPageShapes().filter((s) => s.meta.ask).length);
+    check('a swipe that starts on a suggestion sends nothing', asksAfter === asksBefore, JSON.stringify({ asksBefore, asksAfter }));
+  }
+
+  // Zoomed in to 200 % on the phone, suggestions that fit are still shown (item 128 (a)).
+  await p.evaluate((id) => {
+    const ed = window.__pairedEditor, b = ed.getShapePageBounds(id), z = 2;
+    ed.selectNone();
+    ed.setCamera({ x: 20 / z - b.x, y: 200 / z - b.y, z }, { immediate: true });
+  }, card);
+  await p.waitForTimeout(300);
+  await p.evaluate((id) => { window.__pairedEditor.select(id); }, card);
+  await p.waitForTimeout(PAUSE);
+  s = await seen(p);
+  await p.screenshot({ path: `${out}/5-phone-200.png` });
+  check('at 200 % on the phone, suggestions show, in view, covering nothing', s.shown && s.inView && s.chrome.length === 0 && s.covered.length === 0 && s.zoom === 2, JSON.stringify(s));
   check('no page errors on the phone', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+// A 360 px phone, two thoughts selected: the long comparison question does not fit, the first does (item 128 (c)).
+{
+  const ctx = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), 'suggest-narrow-')), { ...devices['Galaxy S9+'], viewport: { width: 360, height: 640 } });
+  const p = ctx.pages()[0] ?? await ctx.newPage();
+  await p.goto(`${BASE}/canvas/`);
+  await p.waitForFunction(() => window.paired?.read().objects.length >= 3, null, { timeout: 30000 });
+  await p.waitForTimeout(1500);
+  const ids = await p.evaluate(() => {
+    const ed = window.__pairedEditor, z = ed.getZoomLevel();
+    const all = ed.getCurrentPageShapes().map((s) => ed.getShapePageBounds(s));
+    const y = Math.max(...all.map((b) => b.maxY)) + 60, x = Math.min(...all.map((b) => b.x));
+    ed.setCamera({ x: 90 / z - x, y: 80 / z - y, z }, { immediate: true });
+    const id = (r) => (typeof r === 'string' ? r : r.id);
+    return [id(window.paired.create({ kind: 'note', x, y, width: 100, text: 'Per seat' })), id(window.paired.create({ kind: 'note', x: x + 120, y, width: 100, text: 'Flat price' }))];
+  });
+  await p.evaluate((ids) => { window.__pairedEditor.select(...ids); }, ids);
+  await p.waitForTimeout(PAUSE);
+  const s = await seen(p);
+  await p.screenshot({ path: `${out}/6-narrow-two.png` });
+  check('on a 360 px phone, two thoughts still get a suggestion (the first, if both do not fit)', s.shown && s.texts[0] === 'Compare these' && s.inView && s.chrome.length === 0 && s.covered.length === 0, JSON.stringify(s));
   await ctx.close();
 }
 

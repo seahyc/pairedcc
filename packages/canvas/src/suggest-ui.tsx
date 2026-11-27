@@ -25,6 +25,8 @@ export function textLines(node: unknown): string {
 }
 /** Room for the card a suggestion becomes, so clicking one never lands it on something. */
 const CARD_ROOM = { w: HUMAN_CARD_W, h: 72 };
+/** How far a finger may move and still tap, in screen px. */
+const TAP_SLOP = 10;
 /** An ask's state line is drawn under it; it counts as part of the ask. */
 const STATUS_ROOM = 36;
 
@@ -65,18 +67,22 @@ export function offerFor(editor: Editor): Offer | null {
   const under = bar && bar.top >= bottom - 1 ? (bar.bottom - bottom + 6) / zoom : 0;
   // The window's controls, as page rectangles: covering the tool strip or the zoom bar is as bad
   // as covering a card. Only what is shown counts.
+  const chrome: Rect[] = [];
   for (const el of document.querySelectorAll(CHROME)) {
     const r = el.getBoundingClientRect();
     if (!r.width || !r.height) continue;
     const a = editor.screenToPage({ x: r.left, y: r.top }), b = editor.screenToPage({ x: r.right, y: r.bottom });
-    others.push({ x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y });
+    chrome.push({ x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y });
   }
-  const view = editor.getViewportPageBounds();
-  const size = suggestSize(texts, { scale, touch: TOUCH });
-  const room = { w: Math.max(size.w, CARD_ROOM.w), h: Math.max(size.h, CARD_ROOM.h) };
-  const spot = suggestSpot({ x: box.x, y: box.y, w: box.w, h: box.h }, room, others, { under, scale, view: { x: view.x, y: view.y, w: view.w, h: view.h } });
-  if (!spot) return null;
-  return { key: selectionKey(shapes.map((s) => s.id)), texts, ...spot, ...size, scale, targetIds: shapes.map((s) => s.id) };
+  const v = editor.getViewportPageBounds(), view = { x: v.x, y: v.y, w: v.w, h: v.h };
+  const sel = { x: box.x, y: box.y, w: box.w, h: box.h };
+  // Both suggestions if they fit; on a narrow window, the first alone rather than none.
+  for (const shown of [texts, texts.slice(0, 1)]) {
+    const size = suggestSize(shown, { scale, touch: TOUCH });
+    const spot = suggestSpot(sel, size, others, { under, scale, view, room: CARD_ROOM, chrome });
+    if (spot) return { key: selectionKey(shapes.map((s) => s.id)), texts: shown, ...spot, ...size, scale, targetIds: shapes.map((s) => s.id) };
+  }
+  return null;
 }
 
 /**
@@ -92,6 +98,8 @@ export function SuggestLayer() {
   const idle = useValue("suggest idle", () => editor.isIn("select.idle") && !editor.getEditingShapeId(), [editor]);
   const key = idle ? ids : "";
   const [offer, setOffer] = useState<Offer | null>(null);
+  // A touch on a suggestion, until it lifts (a tap) or moves away (a swipe).
+  const tap = useRef<{ id: number; x: number; y: number } | null>(null);
   // Selections whose suggestions the person has moved past. Pressing on the selected card (and
   // so leaving idle for a moment) keeps it the same selection; selecting anything else, or
   // nothing, is a new one, which gets a new chance.
@@ -168,10 +176,22 @@ export function SuggestLayer() {
             onPointerDown={(e) => {
               e.stopPropagation();
               e.preventDefault();
-              // A touch over the board never becomes a click, so a tap acts on the press (as
-              // the selection bar's tappable hint does); a mouse click, a key or a screen
-              // reader uses onClick.
-              if (e.pointerType !== "mouse") choose(text);
+              // A touch over the board never becomes a click, so a tap is recognised here: the
+              // finger lifts where it landed. A swipe that starts on a suggestion sends nothing.
+              // A mouse click, a key or a screen reader uses onClick.
+              tap.current = e.pointerType === "mouse" ? null : { id: e.pointerId, x: e.clientX, y: e.clientY };
+            }}
+            onPointerMove={(e) => {
+              const t = tap.current;
+              if (t && t.id === e.pointerId && Math.hypot(e.clientX - t.x, e.clientY - t.y) > TAP_SLOP) tap.current = null;
+            }}
+            onPointerCancel={() => {
+              tap.current = null;
+            }}
+            onPointerUp={(e) => {
+              const t = tap.current;
+              tap.current = null;
+              if (t && t.id === e.pointerId && Math.hypot(e.clientX - t.x, e.clientY - t.y) <= TAP_SLOP) choose(text);
             }}
             onClick={(e) => {
               e.stopPropagation();
