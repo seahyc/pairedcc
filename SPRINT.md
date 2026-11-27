@@ -122,7 +122,7 @@ too flexible"): nothing new is shown until it applies, no new permanent toolbar 
 new key each, and each one undoes in one step. Each PR names the finding it serves, shows a
 before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
 
-- **P1. (Part 1, fold: PR #144; part 2, focus (F): PR #145, stacked on #144; both open, awaiting review.) Few things in view (finding 1).** A finished thread (an ask whose answer was picked, or
+- **P1. (Part 1, fold: #144 merged; part 2, focus (F): PR #145 open, awaiting review.) Few things in view (finding 1).** A finished thread (an ask whose answer was picked, or
   which the person marks settled) folds to one line showing the question and the picked answer;
   click to unfold. Focus: selecting a frame or a thread and pressing F dims everything else until
   Esc. Done when a board with 12 threads shows at most 4 unfolded by the person's choice, folding
@@ -147,7 +147,7 @@ before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
   selection, which then asks as any card does. They vanish on any other action and never appear
   while typing. Done when they never cover the person's objects, never appear on agent cards, and
   the starters logic from before (record, frame, chart, several objects) is reused, not rewritten.
-- **P5. Understanding needs effort (finding 9).** The learning prototype (`?prototype=learning`)
+- **P5. (Part 1, Check me on an agent answer: #141 merged. Part 2, Check me on a settled thought and its spaced return: PR #149 open, awaiting review.) Understanding needs effort (finding 9).** The learning prototype (`?prototype=learning`)
   becomes available on every board without a flag but stays off until asked: a "Check me" action
   on the selection bar for a settled card or an agent answer asks the person to predict or explain
   first and then shows the answer to compare (predict-then-check, self-explanation); a card the
@@ -703,14 +703,17 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 108. (PR #148 open, awaiting review.) **The acceptance step "A manual annotation survives an agent revision" loses the first letter.** On `claude/sprint-int` at 44a5ae2 (and on #144) `pnpm eval:canvas --only=acceptance` is 9/10 in four runs out of four: the typed note reads "heck the February meter swap" (once "the Februaryheck  meter swap"). The measure presses N, clicks, and types as soon as `getEditingShapeId()` is set, before the text editor has focus, so the first key goes to the board. Done when the measure waits for the editor's focus (or the board takes the first key into the new card) and the step passes three runs in a row, with the cause named.
 109. (PR #147 open, awaiting review.) **`verify-runs.ts` after #136.** On `claude/sprint-int` at 44a5ae2 the check stops at its fifth step: undoing a run whose card the person edited now says "changed after the run created it (meta.name, props.richText)", because #136 renames a derived layer name with the text, and the check expects exactly "(props.richText)". Done when the check accepts the name alongside the text (or the refusal leaves derived fields out, if that is the better message), passing on the integration branch.
 
+110. **An ask made from the person's own card is missing from the feedback queue.** (Found by build-A's conversion of `verify-calm.mjs` for item 107.) Since 7cc29ef the person's card itself becomes the ask, but `buildFeedback` collects only annotations, so the queue no longer lists asks with their answers, although the shortcut sheet says "Everything you ask … goes into one queue your agent reads" and `asks.ts` says an ask is in the queue like any comment. Done when such an ask is a queue item (open until answered, its answer as the reply), with failing-first unit tests.
+111. **An empty question card leaves its arrow behind.** (Found the same way.) Ask on an agent's answer opens a pink card joined to it by an arrow; leaving the card empty removes the card but not the arrow (`verify-calm`: "6 → 7 objects; left: arrow by Human"). Done when nothing is left behind, checked in a real page.
+112. **The shortcut sheet says ⌘↵ on Windows and Linux.** (Found by the converted `verify-keys.mjs`.) The sheet's opening sentence ("any other card is asked with ⌘↵") is not passed through `keys()`, so a Windows tab shows the Apple key (#83's rule). Done when `verify-keys` passes 16/16.
+
 ## Claims
 P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest | 2026-11-27T00:45Z
-P5 part 2. Spaced return and Check me on a settled card (build-A; part 1 merged as #141, its claim was stale) | claude/sprint-p5-spacing | 2026-11-27T01:00Z
-P1. Few things in view (build-A, taken over: the 14:57Z claim had no branch or PR after 6 h) | claude/sprint-p1-fold | 2026-11-27T00:20Z
-P3 part 2. The whole board (O) (build-A) | claude/sprint-p3-overview | 2026-11-27T00:50Z
 107. Browser checks that still open the question box (build-A) | claude/sprint-checks-no-box | 2026-11-27T00:52Z
+110–112. Regressions found by the converted checks (build-A) | claude/sprint-ask-leftovers | 2026-11-27T01:15Z
 
 ## Done
+- P1 (part 1). A finished thread folds to one line (build-A): PR #144, merged (folds once the person moves on; the line unfolds for good, Fold folds again; read/overview `folded: true`; verify-fold 19/19).
 - 105 (c). canvas_runs by page (build-B): PR #139 (pages on each run, page: "current"; live MCP check 1/3 → 3/3; manifest regenerated; workspace green with services).
 - P3 (part 1). Settled mark (build-A): PR #138 (S settles or reopens, print with ✓ in the person's colour, one undo, saved, `settled: true` in read and ask targets; verify-settled 11/11; first screen unchanged).
 - 105 (b), (d). Chart filter clearing and annotate placement documented (build-B): PR #137.
