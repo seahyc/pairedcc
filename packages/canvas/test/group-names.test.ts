@@ -1,0 +1,74 @@
+import { describe, expect, it } from "vitest";
+import type { Editor } from "tldraw";
+import { overview } from "../src/overview";
+import { groupLabel } from "../src/board-overview";
+
+// P2, what was left: named regions beyond frames. The overview (O) labels each group; agents get
+// the same label from the same function.
+const text = (t: string) => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: t }] }] });
+const card = (id: string, x: number, y: number, t: string, tone = "human") => ({
+  id, type: "card", parentId: "page:p", x, y, rotation: 0, isLocked: false, opacity: 1, index: "a1", typeName: "shape",
+  meta: { revision: 0 }, props: { w: 200, h: 60, tone, richText: text(t) },
+});
+const shapes = [
+  card("shape:title", 0, 0, "Pricing ideas"),
+  card("shape:a", 0, 80, "Charge per seat"),
+  card("shape:b", 220, 80, "Charge per job post"),
+  card("shape:far1", 2000, 0, "Office move"),
+  card("shape:far2", 2000, 80, "Lease ends in March", "heading"),
+];
+const fake = {
+  getCurrentPage: () => ({ id: "page:p", name: "Board" }),
+  getCurrentPageShapesSorted: () => shapes,
+  getCurrentPageShapes: () => shapes,
+  getPages: () => [{ id: "page:p", name: "Board" }],
+  getSelectedShapeIds: () => [],
+  getShape: (id: string) => shapes.find((s) => s.id === id),
+  getShapePageBounds: (s: any) => {
+    const shape = typeof s === "string" ? shapes.find((x) => x.id === s) : s;
+    return shape ? { x: shape.x, y: shape.y, w: shape.props.w, h: shape.props.h, maxX: shape.x + shape.props.w, maxY: shape.y + shape.props.h } : undefined;
+  },
+  isShapeOrAncestorLocked: () => false,
+};
+const editor = new Proxy(fake, { get: (t, k) => (k in t ? (t as Record<string | symbol, unknown>)[k] : () => { throw new Error(`fake editor lacks ${String(k)}`); }) }) as unknown as Editor;
+
+describe("canvas_overview clusters carry the group's name", () => {
+  const { clusters } = overview(editor) as { clusters: { ids: string[]; label?: string }[] };
+  it("names a pile by its first words in reading order, as the overview box does", () => {
+    const pricing = clusters.find((c) => c.ids.includes("shape:a"))!;
+    expect(pricing.label).toBe("Pricing ideas");
+  });
+  it("prefers a heading in the pile", () => {
+    expect(clusters.find((c) => c.ids.includes("shape:far1"))!.label).toBe("Lease ends in March");
+  });
+  it("is the same function the overview (O) uses", () => {
+    const members = shapes.slice(0, 3).map((s) => ({ id: s.id, x: s.x, y: s.y, w: 200, h: 60, text: s.props.richText.content[0].content[0].text, thought: true, settled: false }));
+    expect(clusters.find((c) => c.ids.includes("shape:a"))!.label).toBe(groupLabel(members));
+  });
+});
+
+import { buildPrompt } from "../tools/resident-prompt";
+
+describe("the resident agent is told the group's name", () => {
+  const target = { id: "shape:q", type: "card", author: "Human", text: "Which would you test first?" };
+  it("with the group's members", () => {
+    const prompt = buildPrompt({ question: target.text, targets: [target], group: "Pricing ideas", cluster: [{ id: "shape:a", type: "card", author: "Human", text: "Charge per seat", relation: "above" }] });
+    expect(prompt).toContain('the group reads as "Pricing ideas"');
+  });
+  it("when everything in the group is already given", () => {
+    expect(buildPrompt({ question: target.text, targets: [target], group: "Pricing ideas" })).toContain('sits in a group that reads as "Pricing ideas"');
+  });
+  it("and says nothing about a group when there is none", () => {
+    expect(buildPrompt({ question: target.text, targets: [target] })).not.toMatch(/reads as/);
+  });
+});
+
+describe("a group is not named after an ask about it", () => {
+  const item = (id: string, y: number, text: string, ask = false) => ({ id, x: 0, y, w: 200, h: 60, text, thought: true, settled: false, ...(ask ? { ask: true } : {}) });
+  it("passes over an ask card, even first in reading order", () => {
+    expect(groupLabel([item("q", 0, "Which would you test first?", true), item("t", 80, "Pricing ideas")])).toBe("Pricing ideas");
+  });
+  it("uses the ask when nothing else in the group has words", () => {
+    expect(groupLabel([item("q", 0, "Which would you test first?", true)])).toBe("Which would you test first?");
+  });
+});

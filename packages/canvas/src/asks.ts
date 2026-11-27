@@ -10,6 +10,7 @@ import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
 import { hiddenFromAgents } from "./fold";
 import { clusterAround, relation } from "./arrangement";
+import { groupName } from "./overview";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -315,7 +316,12 @@ function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep:
   // A left-out member is withheld (and counted as such), like anything else around the ask.
   const kept = new Set<string>(keep(found.members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? [])).map((s) => s.id));
   const members = found.members.filter((m) => kept.has(m.id)).map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
-  return { members, more: found.more };
+  // The group's name, as the overview (O) shows it, from everything in it but the ask's own card
+  // (an ask is never the name of what it asks about) and what the person left out.
+  const whole = clusterAround(placed, host.id, new Set(), Infinity).members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? []);
+  // Filtered without counting: naming the group must not change how many objects the ask says it withheld.
+  const name = whole.length ? groupName(editor, keepForAgent(whole, []).kept) : undefined;
+  return { members, more: found.more, ...(name ? { name } : {}) };
 }
 
 /** Where a target sits relative to the ask's card, in words, when both are on the board and apart from each other. */
@@ -389,6 +395,8 @@ export function describeAsk(editor: Editor, shape: TLShape) {
         }
       : {}),
     ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
+    // What the group the card sits in is called, even when everything in it is already a target.
+    ...(group.name ? { group: group.name } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
     ...(withheld.size ? { leftOut: withheld.size } : {}),
     ...(pins.pinned.length ? { pinned: pins.pinned.map((s) => given(editor, s, 400)), ...(pins.more ? { pinnedMore: pins.more } : {}) } : {}),

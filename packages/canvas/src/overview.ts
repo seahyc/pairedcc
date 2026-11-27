@@ -5,6 +5,7 @@ import type { Editor, TLShape } from "tldraw";
 import { revision, richTextPlain, shapeName } from "./operations";
 import { authorOf, collectMarks } from "./scratchbook";
 import { clusters } from "./clusters";
+import { groupLabel, type OverviewItem } from "./board-overview";
 
 // Overview-then-detail: a compact, paginated listing of one level of the board, so an
 // agent can find what matters and then canvas_read/canvas_get only those IDs.
@@ -24,6 +25,22 @@ export function snippet(shape: TLShape) {
   return text.length > snippetLength ? `${text.slice(0, snippetLength - 1)}…` : text || undefined;
 }
 
+/**
+ * A group's name as the overview (O) shows it: a frame's name, else a heading in it, else its first
+ * words in reading order. One function for the person's overview and for agents.
+ */
+export function groupName(editor: Editor, shapes: readonly TLShape[]) {
+  const items = shapes.flatMap((s): OverviewItem[] => {
+    const b = editor.getShapePageBounds(s);
+    if (!b) return [];
+    const text = "richText" in s.props ? richTextPlain(s.props.richText).trim() : "";
+    const base = { id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, text, thought: Boolean(text), settled: false };
+    if (s.type === "frame") return [{ ...base, text: "", thought: false, frame: String((s.props as { name?: unknown }).name ?? "") }];
+    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}) }];
+  });
+  return items.length ? groupLabel(items) : undefined;
+}
+
 export function overview(editor: Editor, value: unknown = {}) {
   const input = overviewInput.parse(value);
   const page = editor.getCurrentPage();
@@ -39,6 +56,7 @@ export function overview(editor: Editor, value: unknown = {}) {
   const byType: Record<string, number> = {};
   for (const s of all) byType[s.type] = (byType[s.type] ?? 0) + 1;
   const marks = collectMarks(editor);
+  const byId = new Map(level.map((s) => [s.id as string, s]));
   const next = start + slice.length;
   return {
     page: { id: page.id, name: page.name },
@@ -72,7 +90,7 @@ export function overview(editor: Editor, value: unknown = {}) {
         const b = s.type === "arrow" ? undefined : editor.getShapePageBounds(s);
         return b ? [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
       }),
-    ),
+    ).map((c) => ({ ...c, label: groupName(editor, c.ids.flatMap((id) => byId.get(id) ?? [])) })),
     ...(next < level.length ? { nextCursor: String(next) } : {}),
   };
 }

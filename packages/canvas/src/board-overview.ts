@@ -14,6 +14,8 @@ export type OverviewItem = Placed & {
   /** Text an object shows (clipped later), for the label; empty when it has none. */
   text: string;
   heading?: boolean;
+  /** An ask (the person's question card): a group is not named after a question about it. */
+  ask?: boolean;
   /** Counted when it holds text: open unless settled. */
   thought: boolean;
   settled: boolean;
@@ -36,12 +38,13 @@ const clip = (text: string, max = 48) => {
   return one.length > max ? `${one.slice(0, max - 1)}…` : one;
 };
 
-/** A group's label: a frame's name; else its heading; else its first words in reading order. */
+/** A group's label: a frame's name; else its heading; else its first words in reading order, passing over asks. */
 export function groupLabel(members: OverviewItem[]) {
   const frame = members.find((m) => m.frame !== undefined);
   if (frame) return clip(frame.frame || "Frame");
   const ordered = [...members].sort((a, b) => a.y - b.y || a.x - b.x);
-  const named = ordered.find((m) => m.heading && m.text.trim()) ?? ordered.find((m) => m.text.trim());
+  const said = (m: OverviewItem) => Boolean(m.text.trim());
+  const named = ordered.find((m) => m.heading && said(m)) ?? ordered.find((m) => !m.ask && said(m)) ?? ordered.find(said);
   return named ? clip(named.text) : members.length === 1 ? "Untitled" : `${members.length} things`;
 }
 
