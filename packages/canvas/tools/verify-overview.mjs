@@ -9,7 +9,8 @@
 //      zoomed past 100%;
 //   4. Menu → "The whole board" opens it too; Esc closes it and gives focus back;
 //   5. the Ellipse is still a click away under More, now that O is the overview;
-//   6. a 1,000-object board: the overview opens within the budget (under 1 s from the key press).
+//   6. a 1,000-object board: the overview opens within the budget (under 1 s from the key press);
+//   7. on a 390 px phone it fits the window, every box inside its map.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-overview.mjs <screenshot dir>
 //
@@ -160,6 +161,29 @@ try {
   check('on a 1,000-object board the overview opens in under 1 s', bigMs < 1000 && bigCount === 40, `${bigMs} ms (small board ${openMs} ms), ${bigCount} groups`);
   await p.screenshot({ path: `${out}/3-overview-1k.png` });
   await p.keyboard.press('Escape');
+  // 7. On a 390 px phone: the overview fits the window, no box outside its map.
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  phone.on('pageerror', (e) => errs.push(e.message.slice(0, 200)));
+  await phone.goto(`${ORIGIN}/canvas/`);
+  await phone.waitForFunction(() => window.paired?.read().objects.length >= 1, null, { timeout: 30000 });
+  await phone.waitForTimeout(1200);
+  await phone.evaluate(() => {
+    const ed = window.__pairedEditor;
+    ed.deleteShapes([...ed.getCurrentPageShapeIds()]);
+    const card = (x, y, text) => ed.createShape({ type: 'card', x, y, props: { w: 200, tone: 'human', richText: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] } } });
+    card(0, 0, 'Pricing'); card(220, 0, 'Per seat'); card(2400, 900, 'Ask five teams'); card(0, 1800, 'Risks');
+  });
+  await phone.getByRole('button', { name: 'Menu' }).click();
+  await phone.getByRole('menuitem', { name: /The whole board/ }).click();
+  await phone.locator('[data-overview-map]').waitFor({ timeout: 3000 });
+  const fit = await phone.evaluate(() => {
+    const d = document.querySelector('.overview-dialog').getBoundingClientRect(), m = document.querySelector('[data-overview-map]').getBoundingClientRect();
+    const boxes = [...document.querySelectorAll('[data-overview-group]')].map((b) => b.getBoundingClientRect());
+    return { dialog: [Math.round(d.left), Math.round(d.right)], inWindow: d.left >= 0 && d.right <= innerWidth, boxesInMap: boxes.every((b) => b.left >= m.left - 1 && b.right <= m.right + 1), mapScrolls: document.querySelector('[data-overview-map]').scrollWidth > document.querySelector('[data-overview-map]').clientWidth + 1, groups: boxes.length };
+  });
+  check('on a 390 px phone the overview fits the window, every box inside its map', fit.inWindow && fit.boxesInMap && !fit.mapScrolls && fit.groups === 3, JSON.stringify(fit));
+  await phone.screenshot({ path: `${out}/4-overview-phone.png` });
+  await phone.close();
   check('no page errors', errs.length === 0, errs.join(' | '));
 } finally {
   await browser.close();
