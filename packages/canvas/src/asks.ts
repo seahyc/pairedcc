@@ -123,11 +123,11 @@ export function shouldSend(shape: TLShape | undefined) {
  * a pink card opens beside it, already pointing at it, and what is written there is sent
  * when the person finishes. With a question (agents, tests) it is sent at once.
  */
-export function createAsk(editor: Editor, value: { targetIds: string[]; question?: string }) {
+export function createAsk(editor: Editor, value: { targetIds: string[]; question?: string; at?: { x: number; y: number } }) {
   const targets = value.targetIds.flatMap((id) => editor.getShape(id as TLShapeId) ?? []).filter((s) => s.type !== "arrow");
   if (!targets.length) throw new Error("Select what you mean first, then ask");
   const question = value.question?.trim() ?? "";
-  const id = createComment(editor, { targetIds: targets.map((t) => t.id), text: question }, { name: "Ask", askWhenWritten: true }) as TLShapeId;
+  const id = createComment(editor, { targetIds: targets.map((t) => t.id), text: question, at: value.at }, { name: "Ask", askWhenWritten: true }) as TLShapeId;
   if (question) askDirect(editor, id);
   return id;
 }
@@ -493,6 +493,26 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
       rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
       return id;
     });
+    // The room was checked with estimated heights; the cards now have their measured ones. If
+    // they reach something below that room, the whole answer moves down until it is clear.
+    const boxes = made.flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []);
+    if (boxes.length) {
+      const x = Math.min(...boxes.map((b) => b.x)), y = Math.min(...boxes.map((b) => b.y));
+      const real = { x, y, w: Math.max(...boxes.map((b) => b.maxX)) - x, h: Math.max(...boxes.map((b) => b.maxY)) - y };
+      const skip = new Set<string>([shape.id, ...made]);
+      const down = freeSpot(editor, real, skip, pageId);
+      if (down.y > real.y) {
+        // As when it was placed: under the ask unless that is much further than beside it.
+        const besideReal = { ...real, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
+        const side = freeSpot(editor, besideReal, skip, pageId);
+        const to = pickAnswerSpot(down.y - real.y, side.y - besideReal.y) === "under" ? down : side;
+        const dx = to.x - real.x, dy = to.y - real.y;
+        for (const id of made) {
+          const card = editor.getShape(id as TLShapeId);
+          if (card) editor.updateShape({ id: card.id, type: card.type, x: card.x + dx, y: card.y + dy });
+        }
+      }
+    }
     setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt, read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.
     // An answer closes the queue row (a comment's, or the person's own card's); a clarifying
