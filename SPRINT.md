@@ -723,6 +723,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 121. **Options are laid out on stated dimensions (principles row 6).** `docs/canvas/principles.md`, finding 6 (comparing beats describing), still missing: "Answers are not laid out on stated dimensions." When an answer is two to four alternatives, the agent can name up to four dimensions they differ on (`canvas_answer` `dimensions`, and a short value per option); each option card then lists the same dimensions in the same order under its headline, so the person compares down a line instead of reading each card whole. The resident agent states dimensions when the person asks for options. No new UI. Done when unit tests cover the layout text and input validation, a browser check shows two option cards with their dimension lines in the same order (screenshot), and the resident prompt asks for dimensions with alternatives.
 
 ## Claims
+100 (d), (e). Pre-calm board: one Thinking page across devices; a named empty page keeps its name (build-B) | claude/sprint-calm-pages | 2026-11-27T02:04Z
 121. Options on stated dimensions (build-A) | claude/sprint-option-dimensions | 2026-11-27T01:52Z
 120. Suggestions follow what the thought says (build-B) | claude/sprint-suggest-cues | 2026-11-27T01:45Z
 
