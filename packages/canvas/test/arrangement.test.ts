@@ -51,6 +51,46 @@ describe("the cluster an ask sits in", () => {
   });
 });
 
+describe("an ask written on empty space inside a group (item 131)", () => {
+  // A ring of cards chained 40 px apart around an empty middle, each more than 60 px from it.
+  const ring = [
+    box("t1", 0, 0), box("t2", 240, 0), box("t3", 480, 0),
+    box("l1", 0, 160), box("l2", 0, 320), box("r1", 480, 160), box("r2", 480, 320),
+    box("b1", 0, 480), box("b2", 240, 480), box("b3", 480, 480),
+  ];
+  const middle = box("ask", 280, 260, 120, 60);
+  it("a question in the middle of a ring, beyond the group gap from every card, is given the ring", () => {
+    const got = clusterAround([...ring, middle], "ask", new Set(), Infinity);
+    expect(got.members.map((m) => m.id).sort()).toEqual(ring.map((r) => r.id).sort());
+  });
+  it("each member still says where it sits from the question", () => {
+    const got = clusterAround([...ring, middle], "ask", new Set(), Infinity);
+    expect(got.members.find((m) => m.id === "t2")?.relation).toBe("above");
+    expect(got.members.find((m) => m.id === "b2")?.relation).toBe("under");
+    expect(got.members.find((m) => m.id === "l1")?.relation).toBe("left of");
+  });
+  it("still leaves out what the ask already gives, and caps and counts the rest", () => {
+    const got = clusterAround([...ring, middle], "ask", new Set(["t2"]));
+    expect(got.members.map((m) => m.id)).not.toContain("t2");
+    expect(got.members).toHaveLength(CLUSTER_GIVE);
+    expect(got.more).toBe(ring.length - 1 - CLUSTER_GIVE);
+  });
+  it("a question outside every group's bounds is given none", () => {
+    expect(clusterAround([...ring, box("ask", 900, 260, 120, 60)], "ask").members).toEqual([]);
+  });
+  it("inside two groups' bounds, the smaller one (the one it is most inside)", () => {
+    // A wide ring around a small pile, with the question in the pile's gap but beyond 60 px of it.
+    const big = [box("w1", -400, -400, 1400, 40), box("w2", -400, -340, 40, 1340), box("w3", 960, -340, 40, 1340), box("w4", -400, 1020, 1400, 40)];
+    const pile = [box("p1", 100, 100), box("p2", 100, 500), box("p3", 340, 100, 200, 520)];
+    const got = clusterAround([...big, ...pile, box("ask", 120, 330, 100, 40)], "ask", new Set(), Infinity);
+    expect(got.members.map((m) => m.id).sort()).toEqual(["p1", "p2", "p3"]);
+  });
+  it("a question that is already in a group keeps that group", () => {
+    const got = clusterAround([...ring, box("ask", 240, 160, 200, 120), box("near", 260, 300, 100, 40)], "ask", new Set(), Infinity);
+    expect(got.members.map((m) => m.id)).toContain("near");
+  });
+});
+
 describe("the resident agent is told where things sit", () => {
   it("lists the ask's group with relations, and its rules say to use them", () => {
     const prompt = buildPrompt({
