@@ -710,9 +710,12 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 113. (PR #155 open, stacked on #153.) **A card written over a frame's edge is cut off by the frame.** (Found by the converted `verify-ask-unclipped.mjs`, #153.) The person writes a question card just under a card inside a frame; tldraw parents it into the frame and the frame's mask cuts off its lower part, so the person's question (now the ask itself) is partly hidden. The same holds for any card the person writes across a frame edge. Done when a person's card that would be cut off by a frame is either wholly inside it (the frame grows, as a choice recorded) or left on the page, checked by `verify-ask-unclipped.mjs` 32/32, without moving cards the person placed wholly inside a frame.
 114. **Agent-usability tasks for build-B's features since #131.** The group an ask's card sits in, with relations in words (P2, #135 and #140), and `canvas_runs` by page (105 (c), #139) have no agent-usability task. Done when a task for each exists with a passing self-test, written by a lane that did not build them (build-A), and a fresh agent's attempt on them is recorded.
 
+115. **verify-all knows every browser check.** On `claude/sprint-int` at a5d738d, `tools/verify-all.mjs` reports seven checks as UNKNOWN and does not run them (announce-fixes, big-edit, name-follows, notice-hold, p2-cluster, runs-page, settled), so their regressions slip through merges as item 83 meant to prevent. Done when verify-all runs each (or lists it as left out with a reason, for a check that reports timings without a verdict), every one it runs passes on the integration branch, and the run reports no unknown checks.
+
 ## Claims
 P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest | 2026-11-27T00:45Z
 114. Agent-usability tasks for P2 and 105 (c) (build-A) | claude/sprint-agent-tasks-4 | 2026-11-27T01:21Z
+115. verify-all knows every browser check (build-A) | claude/sprint-verify-all-known | 2026-11-27T01:30Z
 
 ## Done
 - P1 (part 2). Focus (F) on a frame or thread (build-A): PR #145, merged (one rectangle, the rest dimmed until Esc; F stays the Frame tool otherwise; verify-focus 13/13).
