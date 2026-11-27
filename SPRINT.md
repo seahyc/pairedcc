@@ -741,11 +741,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 132. **Friction from #175's focused attempt on task 32 (reported by the agent in `eval/agent-runs/32-ask-across-frame-edge.json`, not yet reproduced).** A question written across a frame's edge is lifted onto the page (#155). (a) Its ask carried no `group`, though `canvas_overview` puts the lifted question in a cluster with the frame and AGENT_API says `group` is "present whenever the card sits in a group"; (b) the overview labelled that cluster with the question's own words ("Which of these quotes is cheapest?"), where AGENT_API says a label is the frame's name first and passes over an ask card; (c) AGENT_API does not say which frame a card across a frame's edge belongs to (the ask gives the frame it was written in, `meta.within`). Done when each is reproduced first, with a failing-first test, fixed or documented, and task 32 still passes.
 
+132. **Answers to questions written close under each other stay with their own question, and a state line never runs over the card under it (found by #129's realistic notes; "each answer stays with its own ask", item 92; "text never leaves its container").** On the person's real cards (73 px tall), three questions written 24 px apart under one card and answered out of order put the first question's options level with the second question, where they read as its answer: under is taken by the next question, and beside collides with the second question's own row, so the row slides down (`verify-answer-beside` step "answer to ask 1 sits next to its own ask" fails with #129; the old 200 px stickies left room and hid it). Each ask's state line ("answered in 1s · also read …", two lines) also runs over the card written under it. Screenshot: `docs/canvas/screenshots/stacked-asks-answer-elsewhere.png` (on #129's branch). Done when, on that board, each answer row starts beside or under its own question and never level with another question, no state line overlaps another object, with failing-first tests (unit on fixed layouts, and the browser check), and the choice of where such an answer goes recorded under Decisions needed.
+
 ## Claims
 127. Dimension lines line up across option cards (build-A) | claude/sprint-dimension-align-2, PR #174 | 2026-11-27T14:27Z
 129. An ask's group and the person's note width (build-A) | claude/sprint-note-width | 2026-11-27T14:27Z
-130. Overview gives a folded thread's pick and a settled thought's review date (build-A) | claude/sprint-overview-pick-review | 2026-11-27T15:05Z
+130. Overview gives a folded thread's pick and a settled thought's review date (build-A) | claude/sprint-overview-pick-review | 2026-11-27T14:25Z
 131. An ask on empty space inside a group (build-A) | claude/sprint-ask-inside-group | 2026-11-27T14:40Z
+132. Answers to close-stacked questions; state line over the next card (build-A) | claude/sprint-stacked-asks | 2026-11-27T14:52Z
 132. Friction from task 32's attempt (build-B) | claude/sprint-lifted-group | 2026-11-27T14:58Z
 
 ## Done
