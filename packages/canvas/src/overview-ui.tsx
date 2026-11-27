@@ -16,18 +16,20 @@ export function overviewItems(editor: Editor): OverviewItem[] {
   const pageId = editor.getCurrentPageId();
   const thoughtsIn = (frame: TLShape) => {
     let open = 0, settled = 0;
-    const walk = (parent: TLShape) => {
+    // A settled group (an imported record settled from the record stepper) settles what it holds.
+    const walk = (parent: TLShape, settledAbove: boolean) => {
       for (const id of editor.getSortedChildIdsForParent(parent.id)) {
         const child = editor.getShape(id);
-        if (!child || child.type === "arrow" || hiddenFromAgents(editor, child)) continue;
+        if (!child || child.type === "arrow" || editor.isShapeHidden(child)) continue;
+        const done = settledAbove || isSettled(child.meta);
         if (textOf(child)) {
-          if (isSettled(child.meta)) settled++;
+          if (done) settled++;
           else open++;
         }
-        walk(child);
+        walk(child, done);
       }
     };
-    walk(frame);
+    walk(frame, frame.type === "group" && isSettled(frame.meta));
     return { open, settled };
   };
   return editor.getSortedChildIdsForParent(pageId).flatMap((id): OverviewItem[] => {
@@ -41,7 +43,11 @@ export function overviewItems(editor: Editor): OverviewItem[] {
     const base = { id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, text, thought: Boolean(text), settled: isSettled(s.meta) };
     if (s.type === "frame") return [{ ...base, text: "", thought: false, frame: String((s.props as { name?: unknown }).name ?? ""), inside: thoughtsIn(s) }];
     // An imported record is a group of cards: its title counts once, the cards inside it are its thoughts.
-    if (s.type === "group") return [{ ...base, inside: thoughtsIn(s) }];
+    if (s.type === "group") {
+      // Labelled by its first words (an imported record's title), in reading order.
+      const first = editor.getSortedChildIdsForParent(s.id).flatMap((c) => editor.getShape(c) ?? []).map((c) => ({ c, b: editor.getShapePageBounds(c) })).filter((x) => x.b && textOf(x.c)).sort((a, b) => a.b!.y - b.b!.y || a.b!.x - b.b!.x)[0];
+      return [{ ...base, text: first ? textOf(first.c) : "", inside: thoughtsIn(s) }];
+    }
     return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading" }];
   });
 }
@@ -55,7 +61,7 @@ export function BoardOverview({ onClose }: { onClose: () => void }) {
   const focus = useDialogFocus<HTMLElement>(onClose);
   // Read once when it opens: the overview is a look at the board, not a live panel.
   const items = useValue("overview items", () => overviewItems(editor), [editor]);
-  const { groups, more } = useMemo(() => boardGroups(items), [items]);
+  const { groups, more, open, settled } = useMemo(() => boardGroups(items), [items]);
   const width = mapWidth(), height = Math.round(MAP_H * Math.min(1, width / MAP_W) + (width < MAP_W ? 120 : 0));
   const boxes = useMemo(() => new Map(mapLayout(groups, width, height, 12, BOX_W, BOX_H).map((b) => [b.id, b])), [groups, width, height]);
   const fly = (id: string) => {
@@ -66,7 +72,6 @@ export function BoardOverview({ onClose }: { onClose: () => void }) {
     const pad = 60;
     editor.zoomToBounds({ x: g.bounds.x - pad, y: g.bounds.y - pad, w: g.bounds.w + pad * 2, h: g.bounds.h + pad * 2 }, { targetZoom: 1, animation: { duration: 220 } });
   };
-  const open = groups.reduce((n, g) => n + g.open, 0), settled = groups.reduce((n, g) => n + g.settled, 0);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <section {...focus} className="agent-dialog overview-dialog" role="dialog" aria-modal="true" aria-label="Overview of the board" onClick={(e) => e.stopPropagation()}>

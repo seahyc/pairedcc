@@ -71,7 +71,12 @@ try {
     settle(inside[1]);
     settle(pile[1]);
     settle(pile[2]);
-    return { frame, inside, pile, lone };
+    // An imported record is a group of cards; settling it from the record stepper marks the group.
+    const rec = [note(3200, 100, 'Record: churn'), note(3200, 330, 'Fix: annual plan')];
+    ed.groupShapes(rec);
+    const group = ed.getShape(rec[0]).parentId;
+    settle(group);
+    return { frame, inside, pile, lone, group };
   });
   await p.waitForTimeout(300);
   await p.mouse.click(1300, 820);
@@ -84,7 +89,9 @@ try {
     return { id: el.dataset.overviewGroup, label: el.querySelector('.overview-label').textContent, counts: el.querySelector('.overview-counts').textContent, x: r.x, y: r.y, r: r.right, b: r.bottom };
   }));
   const byLabel = Object.fromEntries(groups.map((g) => [g.label, g]));
-  check('O shows the board\'s three groups, labelled', groups.length === 3 && byLabel.Pricing && byLabel.Risks && byLabel['Ask five teams'], groups.map((g) => g.label).join(', '));
+  check('O shows the board\'s four groups, labelled', groups.length === 4 && byLabel.Pricing && byLabel.Risks && byLabel['Ask five teams'], groups.map((g) => g.label).join(', '));
+  const record = groups.find((g) => g.id === ids.group);
+  check('a settled record is labelled by its title and counts what it holds as settled', record?.counts === '2 settled' && record?.label === 'Record: churn', record ? `${record.label}: ${record.counts}` : 'no record group');
   check('each says what is open and settled in it', byLabel.Pricing?.counts === '2 open · 1 settled' && byLabel.Risks?.counts === '1 open · 2 settled' && byLabel['Ask five teams']?.counts === '1 open', groups.map((g) => `${g.label}: ${g.counts}`).join('; '));
   check('they sit as on the board: the frame above the pile, the lone thought to the right', byLabel.Pricing && byLabel.Risks && byLabel.Pricing.b <= byLabel.Risks.y && byLabel['Ask five teams'].x > byLabel.Risks.r);
   const overlap = groups.some((a, i) => groups.slice(i + 1).some((b) => a.x < b.r && b.x < a.r && a.y < b.b && b.y < a.b));
