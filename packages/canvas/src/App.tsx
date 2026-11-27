@@ -53,6 +53,7 @@ import {
   Keyboard,
   Ellipsis,
   Menu,
+  LayoutGrid,
   Sparkles,
   Layers,
   FilePlus2,
@@ -107,6 +108,7 @@ import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followPause, followers } from "./follow";
 import { toggleSettled } from "./settled";
+import { BoardOverview } from "./overview-ui";
 import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
 import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
@@ -131,7 +133,8 @@ const moreTools = [
   { id: "hand", name: "Pan", key: "H", icon: Hand },
   { id: "frame", name: "Frame", key: "F", icon: Frame },
   { id: "geo", name: "Rectangle", key: "R", icon: Square },
-  { id: "ellipse", name: "Ellipse", key: "O", icon: Circle },
+  // O is the overview of the board (P3); the Ellipse is a click away here.
+  { id: "ellipse", name: "Ellipse", key: "", icon: Circle },
   { id: "text", name: "Plain text", key: "T", icon: Type },
 ];
 const tools = [...mainTools, ...moreTools];
@@ -286,6 +289,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Cross out the selection (again to undo)", "X"],
       ["Check me on an agent's answer: explain it from memory, then compare", "E"],
       ["Settle it: done for now (again to reopen)", "S"],
+      ["See the whole board: its groups, open and settled; press one to go there", "O"],
       ...(prototypeEnabled("context")
         ? [
             ["Leave the selection out of asks (again to bring it back)", "L"] as [string, string],
@@ -299,7 +303,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Finish typing", "Esc"],
     ],
   },
-  { title: "Tools", rows: tools.map((t) => [t.name, t.key] as [string, string]) },
+  { title: "Tools", rows: tools.map((t) => [t.name, t.key || "under More"] as [string, string]) },
   {
     title: "Move around",
     rows: [
@@ -555,6 +559,7 @@ function Shell() {
     moreMenu = useMenuKeys<HTMLDivElement>(moreOpen, () => setMoreOpen(false), moreButton);
   const [asking, setAsking] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [overviewOpen, setOverviewOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [boardsOpen, setBoardsOpen] = useState(false);
   const sync = useValue("board sync", () => boardSync.get(), []);
@@ -739,6 +744,13 @@ function Shell() {
         return;
       }
       if (event.shiftKey) return;
+      // O shows the whole board: its groups with what is open and settled in each.
+      if (key === "o") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) setOverviewOpen((open) => !open);
+        return;
+      }
       // G goes to an ask answered on another page, while the notice about it is up.
       if (key === "g" && showing.current) {
         event.preventDefault();
@@ -1205,6 +1217,9 @@ function Shell() {
             <button role="menuitem" onClick={openTour}>
               <MapIcon size={14} /> Tour board
             </button>
+            <button role="menuitem" onClick={() => { setOverviewOpen(true); setMenuOpen(false); }}>
+              <LayoutGrid size={14} /> The whole board <kbd>O</kbd>
+            </button>
             <button role="menuitem" onClick={() => { setHelpOpen(true); setMenuOpen(false); }}>
               <Keyboard size={14} /> Shortcuts <kbd>?</kbd>
             </button>
@@ -1330,7 +1345,7 @@ function Shell() {
           <div ref={moreMenu.ref} onClickCapture={moreMenu.onClickCapture} className="menu more-menu" role="menu" aria-label="More tools">
             {moreTools.map((t) => (
               <button key={t.id} role="menuitem" className={currentTool === t.id ? "current" : ""} onClick={() => { chooseTool(t.id); setMoreOpen(false); }}>
-                <t.icon size={14} /> {t.name} <kbd>{t.key}</kbd>
+                <t.icon size={14} /> {t.name} {t.key && <kbd>{t.key}</kbd>}
               </button>
             ))}
             <button role="menuitem" onClick={() => { addComment(); setMoreOpen(false); }}>
@@ -1727,6 +1742,7 @@ function Shell() {
         </div>
       )}
       {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
+      {overviewOpen && <BoardOverview onClose={() => setOverviewOpen(false)} />}
       {historyOpen && historyWhere && <HistoryDialog where={historyWhere} onClose={() => setHistoryOpen(false)} />}
       {boardsOpen && historyWhere && <SavedBoardsDialog where={historyWhere} onClose={() => setBoardsOpen(false)} />}
       {agentOpen && (
