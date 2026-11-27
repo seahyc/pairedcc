@@ -88,6 +88,9 @@ const CHECKS = [
   { name: 'answer-beside', file: 'verify-answer-beside.mjs', args: (d) => [d] },
   { name: 'import-author', file: 'verify-import-author.mjs', args: () => [] },
   { name: 'recall', file: 'verify-recall.mjs', args: (d) => [d] },
+  { name: 'overview', file: 'verify-overview.mjs', args: (d) => [d] },
+  { name: 'fold', file: 'verify-fold.mjs', args: (d) => [d] },
+  { name: 'focus', file: 'verify-focus.mjs', args: (d) => [d] },
 ].filter((c) => existsSync(join(dirname(fileURLToPath(import.meta.url)), c.file)));
 const SKIPPED = [
   { name: 'board-sync-server', reason: 'needs Postgres and Redis; run `pnpm --filter @pairedcc/canvas verify:sync-server`' },
