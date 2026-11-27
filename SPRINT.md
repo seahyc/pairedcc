@@ -744,6 +744,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 129. An ask's group and the person's note width (build-A) | claude/sprint-note-width | 2026-11-27T14:27Z
 130. Overview gives a folded thread's pick and a settled thought's review date (build-A) | claude/sprint-overview-pick-review | 2026-11-27T15:05Z
 131. An ask on empty space inside a group (build-A) | claude/sprint-ask-inside-group | 2026-11-27T14:40Z
+125 (rest). Agent task for a card lifted out of a frame (build-B) | claude/sprint-agent-task-lifted | 2026-11-27T14:48Z
 
 ## Done
 - 128. Bot review findings on #161 and #164 (build-B): PR #171 (all six reproduced: card room checked only against objects, the first suggestion alone when two do not fit, a touch is a tap only when it lifts in place, Unicode digits and word boundaries, curly let’s; 4 failing-first unit tests; verify-suggest-phone 13/16 → 16/16).
