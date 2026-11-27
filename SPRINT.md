@@ -122,7 +122,7 @@ too flexible"): nothing new is shown until it applies, no new permanent toolbar 
 new key each, and each one undoes in one step. Each PR names the finding it serves, shows a
 before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
 
-- **P1. Few things in view (finding 1).** A finished thread (an ask whose answer was picked, or
+- **P1. (Done: fold #144 and focus #145 merged.) Few things in view (finding 1).** A finished thread (an ask whose answer was picked, or
   which the person marks settled) folds to one line showing the question and the picked answer;
   click to unfold. Focus: selecting a frame or a thread and pressing F dims everything else until
   Esc. Done when a board with 12 threads shows at most 4 unfolded by the person's choice, folding
@@ -134,7 +134,7 @@ before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
   empty space inside a cluster is about that cluster. The agent still never moves or edits the
   person's objects. Done when unit tests cover clustering on fixed layouts and a browser check
   shows the cluster outlined while the ask is being answered.
-- **P3. (Part 1, the settled mark: PR #138 open, awaiting review. Part 2, the overview, unclaimed; its proposed key O is the Ellipse tool.) See the whole board and what is settled (finding 4, and the opposite of finding 8).**
+- **P3. (Part 1, the settled mark: #138 merged. Part 2, the overview: PR #146 open, awaiting review; O becomes the overview and the Ellipse keeps its place under More without a key.) See the whole board and what is settled (finding 4, and the opposite of finding 8).**
   "Settled" is a mark like Pick (key S): a settled thought turns from rough handwriting to a clean
   print style with a small check, and can be unsettled. An overview (key O, also in the menu) shows
   the board's clusters as labelled boxes, each with open/settled counts; click to fly there. Done
@@ -147,7 +147,7 @@ before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
   selection, which then asks as any card does. They vanish on any other action and never appear
   while typing. Done when they never cover the person's objects, never appear on agent cards, and
   the starters logic from before (record, frame, chart, several objects) is reused, not rewritten.
-- **P5. Understanding needs effort (finding 9).** The learning prototype (`?prototype=learning`)
+- **P5. (Part 1, Check me on an agent answer: #141 merged. Part 2, Check me on a settled thought and its spaced return: PR #149 open, awaiting review.) Understanding needs effort (finding 9).** The learning prototype (`?prototype=learning`)
   becomes available on every board without a flag but stays off until asked: a "Check me" action
   on the selection bar for a settled card or an agent answer asks the person to predict or explain
   first and then shows the answer to compare (predict-then-check, self-explanation); a card the
@@ -665,7 +665,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 97. (PR #126 open, awaiting review.) **verify-answer-page's frame step after #104.** On `claude/sprint-int` at 8cea125, `tools/verify-answer-page.mjs` fails "an answer that lands inside a frame on the open page belongs to the frame" (10/11); #104 made answers land clear of frames so they are never clipped. Done when the product choice (answer inside the frame, unclipped, or beside it) is recorded and the check asserts that choice, passing on the branch.
 
-100. ((a)-(c): PR #129 open, awaiting review.) **Bot review findings on build-A's merged PRs (not yet reproduced).** Each needs a failing test
+100. ((a)-(c): #129 merged. (f): PR #150 open, awaiting review (build-A, reproduced: four tall options covered a note 40 px below their estimated room).) **Bot review findings on build-A's merged PRs (not yet reproduced).** Each needs a failing test
     first, then a fix or a recorded decision. #101: (a) two answers announced with identical text in
     a row are spoken once (React keeps the same live-region text); (b) an ask that goes quiet past
     the two-minute timeout gets Retry on screen but no announcement; (c) a clarifying question and a
@@ -700,12 +700,22 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 107. **Browser checks that still open the question box.** Since 7cc29ef there is no question box, but seventeen `tools/verify-*` checks still open it (`.selection-bar.asking` or `getByLabel('Your question')`): annotate-clear, answer-page, answer-show, answer-view, ask-chart, ask-frame, ask-image, ask-live, ask-marks, ask-unclipped, calm, contain, keyboard, keys, leave-out, retry-key, touch. Their ask steps now time out, so they no longer prove what they were written for. Done when each asks the new way (the person's card sent with ⌘↵ or by finishing a question; Ask on someone else's object opens a pink card to write in) and passes on the integration branch, with any real regression it then finds filed. (The Ask loop measure and agent task 22 are fixed in #132.)
 
+108. (PR #148 open, awaiting review.) **The acceptance step "A manual annotation survives an agent revision" loses the first letter.** On `claude/sprint-int` at 44a5ae2 (and on #144) `pnpm eval:canvas --only=acceptance` is 9/10 in four runs out of four: the typed note reads "heck the February meter swap" (once "the Februaryheck  meter swap"). The measure presses N, clicks, and types as soon as `getEditingShapeId()` is set, before the text editor has focus, so the first key goes to the board. Done when the measure waits for the editor's focus (or the board takes the first key into the new card) and the step passes three runs in a row, with the cause named.
+109. (PR #147 open, awaiting review.) **`verify-runs.ts` after #136.** On `claude/sprint-int` at 44a5ae2 the check stops at its fifth step: undoing a run whose card the person edited now says "changed after the run created it (meta.name, props.richText)", because #136 renames a derived layer name with the text, and the check expects exactly "(props.richText)". Done when the check accepts the name alongside the text (or the refusal leaves derived fields out, if that is the better message), passing on the integration branch.
+
+110. **An ask made from the person's own card is missing from the feedback queue.** (Found by build-A's conversion of `verify-calm.mjs` for item 107.) Since 7cc29ef the person's card itself becomes the ask, but `buildFeedback` collects only annotations, so the queue no longer lists asks with their answers, although the shortcut sheet says "Everything you ask … goes into one queue your agent reads" and `asks.ts` says an ask is in the queue like any comment. Done when such an ask is a queue item (open until answered, its answer as the reply), with failing-first unit tests.
+111. **An empty question card leaves its arrow behind.** (Found the same way.) Ask on an agent's answer opens a pink card joined to it by an arrow; leaving the card empty removes the card but not the arrow (`verify-calm`: "6 → 7 objects; left: arrow by Human"). Done when nothing is left behind, checked in a real page.
+112. **The shortcut sheet says ⌘↵ on Windows and Linux.** (Found by the converted `verify-keys.mjs`.) The sheet's opening sentence ("any other card is asked with ⌘↵") is not passed through `keys()`, so a Windows tab shows the Apple key (#83's rule). Done when `verify-keys` passes 16/16.
+
 ## Claims
 P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest | 2026-11-27T00:45Z
-P5. Understanding needs effort (part 1: Check me on the default board) | claude/sprint-p5-check | 2026-11-26T15:15Z
-P1. Few things in view (build-A, taken over: the 14:57Z claim had no branch or PR after 6 h) | claude/sprint-p1-fold | 2026-11-27T00:20Z
+107. Browser checks that still open the question box (build-A) | claude/sprint-checks-no-box | 2026-11-27T00:52Z
+110–112. Regressions found by the converted checks (build-A) | claude/sprint-ask-leftovers | 2026-11-27T01:15Z
+105 (e). Smaller tool results (build-A) | claude/sprint-small-results | 2026-11-27T01:13Z
 
 ## Done
+- P1 (part 2). Focus (F) on a frame or thread (build-A): PR #145, merged (one rectangle, the rest dimmed until Esc; F stays the Frame tool otherwise; verify-focus 13/13).
+- P1 (part 1). A finished thread folds to one line (build-A): PR #144, merged (folds once the person moves on; the line unfolds for good, Fold folds again; read/overview `folded: true`; verify-fold 19/19).
 - 105 (c). canvas_runs by page (build-B): PR #139 (pages on each run, page: "current"; live MCP check 1/3 → 3/3; manifest regenerated; workspace green with services).
 - P3 (part 1). Settled mark (build-A): PR #138 (S settles or reopens, print with ✓ in the person's colour, one undo, saved, `settled: true` in read and ask targets; verify-settled 11/11; first screen unchanged).
 - 105 (b), (d). Chart filter clearing and annotate placement documented (build-B): PR #137.
@@ -937,6 +947,9 @@ P1. Few things in view (build-A, taken over: the 14:57Z claim had no branch or P
 - (build-B, item 80) Asks, comments about objects, replies, answers and agent notes are created on the page (above any frame), not inside the frame under them, so a frame never clips them; they follow their target through the follow rule. Alternative: grow the frame to fit them, which changes the person's frame.
 
 - (build-B, review findings on build-B PRs, recorded for the review lane; marked optional by the bot, so not pushed alone. The first three are regressions #104 introduces and should be fixed before or with merging it.) #104: (a) an ask or comment about several cards in one frame no longer moves when the frame is dragged (`followers` skips multi-target cards; they used to be frame children); (b) a selected frame's ask no longer includes comments placed inside it (they are page-level now); (c) `canvas_arrange` moving an unselected frame leaves its page-level comments behind (the follow handler needs a selection). #92: a locked section's comments still move with Show cited, though the section does not. #97: `answersTop` passes "East has 187 orders, but West has the highest bar" (the ranking word is not tied to the top region). #103: `mas` matches `Maß` (folding ß to ss happens before grapheme segmentation). #106: annotation height is estimated from character count, so wide (CJK) text can still overlap; `freeSpot` gives up after 1,680 px under a taller obstacle. #98's three findings (one red) are fixed in 9141bcc.
+- (build-A, P1) A finished thread folds when the person moves on, not at the moment of the pick: while its ask or an answer is selected or being written it stays open, so a pick never makes the thread vanish under the pointer. Pressing the folded line unfolds it for good (`meta.fold: "open"`, one undo step); Fold on its state line returns it to folded. Folding is only visibility: nothing moves, and asks still give folded objects as context (they are on the board, just out of view); `read`/`overview` say `folded: true`.
+- (build-A, P1) F was the Frame tool. F now focuses when the selection is one frame or one thread (an ask and/or its answers), and stays the Frame tool otherwise, the same pattern as E (Check me only on an agent answer). Focus is not saved and not undoable: it is a way of looking, ended by Esc.
+- (build-A, P3) O was the Ellipse tool's key. O now opens the overview (also Menu → The whole board); the Ellipse stays under More, without a key. A thinking board rarely needs an ellipse; seeing the whole board is the loop's step. The overview counts a thought as open unless the person settled it, and draws at most 40 groups (frames, piles, lone objects), counting the rest.
 
 ## Log
 | UTC time | Lane | Task | PR | Result |

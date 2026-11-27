@@ -2125,4 +2125,213 @@ kbd {
 }
 @media (prefers-reduced-motion: reduce) {
   .suggestions { animation: none; }
+
+/* P5: a settled thought face down while the person explains it from memory (Check me). */
+.check-cover {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1.5px dashed #e3a9c1;
+  background: repeating-linear-gradient(135deg, #fbeef3 0 10px, #f7e4ec 10px 20px);
+  font: 500 13px Inter, system-ui, sans-serif;
+  color: #a50f4d;
+  text-align: center;
+  padding: 8px;
+  overflow: hidden;
+}
+
+/* P5: spaced return. One quiet line at the bottom edge, never a modal. */
+.recall-line {
+  position: absolute;
+  left: 132px;
+  bottom: 24px;
+  max-width: min(620px, calc(100vw - 560px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid #e9c3d3;
+  border-radius: 999px;
+  background: #fff8fb;
+  font: 400 12.5px/1.3 Inter, system-ui, sans-serif;
+  color: #5d5a68;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+.recall-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recall-line button {
+  flex: none;
+  border: 1px solid #e3b9cc;
+  background: #fff;
+  color: #a50f4d;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: 500 11.5px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+.recall-line button.recall-later {
+  border-color: #dedfe4;
+  color: #6b675e;
+}
+@media (max-width: 760px) {
+  .recall-line {
+    left: 16px;
+    right: 16px;
+    bottom: 76px;
+    max-width: none;
+  }
+}
+
+/* P3: the whole board (O). Groups laid out as they sit on the board, with open and settled counts. */
+.overview-dialog {
+  width: min(816px, calc(100% - 24px));
+}
+.overview-dialog .dialog-heading h2 {
+  margin: 0;
+}
+.overview-total {
+  flex: 1;
+  font: 400 13px Inter, system-ui, sans-serif;
+  color: #7d7a8c;
+}
+.overview-close {
+  font: 500 11.5px Inter, system-ui, sans-serif;
+}
+.overview-map {
+  position: relative;
+  max-width: 100%;
+  overflow: auto;
+  background: #f4f1ea;
+  border-radius: 10px;
+}
+.overview-group {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 5px 9px;
+  border: 1.5px solid #e9c3d3;
+  border-radius: 9px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+.overview-group:hover,
+.overview-group:focus-visible {
+  border-color: #a50f4d;
+  outline: none;
+}
+.overview-group.settled {
+  border-style: dashed;
+  border-color: #c9c5d6;
+}
+.overview-label {
+  font: 600 12.5px/1.25 Inter, system-ui, sans-serif;
+  color: #2c2d30;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.overview-counts {
+  font: 400 11.5px/1.25 Inter, system-ui, sans-serif;
+  color: #7d7a8c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.overview-more,
+.overview-empty {
+  margin: 10px 0 0;
+  font: 400 12.5px Inter, system-ui, sans-serif;
+  color: #7d7a8c;
+}
+
+/* P1: a finished thread folded to one line where its question was. Press it to unfold. */
+.fold-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: all;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 1px solid #e9c3d3;
+  border-radius: 10px;
+  background: #fff6f9;
+  box-shadow: 0 1px 0 rgba(165, 15, 77, 0.08);
+  font: 500 14px/38px Inter, system-ui, sans-serif;
+  color: #a50f4d;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+}
+.fold-line:hover,
+.fold-line:focus-visible {
+  border-color: #a50f4d;
+  outline: none;
+}
+.fold-q {
+  max-width: 62%;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fold-a {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #22203a;
+  font-family: "Shantell Sans", Inter, sans-serif;
+  font-weight: 400;
+}
+.fold-more {
+  flex: none;
+  font-size: 12px;
+  color: #7d7a8c;
+}
+.ask-status button.fold-button {
+  border-color: #d8d5e6;
+  color: #55524c;
+}
+
+/* P1: focus (F). One clear rectangle around the frame or thread; the rest of the board dims. */
+.focus-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100001;
+}
+.focus-hole {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 14px;
+  box-shadow: 0 0 0 200000px rgba(244, 241, 234, 0.82);
+}
+.focus-label {
+  position: absolute;
+  left: 4px;
+  bottom: calc(100% + 6px);
+  white-space: nowrap;
+  font: 500 12px Inter, system-ui, sans-serif;
+  color: #7d7a8c;
 }

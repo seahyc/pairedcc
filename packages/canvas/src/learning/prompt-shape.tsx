@@ -15,6 +15,8 @@ import {
   type TLShapeId,
 } from "tldraw";
 import { revision } from "../operations";
+import { authorOf } from "../scratchbook";
+import { nextRecall, recallOf, snoozeRecall } from "./recall";
 import { commitResponse, hiddenBy, hideRefusal, learnInput, modeCopy, skipPrompt, type PromptProps, type PromptStatus } from "./model";
 
 // PROTOTYPE learning prompt card. Objects with meta.revealAfter = <prompt id> stay
@@ -50,7 +52,19 @@ export function waitingOn(editor: Editor, promptId: string) {
 
 function answer(editor: Editor, shape: PromptShape, next: PromptProps) {
   editor.markHistoryStoppingPoint(next.status === "skipped" ? "skip prompt" : "commit prompt");
-  editor.updateShape<PromptShape>({ id: shape.id, type: "prompt", props: next, meta: { ...shape.meta, answeredBy: "Human" } });
+  editor.run(() => {
+    editor.updateShape<PromptShape>({ id: shape.id, type: "prompt", props: next, meta: { ...shape.meta, answeredBy: "Human" } });
+    // A settled thought the person checked themselves on comes back later for recall (spacing).
+    const card = typeof shape.meta.check === "string" ? editor.getShape(shape.meta.check as TLShapeId) : undefined;
+    if (!card || card.meta.settled !== true || authorOf(card) !== "Human") return;
+    const previous = recallOf(card.meta), now = Date.now();
+    const recall = next.status === "committed" ? nextRecall(previous, now) : previous ? snoozeRecall(previous, now) : undefined;
+    if (!recall && !previous) return;
+    const meta = { ...card.meta };
+    if (recall) meta.recall = recall;
+    else delete meta.recall;
+    editor.store.update(card.id, (record) => ({ ...record, meta }));
+  });
 }
 
 const checkCopy = { label: "Check me · explain it first", field: "From memory, in your own words", commit: "Show me the answer", committed: "You said" };
@@ -88,6 +102,11 @@ function PromptView({ shape }: { shape: PromptShape }) {
   const hidden = useValue("prompt hides", () => waitingOn(editor, shape.id).length, [editor, shape.id]);
   // A check the person asked for (Check me) is part of the default board, not the prototype.
   const check = typeof shape.meta.check === "string";
+  // Checking a settled thought of the person's: it was covered, not put away.
+  const ownThought = useValue("check on own thought", () => {
+    const card = check ? editor.getShape(shape.meta.check as TLShapeId) : undefined;
+    return Boolean(card && authorOf(card) === "Human");
+  }, [editor, shape.meta.check]);
   const copy = check ? checkCopy : modeCopy[shape.props.mode];
   const { status } = shape.props;
   const stop = (e: React.PointerEvent | React.KeyboardEvent) => editor.markEventAsHandled(e);
@@ -139,10 +158,10 @@ function PromptView({ shape }: { shape: PromptShape }) {
         <div className="learn-answer">
           <span>{copy.committed}:</span>
           <p>{shape.props.response}</p>
-          {check && <span className="learn-compare">The answer is back beside this: compare the two.</span>}
+          {check && <span className="learn-compare">{ownThought ? "Your thought is uncovered beside this: compare the two." : "The answer is back beside this: compare the two."}</span>}
         </div>
       ) : (
-        <div className="learn-answer skipped">{check ? "Skipped; the answer is back beside this." : "Skipped; shown directly."}</div>
+        <div className="learn-answer skipped">{check ? (ownThought ? "Skipped; your thought is uncovered beside this." : "Skipped; the answer is back beside this.") : "Skipped; shown directly."}</div>
       )}
     </HTMLContainer>
   );

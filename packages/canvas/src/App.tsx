@@ -53,6 +53,7 @@ import {
   Keyboard,
   Ellipsis,
   Menu,
+  LayoutGrid,
   Sparkles,
   Layers,
   FilePlus2,
@@ -108,6 +109,10 @@ import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followPause, followers } from "./follow";
 import { toggleSettled } from "./settled";
+import { CoverLayer, RecallLine } from "./learning/recall-ui";
+import { BoardOverview } from "./overview-ui";
+import { foldVisibility } from "./fold";
+import { endFocus, focusAtom, focusRect, focusable, startFocus } from "./focus";
 import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
 import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
@@ -132,7 +137,8 @@ const moreTools = [
   { id: "hand", name: "Pan", key: "H", icon: Hand },
   { id: "frame", name: "Frame", key: "F", icon: Frame },
   { id: "geo", name: "Rectangle", key: "R", icon: Square },
-  { id: "ellipse", name: "Ellipse", key: "O", icon: Circle },
+  // O is the overview of the board (P3); the Ellipse is a click away here.
+  { id: "ellipse", name: "Ellipse", key: "", icon: Circle },
   { id: "text", name: "Plain text", key: "T", icon: Type },
 ];
 const tools = [...mainTools, ...moreTools];
@@ -287,6 +293,8 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Cross out the selection (again to undo)", "X"],
       ["Check me on an agent's answer: explain it from memory, then compare", "E"],
       ["Settle it: done for now (again to reopen)", "S"],
+      ["See the whole board: its groups, open and settled; press one to go there", "O"],
+      ["Focus on the selected frame or thread: the rest dims until Esc", "F"],
       ...(prototypeEnabled("context")
         ? [
             ["Leave the selection out of asks (again to bring it back)", "L"] as [string, string],
@@ -300,7 +308,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Finish typing", "Esc"],
     ],
   },
-  { title: "Tools", rows: tools.map((t) => [t.name, t.key] as [string, string]) },
+  { title: "Tools", rows: tools.map((t) => [t.name, t.key || "under More"] as [string, string]) },
   {
     title: "Move around",
     rows: [
@@ -556,6 +564,7 @@ function Shell() {
     moreMenu = useMenuKeys<HTMLDivElement>(moreOpen, () => setMoreOpen(false), moreButton);
   const [asking, setAsking] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [overviewOpen, setOverviewOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [boardsOpen, setBoardsOpen] = useState(false);
   const sync = useValue("board sync", () => boardSync.get(), []);
@@ -740,6 +749,13 @@ function Shell() {
         return;
       }
       if (event.shiftKey) return;
+      // O shows the whole board: its groups with what is open and settled in each.
+      if (key === "o") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) setOverviewOpen((open) => !open);
+        return;
+      }
       // G goes to an ask answered on another page, while the notice about it is up.
       if (key === "g" && showing.current) {
         event.preventDefault();
@@ -754,6 +770,14 @@ function Shell() {
         event.preventDefault();
         event.stopImmediatePropagation();
         if (!event.repeat) toggleLeftOut(editor, chosen);
+        return;
+      }
+      // F focuses on a selected frame or thread (everything else dims until Esc). Only then:
+      // otherwise F stays the Frame tool.
+      if (key === "f" && focusable(editor)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) startFocus(editor);
         return;
       }
       // E checks the person on a selected agent answer. Only then: otherwise E stays tldraw's.
@@ -1206,6 +1230,9 @@ function Shell() {
             <button role="menuitem" onClick={openTour}>
               <MapIcon size={14} /> Tour board
             </button>
+            <button role="menuitem" onClick={() => { setOverviewOpen(true); setMenuOpen(false); }}>
+              <LayoutGrid size={14} /> The whole board <kbd>O</kbd>
+            </button>
             <button role="menuitem" onClick={() => { setHelpOpen(true); setMenuOpen(false); }}>
               <Keyboard size={14} /> Shortcuts <kbd>?</kbd>
             </button>
@@ -1331,7 +1358,7 @@ function Shell() {
           <div ref={moreMenu.ref} onClickCapture={moreMenu.onClickCapture} className="menu more-menu" role="menu" aria-label="More tools">
             {moreTools.map((t) => (
               <button key={t.id} role="menuitem" className={currentTool === t.id ? "current" : ""} onClick={() => { chooseTool(t.id); setMoreOpen(false); }}>
-                <t.icon size={14} /> {t.name} <kbd>{t.key}</kbd>
+                <t.icon size={14} /> {t.name} {t.key && <kbd>{t.key}</kbd>}
               </button>
             ))}
             <button role="menuitem" onClick={() => { addComment(); setMoreOpen(false); }}>
@@ -1703,6 +1730,12 @@ function Shell() {
           <Keyboard size={15} />
         </IconButton>
       </div>
+      <RecallLine
+        onCheck={(id) => {
+          editor.select(id as TLShapeId);
+          startCheck(editor, setNotice, keepInView);
+        }}
+      />
       {notice && (
         <div
           className="toast"
@@ -1728,6 +1761,7 @@ function Shell() {
         </div>
       )}
       {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
+      {overviewOpen && <BoardOverview onClose={() => setOverviewOpen(false)} />}
       {historyOpen && historyWhere && <HistoryDialog where={historyWhere} onClose={() => setHistoryOpen(false)} />}
       {boardsOpen && historyWhere && <SavedBoardsDialog where={historyWhere} onClose={() => setBoardsOpen(false)} />}
       {agentOpen && (
@@ -1790,9 +1824,41 @@ function CanvasLayers() {
       <AskLayer />
       <SuggestLayer />
       <DataLayer />
+      <CoverLayer />
+      <FocusVeil />
     </>
   );
 }
+
+/** While focused (F), everything outside the frame or thread is dimmed; Esc brings it all back. */
+function FocusVeil() {
+  const editor = useEditor();
+  const rect = useValue("focus rect", () => focusRect(editor), [editor]);
+  // The frame or thread in focus is gone (deleted, or another page opened): end the focus, so an
+  // undo or a page switch later never brings the veil back unasked.
+  useEffect(() => {
+    if (!rect && focusAtom.get()) endFocus();
+  }, [rect]);
+  useEffect(() => {
+    const esc = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !focusAtom.get() || editor.getEditingShapeId()) return;
+      endFocus();
+    };
+    window.addEventListener("keydown", esc, { capture: true });
+    return () => window.removeEventListener("keydown", esc, { capture: true });
+  }, [editor]);
+  if (!rect) return null;
+  return (
+    <div className="focus-layer" aria-hidden>
+      <div className="focus-hole" data-focus-hole style={{ transform: `translate(${rect.x}px, ${rect.y}px)`, width: rect.w, height: rect.h }}>
+        <span className="focus-label">Focus · Esc to see everything</span>
+      </div>
+    </div>
+  );
+}
+/** Out of view: a result still behind a learning prompt, or a finished thread folded to one line. */
+const boardVisibility = (shape: TLShape, editor: Editor) =>
+  learningVisibility(shape, editor) === "hidden" || foldVisibility(shape, editor) === "hidden" ? "hidden" : "inherit";
 function App() {
   const [ready, setReady] = useState(false);
   const [agentEditor, setAgentEditor] = useState<Editor | null>(null);
@@ -2024,7 +2090,7 @@ function App() {
           persistenceKey="picabird-canvas-v1"
           assets={boardImageStore}
           shapeUtils={scratchShapes}
-          getShapeVisibility={learningVisibility}
+          getShapeVisibility={boardVisibility}
           tools={scratchTools}
           hideUi
           options={editorOptions}

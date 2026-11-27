@@ -91,7 +91,9 @@ try {
   const before = await count();
   const blocked = await http("undo_run", { runId: sceneRun.runId });
   assert.equal(blocked.ok, false);
-  assert.match(blocked.error!, /changed after the run created it \(props\.richText\)/);
+  // The later text edit is what blocks it; since #136 a layer name made from the text follows the
+  // text, so the refusal may list meta.name beside props.richText.
+  assert.match(blocked.error!, /changed after the run created it \((?:[\w.]+, )*props\.richText(?:, [\w.]+)*\)/);
   assert.equal(await count(), before, "a rejected undo changes nothing");
   log("undoing the scene is rejected while a later edit depends on it", blocked.error);
 

@@ -8,6 +8,7 @@ import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, ca
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
+import { hiddenFromAgents } from "./fold";
 import { clusterAround, relation } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
@@ -64,7 +65,7 @@ function beside(editor: Editor, host: TLShape, skip: Set<string>) {
   const leftOut = page.filter((s) => isLeftOut(s.meta)).map((s) => s.id as string);
   const aboutLeftOut = new Set(leftOut.length ? followers(leftOut, page, new Set()) : []);
   const near = page
-    .filter((s) => !skip.has(s.id) && !aboutLeftOut.has(s.id) && s.parentId === host.parentId && s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s))
+    .filter((s) => !skip.has(s.id) && !aboutLeftOut.has(s.id) && s.parentId === host.parentId && s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !hiddenFromAgents(editor, s))
     .flatMap((s) => {
       const b = editor.getShapePageBounds(s);
       return b && gap(b) <= NEAR ? [{ s, d: gap(b) }] : [];
@@ -159,7 +160,7 @@ function dataText(editor: Editor, s: TLShape): string {
   if (!stale.length) return chartText(dataset.props.data, chart.props.state);
   const nameOf = (id: string) => {
     const shape = editor.getShape(id as TLShapeId);
-    return shape && !editor.isShapeHidden(shape) ? shapeName(shape) : undefined;
+    return shape && !hiddenFromAgents(editor, shape) ? shapeName(shape) : undefined;
   };
   return chartText(dataset.props.data, chart.props.state, { stale: staleReason(stale, nameOf), bars: chart.props.bars });
 }
@@ -178,7 +179,7 @@ function mediaText(editor: Editor, s: TLShape, keep: Keep = (x) => x) {
   const found = pageId
     ? [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []).find((c) => c.meta.role === "caption" && c.meta.captionFor === s.id)
     : undefined;
-  const caption = found && !editor.isShapeHidden(found) && keep([found]).length ? found : undefined;
+  const caption = found && !hiddenFromAgents(editor, found) && keep([found]).length ? found : undefined;
   return describeImage({ kind: s.type, name: asset?.props?.name, w: asset?.props?.w, h: asset?.props?.h, caption: caption ? textOf(caption) : undefined, alt: props.altText });
 }
 
@@ -235,7 +236,7 @@ function attachedTo(editor: Editor, frame: TLShape) {
   const blocked = new Set<string>(leftOut.length ? (editor.getShapeAndDescendantIds(leftOut as TLShapeId[]) as Set<string>) : []);
   return followers(subtree.filter((id) => !blocked.has(id)), page, new Set())
     .flatMap((id) => editor.getShape(id as TLShapeId) ?? [])
-    .filter((s) => !within.has(s.id) && !askOf(s) && !editor.isShapeHidden(s) && textOf(s));
+    .filter((s) => !within.has(s.id) && !askOf(s) && !hiddenFromAgents(editor, s) && textOf(s));
 }
 
 function inside(editor: Editor, frame: TLShape, skip: Set<string>, keep: Keep = (x) => x) {
@@ -244,7 +245,7 @@ function inside(editor: Editor, frame: TLShape, skip: Set<string>, keep: Keep = 
     for (const childId of editor.getSortedChildIdsForParent(id)) {
       const child = editor.getShape(childId);
       // Anything a learning prompt still hides stays out of what the agent is given.
-      if (!child || skip.has(child.id) || child.type === "arrow" || askOf(child) || editor.isShapeHidden(child)) continue;
+      if (!child || skip.has(child.id) || child.type === "arrow" || askOf(child) || hiddenFromAgents(editor, child)) continue;
       // What the person left out of asks is not given, and neither is what it holds.
       if (!keep([child]).length) continue;
       if (child.type === "frame" || child.type === "group") walk(child.id);
@@ -270,7 +271,7 @@ function thread(editor: Editor, shape: TLShape, keep: Keep, depth = 0, seen = ne
   // and which of them the person crossed out.
   const siblings = keep(editor.store
     .allRecords()
-    .filter((r): r is TLShape => r.typeName === "shape" && (r as TLShape).meta.replyTo === parent.id && r.id !== shape.id && !askOf(r as TLShape) && !editor.isShapeHidden(r as TLShape))
+    .filter((r): r is TLShape => r.typeName === "shape" && (r as TLShape).meta.replyTo === parent.id && r.id !== shape.id && !askOf(r as TLShape) && !hiddenFromAgents(editor, r as TLShape))
     .sort((a, b) => a.y - b.y || a.x - b.x));
   return [
     ...earlier,
@@ -289,7 +290,7 @@ export function pinnedOnPage(editor: Editor, pageId: TLPageId, given: Iterable<s
   const found = pinnedFor(
     marked.map((shape) => {
       const b = editor.getShapePageBounds(shape);
-      return { id: shape.id, x: b?.x ?? 0, y: b?.y ?? 0, meta: shape.meta, hidden: editor.isShapeHidden(shape), shape };
+      return { id: shape.id, x: b?.x ?? 0, y: b?.y ?? 0, meta: shape.meta, hidden: hiddenFromAgents(editor, shape), shape };
     }),
     given,
   );
@@ -305,7 +306,7 @@ function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep:
   const placed = editor
     .getSortedChildIdsForParent(host.parentId)
     .flatMap((id) => editor.getShape(id) ?? [])
-    .filter((s) => s.id === host.id || (s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !editor.isShapeHidden(s)))
+    .filter((s) => s.id === host.id || (s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !hiddenFromAgents(editor, s)))
     .flatMap((s) => {
       const b = editor.getShapePageBounds(s);
       return b ? [{ id: s.id as string, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
@@ -352,7 +353,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
         editor
           .getSortedChildIdsForParent(frame.id)
           .flatMap((id) => editor.getShape(id) ?? [])
-          .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !editor.isShapeHidden(s) && (textOf(s) || s.type === "chart" || s.type === "dataset"))
+          .filter((s) => !skip.has(s.id) && s.type !== "arrow" && !askOf(s) && !hiddenFromAgents(editor, s) && (textOf(s) || s.type === "chart" || s.type === "dataset"))
           .concat(attachedTo(editor, frame).filter((a) => !skip.has(a.id))),
       ).slice(0, 12)
     : [];
