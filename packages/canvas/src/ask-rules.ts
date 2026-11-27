@@ -6,6 +6,43 @@ export function capWords(text: string, max: number) {
   return words.length <= max ? text.trim() : `${words.slice(0, max).join(" ")}…`;
 }
 
+/**
+ * The text of each answer card. Options are lettered; with dimensions, each option lists the
+ * same dimensions in the same order under its headline (finding 6: compare down a line).
+ */
+export function answerTexts(input: { text?: string; alternatives?: string[]; dimensions?: string[]; values?: string[][] }) {
+  if (!input.alternatives) return [capWords(input.text ?? "", 90)];
+  return input.alternatives.map((text, i) => {
+    // With dimensions each card is one line per field, so a field's own line breaks become spaces.
+    const one = (t: string) => (input.dimensions ? t.replace(/\s+/g, " ").trim() : t);
+    const head = `${"ABCD"[i]} · ${capWords(one(text), input.dimensions ? 30 : 60)}`;
+    const lines = (input.dimensions ?? []).map((d, j) => `${one(d)}: ${capWords(one(input.values?.[i]?.[j] ?? ""), 12)}`);
+    return [head, ...lines].join("\n");
+  });
+}
+
+/** An option card's rich text: its headline, then one paragraph per dimension with the name in bold. */
+export function optionRichText(text: string, dimensions: string[]) {
+  const [head, ...lines] = text.split("\n");
+  // An empty line is an empty paragraph: the editor refuses a text node with no text.
+  const para = (content: { type: string; text: string; marks?: unknown[] }[]) => {
+    const filled = content.filter((t) => t.text.length > 0);
+    return filled.length ? { type: "paragraph", content: filled } : { type: "paragraph" };
+  };
+  return {
+    type: "doc",
+    content: [
+      para([{ type: "text", text: head }]),
+      ...lines.map((line, j) => {
+        const label = `${dimensions[j]}:`;
+        return line.startsWith(label)
+          ? para([{ type: "text", text: label, marks: [{ type: "bold" }] }, ...(line.length > label.length ? [{ type: "text", text: line.slice(label.length) }] : [])])
+          : para([{ type: "text", text: line }]);
+      }),
+    ],
+  };
+}
+
 export const ANSWER_W = 340;
 export const OPTION_W = 250;
 export const OPTION_GAP = 20;
