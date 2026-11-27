@@ -71,7 +71,7 @@ import {
   type CanvasBridge,
 } from "./operations";
 import { agentLink, agentListeners, connectAgentAccess } from "./agent-client";
-import { convergeForPerson, createComment } from "./agent-operations";
+import { convergeForPerson, createComment, createFor } from "./agent-operations";
 import { prototypeEnabled, canvasReturnTo } from "./prototype-flags";
 import { toggleLeftOut, togglePinned } from "./leave-out";
 import { followConnectors } from "./connector-follow";
@@ -1951,7 +1951,8 @@ function App() {
       if (previous.props.richText === next.props.richText) return next;
       return { ...next, meta: { ...next.meta, updatedAt: Date.now() } };
     });
-    window.paired = createBridge(editor);
+    // The bridge stands in for the person: a note it creates is the person's card, as they write it.
+    window.paired = { ...createBridge(editor), create: (input: unknown) => createFor(editor, input, HUMAN) };
     // Images from before boards kept them: copy them into the board so the next save carries
     // them. Done once sync is listening (after a save or load), so the copy is itself saved;
     // a board with no account gets it after a few seconds. A no-op when there is nothing to move.

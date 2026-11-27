@@ -88,13 +88,18 @@ export function createCard(editor: Editor, value: unknown, author: string, meta:
   return id;
 }
 
-/** Agents' notes become cards; other primitives pass through unchanged. */
-function createFor(editor: Editor, value: unknown, actor: string) {
+/**
+ * Notes become cards: an agent's note is its typed card (and is selected), the person's is their
+ * handwritten card, as the Write tool makes, at the width asked for. A sticky note cannot take a
+ * width, so a person's note made by script would otherwise sit wider apart than it said. Other
+ * primitives pass through unchanged.
+ */
+export function createFor(editor: Editor, value: unknown, actor: string) {
   const kind = value && typeof value === "object" ? (value as { kind?: unknown }).kind : undefined;
-  if (kind === "note" && actor !== HUMAN) {
+  if (kind === "note") {
     editor.markHistoryStoppingPoint("create card");
     const id = createCard(editor, value, actor);
-    editor.select(id);
+    if (actor !== HUMAN) editor.select(id);
     return id;
   }
   return createObject(editor, value);
