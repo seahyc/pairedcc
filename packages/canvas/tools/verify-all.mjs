@@ -90,6 +90,7 @@ const CHECKS = [
   { name: 'ask-live', file: 'verify-ask-live.mjs', args: (d) => [d] },
   { name: 'answer-beside', file: 'verify-answer-beside.mjs', args: (d) => [d] },
   { name: 'import-author', file: 'verify-import-author.mjs', args: () => [] },
+  { name: 'ask-queue', file: 'verify-ask-queue.mjs', args: (d) => [d] },
   { name: 'recall', file: 'verify-recall.mjs', args: (d) => [d] },
   { name: 'overview', file: 'verify-overview.mjs', args: (d) => [d] },
   { name: 'fold', file: 'verify-fold.mjs', args: (d) => [d] },

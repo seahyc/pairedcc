@@ -441,7 +441,7 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
           </IconButton>
         </div>
         <p>
-          Pink handwriting is you, lavender with ✦ is your agent. Write a question and it is asked when you finish; any other card is asked with ⌘↵. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
+          Pink handwriting is you, lavender with ✦ is your agent. Write a question and it is asked when you finish; any other card is asked with {keys("⌘↵")}. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
         </p>
         <div className="shortcut-grid">
           {shortcutGroups.map((group) => (
