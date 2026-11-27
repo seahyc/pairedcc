@@ -1,4 +1,5 @@
-import type { Editor } from "tldraw";
+import type { Editor, TLShape } from "tldraw";
+import { shapeName } from "./operations";
 import { executeCommand } from "./agent-operations";
 import type { CanvasCommand } from "./protocol";
 import { changedPaths, documentDiff, isEmptyDiff, planUndo, runsInput, undoRunInput, type RunDiff } from "./run-undo";
@@ -49,13 +50,15 @@ export function briefRun(run: AgentRun): ListedRun {
   const brief = (key: "created" | "updated" | "removed") =>
     full[key].length > LISTED_IDS ? { [key]: full[key].slice(0, LISTED_IDS), [`${key}Count`]: full[key].length } : { [key]: full[key] };
   const updated = full.updated.slice(0, LISTED_IDS);
-  return {
+  const out: ListedRun = {
     ...full,
     ...brief("created"),
     ...brief("updated"),
     fields: Object.fromEntries(updated.map((id) => [id, full.fields[id]])),
     ...brief("removed"),
   };
+  const listed = new Set([...(out.created as string[]), ...(out.updated as string[]), ...(out.removed as string[])]);
+  return { ...out, names: Object.fromEntries(Object.entries(full.names).filter(([id]) => listed.has(id))) };
 }
 
 /** The `runs` result: recent runs briefly, or one run in full when `runId` is given. */
@@ -81,7 +84,26 @@ export function summariseRun(run: AgentRun) {
     removed: Object.keys(run.changes.removed),
     pages: run.pages ?? [],
     undone: run.undone,
+    /** A short name for each object the run touched, as the run left it (a removed one as it was). */
+    names: runNames(run),
   };
+}
+
+function runNames(run: AgentRun): Record<string, string> {
+  const named: Record<string, string> = {};
+  const add = (id: string, rec: unknown) => {
+    const r = rec as TLShape | undefined;
+    if (r?.typeName !== "shape" || !r.props || !r.meta) return;
+    try {
+      named[id] = shapeName(r);
+    } catch {
+      // A record too old or odd to name is listed by id alone.
+    }
+  };
+  for (const [id, rec] of Object.entries(run.changes.added)) add(id, rec);
+  for (const [id, [, to]] of Object.entries(run.changes.updated)) add(id, to);
+  for (const [id, rec] of Object.entries(run.changes.removed)) add(id, rec);
+  return named;
 }
 
 export function createRunLedger(max = 100) {
