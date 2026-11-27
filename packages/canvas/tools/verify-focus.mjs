@@ -171,6 +171,19 @@ try {
   await p.waitForTimeout(200);
   const before = JSON.parse(revBefore), after = Object.fromEntries(JSON.parse(await revisions()));
   check('focus moved no revision', before.every(([id, rev]) => after[id] === rev));
+
+  // 5. The thread in focus is deleted: focus ends, and undoing the delete does not bring it back.
+  await p.evaluate((id) => window.paired.select([id]), qid);
+  await p.waitForTimeout(150);
+  await p.keyboard.press('f');
+  await p.waitForTimeout(300);
+  const focusedBeforeDelete = (await hole()) !== null;
+  await p.evaluate((id) => { window.__pairedEditor.deleteShapes([id]); }, qid);
+  await p.waitForTimeout(300);
+  const goneAfterDelete = (await hole()) === null;
+  await p.evaluate(() => { window.__pairedEditor.undo(); });
+  await p.waitForTimeout(300);
+  check('deleting what is in focus ends the focus; undo does not bring it back', focusedBeforeDelete && goneAfterDelete && (await hole()) === null);
   check('no page errors', errs.length === 0, errs.join(' | '));
 } finally {
   await browser.close();

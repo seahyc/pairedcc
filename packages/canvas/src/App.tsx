@@ -1808,6 +1808,11 @@ function CanvasLayers() {
 function FocusVeil() {
   const editor = useEditor();
   const rect = useValue("focus rect", () => focusRect(editor), [editor]);
+  // The frame or thread in focus is gone (deleted, or another page opened): end the focus, so an
+  // undo or a page switch later never brings the veil back unasked.
+  useEffect(() => {
+    if (!rect && focusAtom.get()) endFocus();
+  }, [rect]);
   useEffect(() => {
     const esc = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || !focusAtom.get() || editor.getEditingShapeId()) return;
