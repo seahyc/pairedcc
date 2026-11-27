@@ -46,27 +46,44 @@ const STEP = 28;
 
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
-/** The page-space size two suggestions take: one line each, in the board's handwriting. */
-export function suggestSize(texts: readonly string[], charWidth = 9.5, lineHeight = 30): { w: number; h: number } {
+/** Text size on screen, in px: legible whatever the zoom. */
+export const SUGGEST_FONT = 19;
+/** Line height on screen, in px; on a touch screen each line is a tap target. */
+export const SUGGEST_LINE = 26;
+export const SUGGEST_LINE_TOUCH = 34;
+/** Page units per screen px: suggestions keep one size on screen at every zoom. */
+export const suggestScale = (zoom: number) => 1 / (zoom > 0 ? zoom : 1);
+
+/** The page-space size the suggestions take: one line each, in the board's handwriting. */
+export function suggestSize(texts: readonly string[], opts: { scale?: number; touch?: boolean } = {}): { w: number; h: number } {
+  const scale = opts.scale ?? 1, line = opts.touch ? SUGGEST_LINE_TOUCH : SUGGEST_LINE;
   const longest = Math.max(0, ...texts.map((t) => t.length + 2));
-  return { w: Math.ceil(longest * charWidth + 24), h: texts.length * lineHeight + 8 };
+  return { w: Math.ceil(longest * SUGGEST_FONT * 0.5 + 24) * scale, h: (texts.length * line + 8) * scale };
 }
 
 /**
  * Where the suggestions go: under the selection, sliding down a little past something in the
  * way, then beside it on the right. `others` is everything else on the board (not the selection,
- * not a frame it sits in). Returns null when there is no clear place nearby: then nothing is
- * shown, because a suggestion must never cover the person's objects.
+ * not a frame it sits in) and the window's own controls, in page units. With a `view`, a spot
+ * must lie wholly inside it. Gaps are screen sizes times `scale`. Returns null when there is no
+ * clear place nearby: then nothing is shown, because a suggestion must never cover anything.
  */
-export function suggestSpot(selection: Rect, size: { w: number; h: number }, others: readonly Rect[], under = 0): { x: number; y: number } | null {
+export function suggestSpot(
+  selection: Rect,
+  size: { w: number; h: number },
+  others: readonly Rect[],
+  opts: { under?: number; view?: Rect; scale?: number } = {},
+): { x: number; y: number } | null {
+  const scale = opts.scale ?? 1, air = SUGGEST_AIR * scale, gap = SUGGEST_GAP * scale, step = STEP * scale, view = opts.view;
   const clear = (x: number, y: number) => {
-    const box = { x: x - SUGGEST_AIR, y: y - SUGGEST_AIR, w: size.w + 2 * SUGGEST_AIR, h: size.h + 2 * SUGGEST_AIR };
+    if (view && (x < view.x || y < view.y || x + size.w > view.x + view.w || y + size.h > view.y + view.h)) return false;
+    const box = { x: x - air, y: y - air, w: size.w + 2 * air, h: size.h + 2 * air };
     return !others.some((o) => hits(box, o));
   };
-  const below = selection.y + selection.h + SUGGEST_GAP + under;
-  for (let i = 0; i <= SLIDE; i++) if (clear(selection.x, below + i * STEP)) return { x: selection.x, y: below + i * STEP };
-  const right = selection.x + selection.w + SUGGEST_GAP;
-  for (let i = 0; i <= SLIDE; i++) if (clear(right, selection.y + i * STEP)) return { x: right, y: selection.y + i * STEP };
+  const below = selection.y + selection.h + gap + (opts.under ?? 0);
+  for (let i = 0; i <= SLIDE; i++) if (clear(selection.x, below + i * step)) return { x: selection.x, y: below + i * step };
+  const right = selection.x + selection.w + gap;
+  for (let i = 0; i <= SLIDE; i++) if (clear(right, selection.y + i * step)) return { x: right, y: selection.y + i * step };
   return null;
 }
 
