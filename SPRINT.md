@@ -737,10 +737,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 130. **Friction from #172's focused attempt on tasks 30 and 31 (reported by the agent in `eval/agent-runs/30-31-folded-recall.json`, not yet reproduced).** (a) `canvas_overview` says a thread is `folded` but not which answer the person picked, though the folded line on the board shows it, so an agent needs a `read` to build on the pick; (b) an ask's targets and the overview's entries carry no review schedule for a settled thought, so the agent read the whole page to compare them, and `meta.recall.due` is epoch milliseconds where an ISO date is easier; (c) AGENT_API does not say whether a settled thought without `recall` ever comes back (it does not: only after Check me). Done when each is reproduced first, with a failing-first test, and the overview gives the pick and the next review date without a full read.
 
+131. **An ask written on empty space inside a group is about that group (P2, "about everything over here"; principles row 3).** Today a question joins a group only when it lands within 60 px of a member, so a question written in the middle of a ring of cards, more than 60 px from each, is given no group; principles.md row 3 says so ("only through what sits beside it"). Done when a question that is in no group of its own and lies inside a group's bounds is given that group (members, relations, name), with failing-first unit tests on fixed layouts (inside a ring, inside a wide row's gap, outside every group, inside two groups' bounds: the smaller one) and a browser check that outlines the group while the ask is answered.
+
 ## Claims
 127. Dimension lines line up across option cards (build-A) | claude/sprint-dimension-align-2, PR #174 | 2026-11-27T14:27Z
 129. An ask's group and the person's note width (build-A) | claude/sprint-note-width | 2026-11-27T14:27Z
 130. Overview gives a folded thread's pick and a settled thought's review date (build-A) | claude/sprint-overview-pick-review | 2026-11-27T15:05Z
+131. An ask on empty space inside a group (build-A) | claude/sprint-ask-inside-group | 2026-11-27T14:40Z
 
 ## Done
 - 128. Bot review findings on #161 and #164 (build-B): PR #171 (all six reproduced: card room checked only against objects, the first suggestion alone when two do not fit, a touch is a tap only when it lifts in place, Unicode digits and word boundaries, curly let’s; 4 failing-first unit tests; verify-suggest-phone 13/16 → 16/16).
