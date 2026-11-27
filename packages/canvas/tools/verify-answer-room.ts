@@ -97,6 +97,35 @@ try {
   await p.evaluate(() => { (window as any).__pairedEditor.zoomToFit({ animation: { duration: 0 } }); });
   await p.waitForTimeout(300);
   await p.screenshot({ path: `${out}/answer-room.png` });
+  // 2. A tall obstacle below the answer in both the under and the beside columns: wherever the
+  // answer goes, it covers nothing (the search steps past the obstacle, not 60 short steps into it).
+  const ask2 = await p.evaluate(() => {
+    const ed = (window as any).__pairedEditor;
+    ed.setCamera({ x: -6000, y: 0, z: 1 });
+    // (No named helpers in here: the page does not have the bundler's naming shim.)
+    ed.createShape({ type: "card", x: 6200, y: 120, props: { w: 300, tone: "human", richText: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "And for schools?" }] }] } } });
+    const a = ed.getCurrentPageShapes().filter((s: any) => s.type === "card").at(-1).id;
+    const b = ed.getShapePageBounds(a);
+    // A note just under the estimated room, and a tall block across both columns beneath it.
+    ed.createShape({ type: "card", x: 6200, y: b.maxY + 330, props: { w: 600, tone: "human", richText: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "A note of mine" }] }] } } });
+    ed.createShape({ type: "geo", x: 6150, y: b.maxY + 420, props: { w: 1600, h: 2600, geo: "rectangle" } });
+    return { id: a };
+  });
+  await p.evaluate((id: string) => (window as any).paired.select([id]), ask2.id);
+  await p.waitForTimeout(200);
+  const waiting2 = post("/asks/wait", { agent: "Check agent", waitMs: 10000 });
+  await p.keyboard.press("Control+Enter");
+  const got2 = await waiting2;
+  const answered2 = await post("/command", { requestId: randomUUID(), sessionId: got2.sessionId, actor: "Check agent", command: { op: "answer", input: { id: got2.ask.id, alternatives: options } } });
+  if (!answered2.ok) throw new Error(JSON.stringify(answered2).slice(0, 300));
+  await p.waitForTimeout(1200);
+  const covered2 = await p.evaluate((askId: string) => {
+    const ed = (window as any).__pairedEditor;
+    const answers = ed.getCurrentPageShapes().filter((s: any) => s.meta.replyTo === askId).map((s: any) => ed.getShapePageBounds(s.id));
+    const others = ed.getCurrentPageShapes().filter((s: any) => s.meta.replyTo !== askId && s.id !== askId && s.type !== "arrow" && s.type !== "frame").map((s: any) => ed.getShapePageBounds(s.id));
+    return answers.flatMap((a: any) => others.filter((o: any) => a.x < o.maxX && o.x < a.maxX && a.y < o.maxY && o.y < a.maxY).map((o: any) => `${Math.round(a.y)}–${Math.round(a.maxY)} over ${Math.round(o.y)}–${Math.round(o.maxY)}`));
+  }, ask2.id);
+  check("with a tall obstacle below both columns, the answer still covers nothing", covered2.length === 0, covered2.slice(0, 3).join("; "));
   check("no page errors", errs.length === 0, errs.join(" | "));
 } finally {
   await browser.close();
