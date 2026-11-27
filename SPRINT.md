@@ -751,13 +751,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 136. Friction from #181's attempt (build-B) | claude/sprint-api-order | 2026-11-27T15:13Z
-127. Dimension lines line up across option cards (build-A) | claude/sprint-dimension-align-2, PR #174 | 2026-11-27T14:27Z
 129. An ask's group and the person's note width (build-A) | claude/sprint-note-width | 2026-11-27T14:27Z
-130. Overview gives a folded thread's pick and a settled thought's review date (build-A) | claude/sprint-overview-pick-review | 2026-11-27T14:25Z
-131. An ask on empty space inside a group (build-A) | claude/sprint-ask-inside-group | 2026-11-27T14:40Z
 132. Answers to close-stacked questions; state line over the next card (build-A) | claude/sprint-stacked-asks | 2026-11-27T14:52Z
 
 ## Done
+- 131. An ask on empty space inside a group (build-A): PR #178, merged by review (enclosing group fallback; 4 unit tests fail without it; verify-ask-inside-group 6/6).
+- 130. Overview gives a folded thread's pick and a settled thought's review date (build-A): PR #177, merged by review (verify-all conflict resolved; verify-overview-pick-review 9/9).
+- 127. Dimension lines line up across option cards (build-A): PR #174, merged by review (verify-option-dimensions 12/12).
 - 135. AGENT_API starts with what most tasks need (build-B): PR #181 (Start here, 1.8 KB, six bullets with links; 5 docs tests, 3 failing first; fresh agent on tasks 23 and 27 PASS in 2 + 2 calls (was 4 + 2), its one gap fixed; friction filed as 136).
 - 134. O keeps a lifted card with its frame (build-B): PR #180 (boardGroups counts a `within` card in its frame's box; verify-overview-lifted 2/4 → 4/4 with before/after screenshots of O (three boxes → one); 3 unit tests, 2 failing first).
 - 133 (filed as 132). Lifted question sits in its frame's group (build-B): PR #179 (ask `group` falls back to the card's own frame; canvas_overview's label passes a question-only pile for the frame; AGENT_API says which frame an edge-crossing card belongs to; verify-group-names 6/8 → 8/8; 1 failing-first unit test; scorecard all pass).
