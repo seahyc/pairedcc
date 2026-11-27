@@ -751,7 +751,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 137. **Dimension lines line up on an answer that lands on another page (principles row 6, "Still missing").** `levelOptionLines` looks only at the open page, so options on dimensions answered while the person is on another page (an answer lands on its ask's page, #69) keep their dimension lines where the wrapping leaves them. Done when such an answer's lines are level when the person opens that page, with a failing-first browser check in `verify-option-dimensions`, and principles row 6 updated.
 
+138. **`canvas_create` without coordinates puts the object in the person's view, clear of everything (friction from #172's attempt on task 30: "no default spot for a free canvas_create").** `x` and `y` are required, so an agent adding a note that belongs to nothing in particular has to read the board and invent a free spot. Done when `x`/`y` are optional for `canvas_create`: without them the object goes beside the person's selection when there is one, else in the middle of their view, moved clear of other objects as answers are; with them nothing changes. Failing-first unit test for the spot and a browser check (in view, overlapping nothing); AGENT_API, tool description and hosted manifest updated.
+
 ## Claims
+138. canvas_create without coordinates (build-A) | claude/sprint-create-spot | 2026-11-27T15:27Z
 137. Dimension lines on an answer on another page (build-A) | claude/sprint-dimension-other-page | 2026-11-27T15:25Z
 136. Friction from #181's attempt (build-B) | claude/sprint-api-order | 2026-11-27T15:13Z
 
