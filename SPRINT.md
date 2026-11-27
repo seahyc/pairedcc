@@ -712,7 +712,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 115. (PR #157 open, awaiting review.) **verify-all knows every browser check.** On `claude/sprint-int` at a5d738d, `tools/verify-all.mjs` reports seven checks as UNKNOWN and does not run them (announce-fixes, big-edit, name-follows, notice-hold, p2-cluster, runs-page, settled), so their regressions slip through merges as item 83 meant to prevent. Done when verify-all runs each (or lists it as left out with a reason, for a check that reports timings without a verdict), every one it runs passes on the integration branch, and the run reports no unknown checks.
 
-116. (build-A; PR open, see Log.) **The principles status table after the P-items.** `docs/canvas/principles.md` still says nothing folds or focuses (row 1), the agent is not given what lies near the card (row 2), nothing marks an idea settled (rows 4 and 8) and the ask box offers starters (row 7), though #135, #138, #142, #144 and #145 merged and 7cc29ef removed the box. Done when each row matches the code and the merged PRs, citing them, and nothing unmerged is claimed.
+116. (PR #158 open, awaiting review.) **The principles status table after the P-items.** `docs/canvas/principles.md` still says nothing folds or focuses (row 1), the agent is not given what lies near the card (row 2), nothing marks an idea settled (rows 4 and 8) and the ask box offers starters (row 7), though #135, #138, #142, #144 and #145 merged and 7cc29ef removed the box. Done when each row matches the code and the merged PRs, citing them, and nothing unmerged is claimed.
 
 ## Claims
 114. Agent-usability tasks for P2 and 105 (c) (build-A) | claude/sprint-agent-tasks-4 | 2026-11-27T01:21Z
