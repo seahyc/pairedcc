@@ -53,3 +53,26 @@ describe("agent documentation", () => {
     expect((readme + agentApi).match(/\/Users\/[a-z]+\/\S*/g) ?? []).toEqual([]);
   });
 });
+
+describe("AGENT_API.md starts with what most tasks need (item 135)", () => {
+  const start = /\n## Start here\n([\s\S]*?)\n## /.exec(agentApi)?.[1] ?? "";
+  const slug = (heading: string) => heading.toLowerCase().replace(/[^a-z0-9 -]/g, "").trim().replace(/ /g, "-");
+  const anchors = new Set([...agentApi.matchAll(/^#{1,4} (.+)$/gm)].map((m) => slug(m[1])));
+  it("is the first section, and short", () => {
+    expect(start, "AGENT_API.md should have a Start here section").not.toBe("");
+    expect(/^## (.+)$/m.exec(agentApi)?.[1]).toBe("Start here");
+    expect(new TextEncoder().encode(start).length).toBeLessThanOrEqual(3000);
+  });
+  it("names only tools that exist", () => {
+    const names = new Set(toolDefs.map((t) => t.name));
+    expect([...start.matchAll(/`(canvas_[a-z_]+)`/g)].map((m) => m[1]).filter((n) => !names.has(n))).toEqual([]);
+  });
+  it("covers the common loop", () => {
+    for (const tool of ["canvas_asks", "canvas_answer", "canvas_overview", "canvas_read", "canvas_undo_run"]) expect(start).toContain(`\`${tool}\``);
+  });
+  it("links only to sections that exist", () => {
+    const links = [...start.matchAll(/\]\(#([a-z0-9-]+)\)/g)].map((m) => m[1]);
+    expect(links.length).toBeGreaterThan(0);
+    expect(links.filter((l) => !anchors.has(l))).toEqual([]);
+  });
+});
