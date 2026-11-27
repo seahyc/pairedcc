@@ -432,6 +432,26 @@ export function setAskStatus(editor: Editor, value: unknown, actor: string) {
 }
 
 /**
+ * The nearest spot at or below `box` that covers nothing on the page (with the same air as
+ * `freeSpot`), stepping past the bottom of whatever it meets, so a tall obstacle is never
+ * accepted as a place to land.
+ */
+function clearSpot(editor: Editor, box: { x: number; y: number; w: number; h: number }, skip: Set<string>, pageId: TLPageId) {
+  const others = [...editor.getPageShapeIds(pageId)]
+    .flatMap((id) => editor.getShape(id) ?? [])
+    .filter((s) => s.type !== "frame" && s.type !== "arrow" && !skip.has(s.id))
+    .flatMap((s) => editor.getShapePageBounds(s) ?? []);
+  const spot = { ...box };
+  for (let i = 0; i < 200; i++) {
+    const room = { x: spot.x - 8, y: spot.y - 14, maxX: spot.x + spot.w + 8, maxY: spot.y + spot.h + 14 };
+    const hit = others.filter((o) => o.x < room.maxX && room.x < o.maxX && o.y < room.maxY && room.y < o.maxY);
+    if (!hit.length) return spot;
+    spot.y = Math.max(...hit.map((o) => o.maxY)) + 14;
+  }
+  return spot;
+}
+
+/**
  * The agent's answer, placed under the ask: one short card, or two to four alternatives
  * side by side. The human's objects are never moved or edited.
  */
@@ -494,18 +514,19 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
       return id;
     });
     // The room was checked with estimated heights; the cards now have their measured ones. If
-    // they reach something below that room, the whole answer moves down until it is clear.
+    // they reach something, the whole answer moves: searched again from both of the first
+    // placement's starting points (under the ask, beside it) with its measured size, each shift
+    // compared from its own start, and never to a spot that still covers something.
     const boxes = made.flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []);
     if (boxes.length) {
       const x = Math.min(...boxes.map((b) => b.x)), y = Math.min(...boxes.map((b) => b.y));
       const real = { x, y, w: Math.max(...boxes.map((b) => b.maxX)) - x, h: Math.max(...boxes.map((b) => b.maxY)) - y };
       const skip = new Set<string>([shape.id, ...made]);
-      const down = freeSpot(editor, real, skip, pageId);
-      if (down.y > real.y) {
-        // As when it was placed: under the ask unless that is much further than beside it.
-        const besideReal = { ...real, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
-        const side = freeSpot(editor, besideReal, skip, pageId);
-        const to = pickAnswerSpot(down.y - real.y, side.y - besideReal.y) === "under" ? down : side;
+      if (clearSpot(editor, real, skip, pageId).y !== real.y) {
+        const underStart = { ...real, x: layout.box.x, y: layout.box.y };
+        const besideStart = { ...real, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
+        const under2 = clearSpot(editor, underStart, skip, pageId), beside2 = clearSpot(editor, besideStart, skip, pageId);
+        const to = pickAnswerSpot(under2.y - underStart.y, beside2.y - besideStart.y) === "under" ? under2 : beside2;
         const dx = to.x - real.x, dy = to.y - real.y;
         for (const id of made) {
           const card = editor.getShape(id as TLShapeId);
