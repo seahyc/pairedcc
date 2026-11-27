@@ -702,7 +702,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 P5. Understanding needs effort (part 1: Check me on the default board) | claude/sprint-p5-check | 2026-11-26T15:15Z
-P1. Few things in view | claude/sprint-p1-fold | 2026-11-26T14:57Z
+P1. Few things in view (build-A, taken over: the 14:57Z claim had no branch or PR after 6 h) | claude/sprint-p1-fold | 2026-11-27T00:20Z
 
 ## Done
 - 105 (c). canvas_runs by page (build-B): PR #139 (pages on each run, page: "current"; live MCP check 1/3 → 3/3; manifest regenerated; workspace green with services).
