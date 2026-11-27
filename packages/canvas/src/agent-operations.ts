@@ -533,7 +533,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         // A finished thread the person has out of view as one line: still theirs, still in context.
         ...(foldedForAgent(editor, s) ? { folded: true } : {}),
         ...(foldedPick(editor, s) ? { pick: foldedPick(editor, s) } : {}),
-        ...(reviewDate(s.meta) ? { review: reviewDate(s.meta) } : {}),
+        ...(reviewDate(s.meta, authorOf(s)) ? { review: reviewDate(s.meta, authorOf(s)) } : {}),
         meta: s.meta,
         asset,
       };

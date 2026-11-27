@@ -190,6 +190,20 @@ describe("resident agent prompt", () => {
     expect(prompt).toContain("Why change pricing?");
     expect(readingNote(given)).toBe('reading 2 objects and the frame "Pricing"');
   });
+  it("writes each settled thought's review date beside that thought", () => {
+    const prompt = buildPrompt({
+      question: "Which should I revisit first?",
+      targets: [
+        { id: "shape:a", type: "card", author: "Human", text: "Churn is a pricing problem", review: "2026-12-02T09:30:00.000Z" },
+        { id: "shape:b", type: "card", author: "Human", text: "Seats beat usage", review: "2026-12-09T09:30:00.000Z" },
+      ],
+    });
+    const line = (t: string) => prompt.split("\n").find((l) => l.includes(t)) ?? "";
+    expect(line("Churn is a pricing problem")).toContain("2026-12-02");
+    expect(line("Churn is a pricing problem")).not.toContain("2026-12-09");
+    expect(line("Seats beat usage")).toContain("2026-12-09");
+    expect(line("Seats beat usage")).not.toContain("2026-12-02");
+  });
   it("holds the model to one short step", () => {
     expect(systemPrompt).toContain("At most 60 words");
     expect(systemPrompt).toContain("One step, then stop");

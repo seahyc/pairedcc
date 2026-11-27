@@ -16,12 +16,22 @@ export function recallOf(meta: Record<string, unknown>): Recall | undefined {
 }
 
 /**
- * For agents: when a settled thought next comes back for review, as an ISO date, or undefined when
- * it has no schedule (only Check me starts one) or is no longer settled.
+ * Comes back on the board: the person's own thought with a schedule. An agent's copy of a settled
+ * thought can carry the recall meta it was copied with, but it is not the person's to recall.
+ * One rule for the board's reminder and for the review date agents are given.
  */
-export function reviewDate(meta: Record<string, unknown>): string | undefined {
+export function recallable(meta: Record<string, unknown>, author: string) {
+  return author === "Human" && recallOf(meta) !== undefined;
+}
+
+/**
+ * For agents: when a settled thought next comes back for review, as an ISO date, or undefined when
+ * it has no schedule (only Check me starts one), is no longer settled, or would not come back on
+ * the board (see recallable).
+ */
+export function reviewDate(meta: Record<string, unknown>, author: string): string | undefined {
   const r = recallOf(meta);
-  return r && meta.settled === true && Number.isFinite(r.due) ? new Date(r.due).toISOString() : undefined;
+  return r && recallable(meta, author) && meta.settled === true && Number.isFinite(r.due) ? new Date(r.due).toISOString() : undefined;
 }
 
 /**
