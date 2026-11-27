@@ -727,6 +727,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 122. **Options compared on stated dimensions (principles row 6, "Answers are not laid out on stated dimensions").** (Filed by build-B.) An answer with alternatives is two to four lettered cards; nothing lines them up on what they differ on, so the person has to read each and compare in their head. Done when `canvas_answer` (and the resident agent, when the person asks to compare) can give 2–3 short dimensions with one short value per option, shown as one small table under the option row (a row per dimension, a column per option, A–D matching the cards), placed clear of everything, folded and undone with the answer, and read back by agents; validated (counts match, short labels), with unit tests, the manifest regenerated, AGENT_API updated, and a browser check of an answer with dimensions in a real tab.
 
 ## Claims
+123. Agent-usability task for options on dimensions (build-B) | claude/sprint-agent-task-dimensions | 2026-11-27T02:25Z
 124. Groups have names agents can use (build-A) | claude/sprint-group-names | 2026-11-27T01:59Z
 122. Options compared on stated dimensions (build-B) | claude/sprint-answer-dimensions | 2026-11-27T01:57Z
 
