@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANSWER_W, LANDING_MS, MIN_ANSWER_W, OPTION_GAP, OPTION_W, answerFit, answerLayout, landedAnswers } from "../src/ask-rules";
+import { ANSWER_W, LANDING_MS, MIN_ANSWER_W, OPTION_GAP, OPTION_W, answerFit, answerLayout, landedAnswers, landingBox } from "../src/ask-rules";
 
 describe("answerFit: answers fit the window they land in", () => {
   it("keeps today's sizes and one row when there is room", () => {
@@ -47,5 +47,19 @@ describe("landedAnswers: which answers just arrived", () => {
     expect(landedAnswers([{ id: "a" }], seen, 10)).toEqual([]);
     landedAnswers([{ id: "a", answeredAt: 100 }], seen, 200);
     expect(landedAnswers([{ id: "a", answeredAt: 900 }], seen, 1000)).toEqual(["a"]);
+  });
+});
+
+describe("landingBox: what comes into view when an answer lands", () => {
+  const ask = { x: 0, y: 0, maxX: 300, maxY: 500 };
+  const answers = [{ x: 0, y: 560, maxX: 250, maxY: 900 }, { x: 270, y: 560, maxX: 520, maxY: 760 }];
+  it("the ask with its answer when both fit", () => {
+    expect(landingBox(ask, answers, 1000)).toEqual({ x: 0, y: 0, maxX: 520, maxY: 900 });
+  });
+  it("the answer alone when the two are taller than the room on screen", () => {
+    expect(landingBox(ask, answers, 600)).toEqual({ x: 0, y: 560, maxX: 520, maxY: 900 });
+  });
+  it("the ask when there is no answer yet", () => {
+    expect(landingBox(ask, [], 100)).toEqual(ask);
   });
 });
