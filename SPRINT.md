@@ -736,6 +736,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 129. **An ask's group starts from the card beside the question too.** (Reported by the agent in #170's attempt; geometry from the task, not yet reproduced in a tab.) The person wrote "Seat or job post: which should we test first?" on a card 170 px under the first of two idea cards that sit side by side 40 px apart. The ask gave the first idea as its target (right beside the question) but no `cluster`, because the question card itself is more than 60 px from the row, so the second idea, which the question names, was missing and the agent found it with a text search. AGENT_API says an ask "carries everything the human sees as its context". Done when the group an ask gives also takes in the group of the objects given as beside-targets (still leaving out what `targets` and `frame` give), with a failing-first test on that fixed layout and a browser check.
 
 ## Claims
+125. Agent-usability tasks for folded threads, settled recall and lifted-out cards (build-B) | claude/sprint-agent-tasks-fold | 2026-11-27T02:17Z
 128. Bot review findings on #161 and #164 (build-B) | claude/sprint-suggest-review | 2026-11-27T02:08Z
 127. Dimension lines line up across option cards (build-A) | claude/sprint-dimension-align | 2026-11-27T02:09Z
 
