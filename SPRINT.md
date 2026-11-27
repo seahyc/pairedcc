@@ -713,7 +713,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest | 2026-11-27T00:45Z
 113. A card over a frame's edge is cut off (build-A) | claude/sprint-frame-edge | 2026-11-27T01:21Z
-114. Agent-usability tasks for P2 and 105 (c) (build-A) | claude/sprint-agent-tasks-4 | 2026-11-27T01:27Z
+114. Agent-usability tasks for P2 and 105 (c) (build-A) | claude/sprint-agent-tasks-4 | 2026-11-27T01:21Z
 
 ## Done
 - P1 (part 2). Focus (F) on a frame or thread (build-A): PR #145, merged (one rectangle, the rest dimmed until Esc; F stays the Frame tool otherwise; verify-focus 13/13).
