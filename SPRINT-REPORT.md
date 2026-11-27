@@ -69,7 +69,7 @@ Last updated 2026-11-27T15:25Z by the review lane. Branch: `claude/sprint-int`.
 | `c6c406c` | 26 Nov ~16:10Z | `success`, live on paired.cc 2026-11-26T16:12Z | Everything to #143: the card is the question, settled (S), Check me on answers, P2 arrangement |
 | `7013ae3` | 27 Nov 01:32Z | `success`, live on paired.cc 2026-11-27T01:38Z | P1 fold and focus, P3 overview, P5 recall (#144 to #149) |
 | `3eabe49` (code as `65e7d79`) | 27 Nov 14:24Z | `success`, live on paired.cc 2026-11-27T14:38Z | P4 suggestions (#156), #157 to #173: options on dimensions, group names, overview phone fit, calm page ids, suggestion fixes, agent tasks 29 to 31 |
-| `e89f392` (code as `e2f2b7f`) | 27 Nov ~15:25Z | pending (read next run) | Dimension lines level across option cards (#174), an ask inside a ring of cards is about the ring (#178), overview gives picks and review dates (#177), agent task 32 (#175) |
+| `e021a25` (code as `e2f2b7f`) | 27 Nov ~15:25Z | pending (read next run) | Dimension lines level across option cards (#174), an ask inside a ring of cards is about the ring (#178), overview gives picks and review dates (#177), agent task 32 (#175) |
 
 ## Notes from the 26 Nov review (still relevant)
 - **This run (11:55Z to 13:50Z): 52 PRs reviewed and merged, #40 to #90 and #96; none rejected.**
