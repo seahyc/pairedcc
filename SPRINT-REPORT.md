@@ -1,8 +1,15 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-27T02:30Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-27T14:40Z by the review lane. Branch: `claude/sprint-int`.
 
-## Read first (27 Nov, 02:30Z)
+## Read first (27 Nov, 14:40Z)
+- **Released again (the day's second release)**: everything up to #173, pushed to `claude/release` at about 14:40Z. That covers P4 suggestions (#156) and the work below. The deploy status is read on the next run.
+- **What you will notice:** when the agent offers options, each lettered card can now list the same dimensions in the same order (for example "Cost to try", "Risk"), with the names in bold (#165). The overview and an ask now name a pile of cards after its title, never after the question in it (#169). On a phone the overview fits the screen (#166). Suggestions behave better on phones: a swipe no longer sends one, and on a narrow screen one suggestion is shown rather than none (#171).
+- **A product choice made for you:** two lanes built "options on dimensions" at the same time. I merged #165 (the dimensions sit inside the option cards, so nothing new appears on the board) and closed #168 (a separate table under the options). If you would rather have the table, #168's branch still exists.
+- **Checks on `65e7d79`:** full workspace green with Postgres 16 and Redis (server 160, canvas 755, sdk 12, mcp 4, e2e 1); headless browser suite 75/75.
+- Open: item 127 (making the dimension lines line up across cards when headlines wrap differently) is back in the backlog after its claim lapsed with no PR.
+
+## Earlier (27 Nov, 02:30Z)
 - **Four of the five P-items are live on paired.cc** (`7013ae3`, pushed 01:32Z, deploy status
   `success`, live 01:38Z). **P4 (suggestions) is merged** (#156) and goes out with the next release. Behind no flag, nothing on the first
   screen changes (same PNG hash as before):
@@ -53,6 +60,7 @@ Last updated 2026-11-27T02:30Z by the review lane. Branch: `claude/sprint-int`.
 | `601800b` | 26 Nov (from your side) | live | First release |
 | `c6c406c` | 26 Nov ~16:10Z | `success`, live on paired.cc 2026-11-26T16:12Z | Everything to #143: the card is the question, settled (S), Check me on answers, P2 arrangement |
 | `7013ae3` | 27 Nov 01:32Z | `success`, live on paired.cc 2026-11-27T01:38Z | P1 fold and focus, P3 overview, P5 recall (#144 to #149) |
+| the commit that adds this row (code as `65e7d79`) | 27 Nov ~14:40Z | pending (read on the next run) | P4 suggestions (#156), #157 to #173: options on dimensions, group names, overview phone fit, calm page ids, suggestion fixes, agent tasks 29 to 31 |
 
 ## Notes from the 26 Nov review (still relevant)
 - **This run (11:55Z to 13:50Z): 52 PRs reviewed and merged, #40 to #90 and #96; none rejected.**
@@ -267,6 +275,13 @@ recorded with #57 (a fresh one is PR #97, not yet reviewed). Performance reads "
 not: see Read first.
 
 ## Merged
+- [#169](https://github.com/seahyc/pairedcc/pull/169) P2: groups have names that agents can use, and a group is never named after an ask in it (7a610c7). Review: resolved the AGENT_API conflict and put a doc comment back where it belongs; verify-group-names 5/5.
+- [#165](https://github.com/seahyc/pairedcc/pull/165) Options laid out on stated dimensions, inside the option cards (ec41baa). verify-option-dimensions 7/7; the manifest regenerates identical.
+- [#166](https://github.com/seahyc/pairedcc/pull/166) Review follow-ups: overview totals, groups and phone fit; the answer-room search; the landing round (7d47281). Review: added verify-group-names to verify-all.
+- [#167](https://github.com/seahyc/pairedcc/pull/167) An older board opened on two devices gets one Thinking page; a chosen page name is kept (4b0bd91). verify-calm-pages passes.
+- [#173](https://github.com/seahyc/pairedcc/pull/173) Agent task 29 (options on dimensions); replaces #170, which was stacked on the pre-squash #165 (750d9bd). Self-test 1/1.
+- [#171](https://github.com/seahyc/pairedcc/pull/171) Suggestions: zoomed-in phones, swipes, narrow phones, cue words in any script (8753e6b). p4-suggest, suggest-phone, suggest-cues and touch all pass.
+- [#172](https://github.com/seahyc/pairedcc/pull/172) Agent tasks 30 (build on a folded thread's pick) and 31 (recall order) (65e7d79). Self-test 2/2.
 - [#150](https://github.com/seahyc/pairedcc/pull/150) An answer taller than its estimate moves clear of what is below (e54ca60). verify-answer-room 5/5; fails without the fix.
 - [#151](https://github.com/seahyc/pairedcc/pull/151) A tall ask and its answer bring the answer into view (8d41398). verify-answer-tall 4/4.
 - [#152](https://github.com/seahyc/pairedcc/pull/152) Agent reads stay small: `read` gives words once as text (no `props.richText`), `runs` lists at most 10 ids per list (b05fb63). Manifest regenerates identical; scorecard green. **An outside agent reading `props.richText` from `read` must use `canvas_get`.**
@@ -379,7 +394,8 @@ script, #12 against a real local Postgres 16 and the running server). From #8 on
 through GitHub and show as merged; #2 to #7 show as closed because they were squashed locally.
 
 ## Rejected
-None.
+- [#168](https://github.com/seahyc/pairedcc/pull/168) Closed as a duplicate of #165: it added a separate table object to the board. The work itself was sound.
+- [#170](https://github.com/seahyc/pairedcc/pull/170) Replaced by #173 (branch stacked on a superseded base).
 
 ## Decisions needed
 1. **Board conflicts.** Different objects merge; the same object: the saving tab wins, the other
