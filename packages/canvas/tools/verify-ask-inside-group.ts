@@ -3,8 +3,9 @@
 // as a ring (a 4 × 4 square with its middle empty), each 40 px from the next, and writes a question
 // in the middle, more than the 60 px group gap from every note. The ask must give the whole ring as
 // its group, with where each note sits, and the board outlines the ring while the ask is worked on.
-// A question outside the ring is given no group. Starts its own dev server (port 5194) unless
-// PAIRED_URL is set:
+// A question outside the ring is given no group. Inside a frame holding more than the frame
+// context's twelve objects, the ring past that cap is still given as the group. Starts its own
+// dev server (port 5194) unless PAIRED_URL is set:
 //   node --import tsx tools/verify-ask-inside-group.ts [screenshot dir]
 import { launch, mcpAgent, openCanvas, startServer, until } from "../eval/lib";
 
@@ -54,6 +55,32 @@ try {
   await page.keyboard.press("ControlOrMeta+Enter");
   const view2: any = await until(async () => (await agent.call("canvas_asks", { state: "all" })).asks.find((a: any) => a.id === outside), "the outside ask");
   check("a question outside the ring is given no group", !(view2.cluster ?? []).some((m: any) => ids.includes(m.id)), view2.cluster);
+  // The same ring inside a frame that holds more than the frame context's twelve objects: twelve
+  // unrelated notes first in the frame's order, then the ring. The frame context gives the twelve;
+  // the ring is still given as the group (eight listed with relations, the rest counted), and
+  // nothing the frame context gave is repeated in it.
+  await agent.call("canvas_page", { name: "Framed ring" });
+  const ring2: string[] = [];
+  for (const w of words) ring2.push(idOf(await ev("(p, e, text) => p.create({ kind: 'note', x: 0, y: 0, width: 160, text })", w)));
+  await ev("(p, e, a) => a.ids.forEach((id, i) => { const s = e.getShape(id); e.updateShape({ id, type: s.type, x: a.cells[i][0] * (a.w + 40), y: a.cells[i][1] * (a.h + 40) }); })", { ids: ring2, cells, w: size.w, h: size.h });
+  const loose: string[] = [];
+  const looseWords = ["Paint", "Tiles", "Lamp", "Rug", "Sofa", "Desk", "Shelf", "Plant", "Clock", "Mirror", "Vase", "Bench"];
+  for (const [i, w] of looseWords.entries()) loose.push(idOf(await ev("(p, e, a) => p.create({ kind: 'note', x: a.x, y: a.y, width: 160, text: a.w })", { w, x: (i % 6) * (size.w + 120), y: 4 * (size.h + 40) + 200 + Math.floor(i / 6) * (size.h + 120) })));
+  const q3 = idOf(await ev("(p, e) => p.create({ kind: 'note', x: 0, y: 0, width: 120, text: 'What is missing here?' })"));
+  await ev("(p, e, a) => { const b = e.getShapePageBounds(a.q), s = e.getShape(a.q); e.updateShape({ id: a.q, type: s.type, x: a.mid.x - b.w / 2, y: a.mid.y - b.h / 2 }); }", { q: q3, mid });
+  const frameId = idOf(await ev("(p, e, a) => p.create({ kind: 'frame', x: -120, y: -120, width: a.w, height: a.h, name: 'Living room' })", { w: 6 * (size.w + 120) + 240, h: 4 * (size.h + 40) + 200 + 2 * (size.h + 120) + 240 }));
+  // In this order, so the unrelated notes come first among the frame's children.
+  await ev("(p, e, a) => { e.reparentShapes(a.loose, a.frame); e.reparentShapes(a.ring, a.frame); e.reparentShapes([a.q], a.frame); }", { loose, ring: ring2, q: q3, frame: frameId });
+  const order: string[] = await ev("(p, e, f) => e.getSortedChildIdsForParent(f)", frameId);
+  check("the frame holds the twelve unrelated notes first, then the ring and the question", order.length === 25 && loose.every((id) => order.indexOf(id) < 12) && ring2.every((id) => order.includes(id)) && order.includes(q3), { children: order.length });
+  await ev("(p, e, id) => void p.select([id])", q3);
+  await page.keyboard.press("ControlOrMeta+Enter");
+  const view3: any = await until(async () => (await agent.call("canvas_asks", { state: "all" })).asks.find((a: any) => a.id === q3), "the framed ask");
+  const sent = (view3.frame?.objects ?? []).map((o: any) => o.id);
+  const cl3 = view3.cluster ?? [];
+  check("the frame context gives its twelve objects (the unrelated notes)", sent.length === 12 && sent.every((id: string) => loose.includes(id)), { frame: sent.length });
+  check("beyond the frame's cap, the ask is still given the ring: eight listed with relations, the rest counted", cl3.length === 8 && cl3.every((m: any) => ring2.includes(m.id) && typeof m.relation === "string") && cl3.length + (view3.clusterMore ?? 0) === ring2.length, { listed: cl3.length, more: view3.clusterMore, group: view3.group });
+  check("what the frame context gave is not repeated in the group", !cl3.some((m: any) => sent.includes(m.id)));
   check("no page errors", errors.length === 0, errors.slice(0, 3));
   await agent.close();
   await context.close();

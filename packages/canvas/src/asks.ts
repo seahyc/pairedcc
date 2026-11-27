@@ -380,9 +380,10 @@ export function describeAsk(editor: Editor, shape: TLShape) {
       ).slice(0, 12)
     : [];
   // Where things sit carries meaning: the group the card is in, said with relations. What the
-  // ask already gives (targets, and the frame's objects when the card is in a frame) is not repeated.
+  // ask already gives (targets, and the frame objects it sent when the card is in a frame) is not
+  // repeated. Only what was sent: a frame past its twelve-object cap still gives the rest as the group.
   const group = editor.getShapePageBounds(shape)
-    ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : []), ...frameObjects.map((s) => s.id)]), keep)
+    ? groupOf(editor, shape, new Set([...skip, ...frameObjects.map((s) => s.id)]), keep)
     : { members: [], more: 0 };
   // A card with no named group of its own around it still sits in its frame's: the one it is in, or
   // the one it was lifted out of so the frame would not cut it off (item 132). Named as O names a frame.
