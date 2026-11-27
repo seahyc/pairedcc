@@ -120,7 +120,7 @@ const before = await p.evaluate(() => window.__pairedEditor.getCurrentPageShapes
 await p.locator('.suggestions button', { hasText: "What's missing?" }).click();
 await p.waitForTimeout(600);
 const made = await p.evaluate((cardId) => {
-  const ed = window.__pairedEditor, id = ed.getOnlySelectedShapeId(), shape = id && ed.getShape(id);
+  const ed = window.__pairedEditor, shape = ed.getCurrentPageShapes().find((s) => s.meta.ask && (s.meta.targetIds ?? []).includes(cardId)), id = shape?.id;
   const text = shape && 'richText' in shape.props ? shape.props.richText.content.map((b) => (b.content ?? []).map((t) => t.text).join('')).join('\n') : '';
   const a = ed.getShapePageBounds(cardId), b = shape && ed.getShapePageBounds(shape);
   const others = ed.getCurrentPageShapes().filter((o) => o.id !== id && o.type !== 'arrow' && o.type !== 'frame').map((o) => ed.getShapePageBounds(o));
@@ -130,8 +130,9 @@ const made = await p.evaluate((cardId) => {
 check('clicking one writes it as the person\'s own card', made.text === "What's missing?" && made.author === 'Human', JSON.stringify(made));
 check('the card is an ask about the selection', made.ask === 'waiting' && made.targets.includes(card), JSON.stringify(made));
 check('the card is under (or, when that is taken, beside) the selection and on top of nothing', made.under && made.overlaps === 0, JSON.stringify(made));
-check('the suggestions are gone', !(await seen()).shown);
+check('the suggestions are gone, and nothing stays selected to cover the thought', !(await seen()).shown && (await p.evaluate(() => window.__pairedEditor.getSelectedShapeIds().length)) === 0);
 await p.screenshot({ path: `${out}/3-chosen.png` });
+await p.evaluate((id) => { window.paired.select([id]); window.__pairedEditor.focus(); }, made.id);
 await p.waitForTimeout(PAUSE);
 check('an ask gets no suggestions of its own', !(await seen()).shown);
 await press(`${mod}+z`, 500);

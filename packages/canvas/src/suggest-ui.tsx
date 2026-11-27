@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { useEditor, useValue, type Editor, type TLShape } from "tldraw";
 import { askOf, createAsk, writtenByPerson } from "./asks";
 import { sendAsk } from "./ask-ui";
 import { selectedRecords } from "./import-board";
@@ -116,7 +116,9 @@ export function SuggestLayer() {
     setOffer(null);
     const id = createAsk(editor, { targetIds: offer.targetIds, question: text, at: { x: offer.x, y: offer.y } });
     sendAsk(editor, id);
-    editor.select(id as TLShapeId);
+    // Sent as it stands, like a card sent with Ask: nothing stays selected, so the bar never
+    // covers the thought the question is about; the ask's state line says what happens.
+    editor.selectNone();
     editor.focus();
   };
   return (
