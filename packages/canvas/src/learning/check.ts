@@ -12,12 +12,20 @@ export const CHECK_SIZE = { w: 340, h: 300 } as const;
 const GAP = 24;
 
 /**
- * What a check on this object would quote, or null when Check me does not apply: only an
- * agent's answer to an ask (the person's own words are never put away from them), with text,
- * and not one already waiting behind an open check.
+ * What a check on this object would quote, or null when Check me does not apply: an agent's
+ * answer to an ask, or a thought the person settled; with text, and not one already waiting
+ * behind an open check.
  */
 export function checkTarget(shape: Shapeish, askText: (id: string) => string | undefined, waiting: (promptId: string) => boolean = () => false) {
-  if (shape.type !== "card" || shape.author === "Human" || !shape.text.trim()) return null;
+  if (shape.type !== "card" || !shape.text.trim()) return null;
+  // A thought the person settled: they can check they can still say why (it is covered while
+  // they answer, never hidden or taken away). Their writing that is still rough is not checked.
+  if (shape.author === "Human") {
+    if (shape.meta.settled !== true) return null;
+    const cover = shape.meta.coveredBy;
+    if (typeof cover === "string" && waiting(cover)) return null;
+    return { question: "", settled: true as const };
+  }
   const replyTo = shape.meta.replyTo;
   if (typeof replyTo !== "string") return null;
   const behind = shape.meta.revealAfter;
@@ -28,7 +36,8 @@ export function checkTarget(shape: Shapeish, askText: (id: string) => string | u
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
 
 /** The prompt's wording: recall and explain before looking again. */
-export function checkQuestion(question: string) {
+export function checkQuestion(question: string, settled = false) {
+  if (settled) return "Before you look again: what did you settle on here, and why? Say it in your own words.";
   const q = question.trim();
   return q
     ? `Before you look again: what was the answer to “${clip(q, 90)}”, and why? Say it in your own words.`

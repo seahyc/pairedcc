@@ -107,6 +107,7 @@ import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followPause, followers } from "./follow";
 import { toggleSettled } from "./settled";
+import { CoverLayer, RecallLine } from "./learning/recall-ui";
 import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
 import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
@@ -1702,6 +1703,12 @@ function Shell() {
           <Keyboard size={15} />
         </IconButton>
       </div>
+      <RecallLine
+        onCheck={(id) => {
+          editor.select(id as TLShapeId);
+          startCheck(editor, setNotice, keepInView);
+        }}
+      />
       {notice && (
         <div
           className="toast"
@@ -1788,6 +1795,7 @@ function CanvasLayers() {
       <ScratchbookLayer />
       <AskLayer />
       <DataLayer />
+      <CoverLayer />
     </>
   );
 }

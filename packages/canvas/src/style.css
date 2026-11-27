@@ -2082,3 +2082,69 @@ kbd {
   white-space: nowrap;
   border: 0;
 }
+
+/* P5: a settled thought face down while the person explains it from memory (Check me). */
+.check-cover {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1.5px dashed #e3a9c1;
+  background: repeating-linear-gradient(135deg, #fbeef3 0 10px, #f7e4ec 10px 20px);
+  font: 500 13px Inter, system-ui, sans-serif;
+  color: #a50f4d;
+  text-align: center;
+  padding: 8px;
+  overflow: hidden;
+}
+
+/* P5: spaced return. One quiet line at the bottom edge, never a modal. */
+.recall-line {
+  position: absolute;
+  left: 132px;
+  bottom: 24px;
+  max-width: min(620px, calc(100vw - 560px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid #e9c3d3;
+  border-radius: 999px;
+  background: #fff8fb;
+  font: 400 12.5px/1.3 Inter, system-ui, sans-serif;
+  color: #5d5a68;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+.recall-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recall-line button {
+  flex: none;
+  border: 1px solid #e3b9cc;
+  background: #fff;
+  color: #a50f4d;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: 500 11.5px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+.recall-line button.recall-later {
+  border-color: #dedfe4;
+  color: #6b675e;
+}
+@media (max-width: 760px) {
+  .recall-line {
+    left: 16px;
+    right: 16px;
+    bottom: 76px;
+    max-width: none;
+  }
+}
