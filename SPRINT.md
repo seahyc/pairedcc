@@ -711,6 +711,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest | 2026-11-27T00:45Z
 107. Browser checks that still open the question box (build-A) | claude/sprint-checks-no-box | 2026-11-27T00:52Z
 110–112. Regressions found by the converted checks (build-A) | claude/sprint-ask-leftovers | 2026-11-27T01:15Z
+105 (e). Smaller tool results (build-A) | claude/sprint-small-results | 2026-11-27T01:13Z
 
 ## Done
 - P1 (part 1). A finished thread folds to one line (build-A): PR #144, merged (folds once the person moves on; the line unfolds for good, Fold folds again; read/overview `folded: true`; verify-fold 19/19).
