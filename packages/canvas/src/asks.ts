@@ -9,6 +9,7 @@ import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
 import { hiddenFromAgents } from "./fold";
+import { unclipFromFrame } from "./frame-edge";
 import { clusterAround, relation } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
@@ -91,6 +92,9 @@ export function askDirect(editor: Editor, hostId: string, otherIds: string[] = [
   const skip = new Set<string>([host.id, ...others.map((s) => s.id), ...kept.map((s) => s.id)]);
   const targets = [...new Map([...kept, ...others, ...beside(editor, host, skip)].map((t) => [t.id, t])).values()];
   const around = frameOf(editor, host);
+  // A question card across the frame's edge would be cut off by it; it is lifted onto the page
+  // where it is (the frame it sat in is still given as its context).
+  unclipFromFrame(editor, host.id);
   const frame = around && keepForAgent([around], targets.map((t) => t.id)).kept.length ? around : undefined;
   const ask: AskMeta = {
     state: "waiting",

@@ -10,6 +10,7 @@ import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
 import { isLeftOut, isPinned, leftOutLabel, pinnedLabel, toggleLeftOut, togglePinned } from "./leave-out";
 import { toggleSettled } from "./settled";
+import { unclipFromFrame } from "./frame-edge";
 import { foldLine, isFoldedNow, threadFinished, toggleFold } from "./fold";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
@@ -291,6 +292,8 @@ export function AutoAsk({ keepInView }: { keepInView: (box: Box) => void }) {
       editor.run(() => editor.deleteShapes([shape.id]), { history: "ignore" });
       return;
     }
+    // The person finished writing: a card of theirs across a frame's edge would be cut off.
+    if (writtenByPerson(shape)) unclipFromFrame(editor, shape.id);
     if (shouldSend(shape)) sendCard(editor, shape.id, [], keepInView);
   }, [editing, editor, keepInView]);
   return null;
