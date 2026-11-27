@@ -738,6 +738,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 130. **Friction from #172's focused attempt on tasks 30 and 31 (reported by the agent in `eval/agent-runs/30-31-folded-recall.json`, not yet reproduced).** (a) `canvas_overview` says a thread is `folded` but not which answer the person picked, though the folded line on the board shows it, so an agent needs a `read` to build on the pick; (b) an ask's targets and the overview's entries carry no review schedule for a settled thought, so the agent read the whole page to compare them, and `meta.recall.due` is epoch milliseconds where an ISO date is easier; (c) AGENT_API does not say whether a settled thought without `recall` ever comes back (it does not: only after Check me). Done when each is reproduced first, with a failing-first test, and the overview gives the pick and the next review date without a full read.
 
 ## Claims
+127. Dimension lines line up across option cards (build-A) | claude/sprint-dimension-align-2 | 2026-11-27T14:27Z
+129. An ask's group and the person's note width (build-A) | claude/sprint-note-width | 2026-11-27T14:27Z
 
 ## Done
 - 128. Bot review findings on #161 and #164 (build-B): PR #171 (all six reproduced: card room checked only against objects, the first suggestion alone when two do not fit, a touch is a tap only when it lifts in place, Unicode digits and word boundaries, curly let’s; 4 failing-first unit tests; verify-suggest-phone 13/16 → 16/16).
