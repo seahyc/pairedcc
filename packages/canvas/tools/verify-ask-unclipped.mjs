@@ -6,7 +6,7 @@
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-ask-unclipped.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 (`pnpm dev:canvas`) with an empty board store (PAIRED_BOARDS_DIR
+// Needs the dev server on :5183 (`pnpm dev:canvas`; set CANVAS_BASE for another) with an empty board store (PAIRED_BOARDS_DIR
 // set to a new folder).
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
@@ -14,7 +14,7 @@ const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-ask-unclipped.mjs <screenshot dir>');
 mkdirSync(out, { recursive: true });
-const BASE = 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 
