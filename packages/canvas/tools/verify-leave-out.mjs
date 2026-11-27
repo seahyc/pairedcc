@@ -1,14 +1,15 @@
 // Browser check for item 67: the person chooses what an ask leaves out (?prototype=context).
-// Three cards sit in a frame. The person leaves one out with L, asks about another, and the
-// agent's view of that ask (the `asks` operation) must hold the frame's other card but not the
-// left-out one, and say one was left out; the board shows it as left out and the ask's line says
-// "1 left out". Selecting the left-out card and asking still gives it (choosing it is sharing it).
+// Three cards sit in a frame. The person leaves one out with L and asks another (the card is the
+// question, sent as it stands); the agent's view of that ask (the `asks` operation) must hold
+// the frame's other card but not the left-out one, and say one was left out; the board shows it
+// as left out and the ask's line says "1 left out". Selecting the left-out card with a question
+// card and asking still gives it (choosing it is sharing it).
 // "Bring back" on the bar undoes the choice, and one undo takes a leave-out back. A tab without
 // the flag shows no Leave out button and L does nothing.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-leave-out.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 (`pnpm dev:canvas`), with an empty board store (for example
+// Needs the dev server on :5183 (`pnpm dev:canvas`; CANVAS_BASE overrides the origin), with an empty board store (for example
 // PAIRED_BOARDS_DIR set to a new folder), so earlier runs' cards are not where the frame goes. Playwright is not a dependency of this
 // repository; it is loaded from the directory you run this in.
 import { createRequire } from 'node:module';
@@ -18,7 +19,7 @@ import { join } from 'node:path';
 const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-leave-out.mjs <screenshot dir>');
-const BASE = 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 const browser = await chromium.launch();
@@ -50,12 +51,23 @@ async function command(op, input) {
 
 const select = (p, ids) => p.evaluate((ids) => window.paired.select(ids), ids).then(() => p.waitForTimeout(200));
 const meta = (p, id) => p.evaluate((id) => window.__pairedEditor.getShape(id)?.meta ?? null, id);
+// The card is the question; there is no question box. A card the person wrote is sent as it
+// stands with Ask (Ctrl/⌘+Enter, or the bar's first button).
+async function send(p, id) {
+  await select(p, [id]);
+  await p.locator('.selection-bar button.primary').click();
+  await p.waitForTimeout(600);
+  return (await command('asks', {})).asks.find((a) => a.id === id);
+}
+// Asking about something the person did not write (a frame) opens a pink card beside it in
+// typing mode: the question is typed there and sent when they finish writing (Escape).
 async function ask(p, ids, question) {
   await select(p, ids);
   await p.locator('.selection-bar button.primary').click();
-  await p.locator('.selection-bar.asking input').fill(question);
-  await p.keyboard.press('Enter');
-  await p.waitForTimeout(400);
+  await p.waitForFunction(() => Boolean(window.__pairedEditor.getEditingShapeId()), null, { timeout: 5000 });
+  await p.keyboard.type(question, { delay: 0 });
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(600);
   return (await command('asks', {})).asks.find((a) => a.question === question);
 }
 
@@ -79,7 +91,9 @@ await select(p, []);
 await p.waitForTimeout(200);
 check('the board shows it as left out', await p.locator('.scratch-left-out', { hasText: 'left out of asks' }).count() === 1);
 
-const first = await ask(p, [seat], 'What is missing here?');
+// The person asks another of the cards: that card is the question.
+const first = await send(p, seat);
+check('the card is sent as the ask', first?.question === 'Charge per seat', first?.question);
 const frameTexts = first?.frame?.objects?.map((o) => o.text) ?? [];
 console.log(JSON.stringify({ targets: first?.targets?.map((t) => t.text), frame: first?.frame, history: first?.history, leftOut: first?.leftOut }, null, 2));
 check('the frame still gives its other card', frameTexts.includes('Usage based, per post'), frameTexts.join(' | '));
@@ -97,7 +111,18 @@ const aboutFrame = await ask(p, [frameId], 'What does this group add up to?');
 const held = aboutFrame?.targets?.[0]?.inside?.map((o) => o.text) ?? [];
 check('an ask about the frame lists what it holds, without the left-out card', held.includes('Usage based, per post') && !JSON.stringify(aboutFrame ?? {}).includes('not sure I trust') && aboutFrame?.leftOut === 1, held.join(' | '));
 
-const direct = await ask(p, [aside], 'Is this worry fair?');
+// The person writes a question card of their own, away from the frame, selects it with the
+// left-out card and asks: the question card is sent, and the left-out card it was selected with
+// is still given as context (choosing it is sharing it).
+const worry = await p.evaluate(() => window.paired.create({ kind: 'note', x: 120, y: 1100, width: 240, text: 'Is this worry fair?' })).then((r) => (typeof r === 'string' ? r : r.id));
+// Selected in that order, as a click on the question card and a Shift+click on the left-out one
+// would (window.paired.select orders by the page, which would put the left-out card first).
+await p.evaluate(([a, b]) => { window.__pairedEditor.setCurrentTool('select'); window.__pairedEditor.select(a, b); }, [worry, aside]);
+await p.waitForTimeout(200);
+await p.locator('.selection-bar button.primary').click();
+await p.waitForTimeout(600);
+const directSent = (await command('asks', {})).asks.find((a) => a.id === worry);
+const direct = directSent?.question === 'Is this worry fair?' ? directSent : undefined;
 check('an object the person selects is still given', direct?.targets?.[0]?.text?.includes('not sure I trust'), direct?.targets?.[0]?.text);
 
 await select(p, [aside]);
@@ -110,8 +135,11 @@ await p.waitForTimeout(150);
 await p.keyboard.press('Control+z');
 await p.waitForTimeout(200);
 check('one undo takes a leave-out back', (await meta(p, aside))?.leftOut === undefined);
-const again = await ask(p, [seat], 'And now?');
-check('brought back, it is given again', JSON.stringify(again?.frame ?? {}).includes('not sure I trust') && again?.leftOut === undefined);
+// The first ask is answered, and the person asks that card again: it is sent afresh.
+await command('answer', { id: first.id, text: 'Nothing about usage yet.' });
+await p.waitForTimeout(400);
+const again = await send(p, seat);
+check('brought back, it is given again', again?.attempt > first.attempt && JSON.stringify(again?.frame ?? {}).includes('not sure I trust') && again?.leftOut === undefined, `attempt ${again?.attempt}, state ${again?.state}`);
 check('no page errors (flagged tab)', errors.length === 0, errors.join(' | '));
 await ctx.close();
 
