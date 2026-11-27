@@ -1,19 +1,20 @@
 // Browser check for item 81: an agent's note never lands on top of something. The person writes a
-// card and asks about it (the ask lands beside it), writes a second card just under the first, and
-// an agent annotates the first card without choosing a spot. The note must cover nothing, stay in
-// the card's column below it, and an explicit x/y must still be honoured.
+// card and asks about it (the card is the question: Ask sends the card itself, which becomes the
+// ask), writes a second card just under the first, and an agent annotates the first card without
+// choosing a spot. The note must cover nothing, stay beside the card (item 118 (c)), and an
+// explicit x/y must still be honoured.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-annotate-clear.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 (`pnpm dev:canvas`) with an empty board store (PAIRED_BOARDS_DIR
-// set to a new folder).
+// Needs the dev server on :5183 (`pnpm dev:canvas`, or CANVAS_BASE) with an empty board store
+// (PAIRED_BOARDS_DIR set to a new folder).
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-annotate-clear.mjs <screenshot dir>');
 mkdirSync(out, { recursive: true });
-const BASE = 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 
@@ -43,9 +44,9 @@ const fb = await bounds(first);
 await p.evaluate((id) => window.paired.select([id]), first);
 await p.waitForTimeout(250);
 await p.locator('.selection-bar button.primary').click();
-await p.locator('.selection-bar.asking input').fill('What is missing here?');
-await p.keyboard.press('Enter');
 await p.waitForTimeout(500);
+const asked = await p.evaluate((id) => window.paired.read().objects.find((o) => o.id === id)?.meta.ask?.state ?? null, first);
+check('Ask sends the person\'s card as the ask', Boolean(asked), String(asked));
 await make(120, fb.y + fb.h + 60, 'A second thought, right under the first');
 await p.waitForTimeout(300);
 
@@ -55,7 +56,12 @@ const nb = await bounds(noteId);
 const others = await p.evaluate((note) => window.paired.read().objects.filter((o) => o.id !== note && o.type !== 'arrow' && o.type !== 'frame' && o.bounds).map((o) => ({ id: o.id, text: (o.text ?? '').slice(0, 30), ...o.bounds })), noteId);
 const covered = others.filter((o) => overlaps(nb, o));
 check('the agent note covers nothing', covered.length === 0, covered.map((o) => o.text || o.id).join(' | '));
-check('it stays in the card\'s column, below it', Math.abs(nb.x - fb.x) < 1 && nb.y > fb.y + fb.h, JSON.stringify(nb));
+// Item 118 (c) changed where a note goes when the space under its card is taken: under the card
+// while that is within 200 px of it, otherwise the nearest clear spot beside it (here, level with
+// the card on its right, rather than below the second thought, 480 px down and off screen).
+const gapTo = (a, b) => Math.hypot(Math.max(0, b.x - (a.x + a.w), a.x - (b.x + b.w)), Math.max(0, b.y - (a.y + a.h), a.y - (b.y + b.h)));
+const column = Math.abs(nb.x - fb.x) < 1 && nb.y > fb.y + fb.h, level = nb.y < fb.y + fb.h && nb.y + nb.h > fb.y;
+check('it stays beside its card: in its column below it, or level with it', (column || level) && gapTo(nb, fb) <= 200, `${JSON.stringify(nb)}, ${Math.round(gapTo(nb, fb))} px away`);
 
 const placed = await command('annotate', { targetId: first, text: 'Placed by hand', x: 900, y: 700 });
 const pb = await bounds(placed.id ?? placed.annotation?.id);

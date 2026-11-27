@@ -94,6 +94,28 @@ export const starters = ["What's missing?", "Give me alternatives", "Poke holes 
 /** An imported record is an argument to judge, so its first starter asks exactly that. */
 export const recordStarters = ["Is this point valid?", "Is the defence enough?", "Poke holes in this"];
 
+/** Abstract nouns: a short thought made of them is a claim that needs an example. */
+const ABSTRACT = /\b(\w+(ity|ness|ism|ance|ence)|quality|quantity|value|strategy|vision|culture|growth|freedom|focus)\b/i;
+
+/**
+ * What one thought's own words invite, if anything (principles row 7, recognising beats
+ * recalling; and row 5, concrete before abstract): a list, which matters most; a number, where it
+ * comes from; a reason, the strongest objection; a proposal, what would make it wrong; a short
+ * abstract claim, a concrete example. English cue words only: other text keeps the kind's starters.
+ */
+export function textCue(text: string): string | undefined {
+  const t = text.trim();
+  if (!t) return undefined;
+  const lines = t.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length >= 2) return "Which of these matters most?";
+  if (/\d/.test(t)) return "Where does this number come from?";
+  if (/\b(because|since|so|therefore|thus|hence)\b/i.test(t)) return "What's the strongest objection?";
+  if (/\b(should|must|ought|need to|needs to|let's|lets)\b/i.test(t)) return "What would make this wrong?";
+  const words = t.split(/\s+/).length;
+  if (words <= 6 && ABSTRACT.test(t)) return "Give me a concrete example";
+  return undefined;
+}
+
 /**
  * Starters chosen from what is selected, so the person recognises a next step rather than
  * recalling one. Several objects invite comparison on stated dimensions, not a verdict.
@@ -109,6 +131,9 @@ export function startersFor(selection: readonly { type: string; text: string }[]
   if (only.type === "chart") return ["What does this show?", "What stands out here?", "What could explain this?"];
   if (only.type === "dataset") return ["What is in this data?", "What would be worth charting?", "What looks odd here?"];
   if (/\?\s*$/.test(only.text.trim())) return ["Answer this", "What would change the answer?", "Give me alternatives"];
+  // One thought: what its words invite comes first, then the usual next step.
+  const cue = textCue(only.text);
+  if (cue) return [cue, starters[0], starters[1]];
   return starters;
 }
 /** How long an agent that acted on the tab counts as still connected. */
