@@ -57,11 +57,10 @@ check('then it goes', await toast.count() === 0);
 const card = await p.evaluate(() => window.paired.create({ kind: 'note', x: 120, y: 520, width: 300, text: 'Is the team plan priced per seat?' })).then((r) => (typeof r === 'string' ? r : r.id));
 await p.evaluate((id) => window.paired.select([id]), card);
 await p.waitForTimeout(200);
+// The card is the question (there is no question box): Ask on the person's own card sends it.
 await p.locator('.selection-bar button.primary').click();
-await p.locator('.selection-bar.asking input').fill('What if it were flat?');
-await p.keyboard.press('Enter');
 await p.waitForTimeout(400);
-const askId = (await command('asks', {})).asks.find((a) => a.question === 'What if it were flat?').id;
+const askId = (await command('asks', {})).asks.find((a) => a.question === 'Is the team plan priced per seat?').id;
 await command('page', { name: 'Elsewhere' });
 await p.waitForTimeout(300);
 await p.mouse.move(700, 300);

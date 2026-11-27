@@ -6,6 +6,43 @@ export function capWords(text: string, max: number) {
   return words.length <= max ? text.trim() : `${words.slice(0, max).join(" ")}…`;
 }
 
+/**
+ * The text of each answer card. Options are lettered; with dimensions, each option lists the
+ * same dimensions in the same order under its headline (finding 6: compare down a line).
+ */
+export function answerTexts(input: { text?: string; alternatives?: string[]; dimensions?: string[]; values?: string[][] }) {
+  if (!input.alternatives) return [capWords(input.text ?? "", 90)];
+  return input.alternatives.map((text, i) => {
+    // With dimensions each card is one line per field, so a field's own line breaks become spaces.
+    const one = (t: string) => (input.dimensions ? t.replace(/\s+/g, " ").trim() : t);
+    const head = `${"ABCD"[i]} · ${capWords(one(text), input.dimensions ? 30 : 60)}`;
+    const lines = (input.dimensions ?? []).map((d, j) => `${one(d)}: ${capWords(one(input.values?.[i]?.[j] ?? ""), 12)}`);
+    return [head, ...lines].join("\n");
+  });
+}
+
+/** An option card's rich text: its headline, then one paragraph per dimension with the name in bold. */
+export function optionRichText(text: string, dimensions: string[]) {
+  const [head, ...lines] = text.split("\n");
+  // An empty line is an empty paragraph: the editor refuses a text node with no text.
+  const para = (content: { type: string; text: string; marks?: unknown[] }[]) => {
+    const filled = content.filter((t) => t.text.length > 0);
+    return filled.length ? { type: "paragraph", content: filled } : { type: "paragraph" };
+  };
+  return {
+    type: "doc",
+    content: [
+      para([{ type: "text", text: head }]),
+      ...lines.map((line, j) => {
+        const label = `${dimensions[j]}:`;
+        return line.startsWith(label)
+          ? para([{ type: "text", text: label, marks: [{ type: "bold" }] }, ...(line.length > label.length ? [{ type: "text", text: line.slice(label.length) }] : [])])
+          : para([{ type: "text", text: line }]);
+      }),
+    ],
+  };
+}
+
 export const ANSWER_W = 340;
 export const OPTION_W = 250;
 export const OPTION_GAP = 20;
@@ -57,6 +94,28 @@ export const starters = ["What's missing?", "Give me alternatives", "Poke holes 
 /** An imported record is an argument to judge, so its first starter asks exactly that. */
 export const recordStarters = ["Is this point valid?", "Is the defence enough?", "Poke holes in this"];
 
+/** Abstract nouns: a short thought made of them is a claim that needs an example. */
+const ABSTRACT = /\b(\w+(ity|ness|ism|ance|ence)|quality|quantity|value|strategy|vision|culture|growth|freedom|focus)\b/i;
+
+/**
+ * What one thought's own words invite, if anything (principles row 7, recognising beats
+ * recalling; and row 5, concrete before abstract): a list, which matters most; a number, where it
+ * comes from; a reason, the strongest objection; a proposal, what would make it wrong; a short
+ * abstract claim, a concrete example. English cue words only: other text keeps the kind's starters.
+ */
+export function textCue(text: string): string | undefined {
+  const t = text.trim();
+  if (!t) return undefined;
+  const lines = t.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length >= 2) return "Which of these matters most?";
+  if (/\d/.test(t)) return "Where does this number come from?";
+  if (/\b(because|since|so|therefore|thus|hence)\b/i.test(t)) return "What's the strongest objection?";
+  if (/\b(should|must|ought|need to|needs to|let's|lets)\b/i.test(t)) return "What would make this wrong?";
+  const words = t.split(/\s+/).length;
+  if (words <= 6 && ABSTRACT.test(t)) return "Give me a concrete example";
+  return undefined;
+}
+
 /**
  * Starters chosen from what is selected, so the person recognises a next step rather than
  * recalling one. Several objects invite comparison on stated dimensions, not a verdict.
@@ -72,6 +131,9 @@ export function startersFor(selection: readonly { type: string; text: string }[]
   if (only.type === "chart") return ["What does this show?", "What stands out here?", "What could explain this?"];
   if (only.type === "dataset") return ["What is in this data?", "What would be worth charting?", "What looks odd here?"];
   if (/\?\s*$/.test(only.text.trim())) return ["Answer this", "What would change the answer?", "Give me alternatives"];
+  // One thought: what its words invite comes first, then the usual next step.
+  const cue = textCue(only.text);
+  if (cue) return [cue, starters[0], starters[1]];
   return starters;
 }
 /** How long an agent that acted on the tab counts as still connected. */

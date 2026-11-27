@@ -478,7 +478,7 @@
     },
     {
       "name": "canvas_overview",
-      "description": "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
+      "description": "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count, the person's mark (picked/rejected), card style, settled, a chart's one-line summary and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
       "op": "overview",
       "output": "json",
       "inputSchema": {
@@ -940,7 +940,7 @@
     },
     {
       "name": "canvas_annotate",
-      "description": "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar.",
+      "description": "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar. Without x/y it goes under the object, or beside it when that space is taken, never covering anything, on a card as wide as the note needs.",
       "op": "annotate",
       "output": "json",
       "inputSchema": {
@@ -1122,7 +1122,7 @@
     },
     {
       "name": "canvas_ask_status",
-      "description": "Tell the human what is happening with an ask: `working` with a short note when you pick it up ('reading 2 cards'), `failed` with a plain reason if you cannot answer (they get a Retry button), or `waiting` to hand it back. Shown on the ask itself.",
+      "description": "Tell the human what is happening with an ask: `working` with a short note when you pick it up ('reading 2 cards'), `failed` with a plain reason if you cannot answer (they get a Retry button), or `waiting` to hand it back. Shown on the ask itself. Optional: if you can answer at once, call canvas_answer straight away.",
       "op": "ask_status",
       "output": "json",
       "inputSchema": {
@@ -1167,7 +1167,7 @@
     },
     {
       "name": "canvas_answer",
-      "description": "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X). Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved.",
+      "description": "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X); with alternatives, name what they differ on in `dimensions` and give each option a short value on each in `values`, so every card lists them in the same order. Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved. In canvas_feedback the answer is listed as the ask's reply and the item is resolved (left open for a clarifying question).",
       "op": "answer",
       "output": "json",
       "inputSchema": {
@@ -1210,6 +1210,31 @@
             "description": "What you read to answer, shown on the ask.",
             "type": "string",
             "maxLength": 200
+          },
+          "dimensions": {
+            "description": "With alternatives: up to 4 short names of what the options differ on (for example \"Cost to us\", \"Risk\"). Each option card then lists them in the same order, so the person compares down a line.",
+            "minItems": 1,
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            }
+          },
+          "values": {
+            "description": "With dimensions: one row per alternative, in the same order, each with one short value per dimension.",
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "maxItems": 4,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            }
           }
         },
         "required": [
@@ -1433,7 +1458,7 @@
     },
     {
       "name": "canvas_runs",
-      "description": "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, the pages each touched, and the object IDs each one created, updated and removed (at most 10 per list, with createdCount/updatedCount/removedCount when there are more). Pass page: \"current\" for only the open page, or runId for one run with every ID. Use a runId with canvas_undo_run.",
+      "description": "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, the pages each touched, and the object IDs each one created, updated and removed (at most 10 per list, with createdCount/updatedCount/removedCount when there are more), with names: a short name for each listed object. Pass page: \"current\" for only the open page, or runId for one run with every ID. Use a runId with canvas_undo_run.",
       "op": "runs",
       "output": "json",
       "inputSchema": {

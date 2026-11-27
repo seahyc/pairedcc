@@ -4,12 +4,14 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
 import { hiddenFromAgents } from "./fold";
+import { unclipFromFrame } from "./frame-edge";
 import { clusterAround, relation } from "./arrangement";
+import { groupName } from "./overview";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -40,7 +42,13 @@ export function askOf(shape: TLShape | undefined): AskMeta | undefined {
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
-const frameOf = (editor: Editor, shape: TLShape) => editor.findShapeAncestor(shape, (s) => s.type === "frame");
+const frameOf = (editor: Editor, shape: TLShape) => {
+  const found = editor.findShapeAncestor(shape, (s) => s.type === "frame");
+  if (found) return found;
+  // A card lifted out of its frame so the frame would not cut it off (item 113) still sits in it.
+  const within = typeof shape.meta.within === "string" ? editor.getShape(shape.meta.within as TLShapeId) : undefined;
+  return within?.type === "frame" ? within : undefined;
+};
 const targetsOf = (shape: TLShape) =>
   Array.isArray(shape.meta.targetIds) ? shape.meta.targetIds.filter((id): id is string => typeof id === "string") : [];
 
@@ -91,6 +99,9 @@ export function askDirect(editor: Editor, hostId: string, otherIds: string[] = [
   const skip = new Set<string>([host.id, ...others.map((s) => s.id), ...kept.map((s) => s.id)]);
   const targets = [...new Map([...kept, ...others, ...beside(editor, host, skip)].map((t) => [t.id, t])).values()];
   const around = frameOf(editor, host);
+  // A question card across the frame's edge would be cut off by it; it is lifted onto the page
+  // where it is (the frame it sat in is still given as its context).
+  unclipFromFrame(editor, host.id);
   const frame = around && keepForAgent([around], targets.map((t) => t.id)).kept.length ? around : undefined;
   const ask: AskMeta = {
     state: "waiting",
@@ -137,7 +148,7 @@ export function retryAsk(editor: Editor, id: string) {
   const shape = editor.getShape(id as TLShapeId), ask = askOf(shape);
   if (!shape || !ask) throw new Error("Not an ask");
   setAsk(editor, shape, { ...ask, state: "waiting", attempt: ask.attempt + 1, askedAt: Date.now(), startedAt: undefined, error: undefined, note: undefined });
-  if (shape.meta.role === "annotation" && shape.meta.status === "resolved") resolveMark(editor, editor.getShape(shape.id)!, "open", HUMAN);
+  if (shape.meta.status === "resolved") resolveMark(editor, editor.getShape(shape.id)!, "open", HUMAN);
 }
 
 type Given = { id: string; type: string; author: string; text: string; mark?: AskMark; settled?: true; inside?: Given[]; insideMore?: number };
@@ -234,7 +245,10 @@ function attachedTo(editor: Editor, frame: TLShape) {
   // a comment about a left-out card is as private as the card.
   const leftOut = subtree.filter((id) => id !== frame.id && isLeftOut(editor.getShape(id as TLShapeId)?.meta));
   const blocked = new Set<string>(leftOut.length ? (editor.getShapeAndDescendantIds(leftOut as TLShapeId[]) as Set<string>) : []);
-  return followers(subtree.filter((id) => !blocked.has(id)), page, new Set())
+  // A card lifted out of the frame (item 113) follows it by `meta.within`; one the person left out
+  // still blocks what hangs off it, wherever it sits.
+  const leftOutAnywhere = new Set(page.filter((s) => isLeftOut(s.meta)).map((s) => s.id as string));
+  return followers(subtree.filter((id) => !blocked.has(id)), page, leftOutAnywhere)
     .flatMap((id) => editor.getShape(id as TLShapeId) ?? [])
     .filter((s) => !within.has(s.id) && !askOf(s) && !hiddenFromAgents(editor, s) && textOf(s));
 }
@@ -315,7 +329,12 @@ function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep:
   // A left-out member is withheld (and counted as such), like anything else around the ask.
   const kept = new Set<string>(keep(found.members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? [])).map((s) => s.id));
   const members = found.members.filter((m) => kept.has(m.id)).map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
-  return { members, more: found.more };
+  // The group's name, as the overview (O) shows it, from everything in it but the ask's own card
+  // (an ask is never the name of what it asks about) and what the person left out.
+  const whole = clusterAround(placed, host.id, new Set(), Infinity).members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? []);
+  // Filtered without counting: naming the group must not change how many objects the ask says it withheld.
+  const name = whole.length ? groupName(editor, keepForAgent(whole, []).kept) : undefined;
+  return { members, more: found.more, ...(name ? { name } : {}) };
 }
 
 /** Where a target sits relative to the ask's card, in words, when both are on the board and apart from each other. */
@@ -389,6 +408,8 @@ export function describeAsk(editor: Editor, shape: TLShape) {
         }
       : {}),
     ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
+    // What the group the card sits in is called, even when everything in it is already a target.
+    ...(group.name ? { group: group.name } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
     ...(withheld.size ? { leftOut: withheld.size } : {}),
     ...(pins.pinned.length ? { pinned: pins.pinned.map((s) => given(editor, s, 400)), ...(pins.more ? { pinnedMore: pins.more } : {}) } : {}),
@@ -468,9 +489,7 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     .filter((s) => s.meta.replyTo === shape.id)
     .flatMap((s) => editor.getShapePageBounds(s) ?? []);
   const bottom = Math.max(anchor.maxY, ...earlier.map((b) => b.maxY));
-  const texts = input.alternatives
-    ? input.alternatives.map((text, i) => `${"ABCD"[i]} · ${capWords(text, 60)}`)
-    : [capWords(input.text ?? "", 90)];
+  const texts = answerTexts(input);
   // The room the person's window has beside the canvas chrome, so no answer lands off screen.
   const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
   const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
@@ -510,6 +529,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         answeredAt,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
       }, pageId);
+      if (input.alternatives && input.dimensions) {
+        const card = editor.getShape(id as TLShapeId)!;
+        editor.updateShape({ id: card.id, type: card.type, props: { richText: optionRichText(text, input.dimensions) } } as never);
+      }
       rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
       return id;
     });
@@ -536,7 +559,9 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     }
     setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt, read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.
-    if (!input.question && shape.meta.role === "annotation" && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
+    // An answer closes the queue row (a comment's, or the person's own card's); a clarifying
+    // question hands the turn back, so it stays open.
+    if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
     return made;
   });
   return { ask: describeAsk(editor, editor.getShape(shape.id)!), answers: ids.map((id) => describeObject(editor, id, true)) };
