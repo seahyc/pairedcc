@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-11-27T02:07:45.744Z",
+  "agent": "a fresh general-purpose subagent given only AGENT_API.md and eval/mcp-call.ts",
+  "results": [
+    {
+      "task": "29-compare-on-dimensions",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 62
+    }
+  ],
+  "note": "A focused attempt on task 29 alone (item 123), kept apart from latest.json so the scorecard's full attempt is not replaced by a one-task run. The next full attempt (tsx eval/agent-tasks.ts attempt) counts task 29.",
+  "friction": [
+    "The ask gave only the card right beside the question (the per-seat idea) as its target; the person's other idea, 40 px to the right of that card, was not in `cluster`, so the agent found it by a text search. Filed as item 125.",
+    "Option card length: the docs give cut-offs (30 words a headline, 12 a value) but no target length.",
+    "No place for a recommendation among alternatives; the agent put 'test this first' in a headline.",
+    "Whether ask_status working is needed before answer (documented as optional by #163, not merged here)."
+  ]
+}
