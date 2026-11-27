@@ -12,6 +12,17 @@ import { TOUCH } from "./keys";
 const CHROME = ".topbar, .tool-strip, .bottom-left, .zoom-controls, .left-panel, .right-panel, .toast";
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
+
+/** A card's text with its line breaks kept (paragraphs, list items, Shift+Enter), so a list reads as one. */
+export function textLines(node: unknown): string {
+  if (typeof node !== "object" || node === null) return "";
+  const { type, text, content } = node as { type?: string; text?: unknown; content?: unknown };
+  if (type === "hardBreak") return "\n";
+  if (typeof text === "string") return text;
+  if (!Array.isArray(content)) return "";
+  const inline = type === "paragraph" || type === "heading";
+  return content.map(textLines).join(inline ? "" : "\n");
+}
 /** Room for the card a suggestion becomes, so clicking one never lands it on something. */
 const CARD_ROOM = { w: HUMAN_CARD_W, h: 72 };
 /** An ask's state line is drawn under it; it counts as part of the ask. */
@@ -20,7 +31,7 @@ const STATUS_ROOM = 36;
 function describe(s: TLShape): Selected {
   return {
     type: s.type,
-    text: textOf(s),
+    text: "richText" in s.props ? textLines(s.props.richText).trim() : "",
     byPerson: writtenByPerson(s),
     untouchedSeed: s.meta.seed === true && typeof s.meta.updatedAt !== "number",
     conversation: Boolean(askOf(s)) || s.meta.role === "annotation" || s.meta.role === "caption" || Boolean(s.meta.replyTo) || s.type === "prompt",

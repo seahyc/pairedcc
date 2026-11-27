@@ -2,9 +2,9 @@
 // must move only when someone changes an object, not when the canvas re-derives a value.
 
 
-/** Fields derived by the canvas rather than set by anyone (revision counter, text-edit timestamp, auto-sized card or table height). */
+/** Fields derived by the canvas rather than set by anyone (revision counter, text-edit timestamp, the frame a lifted card goes with, auto-sized card or table height). */
 export function isDerivedField(type: unknown, path: string) {
-  return path === "meta.revision" || path === "meta.updatedAt" || ((type === "card" || type === "datatable") && path === "props.h");
+  return path === "meta.revision" || path === "meta.updatedAt" || path === "meta.within" || ((type === "card" || type === "datatable") && path === "props.h");
 }
 
 /** True when two versions of a record differ only in derived fields. */
