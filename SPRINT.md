@@ -140,7 +140,7 @@ before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
   the board's clusters as labelled boxes, each with open/settled counts; click to fly there. Done
   when settled is saved, read by agents, and the overview works on a 1k-object board within the
   performance budget.
-- **P4. Suggestions on the board, not in a box (finding 7).** When the person pauses on a
+- **P4. (PR #156 open, awaiting review.) Suggestions on the board, not in a box (finding 7).** When the person pauses on a
   selection of their own writing for a moment, at most two faint, handwritten-looking suggestions
   appear under it ("what's missing?", "say it as a question?"), chosen by what is selected (record,
   frame, several objects, chart). Clicking one writes it as the person's own pink card under the
@@ -713,11 +713,11 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 115. **verify-all knows every browser check.** On `claude/sprint-int` at a5d738d, `tools/verify-all.mjs` reports seven checks as UNKNOWN and does not run them (announce-fixes, big-edit, name-follows, notice-hold, p2-cluster, runs-page, settled), so their regressions slip through merges as item 83 meant to prevent. Done when verify-all runs each (or lists it as left out with a reason, for a check that reports timings without a verdict), every one it runs passes on the integration branch, and the run reports no unknown checks.
 
 ## Claims
-P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest | 2026-11-27T00:45Z
 114. Agent-usability tasks for P2 and 105 (c) (build-A) | claude/sprint-agent-tasks-4 | 2026-11-27T01:21Z
 115. verify-all knows every browser check (build-A) | claude/sprint-verify-all-known | 2026-11-27T01:30Z
 
 ## Done
+- P4. Suggestions on the board, not in a box (build-B): PR #156 (a pause on the person's own selection writes at most two faint suggestions from `startersFor` under it, beside it when under is taken, or none; never on agent work, asks or while typing; any action dismisses, once per selection; a click writes the person's card there and sends it, one undo; verify-p4-suggest 26/26, failing on int; 12 unit tests; first screen identical; scorecard unchanged).
 - P1 (part 2). Focus (F) on a frame or thread (build-A): PR #145, merged (one rectangle, the rest dimmed until Esc; F stays the Frame tool otherwise; verify-focus 13/13).
 - P1 (part 1). A finished thread folds to one line (build-A): PR #144, merged (folds once the person moves on; the line unfolds for good, Fold folds again; read/overview `folded: true`; verify-fold 19/19).
 - 105 (c). canvas_runs by page (build-B): PR #139 (pages on each run, page: "current"; live MCP check 1/3 → 3/3; manifest regenerated; workspace green with services).
@@ -811,6 +811,7 @@ P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest 
 - Feedback queue and usability heuristics pass (not a backlog item; maintainer branch `yc/heuristics-pass`): PR #7. Reviewed and merged 2026-11-26 as 6c68d68.
 
 ## Decisions needed
+- (build-B, P4) Suggestions go under the selection, or beside it on the right when under is taken, or are not shown at all, so they never cover anything (the brief says "under it"). Imported records count as the person's material (P4 names records); an agent's import does not. Once an action dismisses them they are not offered again until the selection changes, so ignoring them is enough. They are pointer-only: no new key (the brief allows one, not requires it), and any key, Tab included, dismisses them; ⌘↵ already asks from the keyboard. Alternative: a key that writes the first suggestion. After a click nothing stays selected, as after Ask on a card, so the bar does not cover the thought.
 - (build-B) Run lapse: line 1 read `STATE: PAUSE (quota reserve)` from 14:30 to 15:11Z and again from 15:15Z; build-B read it only at the start of its run (13:41Z) and kept working until it noticed at 15:24Z. Opened during the pause windows: #129, #131, #132, #135, #136, #137, #139, #140 (and #126, #128 just before 14:30, now merged). Each was checked and is ready for review, but the review lane may hold them until the sprint resumes. A duplicate of P3 part 1 (build-A's #138 was already done) was built locally and never pushed. Claims for P3 and item 107 are released: 107's partial edits to 14 checks are local only and unreviewed, so 107 is open again. From now on build-B re-reads line 1 before each claim and each push.
 - (build-A, P3 part 1) Settle has a button on the selection bar ("Settle S" / "Settled ✓ S") beside Pick and Cross out, shown only on a selection, rather than being key-only, so the mark can be recognised rather than recalled (finding 7). Settled is a separate flag from Pick/Cross out (a picked option can also be settled). Alternative: key-only, which keeps the bar at four buttons.
 - (build-A) Run lapse: the switch read `STATE: PAUSE (quota reserve)` from 14:30 to 15:11Z and build-A did not re-read line 1 during that window, so it kept working (review fixes on #133 and #127, #134, the P3 claim). Line 1 itself was never changed. From now on build-A re-reads line 1 before every claim and push.
@@ -1118,3 +1119,4 @@ P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest 
 | 2026-11-26T15:21Z | build-B | P2 part 2: relations on targets | #140 | Targets carry `relation`; prompt says it; verify-p2-cluster 9/10 → 10/10 (stacked on #135) |
 | 2026-11-26T15:32Z | build-B | Run end (pause noticed) | — | Stopped on STATE: PAUSE; released P3 (duplicate of #138, not pushed) and 107 claims; lapse recorded under Decisions needed |
 | 2026-11-27T01:19Z | build-A | 105 (e) Smaller tool results | #152 | read props drop richText (text stays; get keeps it): 40-note page 42,739 → 29,388 bytes; runs lists ≤10 ids per list with counts, runId gives one run in full (1,637 → 755 bytes); verify-small-results 3/6 → 6/6; 6 failing-first tests; manifest regenerated; scorecard unchanged except acceptance 9/10 = known 108 |
+| 2026-11-27T01:29Z | build-B | P4 Suggestions on the board | #156 | suggest.ts (12 tests on fixed layouts, startersFor reused), SuggestLayer; verify-p4-suggest fails on int, 26/26 here; verify-all: 17 failing checks identical before/after, 14 related pass after merging int; scorecard identical to int (10/10, 5/5, 26/26, 11/11, identical); first screen identical |
