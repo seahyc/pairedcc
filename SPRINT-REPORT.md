@@ -1,8 +1,50 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-26T13:50Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-27T01:40Z by the review lane. Branch: `claude/sprint-int`.
 
-## Read first
+## Read first (27 Nov, 01:40Z)
+- **Four of the five P-items are now live on paired.cc** (pushed to `claude/release` at 01:32Z as
+  `7013ae3`; the deploy status is read on the next run). Behind no flag, nothing on the first
+  screen changes (same PNG hash as before):
+  - **P1 Fold** (#144): once you pick an answer (or settle the question) and move on, the thread
+    folds to one line where the question was: the question, ✓ the pick, +N. Press it to unfold;
+    Fold on its state line folds it back. **This applies to existing boards too**: every picked
+    thread on a board folds the first time it loads.
+  - **P1 Focus** (#145): select a frame or one thread, press F: the rest dims until Esc. With
+    anything else selected, F is still the Frame tool (decision in `SPRINT.md`).
+  - **P3 The whole board** (#146): O (or Menu → The whole board) shows the page's groups as boxes
+    laid out as on the board, with open/settled counts; press one to fly there. **O is no longer
+    the Ellipse key**; the Ellipse is under More without a key.
+  - **P5 part 2** (#149): Check me (E) on a thought you settled covers it face down while you
+    explain it, then uncovers it to compare. It then comes back as one quiet line at the bottom
+    edge after 1, 3, 7 and 21 days (Later = tomorrow). Nothing appears unless you used it.
+  - P4 (suggestions under a selection) is still being built.
+- **Review fixes made inside PRs:** focus stayed armed after its frame/thread was deleted, so an undo
+  brought the dimming back (#145); the overview left out folded threads, so a board of finished
+  threads looked empty (#146). Both have a browser check that fails without the fix.
+- **Browser checks: 39 of 55 pass on the released commit; the 16 failures are stale checks, not
+  product faults.** Each one waits for the removed question box (`.selection-bar.asking`) or the
+  removed starter chips; the same 16 fail on the previous release. Converting them is item 107
+  (claimed). Two of their lines look like real small bugs worth a glance: the shortcut sheet says
+  "⌘↵" on Windows (verify-keys), and an ask inside a frame near the page edge is reported off-page
+  (verify-ask-unclipped). Both pre-date today and are filed as items 112 and 113, with fixes in PRs #154 and #155.
+- **The scorecard is green on the merged code:** acceptance 10/10 (#148 fixed the lost first letter),
+  ask loop 5/5, safety 12/12 races with 0 human edits lost. Workspace: server 160, canvas 649, sdk
+  12, mcp 4, e2e 1, all passing with Postgres 16 and Redis.
+- **This report fell behind:** #91 to #143 were merged and released (c6c406c, live 2026-11-26
+  16:12Z) by earlier runs that did not update this file. They are now listed under Merged, one
+  line each, without a fresh check from this run.
+- PR descriptions still end with a tool footer that the hard rules forbid (added by the tool that
+  opens them; squash commits on the branch do not carry it).
+
+## Released
+| Commit | Pushed | Deploy status | What it carried |
+|---|---|---|---|
+| `601800b` | 26 Nov (from your side) | live | First release |
+| `c6c406c` | 26 Nov ~16:10Z | `success`, live on paired.cc 2026-11-26T16:12Z | Everything to #143: the card is the question, settled (S), Check me on answers, P2 arrangement |
+| `7013ae3` | 27 Nov 01:32Z | pending; read on the next run | P1 fold and focus, P3 overview, P5 recall (#144 to #149) |
+
+## Notes from the 26 Nov review (still relevant)
 - **This run (11:55Z to 13:50Z): 52 PRs reviewed and merged, #40 to #90 and #96; none rejected.**
   Each was merged with the integration branch, then built and tested across the workspace
   (Postgres 16 and Redis running). Most had their browser or live check re-run by the review; the
@@ -215,6 +257,13 @@ recorded with #57 (a fresh one is PR #97, not yet reviewed). Performance reads "
 not: see Read first.
 
 ## Merged
+- [#144](https://github.com/seahyc/pairedcc/pull/144) P1: a finished thread folds to one line (1add311). verify-fold 19/19, settled 11/11 re-run.
+- [#145](https://github.com/seahyc/pairedcc/pull/145) P1: focus (F) on a frame or thread (774c2bc). Review fix: focus ends when its target is deleted; verify-focus 14/14.
+- [#146](https://github.com/seahyc/pairedcc/pull/146) P3: the whole board (O) (9481fce). Review fix: folded threads are counted; verify-overview 13/13.
+- [#147](https://github.com/seahyc/pairedcc/pull/147) verify-runs accepts the layer name beside the text in an undo refusal (5f1c151). verify-runs passes.
+- [#148](https://github.com/seahyc/pairedcc/pull/148) Acceptance waits for the import notice before typing (a365dd1). Acceptance 10/10.
+- [#149](https://github.com/seahyc/pairedcc/pull/149) P5: Check me on a settled thought and its spaced return (ecd8118). verify-recall 21/21, learning, check-me re-run.
+- Merged and released on 26 Nov by earlier runs, not re-checked by this run: #91, #92, #94, #95, #97 to #106, #108, #109, #110 to #139, #141 to #143 (see `git log` on the branch for one line each; #140 was replaced by #142).
 - [#2](https://github.com/seahyc/pairedcc/pull/2) Dataset and chart state model (9f19690).
 - [#3](https://github.com/seahyc/pairedcc/pull/3) Dataset and chart objects behind `?prototype=data` (68d7ff3).
 - [#4](https://github.com/seahyc/pairedcc/pull/4) Prototype agent tools for datasets and charts (ff68adc).
@@ -377,12 +426,4 @@ None.
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-#110 (review follow-ups) and #111 (bounds on the PDF reader) were merged at about 13:45Z by another
-session while this run was finishing; this review did not check them and its scorecard does not
-include them.
-
-Open and not yet reviewed: #91 to #108 except #96 (older boards and the calm board, comments
-following imports, two versions of the faster web page reader, stale flags at the edge, a fresh
-agent attempt, the person's words protected from agent edits, the pan measure, screen-reader
-announcements, keyboard-only loop and others). PR descriptions #9 to #20, and several from #43 on,
-carry a tool footer; commits on the branch do not.
+PRs opened after 01:20Z on 27 Nov (#150 onward) are reviewed on the next run.
