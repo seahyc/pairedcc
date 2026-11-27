@@ -63,4 +63,11 @@ describe("118 (a): runs say what each id is", () => {
     expect(Object.keys(briefRun(many).names ?? {})).toHaveLength(10);
     expect(Object.keys(summariseRun(run).names ?? {})).not.toContain("binding:b");
   });
+  it("keeps each name short, however long the object's name or first line", () => {
+    const long = "x".repeat(1000);
+    const one: AgentRun = { ...run, changes: { added: { "shape:l": card("shape:l", long) }, updated: {}, removed: {} } };
+    const name = briefRun(one).names!["shape:l"];
+    expect(name.length).toBeLessThanOrEqual(48);
+    expect(name.endsWith("…")).toBe(true);
+  });
 });
