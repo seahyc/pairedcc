@@ -87,6 +87,12 @@ const CHECKS = [
   { name: 'ask-live', file: 'verify-ask-live.mjs', args: (d) => [d] },
   { name: 'answer-beside', file: 'verify-answer-beside.mjs', args: (d) => [d] },
   { name: 'import-author', file: 'verify-import-author.mjs', args: () => [] },
+  { name: 'settled', file: 'verify-settled.mjs', args: (d) => [d] },
+  { name: 'notice-hold', file: 'verify-notice-hold.mjs', args: (d) => [d] },
+  { name: 'p2-cluster', file: 'verify-p2-cluster.mjs', args: (d) => [d] },
+  { name: 'announce-fixes', file: 'verify-announce-fixes.mjs', args: () => [] },
+  { name: 'name-follows', file: 'verify-name-follows.ts', args: () => [] },
+  { name: 'runs-page', file: 'verify-runs-page.ts', args: () => [] },
   { name: 'recall', file: 'verify-recall.mjs', args: (d) => [d] },
   { name: 'overview', file: 'verify-overview.mjs', args: (d) => [d] },
   { name: 'fold', file: 'verify-fold.mjs', args: (d) => [d] },
@@ -95,9 +101,10 @@ const CHECKS = [
 const SKIPPED = [
   { name: 'board-sync-server', reason: 'needs Postgres and Redis; run `pnpm --filter @pairedcc/canvas verify:sync-server`' },
   { name: 'board-images legacy', reason: 'two-step profile modes (legacy-add, legacy-open) are run by hand' },
+  { name: 'big-edit', reason: 'reports move timings on a 10k board without a verdict; run by hand (`node tools/verify-big-edit.mjs`)' },
 ];
 // Checks added to tools/ later that this list does not know yet are reported, never silently missed.
-const known = new Set([...CHECKS.map((c) => c.file), 'verify-board-sync-server.ts', 'verify-all.mjs']);
+const known = new Set([...CHECKS.map((c) => c.file), 'verify-board-sync-server.ts', 'verify-big-edit.mjs', 'verify-all.mjs']);
 const unknown = readdirSync(tools).filter((f) => f.startsWith('verify-') && !known.has(f));
 
 async function isUp() {
