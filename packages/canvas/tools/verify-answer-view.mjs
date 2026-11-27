@@ -1,7 +1,7 @@
 // Browser check: an answer lands where the person can see all of it.
 //
 // Starts its own dev server of this checkout with an empty board store. At 1440 x 900 and
-// 390 x 844 the person writes a thought, asks about it, and an agent answers over HTTP:
+// 390 x 844 the person writes a question on a card and sends it, and an agent answers over HTTP:
 // four options must land wholly inside the window without the zoom changing, options must not
 // overlap, a one-card answer must land in view too, and an answer that arrives while the
 // person is typing elsewhere must not move their view.
@@ -44,18 +44,19 @@ const post = (path, body) => fetch(`${ORIGIN}/api/canvas${path}`, {
 }).then((r) => r.json());
 let n = 0;
 
-/** The person writes `text` at a screen point and asks about it; returns the waiting agent's ask. */
+/**
+ * The person writes `text` at a screen point and asks it; returns the waiting agent's ask. The card
+ * is the question: Ctrl+Enter while writing sends the card itself (there is no question box).
+ */
 async function ask(p, x, y, text) {
   await p.mouse.dblclick(x, y);
   await p.waitForTimeout(300);
   await p.keyboard.type(text, { delay: 0 });
-  await p.keyboard.press('Control+Enter');
-  await p.waitForSelector('.selection-bar.asking input');
-  await p.fill('.selection-bar.asking input', 'Which should we choose?');
   const waiting = post('/asks/wait', { agent: 'Check agent', waitMs: 10000 });
-  await p.press('.selection-bar.asking input', 'Enter');
+  await p.keyboard.press('Control+Enter');
   const got = await waiting;
   if (!got.ask) throw new Error('no ask arrived');
+  if (got.ask.question !== text) throw new Error(`the card was not sent as the ask: ${JSON.stringify(got.ask.question)}`);
   await p.waitForTimeout(400);
   return got;
 }
