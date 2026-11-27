@@ -70,6 +70,7 @@ const CHECKS = [
   { name: 'retry-key', file: 'verify-retry-key.mjs', args: (d) => [d] },
   { name: 'check-me', file: 'verify-check-me.mjs', args: (d) => [d] },
   { name: 'p4-suggest', file: 'verify-p4-suggest.mjs', args: (d) => [d] },
+  { name: 'suggest-phone', file: 'verify-suggest-phone.mjs', args: (d) => [d] },
   { name: 'menu-keys', file: 'verify-menu-keys.mjs', args: (d) => [d] },
   { name: 'import-follow', file: 'verify-import-follow.mjs', args: (d) => [d, ORIGIN] },
   { name: 'stale-edges', file: 'verify-stale-edges.mjs', args: (d) => [d] },
