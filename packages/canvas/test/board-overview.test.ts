@@ -72,3 +72,27 @@ describe("board overview", () => {
     expect(groups.length).toBeGreaterThan(0);
   });
 });
+
+describe("a card lifted out of its frame stays in the frame's box (item 134)", () => {
+  // #155 lifts a card written across a frame's edge onto the page with `within` naming the frame;
+  // it moves with the frame, and O counts it there, never as a box of its own.
+  const frame = { ...card("f", 0, 0, ""), w: 620, h: 360, frame: "Kitchen quotes", thought: false, inside: { open: 2, settled: 1 } };
+  const lifted = card("q", 400, 300, "Which of these quotes is cheapest?", { ask: true, within: "f" });
+  it("counts it in the frame's box, which grows to take it in", () => {
+    const { groups } = boardGroups([frame, lifted]);
+    expect(groups.map((g) => [g.label, g.count, g.open, g.settled])).toEqual([["Kitchen quotes", 2, 3, 1]]);
+    expect(groups[0].bounds).toEqual({ x: 0, y: 0, w: 620, h: 380 });
+  });
+  it("keeps it with its frame even beside a loose pile", () => {
+    const pile = [card("p1", 610, 300, "Ask the landlord"), card("p2", 830, 300, "Measure the wall")];
+    const { groups } = boardGroups([frame, lifted, ...pile]);
+    const frameBox = groups.find((g) => g.label === "Kitchen quotes")!;
+    const pileBox = groups.find((g) => g.label === "Ask the landlord")!;
+    expect([frameBox.count, pileBox.count]).toEqual([2, 2]);
+    expect(groups).toHaveLength(2);
+  });
+  it("a card whose frame is gone is a loose card again", () => {
+    const { groups } = boardGroups([card("x", 0, 0, "Orphan", { within: "gone" })]);
+    expect(groups.map((g) => [g.label, g.count])).toEqual([["Orphan", 1]]);
+  });
+});
