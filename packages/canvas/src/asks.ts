@@ -1,10 +1,11 @@
-import { type Editor, type TLPageId, type TLShape, type TLShapeId } from "tldraw";
+import { renderHtmlFromRichTextForMeasurement, type Editor, type TLPageId, type TLRichText, type TLShape, type TLShapeId } from "tldraw";
 import { z } from "zod";
 import { answerInput, askStates, askStatusInput, asksInput, type AskState } from "./protocol";
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, levelGaps, levelPadsOf, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { cardLook, type CardTone } from "./card-shape";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
@@ -530,6 +531,7 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         replyTo: shape.id,
         answeredAt,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
+        ...(input.alternatives && input.dimensions ? { dimensions: input.dimensions } : {}),
       }, pageId);
       if (input.alternatives && input.dimensions) {
         const card = editor.getShape(id as TLShapeId)!;
@@ -567,4 +569,74 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     return made;
   });
   return { ask: describeAsk(editor, editor.getShape(shape.id)!), answers: ids.map((id) => describeObject(editor, id, true)) };
+}
+
+/**
+ * Options on dimensions, once drawn: space goes above a dimension line on the cards whose headline
+ * (or value above it) took fewer lines, so each dimension sits level across the row and the eye can
+ * run along a line. Measured on the drawn cards, since only the browser's own wrapping is exact; an
+ * answer on a page that is not open is left as it is. The space is `meta.levelPads`, a derived
+ * field like the card's height: the text is untouched, the answer's revision stays valid and its run
+ * still undoes.
+ */
+export async function levelOptionLines(editor: Editor, askId: string) {
+  if (typeof document === "undefined") return;
+  const latest = (shapes: TLShape[]) => {
+    const at = Math.max(...shapes.map((s) => Number(s.meta.answeredAt) || 0));
+    return shapes.filter((s) => (Number(s.meta.answeredAt) || 0) === at);
+  };
+  const cards = latest(editor.getCurrentPageShapes().filter((s) => s.meta.replyTo === askId && Array.isArray(s.meta.dimensions)));
+  if (cards.length < 2) return;
+  // A hidden tab draws no frames; never hold the answer back waiting for one.
+  const frame = () =>
+    new Promise<void>((done) => {
+      const timer = setTimeout(done, 120);
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => requestAnimationFrame(() => (clearTimeout(timer), done())));
+    });
+  await Promise.race([document.fonts?.ready, new Promise((done) => setTimeout(done, 500))]);
+  const dimensions = (cards[0].meta.dimensions as unknown[]).length;
+  // One dimension at a time, top down: space above a line moves every line under it.
+  for (let k = 0; k < dimensions; k++) {
+    await frame();
+    const zoom = editor.getZoomLevel();
+    const drawn = cards.map((card) => {
+      const s = editor.getShape(card.id);
+      const el = document.querySelector<HTMLElement>(`[data-shape-id="${card.id}"]`);
+      const line = el?.offsetParent ? [...el.querySelectorAll("p")].filter((p) => p.querySelector("strong"))[k] : undefined;
+      return s && el && line ? { s, offset: (line.getBoundingClientRect().top - el.getBoundingClientRect().top) / zoom } : undefined;
+    });
+    // A card out of view is not drawn (culled); then the whole row is measured the way a card
+    // estimates its height, which is the same for every card of one width and style.
+    const measured = drawn.every(Boolean) ? drawn : cards.map((card) => estimateLine(editor, card.id, k));
+    if (measured.some((m) => !m)) return; // edited away: leave it as it falls
+    const found = measured as { s: TLShape; offset: number }[];
+    const gaps = levelGaps(found.map((m) => m.offset), found.map((m) => Math.round(m.s.y)));
+    if (gaps.every((n) => n < 0.5)) continue;
+    editor.run(() => {
+      found.forEach(({ s }, i) => {
+        if (gaps[i] < 0.5) return;
+        const pads = Array.from({ length: dimensions }, (_, j) => levelPadsOf(s.meta)[j] ?? 0);
+        pads[k] += gaps[i];
+        editor.updateShape({ id: s.id, type: s.type, meta: { ...s.meta, levelPads: pads } } as never);
+      });
+    }, { history: "ignore" });
+  }
+}
+
+/** Where an option card's k-th dimension line starts below its top, by the editor's text measure. */
+function estimateLine(editor: Editor, id: TLShapeId, k: number) {
+  const s = editor.getShape(id);
+  if (!s || s.type !== "card") return undefined;
+  const props = s.props as { w: number; tone: CardTone; richText: TLRichText };
+  const paras = ((props.richText as { content?: unknown }).content ?? []) as { content?: { marks?: { type: string }[] }[] }[];
+  const at = paras.map((p, n) => (p.content?.[0]?.marks?.some((m) => m.type === "bold") ? n : -1)).filter((n) => n >= 0)[k];
+  if (at === undefined) return undefined;
+  const t = cardLook(props.tone, s.meta.settled === true);
+  const html = renderHtmlFromRichTextForMeasurement(editor, { ...props.richText, content: paras.slice(0, at) } as TLRichText);
+  const above = editor.textMeasure.measureHtml(html || "&nbsp;", {
+    fontFamily: t.font, fontSize: t.size, lineHeight: t.lineHeight, fontStyle: t.style, fontWeight: t.weight,
+    maxWidth: Math.max(40, props.w - t.pad * 2 - 8), padding: "0px",
+  }).h;
+  const pads = levelPadsOf(s.meta).slice(0, k + 1).reduce((a, b) => a + b, 0);
+  return { s, offset: t.pad + above + pads };
 }

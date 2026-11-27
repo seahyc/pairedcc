@@ -43,7 +43,7 @@ import { createChart, createDataset, dataFields, recordInputs, setChartState, se
 import { rewriteRefusal } from "./authorship";
 import { notePlace, noteWidth } from "./note-place";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
-import { answerAsk, listAsks, setAskStatus } from "./asks";
+import { answerAsk, levelOptionLines, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
 import { clip } from "./text";
 import { importForAgent } from "./import-board";
@@ -787,8 +787,12 @@ export async function executeCommand(
       return listAsks(editor, command.input ?? {});
     case "ask_status":
       return setAskStatus(editor, command.input, actor);
-    case "answer":
-      return answerAsk(editor, command.input, actor);
+    case "answer": {
+      const result = answerAsk(editor, command.input, actor);
+      // Options on dimensions: level the dimension lines across the row once the cards are drawn.
+      await levelOptionLines(editor, z.object({ id: z.string() }).parse(command.input).id);
+      return result;
+    }
     case "import":
       return importForAgent(editor, command.input, actor);
     case "remove": {

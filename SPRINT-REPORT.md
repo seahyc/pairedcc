@@ -3,7 +3,7 @@
 Last updated 2026-11-27T14:24Z by the review lane. Branch: `claude/sprint-int`.
 
 ## Read first (27 Nov, 14:24Z)
-- **Released again (the day's second release)**: everything up to #173, pushed to `claude/release` at 14:24Z. That covers P4 suggestions (#156) and the work below. The deploy status is read on the next run.
+- **Released again (the day's second release)**: everything up to #173, pushed to `claude/release` at 14:24Z. That covers P4 suggestions (#156) and the work below. Deploy status `success`: live on paired.cc at 14:38Z.
 - **What you will notice:** when the agent offers options, each lettered card can now list the same dimensions in the same order (for example "Cost to try", "Risk"), with the names in bold (#165). The overview and an ask now name a pile of cards after its title, never after the question in it (#169). On a phone the overview fits the screen (#166). Suggestions behave better on phones: a swipe no longer sends one, and on a narrow screen one suggestion is shown rather than none (#171).
 - **A product choice made for you:** two lanes built "options on dimensions" at the same time. I merged #165 (the dimensions sit inside the option cards, so nothing new appears on the board) and closed #168 (a separate table under the options). If you would rather have the table, #168's branch still exists.
 - **Checks on `65e7d79`:** full workspace green with Postgres 16 and Redis (server 160, canvas 755, sdk 12, mcp 4, e2e 1); headless browser suite 75/75.
@@ -60,7 +60,7 @@ Last updated 2026-11-27T14:24Z by the review lane. Branch: `claude/sprint-int`.
 | `601800b` | 26 Nov (from your side) | live | First release |
 | `c6c406c` | 26 Nov ~16:10Z | `success`, live on paired.cc 2026-11-26T16:12Z | Everything to #143: the card is the question, settled (S), Check me on answers, P2 arrangement |
 | `7013ae3` | 27 Nov 01:32Z | `success`, live on paired.cc 2026-11-27T01:38Z | P1 fold and focus, P3 overview, P5 recall (#144 to #149) |
-| `3eabe49` (code as `65e7d79`) | 27 Nov ~14:24Z | pending (read on the next run) | P4 suggestions (#156), #157 to #173: options on dimensions, group names, overview phone fit, calm page ids, suggestion fixes, agent tasks 29 to 31 |
+| `3eabe49` (code as `65e7d79`) | 27 Nov 14:24Z | `success`, live on paired.cc 2026-11-27T14:38Z | P4 suggestions (#156), #157 to #173: options on dimensions, group names, overview phone fit, calm page ids, suggestion fixes, agent tasks 29 to 31 |
 
 ## Notes from the 26 Nov review (still relevant)
 - **This run (11:55Z to 13:50Z): 52 PRs reviewed and merged, #40 to #90 and #96; none rejected.**
