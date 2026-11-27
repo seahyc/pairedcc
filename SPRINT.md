@@ -700,16 +700,15 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 107. **Browser checks that still open the question box.** Since 7cc29ef there is no question box, but seventeen `tools/verify-*` checks still open it (`.selection-bar.asking` or `getByLabel('Your question')`): annotate-clear, answer-page, answer-show, answer-view, ask-chart, ask-frame, ask-image, ask-live, ask-marks, ask-unclipped, calm, contain, keyboard, keys, leave-out, retry-key, touch. Their ask steps now time out, so they no longer prove what they were written for. Done when each asks the new way (the person's card sent with ⌘↵ or by finishing a question; Ask on someone else's object opens a pink card to write in) and passes on the integration branch, with any real regression it then finds filed. (The Ask loop measure and agent task 22 are fixed in #132.)
 
-108. **The acceptance step "A manual annotation survives an agent revision" loses the first letter.** On `claude/sprint-int` at 44a5ae2 (and on #144) `pnpm eval:canvas --only=acceptance` is 9/10 in four runs out of four: the typed note reads "heck the February meter swap" (once "the Februaryheck  meter swap"). The measure presses N, clicks, and types as soon as `getEditingShapeId()` is set, before the text editor has focus, so the first key goes to the board. Done when the measure waits for the editor's focus (or the board takes the first key into the new card) and the step passes three runs in a row, with the cause named.
+108. (PR #148 open, awaiting review.) **The acceptance step "A manual annotation survives an agent revision" loses the first letter.** On `claude/sprint-int` at 44a5ae2 (and on #144) `pnpm eval:canvas --only=acceptance` is 9/10 in four runs out of four: the typed note reads "heck the February meter swap" (once "the Februaryheck  meter swap"). The measure presses N, clicks, and types as soon as `getEditingShapeId()` is set, before the text editor has focus, so the first key goes to the board. Done when the measure waits for the editor's focus (or the board takes the first key into the new card) and the step passes three runs in a row, with the cause named.
 109. (PR #147 open, awaiting review.) **`verify-runs.ts` after #136.** On `claude/sprint-int` at 44a5ae2 the check stops at its fifth step: undoing a run whose card the person edited now says "changed after the run created it (meta.name, props.richText)", because #136 renames a derived layer name with the text, and the check expects exactly "(props.richText)". Done when the check accepts the name alongside the text (or the refusal leaves derived fields out, if that is the better message), passing on the integration branch.
 
 ## Claims
 P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest | 2026-11-27T00:45Z
-P5. Understanding needs effort (part 1: Check me on the default board) | claude/sprint-p5-check | 2026-11-26T15:15Z
+P5 part 2. Spaced return and Check me on a settled card (build-A; part 1 merged as #141, its claim was stale) | claude/sprint-p5-spacing | 2026-11-27T01:00Z
 P1. Few things in view (build-A, taken over: the 14:57Z claim had no branch or PR after 6 h) | claude/sprint-p1-fold | 2026-11-27T00:20Z
 P3 part 2. The whole board (O) (build-A) | claude/sprint-p3-overview | 2026-11-27T00:50Z
 107. Browser checks that still open the question box (build-A) | claude/sprint-checks-no-box | 2026-11-27T00:52Z
-108. Acceptance step loses its first letter (build-A) | claude/sprint-acceptance-type | 2026-11-27T01:00Z
 
 ## Done
 - 105 (c). canvas_runs by page (build-B): PR #139 (pages on each run, page: "current"; live MCP check 1/3 → 3/3; manifest regenerated; workspace green with services).
