@@ -3,6 +3,7 @@ import { z } from "zod";
 import { answerInput, askStates, askStatusInput, asksInput, type AskState } from "./protocol";
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
+import { hasCommentRow } from "./feedback";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
 import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, levelGaps, levelPadsOf, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { cardLook, type CardTone } from "./card-shape";
@@ -573,9 +574,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     return made;
   });
   const after = editor.getShape(shape.id)!;
-  // The ask's row in the feedback queue: closed by an answer, still open after a clarifying question.
-  const queue = after.meta.status === "resolved" ? "resolved" : "open";
-  return { ask: describeAsk(editor, after), answers: ids.map((id) => describeObject(editor, id, true)), queue };
+  // The ask's row in the feedback queue: closed by an answer, still open after a clarifying question;
+  // left out when the ask has no row (a starter card the person rewrote is still Paired's).
+  const queue = hasCommentRow(authorOf(after), after.meta) ? (after.meta.status === "resolved" ? "resolved" : "open") : undefined;
+  return { ask: describeAsk(editor, after), answers: ids.map((id) => describeObject(editor, id, true)), ...(queue ? { queue } : {}) };
 }
 
 /**

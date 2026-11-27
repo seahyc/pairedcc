@@ -42,6 +42,18 @@ try {
   const asked: any = await agent.call("canvas_answer", { id: second, text: "Do you mean cheapest, or best value for a team of five?", question: true });
   check("a clarifying question says the item stays open", asked.queue === "open", { queue: asked.queue });
   check("and the queue agrees", (await statusOf(second!)) === "open");
+  // Review of #183: a starter card the person rewrote as a question is sent as an ask, but it is
+  // still Paired's card, so it has no row in the queue; the answer says so by leaving `queue` out.
+  await agent.call("canvas_page", { name: "Answer queue, starter card" });
+  const starter = await agent.call("canvas_create", { kind: "note", x: 0, y: 0, width: 300, text: "Which price is lower, $90 or $120?" });
+  await ev("(p, e, id) => { const s = e.getShape(id); e.updateShape({ id, type: s.type, meta: { ...s.meta, seed: true, updatedAt: Date.now() } }); p.select([id]); }", starter.id);
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await page.waitForTimeout(500);
+  const sent = (await agent.call("canvas_asks", { state: "all" })).asks.find((a: any) => a.id === starter.id);
+  check("a rewritten starter card is sent as an ask", Boolean(sent), sent?.state);
+  const starterAnswer: any = await agent.call("canvas_answer", { id: starter.id, text: "$90 is lower." });
+  const row = (await agent.call("canvas_feedback", { status: "all" })).items.find((i: any) => i.id === starter.id);
+  check("it has no queue row, and the answer gives no queue status", !row && !("queue" in starterAnswer), { row: row?.status, queue: starterAnswer.queue });
   check("no page errors", errors.length === 0, errors.slice(0, 3));
   await agent.close();
   await context.close();
