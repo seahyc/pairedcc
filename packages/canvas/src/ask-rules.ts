@@ -21,11 +21,8 @@ export function answerTexts(input: { text?: string; alternatives?: string[]; dim
   });
 }
 
-/**
- * An option card's rich text: its headline, `padLines` empty lines, then one paragraph per
- * dimension with the name in bold.
- */
-export function optionRichText(text: string, dimensions: string[], padLines = 0) {
+/** An option card's rich text: its headline, then one paragraph per dimension with the name in bold. */
+export function optionRichText(text: string, dimensions: string[]) {
   const [head, ...lines] = text.split("\n");
   // An empty line is an empty paragraph: the editor refuses a text node with no text.
   const para = (content: { type: string; text: string; marks?: unknown[] }[]) => {
@@ -36,8 +33,6 @@ export function optionRichText(text: string, dimensions: string[], padLines = 0)
     type: "doc",
     content: [
       para([{ type: "text", text: head }]),
-      // Empty lines under a short headline, so each dimension sits level with the other options'.
-      ...Array.from({ length: padLines }, () => para([])),
       ...lines.map((line, j) => {
         const label = `${dimensions[j]}:`;
         return line.startsWith(label)
@@ -420,14 +415,19 @@ export function landingBox(ask: Rect, answers: readonly Rect[], roomHeight: numb
 }
 
 /**
- * How many empty lines each option card needs under its headline so its first dimension line sits
- * level with the lowest one in its row. `offsets` are where each card's first dimension line starts
- * below the card's top, `rows` which row each card is in, and `line` one line's height, all in the
- * same units.
+ * How much space each option card needs above one of its dimension lines so that line sits level
+ * with the lowest one in its row. `offsets` are where each card's line starts below the card's
+ * top and `rows` which row each card is in, in page units; the result is in page units too.
  */
-export function levelPads(offsets: number[], rows: number[], line: number) {
+export function levelGaps(offsets: number[], rows: number[]) {
   return offsets.map((o, i) => {
     const lowest = Math.max(...offsets.filter((_, j) => rows[j] === rows[i]));
-    return line > 0 ? Math.max(0, Math.round((lowest - o) / line)) : 0;
+    return Math.max(0, Math.round((lowest - o) * 10) / 10);
   });
+}
+
+/** A card's `meta.levelPads`: one gap per dimension line, or none when the meta is not that. */
+export function levelPadsOf(meta: unknown): number[] {
+  const pads = (meta as { levelPads?: unknown } | undefined)?.levelPads;
+  return Array.isArray(pads) && pads.every((n) => typeof n === "number" && Number.isFinite(n) && n >= 0) ? pads : [];
 }
