@@ -8,6 +8,7 @@ Rules:
 - At most 60 words. One step, then stop and wait. Never a finished essay, a plan or a list of everything.
 - Start from a concrete example or a specific case, then the general point if there is room.
 - Only when the person asks for options, alternatives or framings, give 2 to 4 short alternatives (under 30 words each) that differ in a way that matters, so they can be compared side by side. Do not pick for the person.
+- When the person asks to compare ("compare", "which is better", "how do these differ"), also name 2 or 3 short dimensions the alternatives differ on, and give each alternative one short value per dimension (a few words), so they are laid out in a small table.
 - If the ask is ambiguous, ask one short question instead of guessing.
 - Build on what the person picked. Do not offer again what they crossed out: that is a decision, not an open idea.
 - General knowledge is fine. Do not invent facts about the person, their company or their data. Say so if you would need something you were not given.
@@ -16,7 +17,7 @@ Rules:
 - Where things sit carries meaning: what the person put in the same group as their card, and which side it is on, is part of what they mean. Use it, and say so when it changes your answer.
 
 Reply with one JSON object and nothing else:
-{"read":"<what you read, under 12 words, e.g. 'your card on pricing and the frame Pricing'>","kind":"answer"|"alternatives"|"question","text":"<for answer or question>","alternatives":["<for alternatives>"]}`;
+{"read":"<what you read, under 12 words, e.g. 'your card on pricing and the frame Pricing'>","kind":"answer"|"alternatives"|"question","text":"<for answer or question>","alternatives":["<for alternatives>"],"dimensions":["<only when comparing: 2 or 3>"],"values":[["<one row per alternative, one value per dimension>"]]}`;
 
 type Mark = "picked" | "rejected";
 type Given = { id: string; type: string; author: string; text: string; mark?: Mark; inside?: Given[]; insideMore?: number; relation?: string };
@@ -83,7 +84,21 @@ export function buildPrompt(ask: AskForPrompt) {
   return lines.join("\n");
 }
 
-export type AgentReply = { read?: string; kind: "answer" | "alternatives" | "question"; text?: string; alternatives?: string[] };
+export type AgentReply = { read?: string; kind: "answer" | "alternatives" | "question"; text?: string; alternatives?: string[]; dimensions?: string[]; values?: string[][] };
+
+/**
+ * Dimensions and values from a model reply, kept only when they line up (2 or 3 dimensions, one
+ * row per alternative, one value per dimension) and cut to the lengths the board takes; otherwise
+ * the alternatives go without a table rather than failing the answer.
+ */
+export function compareFrom(value: Record<string, unknown>, count: number): { dimensions: string[]; values: string[][] } | undefined {
+  const dims = Array.isArray(value.dimensions) ? value.dimensions.filter((d): d is string => typeof d === "string" && d.trim().length > 0).map((d) => d.trim().slice(0, 40)) : [];
+  const rows = Array.isArray(value.values) ? value.values : [];
+  if (dims.length < 2 || dims.length > 3 || rows.length !== count) return undefined;
+  const values = rows.map((row) => (Array.isArray(row) ? row.map((v) => (typeof v === "string" ? v.trim().slice(0, 60) : "")) : []));
+  if (values.some((row) => row.length !== dims.length || row.some((v) => !v))) return undefined;
+  return { dimensions: dims, values };
+}
 
 /** Read the model's reply. Prose with no JSON is taken as a plain answer rather than lost. */
 export function parseReply(raw: string): AgentReply {
@@ -96,7 +111,7 @@ export function parseReply(raw: string): AgentReply {
       const options = Array.isArray(value.alternatives)
         ? value.alternatives.filter((a): a is string => typeof a === "string" && a.trim().length > 0).slice(0, 4)
         : [];
-      if (value.kind === "alternatives" && options.length >= 2) return { read, kind: "alternatives", alternatives: options };
+      if (value.kind === "alternatives" && options.length >= 2) return { read, kind: "alternatives", alternatives: options, ...compareFrom(value, options.length) };
       const text = typeof value.text === "string" && value.text.trim() ? value.text.trim() : options.join("\n");
       if (text) return { read, kind: value.kind === "question" ? "question" : "answer", text };
     } catch {

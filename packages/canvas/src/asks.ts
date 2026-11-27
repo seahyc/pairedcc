@@ -1,10 +1,10 @@
-import { type Editor, type TLPageId, type TLShape, type TLShapeId } from "tldraw";
+import { createShapeId, type Editor, type TLPageId, type TLShape, type TLShapeId } from "tldraw";
 import { z } from "zod";
 import { answerInput, askStates, askStatusInput, asksInput, type AskState } from "./protocol";
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, compareTable, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
@@ -12,6 +12,7 @@ import { hiddenFromAgents } from "./fold";
 import { clusterAround, relation } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
+import { tableLayout, type DataTableShape } from "./table-shape";
 
 // An ask is the human's question to an agent, attached to what they selected. It is a
 // pink card on the board (so it is in the feedback queue like any comment) that carries
@@ -151,6 +152,11 @@ export const INSIDE_LIMIT = 20;
  */
 function dataText(editor: Editor, s: TLShape): string {
   if (s.type === "dataset") return datasetText((s as DatasetShape).props.data);
+  // A table (an answer's comparison, or a grid that was pasted) reads row by row.
+  if (s.type === "datatable") {
+    const { columns, rows } = (s as DataTableShape).props;
+    return [columns.join(" | "), ...rows.slice(0, 20).map((r) => r.join(" | "))].join("\n");
+  }
   if (s.type !== "chart") return "";
   const chart = s as ChartShape, found = editor.getShape(chart.props.datasetId as TLShapeId);
   // Anything but a dataset under that id is treated as a deleted dataset, never read as one.
@@ -454,6 +460,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   // The room the person's window has beside the canvas chrome, so no answer lands off screen.
   const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
   const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
+  // Options compared on stated dimensions: one small table under the options, inside the room.
+  const compare = input.dimensions && input.values ? compareTable(input.dimensions, input.values) : undefined;
+  const compareSize = compare ? tableLayout(compare.columns, compare.rows, "") : undefined;
+  if (compareSize) layout.box = { ...layout.box, w: Math.max(layout.box.w, compareSize.w), h: layout.box.h + OPTION_GAP + compareSize.h };
   // Under the ask, or beside it when the space under it is taken (later asks stacked below),
   // so the answer never ends up under someone else's question.
   const under = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
@@ -512,6 +522,24 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
           if (card) editor.updateShape({ id: card.id, type: card.type, x: card.x + dx, y: card.y + dy });
         }
       }
+    }
+    if (compare && compareSize && input.dimensions) {
+      const cards = made.flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []);
+      const want = { x: Math.min(...cards.map((b) => b.x)), y: Math.max(...cards.map((b) => b.maxY)) + OPTION_GAP, w: compareSize.w, h: compareSize.h };
+      const at = freeSpot(editor, want, new Set([shape.id, ...made]), pageId);
+      const id = createShapeId();
+      editor.createShape({
+        id,
+        type: "datatable",
+        parentId: pageId,
+        x: at.x,
+        y: at.y,
+        // Part of the answer: it folds, focuses and undoes with the option cards (replyTo), and
+        // is not an option itself (no `option`).
+        meta: { name: `Compared on ${input.dimensions.join(", ")}`, revision: 0, createdBy: actor, targetId: shape.id, replyTo: shape.id, answeredAt, compare: true },
+        props: { w: compareSize.w, h: compareSize.h, title: "", columns: compare.columns, rows: compare.rows },
+      });
+      made.push(id);
     }
     setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt, read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.

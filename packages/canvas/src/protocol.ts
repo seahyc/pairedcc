@@ -73,8 +73,24 @@ export const answerInput = z
     alternatives: z.array(z.string().min(1).max(400)).min(2).max(4).optional().describe("2 to 4 short options placed side by side, when the ask is a choice."),
     question: z.boolean().default(false).describe("True when `text` is a clarifying question back to the human; the ask then stays open."),
     read: z.string().max(200).optional().describe("What you read to answer, shown on the ask."),
+    dimensions: z
+      .array(z.string().min(1).max(40))
+      .min(2)
+      .max(3)
+      .optional()
+      .describe("With alternatives, when the human asks to compare: 2 or 3 short things the options differ on (e.g. 'cost to us', 'time to ship'), shown as a small table under the options."),
+    values: z
+      .array(z.array(z.string().min(1).max(60)))
+      .optional()
+      .describe("With dimensions: one row per alternative, in order, each with one short value per dimension (a few words)."),
   })
-  .refine((v) => Boolean(v.text) !== Boolean(v.alternatives), "Give either text or alternatives");
+  .refine((v) => Boolean(v.text) !== Boolean(v.alternatives), "Give either text or alternatives")
+  .refine((v) => !v.dimensions || Boolean(v.alternatives), "dimensions compare alternatives: give alternatives too")
+  .refine((v) => Boolean(v.dimensions) === Boolean(v.values), "Give dimensions and values together")
+  .refine(
+    (v) => !v.values || !v.dimensions || (v.values.length === (v.alternatives?.length ?? -1) && v.values.every((row) => row.length === v.dimensions!.length)),
+    "values needs one row per alternative, each with one value per dimension",
+  );
 export const commandSchema = z.object({
   op: z.enum([
     "read",

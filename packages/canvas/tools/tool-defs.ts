@@ -195,7 +195,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_answer",
     op: "answer",
     description:
-      "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X). Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved.",
+      "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X). When the human asks to compare, add 2 or 3 short `dimensions` and `values` (one row per alternative, one short value per dimension): they are laid out as one small table under the options. Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved.",
     input: answerInput.shape,
     output: "json",
   },

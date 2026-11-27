@@ -45,6 +45,17 @@ export function answerLayout(anchor: { x: number; y: number }, texts: string[], 
   return { box: { x: anchor.x, y: anchor.y + STATUS_ROOM, w: across * w + (across - 1) * OPTION_GAP, h }, cards };
 }
 
+/**
+ * Options compared on stated dimensions (principles row 6): a row per dimension, a column per
+ * option lettered as its card, so the person reads across one dimension at a time.
+ */
+export function compareTable(dimensions: readonly string[], values: readonly (readonly string[])[]) {
+  return {
+    columns: ["", ...values.map((_, i) => "ABCD"[i])],
+    rows: dimensions.map((d, j) => [d, ...values.map((row) => row[j])]),
+  };
+}
+
 /** A card that ends in a question mark is a question, and is sent as soon as it is written. */
 export const isQuestion = (text: string) => /[?？]\s*$/.test(text.trim());
 

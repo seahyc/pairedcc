@@ -123,7 +123,7 @@ export function AskLayer() {
         const pins = anyPinned && view ? pinnedLabel(pinnedIds.length + (view.pinnedMore ?? 0)) : "";
         const groupSaid = group ? `${group.count} more in its group` : "";
         const base = [givenLabel(editor, ask.contextIds.filter((id) => id !== s.id)), groupSaid].filter(Boolean).join(" + ");
-        return [{ id: s.id, ask, question: textOf(s), answers: optionsInLatestRound(answers.map((r) => ({ answeredAt: typeof r.meta.answeredAt === "number" ? r.meta.answeredAt : undefined, at: typeof r.meta.createdAt === "number" ? r.meta.createdAt : undefined }))), x: b.x, y: b.maxY, w: b.w, given: givenWith(base, pins, kept), outlines, group, finished, fold: undefined as ReturnType<typeof foldLine> | undefined }];
+        return [{ id: s.id, ask, question: textOf(s), answers: optionsInLatestRound(answers.filter((r) => r.meta.compare !== true).map((r) => ({ answeredAt: typeof r.meta.answeredAt === "number" ? r.meta.answeredAt : undefined, at: typeof r.meta.createdAt === "number" ? r.meta.createdAt : undefined }))), x: b.x, y: b.maxY, w: b.w, given: givenWith(base, pins, kept), outlines, group, finished, fold: undefined as ReturnType<typeof foldLine> | undefined }];
       });
     },
     [editor],
