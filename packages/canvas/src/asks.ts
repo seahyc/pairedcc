@@ -41,7 +41,13 @@ export function askOf(shape: TLShape | undefined): AskMeta | undefined {
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
-const frameOf = (editor: Editor, shape: TLShape) => editor.findShapeAncestor(shape, (s) => s.type === "frame");
+const frameOf = (editor: Editor, shape: TLShape) => {
+  const found = editor.findShapeAncestor(shape, (s) => s.type === "frame");
+  if (found) return found;
+  // A card lifted out of its frame so the frame would not cut it off (item 113) still sits in it.
+  const within = typeof shape.meta.within === "string" ? editor.getShape(shape.meta.within as TLShapeId) : undefined;
+  return within?.type === "frame" ? within : undefined;
+};
 const targetsOf = (shape: TLShape) =>
   Array.isArray(shape.meta.targetIds) ? shape.meta.targetIds.filter((id): id is string => typeof id === "string") : [];
 
@@ -238,7 +244,10 @@ function attachedTo(editor: Editor, frame: TLShape) {
   // a comment about a left-out card is as private as the card.
   const leftOut = subtree.filter((id) => id !== frame.id && isLeftOut(editor.getShape(id as TLShapeId)?.meta));
   const blocked = new Set<string>(leftOut.length ? (editor.getShapeAndDescendantIds(leftOut as TLShapeId[]) as Set<string>) : []);
-  return followers(subtree.filter((id) => !blocked.has(id)), page, new Set())
+  // A card lifted out of the frame (item 113) follows it by `meta.within`; one the person left out
+  // still blocks what hangs off it, wherever it sits.
+  const leftOutAnywhere = new Set(page.filter((s) => isLeftOut(s.meta)).map((s) => s.id as string));
+  return followers(subtree.filter((id) => !blocked.has(id)), page, leftOutAnywhere)
     .flatMap((id) => editor.getShape(id as TLShapeId) ?? [])
     .filter((s) => !within.has(s.id) && !askOf(s) && !hiddenFromAgents(editor, s) && textOf(s));
 }

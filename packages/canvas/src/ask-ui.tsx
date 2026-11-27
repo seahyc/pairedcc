@@ -292,9 +292,10 @@ export function AutoAsk({ keepInView }: { keepInView: (box: Box) => void }) {
       editor.run(() => editor.deleteShapes([shape.id]), { history: "ignore" });
       return;
     }
-    // The person finished writing: a card of theirs across a frame's edge would be cut off.
-    if (writtenByPerson(shape)) unclipFromFrame(editor, shape.id);
+    // The person finished writing: a card of theirs across a frame's edge would be cut off. A
+    // question being sent is lifted by the ask itself, after it has noted the frame as context.
     if (shouldSend(shape)) sendCard(editor, shape.id, [], keepInView);
+    else if (writtenByPerson(shape)) unclipFromFrame(editor, shape.id);
   }, [editing, editor, keepInView]);
   return null;
 }
