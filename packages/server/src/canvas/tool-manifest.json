@@ -1167,7 +1167,7 @@
     },
     {
       "name": "canvas_answer",
-      "description": "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X). Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved.",
+      "description": "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X); with alternatives, name what they differ on in `dimensions` and give each option a short value on each in `values`, so every card lists them in the same order. Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved.",
       "op": "answer",
       "output": "json",
       "inputSchema": {
@@ -1210,6 +1210,31 @@
             "description": "What you read to answer, shown on the ask.",
             "type": "string",
             "maxLength": 200
+          },
+          "dimensions": {
+            "description": "With alternatives: up to 4 short names of what the options differ on (for example \"Cost to us\", \"Risk\"). Each option card then lists them in the same order, so the person compares down a line.",
+            "minItems": 1,
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            }
+          },
+          "values": {
+            "description": "With dimensions: one row per alternative, in the same order, each with one short value per dimension.",
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "maxItems": 4,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            }
           }
         },
         "required": [

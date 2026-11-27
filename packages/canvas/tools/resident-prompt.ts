@@ -8,6 +8,7 @@ Rules:
 - At most 60 words. One step, then stop and wait. Never a finished essay, a plan or a list of everything.
 - Start from a concrete example or a specific case, then the general point if there is room.
 - Only when the person asks for options, alternatives or framings, give 2 to 4 short alternatives (under 30 words each) that differ in a way that matters, so they can be compared side by side. Do not pick for the person.
+- With alternatives, name the 1 to 3 dimensions they differ on that matter most to the person (for example cost, risk, time to try), and give each option a value of a few words on each, in the same order. Keep each option's headline under 12 words; the dimensions carry the detail.
 - If the ask is ambiguous, ask one short question instead of guessing.
 - Build on what the person picked. Do not offer again what they crossed out: that is a decision, not an open idea.
 - General knowledge is fine. Do not invent facts about the person, their company or their data. Say so if you would need something you were not given.
@@ -16,7 +17,7 @@ Rules:
 - Where things sit carries meaning: what the person put in the same group as their card, and which side it is on, is part of what they mean. Use it, and say so when it changes your answer.
 
 Reply with one JSON object and nothing else:
-{"read":"<what you read, under 12 words, e.g. 'your card on pricing and the frame Pricing'>","kind":"answer"|"alternatives"|"question","text":"<for answer or question>","alternatives":["<for alternatives>"]}`;
+{"read":"<what you read, under 12 words, e.g. 'your card on pricing and the frame Pricing'>","kind":"answer"|"alternatives"|"question","text":"<for answer or question>","alternatives":["<for alternatives>"],"dimensions":["<with alternatives: what they differ on>"],"values":[["<option A's value on each dimension>"],["<option B's>"]]}`;
 
 type Mark = "picked" | "rejected";
 type Given = { id: string; type: string; author: string; text: string; mark?: Mark; inside?: Given[]; insideMore?: number; relation?: string };
@@ -83,7 +84,21 @@ export function buildPrompt(ask: AskForPrompt) {
   return lines.join("\n");
 }
 
-export type AgentReply = { read?: string; kind: "answer" | "alternatives" | "question"; text?: string; alternatives?: string[] };
+export type AgentReply = { read?: string; kind: "answer" | "alternatives" | "question"; text?: string; alternatives?: string[]; dimensions?: string[]; values?: string[][] };
+
+/**
+ * Dimensions and values from the model's reply, only when they line up: up to 4 short names, and
+ * one row of short values per option. Anything that does not fit is dropped and the options stand.
+ */
+function dimensionsOf(value: Record<string, unknown>, options: number): { dimensions?: string[]; values?: string[][] } {
+  const text = (x: unknown) => (typeof x === "string" ? x.trim() : "");
+  const dimensions = Array.isArray(value.dimensions) ? value.dimensions.map(text) : [];
+  const values = Array.isArray(value.values) ? value.values.map((row) => (Array.isArray(row) ? row.map(text) : [])) : [];
+  const fits =
+    dimensions.length >= 1 && dimensions.length <= 4 && dimensions.every((d) => d && d.length <= 40) &&
+    values.length >= options && values.slice(0, options).every((row) => row.length === dimensions.length && row.every((v) => v && v.length <= 200));
+  return fits ? { dimensions, values: values.slice(0, options) } : {};
+}
 
 /** Read the model's reply. Prose with no JSON is taken as a plain answer rather than lost. */
 export function parseReply(raw: string): AgentReply {
@@ -96,7 +111,7 @@ export function parseReply(raw: string): AgentReply {
       const options = Array.isArray(value.alternatives)
         ? value.alternatives.filter((a): a is string => typeof a === "string" && a.trim().length > 0).slice(0, 4)
         : [];
-      if (value.kind === "alternatives" && options.length >= 2) return { read, kind: "alternatives", alternatives: options };
+      if (value.kind === "alternatives" && options.length >= 2) return { read, kind: "alternatives", alternatives: options, ...dimensionsOf(value, options.length) };
       const text = typeof value.text === "string" && value.text.trim() ? value.text.trim() : options.join("\n");
       if (text) return { read, kind: value.kind === "question" ? "question" : "answer", text };
     } catch {

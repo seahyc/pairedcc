@@ -115,7 +115,7 @@ async function answer(sessionId: string, ask: AskForPrompt & { id: string }) {
     await command(sessionId, "answer", {
       id: ask.id,
       read: reply.read,
-      ...(reply.kind === "alternatives" ? { alternatives: reply.alternatives!.map((a) => a.slice(0, 400)) } : { text: reply.text!.slice(0, 700), question: reply.kind === "question" }),
+      ...(reply.kind === "alternatives" ? { alternatives: reply.alternatives!.map((a) => a.slice(0, 400)), ...(reply.dimensions ? { dimensions: reply.dimensions, values: reply.values } : {}) } : { text: reply.text!.slice(0, 700), question: reply.kind === "question" }),
     });
     log(`answered ${ask.id} (${reply.kind}) in ${((Date.now() - started) / 1000).toFixed(1)}s`);
   } catch (error) {

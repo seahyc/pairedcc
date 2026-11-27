@@ -4,7 +4,7 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
@@ -448,9 +448,7 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     .filter((s) => s.meta.replyTo === shape.id)
     .flatMap((s) => editor.getShapePageBounds(s) ?? []);
   const bottom = Math.max(anchor.maxY, ...earlier.map((b) => b.maxY));
-  const texts = input.alternatives
-    ? input.alternatives.map((text, i) => `${"ABCD"[i]} · ${capWords(text, 60)}`)
-    : [capWords(input.text ?? "", 90)];
+  const texts = answerTexts(input);
   // The room the person's window has beside the canvas chrome, so no answer lands off screen.
   const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
   const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
@@ -490,6 +488,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         answeredAt,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
       }, pageId);
+      if (input.alternatives && input.dimensions) {
+        const card = editor.getShape(id as TLShapeId)!;
+        editor.updateShape({ id: card.id, type: card.type, props: { richText: optionRichText(text, input.dimensions) } } as never);
+      }
       rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
       return id;
     });
