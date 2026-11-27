@@ -329,3 +329,21 @@ export function describeImage(i: { kind: "image" | "video"; name?: string; w?: n
   const head = [`${label}${name ? ` "${name}"` : ""}`, size].filter(Boolean).join(", ");
   return [`${head}.`, caption ? `Caption: "${caption}".` : "", alt ? `Alt text: "${alt}".` : ""].filter(Boolean).join(" ");
 }
+
+type Rect = { x: number; y: number; maxX: number; maxY: number };
+const union = (boxes: readonly Rect[]): Rect => ({
+  x: Math.min(...boxes.map((b) => b.x)),
+  y: Math.min(...boxes.map((b) => b.y)),
+  maxX: Math.max(...boxes.map((b) => b.maxX)),
+  maxY: Math.max(...boxes.map((b) => b.maxY)),
+});
+/**
+ * What to bring into view when an answer lands: the ask with its answer, or, when the two are
+ * taller than the room on screen, the answer alone, so the news is what is seen (its top first),
+ * not the question the person already knows.
+ */
+export function landingBox(ask: Rect, answers: readonly Rect[], roomHeight: number): Rect {
+  const both = union([ask, ...answers]);
+  if (!answers.length || both.maxY - both.y <= roomHeight) return both;
+  return union(answers);
+}
