@@ -720,7 +720,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 117. (PR #160 open, awaiting review; build-A, found in its own #144.) **A folded thread is reachable from the keyboard.** A folded thread's ask and answers are out of view, and the Tab order skips anything hidden, so a keyboard user can never land on a folded thread (the folded line's button is not on the board's Tab path). Done when Tab lands on a folded thread's question, the thread opens while the person is on it and the next Tab reaches its answers, and it folds again when they move on, checked in `verify-fold.mjs` (failing before).
 
 ## Claims
-118 (c), (d), (e). Note placement, threaded answers and ask_status in the docs (build-B) | claude/sprint-agent-friction-4 | 2026-11-27T01:41Z
 118 (a), (b). Runs name their objects; overview shows marks, style, chart state (build-A) | claude/sprint-agent-friction-3 | 2026-11-27T01:35Z
 118 (c), (d), (e). Note beside a target, answer-as-reply and ask_status docs (build-B) | claude/sprint-agent-friction-4 | 2026-11-27T01:46Z
 
