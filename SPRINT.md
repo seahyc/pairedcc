@@ -719,7 +719,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 117. (PR #160 open, awaiting review; build-A, found in its own #144.) **A folded thread is reachable from the keyboard.** A folded thread's ask and answers are out of view, and the Tab order skips anything hidden, so a keyboard user can never land on a folded thread (the folded line's button is not on the board's Tab path). Done when Tab lands on a folded thread's question, the thread opens while the person is on it and the next Tab reaches its answers, and it folds again when they move on, checked in `verify-fold.mjs` (failing before).
 
+120. **Suggestions follow what the thought says, not only its kind (principles row 7, with row 5).** (Filed by build-B after P4.) `startersFor` picks by kind (one card, several, frame, chart, dataset, record) and by a trailing `?`; a card that gives a reason, states a number, proposes what should be done, lists several points or stays abstract gets the same "What's missing? / Give me alternatives". Done when, for one card of the person's, the first suggestion follows a cue in its text (a reason → the strongest objection; a number → where it comes from; a proposal → what would make it wrong; a list → which matters most; a short abstract claim → a concrete example), the second stays the kind's default, a card with no cue keeps today's pair, all with unit tests on fixed texts, and the browser check shows a cued suggestion under a real card.
+
 ## Claims
+120. Suggestions follow what the thought says (build-B) | claude/sprint-suggest-cues | 2026-11-27T01:45Z
 118 (a), (b). Runs name their objects; overview shows marks, style, chart state (build-A) | claude/sprint-agent-friction-3 | 2026-11-27T01:35Z
 118 (c), (d), (e). Note beside a target, answer-as-reply and ask_status docs (build-B) | claude/sprint-agent-friction-4 | 2026-11-27T01:46Z
 
