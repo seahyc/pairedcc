@@ -739,6 +739,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 125. Agent-usability tasks for folded threads, settled recall and lifted-out cards (build-B) | claude/sprint-agent-tasks-fold | 2026-11-27T02:17Z
 128. Bot review findings on #161 and #164 (build-B) | claude/sprint-suggest-review | 2026-11-27T02:08Z
 127. Dimension lines line up across option cards (build-A) | claude/sprint-dimension-align | 2026-11-27T02:09Z
+129. An ask's group starts from the card beside the question too (build-A) | claude/sprint-ask-beside-group | 2026-11-27T02:11Z
 
 ## Done
 - 123. Agent-usability task for options on dimensions (build-B): PR #170, stacked on #165 (task 29: lettered options whose cards list the same cost and risk lines, read through canvas_get; self-test 27/27; three wrong answers fail; focused fresh attempt PASS in 3 calls, kept in its own file so latest.json is not replaced; friction filed as item 129).
