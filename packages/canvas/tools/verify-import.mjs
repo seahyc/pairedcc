@@ -182,11 +182,19 @@ await p.keyboard.press('ControlOrMeta+z'); await p.waitForTimeout(300);
 // 9. Ask about a record: the agent is given its fields with their column names.
 await p.keyboard.press('Escape');
 await p.evaluate((id) => window.paired.select([id]), recs[0].id); await p.keyboard.press('Shift+2'); await p.waitForTimeout(700);
+// There is no Ask box and no starter questions any more (the card is the question), so the old
+// check that a record offers "Is this point valid?" cannot be made. What remains is checked
+// instead: Ask on a record opens a pink card beside it, pointing at the record, to write the
+// question on; finishing it sends the ask with the record as its context.
 await p.locator('.selection-bar button.primary').click(); await p.waitForTimeout(400);
-const starterTexts = await p.locator('.ask-starters button').allTextContents();
-check('a record offers "Is this point valid?"', starterTexts[0] === 'Is this point valid?', starterTexts.join(' | '));
-await shot('06-ask-box-on-a-record');
-await p.locator('.ask-starters button', { hasText: 'Is this point valid?' }).click(); await p.waitForTimeout(900);
+const opened = await p.evaluate((recordId) => {
+  const ed = window.__pairedEditor, id = ed.getEditingShapeId(), s = id && ed.getShape(id);
+  return s ? { human: !s.meta.createdBy || s.meta.createdBy === 'Human', askWhenWritten: s.meta.askWhenWritten === true, targets: s.meta.targetIds ?? [], onRecord: s.id === recordId || s.parentId === recordId } : null;
+}, recs[0].id);
+check('Ask on a record opens a pink card beside it for the question, pointing at the record', Boolean(opened) && opened.human && opened.askWhenWritten && !opened.onRecord && opened.targets.includes(recs[0].id) && await p.locator('.selection-bar.asking, .ask-starters').count() === 0, JSON.stringify(opened));
+await shot('06-question-card-on-a-record');
+await p.keyboard.type('Is this point valid?', { delay: 5 });
+await p.keyboard.press('Escape'); await p.waitForTimeout(900);
 const asked = await api('asks', { state: 'all' });
 const ask = asked.result?.asks?.find(a => a.question === 'Is this point valid?');
 const texts = ask?.targets.map(t => t.text) ?? [];

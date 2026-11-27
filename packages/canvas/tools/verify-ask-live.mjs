@@ -1,7 +1,7 @@
 // Browser check: an ask's progress is announced to assistive technology.
 //
-// Starts its own dev server of this checkout with an empty board store. The person asks in a
-// real page and an agent takes, answers or fails the ask over HTTP. A polite live region must
+// Starts its own dev server of this checkout with an empty board store. The person writes a
+// question on a card in a real page (finishing it sends it) and an agent takes, answers or fails the ask over HTTP. A polite live region must
 // say each change of state once (sent, working with its note, answered with how many options,
 // failed with Retry), stay silent while the state line's clock ticks, and never be seen.
 //
@@ -59,22 +59,24 @@ try {
   const first = await region();
   check('a polite live region for asks is on the page, unseen and silent at first', Boolean(first) && first.live === 'polite' && !first.seen && first.text === '', JSON.stringify(first));
 
-  /** The person writes and asks; the agent waiting receives it. */
-  async function ask(x, y, text, question) {
+  /**
+   * The person writes a question on a card and finishes writing it (Escape): a card ending in "?"
+   * is sent as it is (there is no question box). The agent waiting receives it.
+   */
+  async function ask(x, y, question) {
     await p.mouse.dblclick(x, y);
     await p.waitForTimeout(300);
-    await p.keyboard.type(text, { delay: 0 });
-    await p.keyboard.press('Control+Enter');
-    await p.waitForSelector('.selection-bar.asking input');
-    await p.fill('.selection-bar.asking input', question);
+    await p.keyboard.type(question, { delay: 0 });
     const waiting = post('/asks/wait', { agent: 'Check agent', waitMs: 10000 });
-    await p.press('.selection-bar.asking input', 'Enter');
-    return waiting;
+    await p.keyboard.press('Escape');
+    const got = await waiting;
+    if (got.ask?.question !== question) throw new Error(`the card was not sent as the ask: ${JSON.stringify(got.ask ?? got)}`);
+    return got;
   }
   const cmd = (got, op, input) => post('/command', { requestId: randomUUID(), sessionId: got.sessionId, actor: 'Check agent', command: { op, input: { id: got.ask.id, ...input } } });
 
   // The waiting agent takes the ask at once, so "sent" is said first.
-  const got = await ask(320, 700, 'Charge per seat or per workspace?', 'Which is simpler to explain?');
+  const got = await ask(320, 700, 'Which is simpler to explain?');
   await p.waitForTimeout(500);
   const sent = await region();
   check('sending an ask is said', /Asked “Which is simpler to explain\?”/.test(sent?.text ?? ''), sent?.text);
@@ -91,7 +93,7 @@ try {
   await p.screenshot({ path: `${out}/1-answered.png` });
 
   await p.evaluate(() => { window.__pairedEditor.selectNone(); });
-  const second = await ask(320, 160, 'Who pays?', 'Team or company?');
+  const second = await ask(320, 160, 'Team or company?');
   await p.waitForTimeout(400);
   await cmd(second, 'ask_status', { state: 'failed', error: 'The model took too long' });
   await p.waitForTimeout(600);

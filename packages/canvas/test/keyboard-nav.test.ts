@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement, type Box } from "../src/keyboard-nav";
+import { firstTabStop, keepThreadsTogether, keyboardCardSpot, selectionAnnouncement, stopAnnouncement, type Box } from "../src/keyboard-nav";
 
 const view: Box = { x: 0, y: 0, w: 1200, h: 800 };
 const size = { w: 300, h: 72 };
@@ -97,5 +97,15 @@ describe("what a screen reader hears at a stop", () => {
   it("says how many are selected when there are several", () => {
     expect(selectionAnnouncement([])).toBe("");
     expect(selectionAnnouncement(["a", "b", "c"])).toBe("3 objects selected.");
+  });
+});
+
+describe("keepThreadsTogether: a folded thread's answers follow its question", () => {
+  const stops = [{ id: "ask" }, { id: "note" }, { id: "a1", replyTo: "ask" }, { id: "a2", replyTo: "ask" }, { id: "other", replyTo: "open-ask" }];
+  it("moves a folded thread's answers to just after its question", () => {
+    expect(keepThreadsTogether(stops, (id) => id === "ask").map((s) => s.id)).toEqual(["ask", "a1", "a2", "note", "other"]);
+  });
+  it("leaves reading order alone for threads that are not folded", () => {
+    expect(keepThreadsTogether(stops, () => false).map((s) => s.id)).toEqual(["ask", "note", "a1", "a2", "other"]);
   });
 });
