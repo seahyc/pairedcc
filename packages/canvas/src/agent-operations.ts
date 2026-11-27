@@ -405,10 +405,11 @@ export function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Se
  * The human's comment: a pink handwritten card pinned to the selected objects (with an
  * arrow to each) or to a spot on the board. It joins the feedback queue as an open item.
  */
-export function createComment(editor: Editor, value: { targetIds?: string[]; x?: number; y?: number; text?: string }, extra: Record<string, unknown> = {}) {
+export function createComment(editor: Editor, value: { targetIds?: string[]; x?: number; y?: number; text?: string; at?: { x: number; y: number } }, extra: Record<string, unknown> = {}) {
   const targets = (value.targetIds ?? []).map((id) => find(editor, id));
-  let x = value.x ?? 0, y = value.y ?? 0;
-  if (targets.length) {
+  let x = value.at?.x ?? value.x ?? 0, y = value.at?.y ?? value.y ?? 0;
+  // `at` is a place already chosen clear of the board (a suggestion the person clicked).
+  if (targets.length && !value.at) {
     const boxes = targets.flatMap((t) => editor.getShapePageBounds(t) ?? []);
     if (!boxes.length) throw new Error("Target must have bounds");
     // A card inside a group (an imported record) is commented on from beside the whole group, level with the card.
