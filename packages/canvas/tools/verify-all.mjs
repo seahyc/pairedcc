@@ -93,6 +93,8 @@ const CHECKS = [
   { name: 'announce-fixes', file: 'verify-announce-fixes.mjs', args: () => [] },
   { name: 'name-follows', file: 'verify-name-follows.ts', args: () => [] },
   { name: 'runs-page', file: 'verify-runs-page.ts', args: () => [] },
+  // Its move timings on a 10k board are reported only; its Layers checks give the verdict.
+  { name: 'big-edit', file: 'verify-big-edit.mjs', args: () => [] },
   { name: 'recall', file: 'verify-recall.mjs', args: (d) => [d] },
   { name: 'overview', file: 'verify-overview.mjs', args: (d) => [d] },
   { name: 'fold', file: 'verify-fold.mjs', args: (d) => [d] },
@@ -101,10 +103,9 @@ const CHECKS = [
 const SKIPPED = [
   { name: 'board-sync-server', reason: 'needs Postgres and Redis; run `pnpm --filter @pairedcc/canvas verify:sync-server`' },
   { name: 'board-images legacy', reason: 'two-step profile modes (legacy-add, legacy-open) are run by hand' },
-  { name: 'big-edit', reason: 'reports move timings on a 10k board without a verdict; run by hand (`node tools/verify-big-edit.mjs`)' },
 ];
 // Checks added to tools/ later that this list does not know yet are reported, never silently missed.
-const known = new Set([...CHECKS.map((c) => c.file), 'verify-board-sync-server.ts', 'verify-big-edit.mjs', 'verify-all.mjs']);
+const known = new Set([...CHECKS.map((c) => c.file), 'verify-board-sync-server.ts', 'verify-all.mjs']);
 const unknown = readdirSync(tools).filter((f) => f.startsWith('verify-') && !known.has(f));
 
 async function isUp() {
