@@ -96,7 +96,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_read",
     op: "read",
     description:
-      "Read the current page, selected objects, readable text, annotations, connections and open human marks (feedback notes, picks, rejects, ink over objects, with target IDs). Each object reports its author. Image bytes are omitted; canvas_get retrieves an image asset. To find objects by their words instead of reading everything, pass text.",
+      "Read the current page, selected objects, readable text, annotations, connections and open human marks (feedback notes, picks, rejects, ink over objects, with target IDs). Each object reports its author and its words as plain text (props leave out richText; canvas_get has it). Image bytes are omitted; canvas_get retrieves an image asset. To find objects by their words instead of reading everything, pass text.",
     input: {
       ...ids,
       text: z.string().max(200).optional().describe("Only objects whose text or name contains this, ignoring case and accents. Combines with ids."),
@@ -249,7 +249,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_runs",
     op: "runs",
     description:
-      "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, the pages each touched, and the object IDs each one created, updated and removed. Pass page: \"current\" for only the open page. Use a runId with canvas_undo_run.",
+      "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, the pages each touched, and the object IDs each one created, updated and removed (at most 10 per list, with createdCount/updatedCount/removedCount when there are more). Pass page: \"current\" for only the open page, or runId for one run with every ID. Use a runId with canvas_undo_run.",
     input: runsInput.shape,
     output: "json",
   },
