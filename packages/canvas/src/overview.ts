@@ -2,7 +2,8 @@ import { isLeftOut } from "./leave-out";
 import { foldedForAgent } from "./fold";
 import { z } from "zod";
 import type { Editor, TLShape } from "tldraw";
-import { revision, richTextPlain, shapeName } from "./operations";
+import { cardStyle, revision, richTextPlain, shapeName } from "./operations";
+import { chartLine } from "./data/agent";
 import { authorOf, collectMarks } from "./scratchbook";
 import { clusters } from "./clusters";
 import { groupLabel, type OverviewItem } from "./board-overview";
@@ -84,6 +85,11 @@ export function overview(editor: Editor, value: unknown = {}) {
         ...(isLeftOut(s.meta) ? { leftOut: true } : {}),
         // A finished thread folded to one line on the board (the question and the pick).
         ...(foldedForAgent(editor, s) ? { folded: true } : {}),
+        // What would otherwise take a full read: the person's judgement, the card's style, settled, what a chart shows.
+        ...(s.meta.mark === "picked" || s.meta.mark === "rejected" ? { mark: s.meta.mark } : {}),
+        ...(s.type === "card" && cardStyle((s.props as { tone?: unknown }).tone) ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
+        ...(s.meta.settled === true ? { settled: true } : {}),
+        ...(s.type === "chart" ? { chart: chartLine(editor, s) } : {}),
         ...(snippet(s) ? { text: snippet(s) } : {}),
       };
     }),

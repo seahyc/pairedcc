@@ -88,7 +88,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_overview",
     op: "overview",
     description:
-      "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
+      "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count, the person's mark (picked/rejected), card style, settled, a chart's one-line summary and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
     input: overviewInput.shape,
     output: "json",
   },
@@ -146,7 +146,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_annotate",
     op: "annotate",
     description:
-      "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar.",
+      "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar. Without x/y it goes under the object, or beside it when that space is taken, never covering anything, on a card as wide as the note needs.",
     // Authorship is never the caller's to set: the canvas attributes the note to the agent.
     input: annotationInput.omit({ author: true }).shape,
     output: "json",
@@ -187,7 +187,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_ask_status",
     op: "ask_status",
     description:
-      "Tell the human what is happening with an ask: `working` with a short note when you pick it up ('reading 2 cards'), `failed` with a plain reason if you cannot answer (they get a Retry button), or `waiting` to hand it back. Shown on the ask itself.",
+      "Tell the human what is happening with an ask: `working` with a short note when you pick it up ('reading 2 cards'), `failed` with a plain reason if you cannot answer (they get a Retry button), or `waiting` to hand it back. Shown on the ask itself. Optional: if you can answer at once, call canvas_answer straight away.",
     input: askStatusInput.shape,
     output: "json",
   },
@@ -195,7 +195,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_answer",
     op: "answer",
     description:
-      "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X). Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved.",
+      "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X). Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved. In canvas_feedback the answer is listed as the ask's reply and the item is resolved (left open for a clarifying question).",
     input: answerInput.shape,
     output: "json",
   },
@@ -249,7 +249,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_runs",
     op: "runs",
     description:
-      "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, the pages each touched, and the object IDs each one created, updated and removed (at most 10 per list, with createdCount/updatedCount/removedCount when there are more). Pass page: \"current\" for only the open page, or runId for one run with every ID. Use a runId with canvas_undo_run.",
+      "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, the pages each touched, and the object IDs each one created, updated and removed (at most 10 per list, with createdCount/updatedCount/removedCount when there are more), with names: a short name for each listed object. Pass page: \"current\" for only the open page, or runId for one run with every ID. Use a runId with canvas_undo_run.",
     input: runsInput.shape,
     output: "json",
   },

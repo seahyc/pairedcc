@@ -30,9 +30,9 @@ export type AskForPrompt = {
   /** What the person pinned for every ask on the page, and how many more were not sent. */
   pinned?: Given[];
   pinnedMore?: number;
-  /** The rest of the group the card sits in, each with where it sits relative to the card. */
   /** What the group the card sits in is called (a frame's name, a heading, or its first words). */
   group?: string;
+  /** The rest of the group the card sits in, each with where it sits relative to the card. */
   cluster?: (Given & { relation: string })[];
   clusterMore?: number;
 };

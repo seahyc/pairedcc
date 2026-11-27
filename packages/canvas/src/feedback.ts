@@ -67,7 +67,10 @@ function commentTargets(meta: Record<string, unknown>) {
  * `buildFeedback`). Others only name the items' targets, which a count does not need.
  */
 export const mayBeFeedback = (s: { type: string; meta: Record<string, unknown> }) =>
-  s.meta.mark === "picked" || s.meta.mark === "rejected" || s.meta.role === "annotation" || s.type === "draw";
+  s.meta.mark === "picked" || s.meta.mark === "rejected" || s.meta.role === "annotation" || s.type === "draw" || isAsk(s.meta);
+
+/** An ask: since the card is the question, the person's own card can be one, not only a comment. */
+const isAsk = (m: Record<string, unknown>) => Boolean(m.ask && typeof m.ask === "object" && typeof (m.ask as { state?: unknown }).state === "string");
 
 export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
   const byId = new Map(sources.map((s) => [s.id, s]));
@@ -116,9 +119,12 @@ export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
         }),
       );
     if (s.author !== HUMAN_AUTHOR) continue;
-    if (m.role === "annotation")
+    // A card the person sent as a question is in the queue like a comment: open until an answer
+    // (not a clarifying question) resolves it.
+    const ownAsk = m.role !== "annotation" && isAsk(m);
+    if (m.role === "annotation" || ownAsk)
       items.push({
-        ...item(s, "comment", m.status, commentTargets(m), {
+        ...item(s, "comment", ownAsk ? (m.status ?? "open") : m.status, commentTargets(m), {
           createdAt: m.createdAt,
           updatedAt: m.updatedAt ?? m.createdAt,
           resolvedAt: m.resolvedAt,

@@ -30,6 +30,7 @@ import {
   shapeName,
   createBridge,
   richTextPlain,
+  cardStyle,
   revision,
 } from "./operations";
 import { createPrompt } from "./learning/prompt-shape";
@@ -39,6 +40,7 @@ import { overview } from "./overview";
 import { matchesText, richTextSearch } from "./read-filter";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { rewriteRefusal } from "./authorship";
+import { notePlace, noteWidth } from "./note-place";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
@@ -61,11 +63,7 @@ const agentWidths = { agent: 420, heading: 440, quote: 380, code: 360 } as const
  * The style a card was written in, as agents name it on create: note, heading, quote or
  * code; "handwriting" for the person's cards and "caption" for image captions.
  */
-export function cardStyle(tone: unknown): string | undefined {
-  if (tone === "agent") return "note";
-  if (tone === "human") return "handwriting";
-  return typeof tone === "string" ? tone : undefined;
-}
+export { cardStyle } from "./operations";
 
 /** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
 export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}, pageId?: TLPageId) {
@@ -360,23 +358,24 @@ export function annotateObject(editor: Editor, value: unknown) {
     target = find(editor, input.targetId),
     bounds = editor.getShapePageBounds(target);
   if (!bounds) throw new Error("Target must have bounds");
-  // Under the target, then further down past anything already there, unless the agent chose a spot.
-  const lines = Math.ceil(input.text.length / 48) + (input.text.match(/\n/g)?.length ?? 0);
-  const placed = input.x === undefined && input.y === undefined
-    ? freeSpot(editor, { x: bounds.x, y: bounds.maxY + 60, w: agentWidths.agent, h: 28 + 22 * Math.max(1, lines) }, new Set([target.id]))
-    : undefined;
+  // Under the target, or the nearest clear spot beside it when that is taken (note-place.ts),
+  // unless the agent chose a spot. A short note gets a card that fits it.
+  const chosen = input.x !== undefined || input.y !== undefined;
+  const width = noteWidth(input.text);
+  const lines = Math.ceil(input.text.length / Math.max(16, Math.floor((width - 44) / 8.5))) + (input.text.match(/\n/g)?.length ?? 0);
+  const placed = chosen ? undefined : notePlace(bounds, { w: width, h: 28 + 22 * Math.max(1, lines) }, othersOnPage(editor, new Set([target.id])));
   const x = input.x ?? placed?.x ?? bounds.x, y = input.y ?? placed?.y ?? bounds.maxY + 60;
   const meta = { name: input.author === HUMAN ? "Feedback" : "Agent note", role: "annotation", targetId: target.id, status: "open", author: input.author };
   editor.markHistoryStoppingPoint("add feedback");
   let id = createShapeId();
   editor.run(() => {
     // On the page, above any frame there: a frame would clip a note that runs past its edge.
-    id = createCard(editor, { x, y, text: input.text }, input.author, meta, editor.getCurrentPageId());
-    // The height above was a guess; the card sizes to its text when made. Check again with its real size.
+    id = createCard(editor, { x, y, width, text: input.text }, input.author, meta, editor.getCurrentPageId());
+    // The height above was a guess; the card sizes to its text when made. Place again with its real size.
     const made = placed && editor.getShapePageBounds(id);
     if (made) {
-      const clear = freeSpot(editor, { x: made.x, y: made.y, w: made.w, h: made.h }, new Set([target.id, id]));
-      if (clear.y !== made.y) editor.updateShape({ id, type: "card", y: clear.y });
+      const again = notePlace(bounds, { w: made.w, h: made.h }, othersOnPage(editor, new Set([target.id, id])));
+      if (again.x !== made.x || again.y !== made.y) editor.updateShape({ id, type: "card", x: again.x, y: again.y });
     }
     connect(
       editor,
@@ -389,12 +388,17 @@ export function annotateObject(editor: Editor, value: unknown) {
 type Rect = { x: number; y: number; w: number; h: number };
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
-/** Nudge a new card down until it no longer sits on top of something else. */
-export function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set(), pageId: TLPageId = editor.getCurrentPageId()) {
-  const others = [...editor.getPageShapeIds(pageId)]
+/** The boxes of everything a new card must not cover on a page: not frames or arrows. */
+function othersOnPage(editor: Editor, ignore: Set<string>, pageId: TLPageId = editor.getCurrentPageId()) {
+  return [...editor.getPageShapeIds(pageId)]
     .flatMap((id) => editor.getShape(id) ?? [])
     .filter((s) => s.type !== "frame" && s.type !== "arrow" && !ignore.has(s.id))
     .flatMap((s) => editor.getShapePageBounds(s) ?? []);
+}
+
+/** Nudge a new card down until it no longer sits on top of something else. */
+export function freeSpot(editor: Editor, box: Rect, ignore: Set<string> = new Set(), pageId: TLPageId = editor.getCurrentPageId()) {
+  const others = othersOnPage(editor, ignore, pageId);
   const spot = { ...box };
   // Leave a little air around the new card, and keep going past a tall column of earlier answers.
   const roomy = () => ({ x: spot.x - 8, y: spot.y - 14, w: spot.w + 16, h: spot.h + 28 });
