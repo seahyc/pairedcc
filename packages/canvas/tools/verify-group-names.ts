@@ -60,6 +60,19 @@ try {
   const ov2 = await agent.call("canvas_overview", {});
   const withFrame = ov2.clusters.find((c: any) => c.ids.includes(lifted));
   check("canvas_overview names that cluster after the frame, not the question", withFrame?.label === "Kitchen quotes", withFrame && { label: withFrame.label, ids: withFrame.ids.length });
+  // Review of #179: an unnamed shape (a rectangle with no words) as the lifted question's only
+  // neighbour on the page does not name its group "Untitled": the question is in the frame's group.
+  await page.keyboard.press("Escape");
+  await agent.call("canvas_page", { name: "Group names, lifted beside a shape" });
+  const frame3: any = await ev("(p) => p.create({ kind: 'frame', x: 0, y: 0, width: 620, height: 360, name: 'Kitchen quotes' })");
+  const frame3Id = typeof frame3 === "string" ? frame3 : frame3.id;
+  await ev("(p, e, a) => { const r = p.create({ kind: 'note', x: 30, y: 50, width: 170, text: 'Oakline Joinery: £8,400' }); e.reparentShapes([typeof r === 'string' ? r : r.id], a); }", frame3Id);
+  await ev("(p) => p.create({ kind: 'rectangle', x: 630, y: 300, width: 120, height: 80 })");
+  const lifted3: string = await ev("(p, e, a) => { const r = p.create({ kind: 'note', x: 400, y: 300, width: 260, text: 'Which of these quotes is cheapest?' }); const id = typeof r === 'string' ? r : r.id; e.reparentShapes([id], a); return id; }", frame3Id) as string;
+  await ev("(p, e, id) => void p.select([id])", lifted3);
+  await page.keyboard.press("ControlOrMeta+Enter");
+  const ask3 = await until(async () => (await agent.call("canvas_asks", { state: "all" })).asks.find((x: any) => x.id === lifted3), "the ask beside a shape");
+  check("an unnamed neighbour does not name the lifted question's group", ask3.group === "Kitchen quotes", { group: ask3.group, cluster: ask3.cluster?.map((m: any) => m.type) });
   check("no page errors", errors.length === 0, errors.slice(0, 3));
   await agent.close();
   await context.close();

@@ -336,8 +336,11 @@ function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep:
   // (an ask is never the name of what it asks about) and what the person left out.
   const whole = clusterAround(placed, host.id, new Set(), Infinity).members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? []);
   // Filtered without counting: naming the group must not change how many objects the ask says it withheld.
-  const name = whole.length ? groupName(editor, keepForAgent(whole, []).kept) : undefined;
-  return { members, more: found.more, ...(name ? { name } : {}) };
+  const named = keepForAgent(whole, []).kept;
+  const name = whole.length ? groupName(editor, named) : undefined;
+  // Whether the pile has words of its own to be named by, or only a placeholder ("Untitled", "2 things").
+  const hasWords = named.some((s) => !askOf(s) && textOf(s));
+  return { members, more: found.more, hasWords, ...(name ? { name } : {}) };
 }
 
 /** Where a target sits relative to the ask's card, in words, when both are on the board and apart from each other. */
@@ -383,11 +386,13 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   // ask already gives (targets, and the frame's objects when the card is in a frame) is not repeated.
   const group = editor.getShapePageBounds(shape)
     ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : []), ...frameObjects.map((s) => s.id)]), keep)
-    : { members: [], more: 0 };
+    : { members: [], more: 0, hasWords: false };
   // A card with no named group of its own around it still sits in its frame's: the one it is in, or
   // the one it was lifted out of so the frame would not cut it off (item 132). Named as O names a frame.
-  const ownFrame = group.name ? undefined : frameOf(editor, shape);
-  const groupCalled = group.name ?? (ownFrame && keepForAgent([ownFrame], []).kept.length ? groupName(editor, [ownFrame]) : undefined);
+  // A pile with words names the group; otherwise the card's own frame does, and only then a placeholder.
+  const ownFrame = group.name && group.hasWords ? undefined : frameOf(editor, shape);
+  const frameName = ownFrame && keepForAgent([ownFrame], []).kept.length ? groupName(editor, [ownFrame]) : undefined;
+  const groupCalled = (group.hasWords ? group.name : undefined) ?? frameName ?? group.name;
   // Pinned for every ask on this page, unless this ask already gives it.
   const alreadyGiven = [...skip, ...group.members.map((m) => m.id), ...(frame ? [frame.id] : []), ...frameObjects.map((s) => s.id), ...givenTargets.flatMap((t) => t.inside?.map((i) => i.id) ?? [])];
   const pins = page ? pinnedOnPage(editor, page.id, alreadyGiven) : { pinned: [], more: 0 };
