@@ -180,7 +180,10 @@ describe("the person's own card sent as a question", () => {
     const items = buildFeedback([source("thought", { text: "Per seat" }), ask("waiting")]);
     expect(items.map((i) => [i.id, i.kind, i.status, i.ask, i.text])).toEqual([["shape:q", "comment", "open", "waiting", "How should we charge?"]]);
     expect(items[0].targetIds).toEqual(["shape:thought"]);
-    expect(buildFeedback([ask("answered")])[0].status).toBe("resolved");
+    // Answered and resolved by the answer; a clarifying question leaves it answered but open.
+    const resolved = { ...ask("answered"), meta: { ...ask("answered").meta, status: "resolved" } };
+    expect(buildFeedback([resolved])[0].status).toBe("resolved");
+    expect(buildFeedback([ask("answered")])[0].status).toBe("open");
     expect(mayBeFeedback({ type: "card", meta: ask("waiting").meta })).toBe(true);
   });
   it("carries the agent's answer as its reply", () => {

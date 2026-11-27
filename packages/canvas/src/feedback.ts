@@ -119,11 +119,12 @@ export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
         }),
       );
     if (s.author !== HUMAN_AUTHOR) continue;
-    // A card the person sent as a question is in the queue like a comment: open until answered.
+    // A card the person sent as a question is in the queue like a comment: open until an answer
+    // (not a clarifying question) resolves it.
     const ownAsk = m.role !== "annotation" && isAsk(m);
     if (m.role === "annotation" || ownAsk)
       items.push({
-        ...item(s, "comment", ownAsk ? (m.status ?? ((m.ask as { state: string }).state === "answered" ? "resolved" : "open")) : m.status, commentTargets(m), {
+        ...item(s, "comment", ownAsk ? (m.status ?? "open") : m.status, commentTargets(m), {
           createdAt: m.createdAt,
           updatedAt: m.updatedAt ?? m.createdAt,
           resolvedAt: m.resolvedAt,
