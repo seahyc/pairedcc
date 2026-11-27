@@ -82,6 +82,7 @@ import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
 import { checkable, startCheck } from "./learning/check-ui";
 import { AskLayer, AutoAsk, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
+import { SuggestLayer } from "./suggest-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
 import { elsewhereNotice, elsewhereShow, markOf, noticeDelay } from "./ask-rules";
@@ -1821,6 +1822,7 @@ function CanvasLayers() {
     <>
       <ScratchbookLayer />
       <AskLayer />
+      <SuggestLayer />
       <DataLayer />
       <CoverLayer />
       <FocusVeil />

@@ -123,11 +123,11 @@ export function shouldSend(shape: TLShape | undefined) {
  * a pink card opens beside it, already pointing at it, and what is written there is sent
  * when the person finishes. With a question (agents, tests) it is sent at once.
  */
-export function createAsk(editor: Editor, value: { targetIds: string[]; question?: string }) {
+export function createAsk(editor: Editor, value: { targetIds: string[]; question?: string; at?: { x: number; y: number } }) {
   const targets = value.targetIds.flatMap((id) => editor.getShape(id as TLShapeId) ?? []).filter((s) => s.type !== "arrow");
   if (!targets.length) throw new Error("Select what you mean first, then ask");
   const question = value.question?.trim() ?? "";
-  const id = createComment(editor, { targetIds: targets.map((t) => t.id), text: question }, { name: "Ask", askWhenWritten: true }) as TLShapeId;
+  const id = createComment(editor, { targetIds: targets.map((t) => t.id), text: question, at: value.at }, { name: "Ask", askWhenWritten: true }) as TLShapeId;
   if (question) askDirect(editor, id);
   return id;
 }
