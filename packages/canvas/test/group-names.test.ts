@@ -72,3 +72,25 @@ describe("a group is not named after an ask about it", () => {
     expect(groupLabel([item("q", 0, "Which would you test first?", true)])).toBe("Which would you test first?");
   });
 });
+
+describe("review of #169", () => {
+  const item = (id: string, y: number, text: string, extra: Record<string, unknown> = {}) => ({ id, x: 0, y, w: 200, h: 60, text, thought: true, settled: false, ...extra });
+  it("an ask that is also a heading does not name the group", () => {
+    expect(groupLabel([item("q", 0, "Which idea would you test?", { ask: true, heading: true }), item("c", 80, "Double-click anywhere")])).toBe("Double-click anywhere");
+  });
+});
+
+describe("a frame beside a loose pile", () => {
+  const frame = { id: "shape:frame", type: "frame", parentId: "page:p", x: 0, y: 0, rotation: 0, isLocked: false, opacity: 1, index: "a1", typeName: "shape", meta: { revision: 0 }, props: { w: 400, h: 300, name: "Research" } };
+  const near = [card("shape:p1", 420, 0, "Pricing ideas"), card("shape:p2", 420, 80, "Charge per seat")];
+  const all = [frame, ...near];
+  const fake2 = { ...fake, getCurrentPageShapesSorted: () => all, getCurrentPageShapes: () => all, getShape: (id: string) => all.find((s) => s.id === id),
+    getShapePageBounds: (s: any) => { const x = typeof s === "string" ? all.find((y) => y.id === s) : s; return x ? { x: x.x, y: x.y, w: x.props.w, h: x.props.h, maxX: x.x + x.props.w, maxY: x.y + x.props.h } : undefined; } };
+  const ed2 = new Proxy(fake2, { get: (t, k) => (k in t ? (t as Record<string | symbol, unknown>)[k] : () => { throw new Error(`fake editor lacks ${String(k)}`); }) }) as unknown as Editor;
+  it("names the cluster after the pile, as the overview names that pile, not after the frame", () => {
+    const { clusters } = overview(ed2) as { clusters: { ids: string[]; label?: string }[] };
+    const c = clusters.find((x) => x.ids.includes("shape:p1"))!;
+    expect(c.ids).toContain("shape:frame");
+    expect(c.label).toBe("Pricing ideas");
+  });
+});

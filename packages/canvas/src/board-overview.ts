@@ -44,7 +44,7 @@ export function groupLabel(members: OverviewItem[]) {
   if (frame) return clip(frame.frame || "Frame");
   const ordered = [...members].sort((a, b) => a.y - b.y || a.x - b.x);
   const said = (m: OverviewItem) => Boolean(m.text.trim());
-  const named = ordered.find((m) => m.heading && said(m)) ?? ordered.find((m) => !m.ask && said(m)) ?? ordered.find(said);
+  const named = ordered.find((m) => !m.ask && m.heading && said(m)) ?? ordered.find((m) => !m.ask && said(m)) ?? ordered.find(said);
   return named ? clip(named.text) : members.length === 1 ? "Untitled" : `${members.length} things`;
 }
 
