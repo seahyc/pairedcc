@@ -714,7 +714,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 116. (PR #158 open, awaiting review.) **The principles status table after the P-items.** `docs/canvas/principles.md` still says nothing folds or focuses (row 1), the agent is not given what lies near the card (row 2), nothing marks an idea settled (rows 4 and 8) and the ask box offers starters (row 7), though #135, #138, #142, #144 and #145 merged and 7cc29ef removed the box. Done when each row matches the code and the merged PRs, citing them, and nothing unmerged is claimed.
 
+117. **Suggestions stay readable and in view at any zoom, and on a phone.** (Found by build-B after P4, #156.) Suggestions are drawn in page units, so on a 390 px phone where the board opens at 37 % they are about 7 px tall and too small to tap, and a card near the bottom edge gets suggestions under the bottom toolbar, off screen. Done when suggestions keep a legible size on screen (at least 15 px text, taps at least 32 px tall on touch) whatever the zoom, are placed only where they are wholly in view and clear of the tool strip, top bar and bottom bar (otherwise not shown), with unit tests on fixed views and a browser check on an emulated phone (stacked on #156).
+
 ## Claims
+117. Suggestions readable and in view at any zoom (build-B) | claude/sprint-p4-phone | 2026-11-27T01:32Z
 114. Agent-usability tasks for P2 and 105 (c) (build-A) | claude/sprint-agent-tasks-4 | 2026-11-27T01:21Z
 
 ## Done
