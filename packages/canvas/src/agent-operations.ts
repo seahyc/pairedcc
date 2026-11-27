@@ -485,6 +485,12 @@ export function readFeedback(editor: Editor, value: unknown = {}) {
   };
 }
 
+function withoutRichText(props: Record<string, unknown>) {
+  if (!("richText" in props)) return props;
+  const { richText: _richText, ...rest } = props;
+  return rest;
+}
+
 export function readCanvas(editor: Editor, value: unknown = {}) {
   const input = readInput.parse(value);
   const objects = editor
@@ -507,7 +513,8 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
           };
       }
       // Data objects are summarised: rows and bars appear in dataset/widget, rows only via get.
-      const props = object && summaryProps(s.type, object.props as Record<string, unknown>);
+      // Rich text is given once, as plain `text`; canvas_get has the structured form.
+      const props = object && withoutRichText(summaryProps(s.type, object.props as Record<string, unknown>));
       return {
         ...object,
         props,
