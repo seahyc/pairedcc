@@ -108,3 +108,15 @@ export function stopAnnouncement(stop: Stop): string {
 export function selectionAnnouncement(ids: string[]): string {
   return ids.length > 1 ? `${ids.length} objects selected.` : "";
 }
+
+/**
+ * The Tab order with a folded thread's answers straight after its question. A folded thread is
+ * open only while the person is on it, so reaching its answers by reading order (with something
+ * else in between) would fold it away first; its answers are visited before moving on.
+ */
+export function keepThreadsTogether<T extends { id: string; replyTo?: string }>(stops: readonly T[], folded: (askId: string) => boolean): T[] {
+  const replies = new Map<string, T[]>();
+  for (const s of stops) if (s.replyTo && folded(s.replyTo)) replies.set(s.replyTo, [...(replies.get(s.replyTo) ?? []), s]);
+  const moved = new Set([...replies.values()].flat().map((s) => s.id));
+  return stops.flatMap((s) => (moved.has(s.id) ? [] : [s, ...(replies.get(s.id) ?? [])]));
+}

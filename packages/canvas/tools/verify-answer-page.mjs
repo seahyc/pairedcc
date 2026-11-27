@@ -5,7 +5,7 @@
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-answer-page.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 (`pnpm dev:canvas`). Playwright is not a dependency of this
+// Needs the dev server on :5183 (`pnpm dev:canvas`; set CANVAS_BASE for another). Playwright is not a dependency of this
 // repository; it is loaded from the directory you run this in.
 import { createRequire } from 'node:module';
 import { mkdtempSync } from 'node:fs';
@@ -14,7 +14,7 @@ import { join } from 'node:path';
 const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-answer-page.mjs <screenshot dir>');
-const BASE = 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 
@@ -39,13 +39,22 @@ async function command(op, input) {
   return body.result;
 }
 
+// The card is the question: the person writes the question on a card of their own right under
+// what it is about, selects it and sends it with Ask (there is no question box). The card becomes
+// the ask; what sits beside it is given with it.
 async function ask(ids, question) {
-  await p.evaluate((ids) => window.paired.select(ids), ids);
+  const id = await p.evaluate(([ids, question]) => {
+    const ed = window.__pairedEditor, bs = ids.map((id) => ed.getShapePageBounds(id));
+    const x = Math.min(...bs.map((b) => b.x)), r = Math.max(...bs.map((b) => b.maxX));
+    const below = ed.getCurrentPageShapes().filter((s) => s.type !== 'arrow' && s.type !== 'frame').map((s) => ed.getShapePageBounds(s)).filter((b) => b.x < r && b.maxX > x);
+    const made = window.paired.create({ kind: 'note', x, y: Math.max(...below.map((b) => b.maxY)) + 24, width: 300, text: question });
+    return typeof made === 'string' ? made : made.id;
+  }, [ids, question]);
+  await p.evaluate((id) => window.paired.select([id]), id);
   await p.waitForTimeout(200);
   await p.locator('.selection-bar button.primary').click();
-  await p.locator('.selection-bar.asking input').fill(question);
-  await p.keyboard.press('Enter');
   await p.waitForTimeout(400);
+  return id;
 }
 
 const card = await p.evaluate(() => window.paired.create({ kind: 'note', x: 120, y: 520, width: 300, text: 'Is the team plan priced per seat?' }));
