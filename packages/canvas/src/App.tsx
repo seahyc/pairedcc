@@ -109,6 +109,8 @@ import { layerTree } from "./layer-tree";
 import { followPause, followers } from "./follow";
 import { toggleSettled } from "./settled";
 import { BoardOverview } from "./overview-ui";
+import { foldVisibility } from "./fold";
+import { endFocus, focusAtom, focusRect, focusable, startFocus } from "./focus";
 import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
 import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
@@ -290,6 +292,7 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
       ["Check me on an agent's answer: explain it from memory, then compare", "E"],
       ["Settle it: done for now (again to reopen)", "S"],
       ["See the whole board: its groups, open and settled; press one to go there", "O"],
+      ["Focus on the selected frame or thread: the rest dims until Esc", "F"],
       ...(prototypeEnabled("context")
         ? [
             ["Leave the selection out of asks (again to bring it back)", "L"] as [string, string],
@@ -765,6 +768,14 @@ function Shell() {
         event.preventDefault();
         event.stopImmediatePropagation();
         if (!event.repeat) toggleLeftOut(editor, chosen);
+        return;
+      }
+      // F focuses on a selected frame or thread (everything else dims until Esc). Only then:
+      // otherwise F stays the Frame tool.
+      if (key === "f" && focusable(editor)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) startFocus(editor);
         return;
       }
       // E checks the person on a selected agent answer. Only then: otherwise E stays tldraw's.
@@ -1804,9 +1815,40 @@ function CanvasLayers() {
       <ScratchbookLayer />
       <AskLayer />
       <DataLayer />
+      <FocusVeil />
     </>
   );
 }
+
+/** While focused (F), everything outside the frame or thread is dimmed; Esc brings it all back. */
+function FocusVeil() {
+  const editor = useEditor();
+  const rect = useValue("focus rect", () => focusRect(editor), [editor]);
+  // The frame or thread in focus is gone (deleted, or another page opened): end the focus, so an
+  // undo or a page switch later never brings the veil back unasked.
+  useEffect(() => {
+    if (!rect && focusAtom.get()) endFocus();
+  }, [rect]);
+  useEffect(() => {
+    const esc = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !focusAtom.get() || editor.getEditingShapeId()) return;
+      endFocus();
+    };
+    window.addEventListener("keydown", esc, { capture: true });
+    return () => window.removeEventListener("keydown", esc, { capture: true });
+  }, [editor]);
+  if (!rect) return null;
+  return (
+    <div className="focus-layer" aria-hidden>
+      <div className="focus-hole" data-focus-hole style={{ transform: `translate(${rect.x}px, ${rect.y}px)`, width: rect.w, height: rect.h }}>
+        <span className="focus-label">Focus · Esc to see everything</span>
+      </div>
+    </div>
+  );
+}
+/** Out of view: a result still behind a learning prompt, or a finished thread folded to one line. */
+const boardVisibility = (shape: TLShape, editor: Editor) =>
+  learningVisibility(shape, editor) === "hidden" || foldVisibility(shape, editor) === "hidden" ? "hidden" : "inherit";
 function App() {
   const [ready, setReady] = useState(false);
   const [agentEditor, setAgentEditor] = useState<Editor | null>(null);
@@ -2038,7 +2080,7 @@ function App() {
           persistenceKey="picabird-canvas-v1"
           assets={boardImageStore}
           shapeUtils={scratchShapes}
-          getShapeVisibility={learningVisibility}
+          getShapeVisibility={boardVisibility}
           tools={scratchTools}
           hideUi
           options={editorOptions}

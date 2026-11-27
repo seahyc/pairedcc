@@ -120,6 +120,24 @@ try {
   check('the Ellipse is still a click away under More', geo === 'geo' && (await p.locator('.more-menu').count()) === 0, `tool ${geo}`);
   await p.evaluate(() => { window.__pairedEditor.setCurrentTool('select'); });
 
+  // 5b. A finished thread folded to one line is still on the board: the overview counts it.
+  const folded = await p.evaluate(() => {
+    const ed = window.__pairedEditor, bridge = window.paired;
+    const r = bridge.create({ kind: 'note', x: 100, y: 2600, width: 260, text: 'Which should we try first?' });
+    const qid = typeof r === 'string' ? r : r.id;
+    ed.updateShape({ id: qid, type: ed.getShape(qid).type, meta: { ...ed.getShape(qid).meta, ask: { state: 'answered', contextIds: [] }, fold: 'folded' } });
+    ed.selectNone();
+    return { qid, hidden: ed.isShapeHidden(ed.getShape(qid)) };
+  });
+  await p.waitForTimeout(300);
+  await p.mouse.click(1300, 820);
+  await p.keyboard.press('o');
+  await p.locator('[data-overview-map]').waitFor({ timeout: 5000 });
+  const foldedLabels = await p.evaluate(() => [...document.querySelectorAll('[data-overview-group] .overview-label')].map((el) => el.textContent));
+  check('a folded thread is still counted in the overview', folded.hidden && foldedLabels.includes('Which should we try first?'), `hidden on the board: ${folded.hidden}; ${foldedLabels.join(', ')}`);
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(200);
+
   // 6. A 1,000-object board.
   await p.evaluate(() => {
     const ed = window.__pairedEditor;

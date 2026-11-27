@@ -4,6 +4,7 @@ import { boardGroups, countsLabel, mapLayout, type OverviewItem } from "./board-
 import { useDialogFocus } from "./focus-keys";
 import { richTextPlain } from "./operations";
 import { isSettled } from "./settled";
+import { hiddenFromAgents } from "./fold";
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText as never).trim() : "");
 const MAP_W = 760, MAP_H = 420, BOX_W = 132, BOX_H = 46;
@@ -16,7 +17,7 @@ export function overviewItems(editor: Editor): OverviewItem[] {
     const walk = (parent: TLShape) => {
       for (const id of editor.getSortedChildIdsForParent(parent.id)) {
         const child = editor.getShape(id);
-        if (!child || child.type === "arrow" || editor.isShapeHidden(child)) continue;
+        if (!child || child.type === "arrow" || hiddenFromAgents(editor, child)) continue;
         if (textOf(child)) {
           if (isSettled(child.meta)) settled++;
           else open++;
@@ -29,7 +30,9 @@ export function overviewItems(editor: Editor): OverviewItem[] {
   };
   return editor.getSortedChildIdsForParent(pageId).flatMap((id): OverviewItem[] => {
     const s = editor.getShape(id);
-    if (!s || s.type === "arrow" || editor.isShapeHidden(s)) return [];
+    // A finished thread folded to one line is still on the board, so it counts; a result behind a
+    // learning prompt does not.
+    if (!s || s.type === "arrow" || hiddenFromAgents(editor, s)) return [];
     const b = editor.getShapePageBounds(s);
     if (!b) return [];
     const text = textOf(s);
