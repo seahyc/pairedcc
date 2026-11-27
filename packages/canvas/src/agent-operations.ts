@@ -30,6 +30,7 @@ import {
   shapeName,
   createBridge,
   richTextPlain,
+  cardStyle,
   revision,
 } from "./operations";
 import { createPrompt } from "./learning/prompt-shape";
@@ -61,11 +62,7 @@ const agentWidths = { agent: 420, heading: 440, quote: 380, code: 360 } as const
  * The style a card was written in, as agents name it on create: note, heading, quote or
  * code; "handwriting" for the person's cards and "caption" for image captions.
  */
-export function cardStyle(tone: unknown): string | undefined {
-  if (tone === "agent") return "note";
-  if (tone === "human") return "handwriting";
-  return typeof tone === "string" ? tone : undefined;
-}
+export { cardStyle } from "./operations";
 
 /** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
 export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}, pageId?: TLPageId) {
