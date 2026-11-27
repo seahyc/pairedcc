@@ -31,6 +31,8 @@ export type AskForPrompt = {
   /** What the person pinned for every ask on the page, and how many more were not sent. */
   pinned?: Given[];
   pinnedMore?: number;
+  /** What the group the card sits in is called (a frame's name, a heading, or its first words). */
+  group?: string;
   /** The rest of the group the card sits in, each with where it sits relative to the card. */
   cluster?: (Given & { relation: string })[];
   clusterMore?: number;
@@ -74,10 +76,11 @@ export function buildPrompt(ask: AskForPrompt) {
     if (ask.pinnedMore) lines.push(`- and ${ask.pinnedMore} more not shown`);
   }
   if (ask.cluster?.length) {
-    lines.push("", "In the same group as what the person wrote (they put these together):");
+    lines.push("", `In the same group as what the person wrote (they put these together${ask.group ? `; the group reads as "${ask.group}"` : ""}):`);
     for (const o of ask.cluster) lines.push(`- ${o.type} by ${who(o.author)}${judged(o.mark)}, ${o.relation === "overlapping" ? "overlapping it" : `${o.relation} it`}: """${o.text}"""`);
     if (ask.clusterMore) lines.push(`- and ${ask.clusterMore} more in the group, not shown`);
   }
+  if (ask.group && !ask.cluster?.length) lines.push("", `What the person wrote sits in a group that reads as "${ask.group}".`);
   if (ask.leftOut)
     lines.push("", `The person kept ${ask.leftOut === 1 ? "1 other object" : `${ask.leftOut} other objects`} on the board out of what you were given, on purpose. Do not guess at ${ask.leftOut === 1 ? "it" : "them"} or ask for ${ask.leftOut === 1 ? "it" : "them"}.`);
   lines.push("", `The person wrote this, and it is what you respond to: """${ask.question}"""`);

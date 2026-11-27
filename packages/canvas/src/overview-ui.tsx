@@ -40,7 +40,7 @@ export function overviewItems(editor: Editor): OverviewItem[] {
     if (s.type === "frame") return [{ ...base, text: "", thought: false, frame: String((s.props as { name?: unknown }).name ?? ""), inside: thoughtsIn(s) }];
     // An imported record is a group of cards: its title counts once, the cards inside it are its thoughts.
     if (s.type === "group") return [{ ...base, inside: thoughtsIn(s) }];
-    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading" }];
+    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}) }];
   });
 }
 
