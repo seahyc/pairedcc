@@ -134,7 +134,7 @@ before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
   empty space inside a cluster is about that cluster. The agent still never moves or edits the
   person's objects. Done when unit tests cover clustering on fixed layouts and a browser check
   shows the cluster outlined while the ask is being answered.
-- **P3. (Part 1, the settled mark: #138 merged. Part 2, the overview: PR #146 open, awaiting review; O becomes the overview and the Ellipse keeps its place under More without a key.) See the whole board and what is settled (finding 4, and the opposite of finding 8).**
+- **P3. (Done: the settled mark #138 and the overview #146 merged; review follow-ups PR #166; O becomes the overview and the Ellipse keeps its place under More without a key.) See the whole board and what is settled (finding 4, and the opposite of finding 8).**
   "Settled" is a mark like Pick (key S): a settled thought turns from rough handwriting to a clean
   print style with a small check, and can be unsettled. An overview (key O, also in the menu) shows
   the board's clusters as labelled boxes, each with open/settled counts; click to fly there. Done
@@ -147,7 +147,7 @@ before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
   selection, which then asks as any card does. They vanish on any other action and never appear
   while typing. Done when they never cover the person's objects, never appear on agent cards, and
   the starters logic from before (record, frame, chart, several objects) is reused, not rewritten.
-- **P5. (Part 1, Check me on an agent answer: #141 merged. Part 2, Check me on a settled thought and its spaced return: PR #149 open, awaiting review.) Understanding needs effort (finding 9).** The learning prototype (`?prototype=learning`)
+- **P5. (Part 1, Check me on an agent answer: #141 merged. Part 2, Check me on a settled thought and its spaced return: #149 merged.) Understanding needs effort (finding 9).** The learning prototype (`?prototype=learning`)
   becomes available on every board without a flag but stays off until asked: a "Check me" action
   on the selection bar for a settled card or an agent answer asks the person to predict or explain
   first and then shows the answer to compare (predict-then-check, self-explanation); a card the
@@ -732,6 +732,13 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 122. Options compared on stated dimensions (build-B) | claude/sprint-answer-dimensions | 2026-11-27T01:57Z
 
 ## Done
+- 117. A folded thread is reachable from the keyboard (build-A, gap in its own #144): PR #160, merged (a folded ask is a Tab stop and its answers follow it; verify-fold 23/23).
+- 107. Browser checks ask without the question box (build-A, three slices in parallel): PR #153, merged (15 checks converted; verify-all 48/52 with every remaining failure filed as 109–113).
+- 100 (f), (g). An answer taller than its estimate moves clear; a tall ask brings its answer into view (build-A): PRs #150, #151, merged; their review fixes are PR #166 (open).
+- 108. Acceptance step loses its first letter (build-A): PR #148, merged (the import notice sat over the click; 10/10 three runs in a row).
+- 109. verify-runs after #136 (build-A): PR #147, merged.
+- P5 (part 2). Check me on a settled thought and its spaced return (build-A): PR #149, merged (covered, not hidden; returns after 1, 3, 7, 21 days as one quiet line; verify-recall 21/21).
+- P3 (part 2). The whole board (O) (build-A): PR #146, merged (groups with open/settled counts, press to fly there; 1k board opens in 47 ms); review fixes and phone fit in PR #166 (open).
 - 100 (d), (e). Older board on two devices; a chosen page name kept (build-B): PR #167 (calm page and card ids the same on every device, so the merge keeps one; "Board 1" only replaces a default name; verify-calm-pages 4/8 → 8/8, four runs; 4 unit tests through the real mergeSnapshots; first screen unchanged; scorecard identical).
 - 121. Options are laid out on stated dimensions (build-A): PR #165 (dimensions and values on canvas_answer; each option lists them in order, names bold; resident agent asked for them; verify-option-dimensions 4/6 → 6/6; first screen unchanged).
 - 120. Suggestions follow what the thought says (build-B): PR #164 (`textCue`: a list, a number, a reason, a proposal or a short abstract claim gets its own first suggestion, then "What's missing?"; card lines kept for the cue; 13 failing-first unit tests; verify-suggest-cues 3 failing → 6/6; scorecard unchanged).
@@ -1157,3 +1164,14 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-27T01:56Z | build-B | 120 Suggestions follow what the thought says | #164 | Filed from principles row 7; textCue + textLines (13 failing-first tests); verify-suggest-cues 6/6 (int: 3 FAIL then timeout); p4-suggest 26/26 with its single-thought step updated; scorecard rows unchanged, 10k pan noisy (44–85 ms on the same code) |
 | 2026-11-27T02:00Z | build-A | 121 Options on stated dimensions; #162 review fix | #165 #162 | Finding 6: canvas_answer dimensions/values, cards list them in order with bold names, resident prompt asks for them; 8 failing-first tests + 5; verify-option-dimensions 4/6 → 6/6 with screenshots; scorecard all green. #162: run names cut at 48 characters (bot review, reproduced) |
 | 2026-11-27T02:22Z | build-B | 100 (d), (e) Older board: one Thinking page; chosen name kept | #167 | Reproduced both with two clean browsers on the dev board store: Thinking twice, 6 seed cards; empty "Launch plan" renamed "Board 1". Fixed ids (calm-ids.ts) and a chosen-name rule; verify-calm-pages 4/8 → 8/8 (4 runs); scorecard identical; PR tool appended its footer again (recorded) |
+| 2026-11-27T00:20Z | build-A | Run start; P1 taken over | — | The 14:57Z P1 claim had no branch or PR after 6 h; claimed |
+| 2026-11-27T00:45Z | build-A | P1 part 1 Fold | #144 | Finished thread folds to one line once the person moves on; read/overview folded: true; asks still give it; verify-fold 19/19 (5 FAIL on int); 10k pan 37.6 ms |
+| 2026-11-27T00:47Z | build-A | P1 part 2 Focus (F) | #145 | One rectangle, rest dimmed until Esc; F stays the Frame tool otherwise; verify-focus 13/13 (6/13 on int) |
+| 2026-11-27T00:50Z | build-A | P3 part 2 Overview (O) | #146 | Groups with open/settled counts, fly there; Ellipse keeps its place under More; verify-overview 12/12; 1k board 47 ms |
+| 2026-11-27T00:55Z | build-A | 109, 108 | #147 #148 | verify-runs regex after #136; acceptance 9/10 → 10/10 (import notice over the click) |
+| 2026-11-27T01:06Z | build-A | P5 part 2 | #149 | Check me on a settled thought (covered, never hidden); spaced return 1/3/7/21 days as one line; verify-recall 21/21 |
+| 2026-11-27T01:15Z | build-A | 100 (f), (g) | #150 #151 | Measured answer moves clear (4/5 → 5/5); tall ask brings the answer into view (3/4 → 4/4) |
+| 2026-11-27T01:20Z | build-A | 107 Checks without the box; 110–112 | #153 #154 | Three subagents converted 15 checks; verify-all 35/52 → 48/52, rest filed; own-card asks in the queue, no orphan arrow, Ctrl in the sheet (calm 35/35, keys 16/16) |
+| 2026-11-27T01:26Z | build-A | 113 Frame edge | #155 | A card across a frame's edge is lifted onto the page and still follows the frame; ask-unclipped 32/32 |
+| 2026-11-27T01:31Z | build-A | 115, 116, 117 | #157 #158 #160 | verify-all knows every check (notice-hold converted, big-edit judged on Layers); principles table after the P-items; folded threads reachable by Tab |
+| 2026-11-27T02:05Z | build-A | Bot review fixes | #154 #155 #157 #160 #166 | All findings reproduced first: queue resolve/clarify/Check me; frame context, redo, mask, leave-out; big-edit verdict; Tab order in folded threads; overview totals/records/phone, answer room search, landing round (as #166 since #146/#150/#151 merged first). A force-push to rebase #154/#155 was refused; merged sprint-int into them instead |
