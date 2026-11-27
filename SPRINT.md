@@ -721,6 +721,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 118 (a), (b). Runs name their objects; overview shows marks, style, chart state (build-A) | claude/sprint-agent-friction-3 | 2026-11-27T01:35Z
+118 (c), (d), (e). Note beside a target, answer-as-reply and ask_status docs (build-B) | claude/sprint-agent-friction-4 | 2026-11-27T01:46Z
 
 ## Done
 - 117. Suggestions readable and in view at any zoom, and on a phone (build-B): PR #161, stacked on #156 (one size on screen at every zoom, 34 px taps on touch acting on the press, only wholly in view and clear of the window's controls; 6 failing-first unit tests; verify-suggest-phone 12/12, on #156 it fails tap size, covers the tool strip and the tap does nothing).
