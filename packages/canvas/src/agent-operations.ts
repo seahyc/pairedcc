@@ -66,8 +66,8 @@ const agentWidths = { agent: 420, heading: 440, quote: 380, code: 360 } as const
 export { cardStyle } from "./operations";
 
 /** Scratchbook card: lavender typed note for agents, pink handwritten scrap for the human. */
-export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}, pageId?: TLPageId) {
-  const input = cardInput.parse(value), id = createShapeId(), human = author === HUMAN;
+export function createCard(editor: Editor, value: unknown, author: string, meta: Record<string, unknown> = {}, pageId?: TLPageId, fixedId?: TLShapeId) {
+  const input = cardInput.parse(value), id = fixedId ?? createShapeId(), human = author === HUMAN;
   // The human always writes by hand; agents pick a text style for what they are writing.
   const tone = human ? "human" : input.style && input.style !== "note" ? input.style : "agent";
   editor.createShape({

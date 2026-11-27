@@ -82,6 +82,7 @@ const CHECKS = [
   { name: 'ask-image', file: 'verify-ask-image.mjs', args: (d) => [d] },
   { name: 'ask-unclipped', file: 'verify-ask-unclipped.mjs', args: (d) => [d] },
   { name: 'annotate-clear', file: 'verify-annotate-clear.mjs', args: (d) => [d] },
+  { name: 'calm-pages', file: 'verify-calm-pages.mjs', args: (d) => [d] },
   { name: 'note-beside', file: 'verify-note-beside.mjs', args: (d) => [d] },
   { name: 'phone-margin', file: 'verify-phone-margin.mjs', args: (d) => [d] },
   // These start their own dev servers on other ports.
@@ -126,6 +127,8 @@ async function isUp() {
 if (await isUp()) throw new Error(`Something is already serving ${ORIGIN}. Stop it first: the checks need a dev server of this checkout with an empty board store.`);
 
 const boards = mkdtempSync(join(tmpdir(), 'verify-all-boards-'));
+// Checks that read or rewrite the account's stored board (calm-pages) find it here.
+process.env.BOARDS_DIR = boards;
 const scratch = mkdtempSync(join(tmpdir(), 'verify-all-'));
 const stub = join(scratch, 'model-stand-in');
 writeFileSync(stub, '#!/bin/sh\n# Stand-in for the model CLI: a fixed short reply after 3 s, no network.\nsleep 3\nprintf \'%s\' \'{"result":"A team of three at ten a seat pays thirty a month; check what happens at twelve.","is_error":false}\'\n');
