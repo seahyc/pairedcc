@@ -1,4 +1,5 @@
 import { isLeftOut } from "./leave-out";
+import { foldedForAgent } from "./fold";
 import { z } from "zod";
 import type { Editor, TLShape } from "tldraw";
 import { revision, richTextPlain, shapeName } from "./operations";
@@ -60,6 +61,8 @@ export function overview(editor: Editor, value: unknown = {}) {
         ...(editor.isShapeOrAncestorLocked(s) ? { locked: true } : {}),
         // The person chose to keep it out of asks (the context prototype): do not use it to answer one.
         ...(isLeftOut(s.meta) ? { leftOut: true } : {}),
+        // A finished thread folded to one line on the board (the question and the pick).
+        ...(foldedForAgent(editor, s) ? { folded: true } : {}),
         ...(snippet(s) ? { text: snippet(s) } : {}),
       };
     }),

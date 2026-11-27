@@ -1,4 +1,5 @@
 import { relationships, relationshipsOf, sourceOf, transformationOf, type ArrowEnd, type PrimitiveRecord } from "./primitives";
+import { foldedForAgent } from "./fold";
 import { followPause, followers } from "./follow";
 import { prototypeRefusal } from "./prototype-flags";
 import {
@@ -516,6 +517,8 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         author: authorOf(s),
         ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         ...(s.meta.settled === true ? { settled: true } : {}),
+        // A finished thread the person has out of view as one line: still theirs, still in context.
+        ...(foldedForAgent(editor, s) ? { folded: true } : {}),
         meta: s.meta,
         asset,
       };
