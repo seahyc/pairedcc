@@ -1,19 +1,20 @@
 // Browser check for item 81: an agent's note never lands on top of something. The person writes a
-// card and asks about it (the ask lands beside it), writes a second card just under the first, and
-// an agent annotates the first card without choosing a spot. The note must cover nothing, stay in
-// the card's column below it, and an explicit x/y must still be honoured.
+// card and asks about it (the card is the question: Ask sends the card itself, which becomes the
+// ask), writes a second card just under the first, and an agent annotates the first card without
+// choosing a spot. The note must cover nothing, stay in the card's column below it, and an
+// explicit x/y must still be honoured.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-annotate-clear.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 (`pnpm dev:canvas`) with an empty board store (PAIRED_BOARDS_DIR
-// set to a new folder).
+// Needs the dev server on :5183 (`pnpm dev:canvas`, or CANVAS_BASE) with an empty board store
+// (PAIRED_BOARDS_DIR set to a new folder).
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-annotate-clear.mjs <screenshot dir>');
 mkdirSync(out, { recursive: true });
-const BASE = 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 
@@ -43,9 +44,9 @@ const fb = await bounds(first);
 await p.evaluate((id) => window.paired.select([id]), first);
 await p.waitForTimeout(250);
 await p.locator('.selection-bar button.primary').click();
-await p.locator('.selection-bar.asking input').fill('What is missing here?');
-await p.keyboard.press('Enter');
 await p.waitForTimeout(500);
+const asked = await p.evaluate((id) => window.paired.read().objects.find((o) => o.id === id)?.meta.ask?.state ?? null, first);
+check('Ask sends the person\'s card as the ask', Boolean(asked), String(asked));
 await make(120, fb.y + fb.h + 60, 'A second thought, right under the first');
 await p.waitForTimeout(300);
 

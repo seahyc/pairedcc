@@ -1,5 +1,6 @@
 // Browser check for item 65 (b), fresh profile: ask about a pasted record, let an agent answer
-// over HTTP, then ask a follow-up about the answer. The follow-up's history must still carry
+// over HTTP, then ask a follow-up about the answer (each on the pink card Ask opens beside what is
+// asked about). The follow-up's history must still carry
 // the record's fields with their column names, not an empty entry for its group.
 //
 //   cd <a directory where playwright is installed>
@@ -12,7 +13,7 @@ const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-ask-record.mjs <screenshot dir> [origin]');
 mkdirSync(out, { recursive: true });
-const ORIGIN = process.argv[3] ?? 'http://localhost:5199';
+const ORIGIN = process.argv[3] ?? process.env.CANVAS_BASE ?? 'http://localhost:5199';
 const fixtures = new URL('../test/fixtures/', import.meta.url);
 const fixture = (name) => readFileSync(new URL(name, fixtures), 'utf8');
 const fixturePath = (name) => new URL(name, fixtures).pathname;
@@ -61,20 +62,33 @@ await paste();
 let objs = await objects();
 const record = records(objs)[0];
 check('the pasted review is ten records', records(objs).length === 10, String(records(objs).length));
-await p.evaluate((id) => window.paired.select([id]), record.id); await p.waitForTimeout(300); await p.locator('.selection-bar button.primary').click(); await p.waitForTimeout(500);
-await shot('00-ask-box'); await p.locator('.ask-starters button', { hasText: 'Is this point valid?' }).click({ timeout: 5000 }); await p.waitForTimeout(900);
+// The card is the question; there is no question box and no starters. Asking about something
+// the person did not write (the pasted record, an agent's answer) opens a pink card beside it in
+// typing mode: the question is typed there and sent when they finish writing (Escape).
+const ask = async (id, question) => {
+  await p.evaluate((id) => window.paired.select([id]), id); await p.waitForTimeout(300);
+  await p.locator('.selection-bar button.primary').click();
+  await p.waitForFunction(() => Boolean(window.__pairedEditor.getEditingShapeId()), null, { timeout: 5000 });
+  await p.keyboard.type(question, { delay: 0 });
+  return async () => { await p.keyboard.press('Escape'); await p.waitForTimeout(900); };
+};
+// This step used to click the starter chip "Is this point valid?" the ask box offered for a
+// record. Starters are gone; the person writes the same question on the card Ask opens, and the
+// check is what remains of the step: the ask is about the record and gives the record's text.
+const finish = await ask(record.id, 'Is this point valid?');
+await shot('00-question-card'); await finish();
 let asked = await api('asks', { state: 'all' });
 const first = asked.result?.asks?.find(a => a.question === 'Is this point valid?');
 check('the first ask is about the record', Boolean(first) && first.targets.length === 5, `${first?.targets.length} targets`);
+const given = (first?.targets ?? []).map(g => String(g.text ?? '')).join('\n');
+check('it gives the record\'s text as context', given.includes('Q56 says two vessels cost 9.2m in total') && given.includes('Pick the supplier quote as the single source'), JSON.stringify(first?.targets?.map(g => String(g.text).slice(0, 30))));
 const answered = await api('answer', { id: first.id, text: 'Partly: Q56 is the supplier quote, so Q16 and Q49 should be corrected to match it.' });
 check('an agent answers over HTTP', answered.ok === true, JSON.stringify(answered).slice(0, 160));
 await p.waitForTimeout(800);
 objs = await objects();
 const answer = objs.find(o => o.meta.replyTo === first.id && o.text.startsWith('Partly'));
 check('the answer is on the board', Boolean(answer));
-await p.evaluate((id) => window.paired.select([id]), answer.id); await p.waitForTimeout(300); await p.locator('.selection-bar button.primary').click(); await p.waitForTimeout(500);
-await p.locator('.ask-row input').fill('Which figure should the table use?');
-await p.keyboard.press('Enter'); await p.waitForTimeout(900);
+await (await ask(answer.id, 'Which figure should the table use?'))();
 asked = await api('asks', { state: 'all' });
 const follow = asked.result?.asks?.find(a => a.question === 'Which figure should the table use?');
 const history = follow?.history ?? [];

@@ -82,11 +82,12 @@ import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
 import { checkable, startCheck } from "./learning/check-ui";
 import { AskLayer, AutoAsk, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
+import { SuggestLayer } from "./suggest-ui";
 import { BoardImageShapeUtil } from "./image-shape";
 import { boardImageStore, moveLocalImagesIntoBoard } from "./image-assets";
 import { elsewhereNotice, elsewhereShow, markOf, noticeDelay } from "./ask-rules";
 import { askOf } from "./asks";
-import { landedAnswers } from "./ask-rules";
+import { landedAnswers, landingBox } from "./ask-rules";
 import { CardShapeUtil, CardShapeTool } from "./card-shape";
 import { DataTableShapeUtil } from "./table-shape";
 import { ImportLayer, chooseImportFile } from "./import-ui";
@@ -110,9 +111,9 @@ import { followPause, followers } from "./follow";
 import { toggleSettled } from "./settled";
 import { CoverLayer, RecallLine } from "./learning/recall-ui";
 import { BoardOverview } from "./overview-ui";
-import { foldVisibility } from "./fold";
+import { foldVisibility, foldedForAgent, hiddenFromAgents } from "./fold";
 import { endFocus, focusAtom, focusRect, focusable, startFocus } from "./focus";
-import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
+import { firstTabStop, keepThreadsTogether, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
 import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
 import "tldraw/tldraw.css";
@@ -339,9 +340,16 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
  * still behind a learning prompt.
  */
 function tabStops(editor: Editor) {
-  return editor.getCurrentPageShapesInReadingOrder().flatMap((s) => {
-    const b = s.type === "arrow" || editor.isShapeHidden(s) ? undefined : editor.getShapePageBounds(s.id);
-    return b ? [{ id: s.id as string, box: { x: b.x, y: b.y, w: b.w, h: b.h } }] : [];
+  const stops = editor.getCurrentPageShapesInReadingOrder().flatMap((s) => {
+    // A folded thread is still a stop, at its question: landing on it opens the thread while the
+    // person is on it, so the keyboard reaches what the folded line shows.
+    const folded = Boolean(s.meta.ask) && editor.isShapeHidden(s) && !hiddenFromAgents(editor, s);
+    const b = s.type === "arrow" || (editor.isShapeHidden(s) && !folded) ? undefined : editor.getShapePageBounds(s.id);
+    return b ? [{ id: s.id as string, replyTo: typeof s.meta.replyTo === "string" ? s.meta.replyTo : undefined, box: { x: b.x, y: b.y, w: b.w, h: b.h } }] : [];
+  });
+  return keepThreadsTogether(stops, (askId) => {
+    const ask = editor.getShape(askId as TLShapeId);
+    return Boolean(ask && foldedForAgent(editor, ask));
   });
 }
 
@@ -433,7 +441,7 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
           </IconButton>
         </div>
         <p>
-          Pink handwriting is you, lavender with ✦ is your agent. Write a question and it is asked when you finish; any other card is asked with ⌘↵. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
+          Pink handwriting is you, lavender with ✦ is your agent. Write a question and it is asked when you finish; any other card is asked with {keys("⌘↵")}. Everything you ask, comment on, pick or cross out goes into one queue your agent reads.
         </p>
         <div className="shortcut-grid">
           {shortcutGroups.map((group) => (
@@ -1172,8 +1180,8 @@ function Shell() {
     for (const id of landed) {
       const ask = editor.getShapePageBounds(id as TLShape["id"]);
       if (!ask || !view.collides(ask)) continue;
-      const boxes = [ask, ...editor.getCurrentPageShapes().filter((s) => s.meta.replyTo === id).flatMap((s) => editor.getShapePageBounds(s) ?? [])];
-      keepInView({ x: Math.min(...boxes.map((b) => b.x)), y: Math.min(...boxes.map((b) => b.y)), maxX: Math.max(...boxes.map((b) => b.maxX)), maxY: Math.max(...boxes.map((b) => b.maxY)) });
+      const answers = editor.getCurrentPageShapes().filter((s) => s.meta.replyTo === id).flatMap((s) => editor.getShapePageBounds(s) ?? []);
+      keepInView(landingBox(ask, answers, visiblePage().h));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answeredAsks]);
@@ -1821,6 +1829,7 @@ function CanvasLayers() {
     <>
       <ScratchbookLayer />
       <AskLayer />
+      <SuggestLayer />
       <DataLayer />
       <CoverLayer />
       <FocusVeil />

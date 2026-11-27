@@ -3,8 +3,9 @@
 // Starts its own dev server of this checkout with an empty board store and opens a fresh board
 // as an Android phone (touch, no hover) and as a desktop browser. On the phone: the first board
 // says to tap Ask and names no key, double-tap and the Write tool both start a card as the
-// caption says, the writing hint is a button that opens the Ask box, and the selection bar
-// shows no key caps. On the desktop the hints and key caps are as before.
+// caption says, the writing hint is a button that asks (the card is the question: tapping it
+// sends the card being written; there is no ask box), and the selection bar shows no key caps.
+// On the desktop the hints and key caps are as before.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-touch.mjs <screenshot dir>
 //
@@ -94,25 +95,28 @@ for (const [tag, options] of [['phone', phone], ['desktop', desktop]]) {
       const hintText = (await hint.innerText().catch(() => '')).replace(/\s+/g, ' ');
       check('phone: while writing, the hint offers Ask and names no key', /Ask/.test(hintText) && !keyNames.test(hintText) && !/Esc/.test(hintText), hintText);
       await p.screenshot({ path: `${out}/phone-2-writing.png` });
+      const written = await p.evaluate(() => window.__pairedEditor.getEditingShapeId());
       await hint.tap().catch(() => {});
       await p.waitForTimeout(400);
-      check('phone: tapping it opens the Ask box on the card', await p.locator('.selection-bar.asking input').count() === 1);
-      await p.screenshot({ path: `${out}/phone-3-ask-box.png` });
+      const sent = await p.evaluate((id) => ({ ask: window.paired.read().objects.find((o) => o.id === id)?.meta.ask?.state ?? null, editing: Boolean(window.__pairedEditor.getEditingShapeId()) }), written);
+      check('phone: tapping it sends the card as the ask', Boolean(written) && Boolean(sent.ask) && !sent.editing && (await p.locator('.selection-bar.asking').count()) === 0, JSON.stringify(sent));
+      await p.screenshot({ path: `${out}/phone-3-ask-sent.png` });
       await p.keyboard.press('Escape');
       await p.waitForTimeout(200);
     } else {
-      check('desktop: the first board still says how to ask with the keyboard', /press (⌘|Ctrl\+)↵ to ask/.test(board), board.slice(0, 120));
+      check('desktop: the first board still says how to ask with the keyboard', /press (⌘|Ctrl\+)↵/.test(board), board.slice(0, 120));
       await p.mouse.dblclick(400, 700);
       await p.waitForTimeout(400);
       await p.keyboard.type('Charge per seat', { delay: 0 });
       await p.waitForTimeout(300);
       const hintText = (await p.locator('.selection-bar.hint').innerText().catch(() => '')).replace(/\s+/g, ' ');
-      check('desktop: the writing hint still names the keys', /↵ ask about this · Esc done/.test(hintText), hintText);
+      check('desktop: the writing hint still names the keys', /(⌘|Ctrl\+)↵ asks now/.test(hintText), hintText);
       await p.keyboard.press('Escape');
       await p.waitForTimeout(200);
     }
-    // The selection bar on a card.
-    const id = await p.evaluate(() => window.paired.read().objects.find((o) => o.type === 'card' && /Charge/.test(o.text ?? ''))?.id);
+    // The selection bar on a card. On the phone "Charge per seat" was just sent with no agent
+    // listening, so its bar offers to send it again; a card that is not an ask offers Ask.
+    const id = await p.evaluate((touch) => window.paired.read().objects.find((o) => o.type === 'card' && (touch ? !o.meta.ask : /Charge/.test(o.text ?? '')))?.id, touch);
     await p.evaluate((i) => window.paired.select([i]), id);
     await p.waitForTimeout(300);
     const caps = await p.locator('.selection-bar kbd').count();

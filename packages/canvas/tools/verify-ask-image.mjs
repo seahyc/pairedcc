@@ -5,7 +5,7 @@
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-ask-image.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 (`pnpm dev:canvas`) with an empty board store (PAIRED_BOARDS_DIR
+// Needs the dev server on :5183 (`pnpm dev:canvas`; CANVAS_BASE overrides the origin) with an empty board store (PAIRED_BOARDS_DIR
 // set to a new folder).
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
@@ -13,7 +13,7 @@ const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-ask-image.mjs <screenshot dir>');
 mkdirSync(out, { recursive: true });
-const BASE = 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 
@@ -37,13 +37,17 @@ async function command(op, input) {
   if (!body.ok) throw new Error(`${op}: ${JSON.stringify(body)}`);
   return body.result;
 }
+// The card is the question; there is no question box. Asking about an image or a frame opens a
+// pink card beside it in typing mode: the question is typed there and sent when the person
+// finishes writing (Escape).
 async function ask(ids, question) {
   await p.evaluate((ids) => window.paired.select(ids), ids);
   await p.waitForTimeout(250);
   await p.locator('.selection-bar button.primary').click();
-  await p.locator('.selection-bar.asking input').fill(question);
-  await p.keyboard.press('Enter');
-  await p.waitForTimeout(500);
+  await p.waitForFunction(() => Boolean(window.__pairedEditor.getEditingShapeId()), null, { timeout: 5000 });
+  await p.keyboard.type(question, { delay: 0 });
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(600);
   return (await command('asks', {})).asks.find((a) => a.question === question);
 }
 
