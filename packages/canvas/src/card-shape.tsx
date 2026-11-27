@@ -17,6 +17,7 @@ import {
 } from "tldraw";
 
 import { sourceOf } from "./import-meta";
+import { levelPadsOf } from "./ask-rules";
 
 // A scratchbook card: the human's pink handwritten scrap or the agent's lavender note.
 declare module "tldraw" {
@@ -85,7 +86,8 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
       maxWidth: Math.max(40, shape.props.w - t.pad * 2 - 8),
       padding: "0px",
     });
-    const h = Math.ceil(size.h + t.pad * 2 + (unboxed.has(shape.props.tone) ? 2 : 4));
+    const pads = levelPadsOf(shape.meta).reduce((a, b) => a + b, 0);
+    const h = Math.ceil(size.h + pads + t.pad * 2 + (unboxed.has(shape.props.tone) ? 2 : 4));
     return h === shape.props.h ? shape : { ...shape, props: { ...shape.props, h } };
   }
   override onBeforeCreate(next: CardShape) {
@@ -95,7 +97,12 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
     // Re-estimate only when the content or width changes; a height-only update is
     // the rendered-size correction from useAutoHeight and must stick.
     const p = prev.props, n = next.props;
-    if (p.richText === n.richText && p.w === n.w && p.tone === n.tone && prev.meta.settled === next.meta.settled) return next;
+    if (p.richText === n.richText && p.w === n.w && p.tone === n.tone && prev.meta.settled === next.meta.settled && prev.meta.levelPads === next.meta.levelPads) return next;
+    // Space that levelled an option's dimension lines was measured for the text as it was.
+    if ((p.richText !== n.richText || p.w !== n.w) && next.meta.levelPads !== undefined) {
+      const { levelPads: _, ...meta } = next.meta;
+      return this.fit({ ...next, meta });
+    }
     return this.fit(next);
   }
   override component(shape: CardShape) {
@@ -105,8 +112,10 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
     const ref = useAutoHeight(this.editor, shape, t.pad * 2 + (unboxed.has(shape.props.tone) ? 2 : 4));
     // Imported material carries its tags (such as severity) as chips and a quiet edge.
     const source = sourceOf(shape), level = source?.level;
+    const levelled = levelStyle(shape);
     return (
       <HTMLContainer style={{ width: shape.props.w, height: shape.props.h }}>
+        {levelled && <style>{levelled}</style>}
         <div ref={ref} className={`scrap scrap--${shape.props.tone}${settled ? " scrap--settled" : ""}${typeof level === "number" ? ` sev sev-${Math.min(level, 4)}` : ""}`} style={{ fontStyle: t.style, fontWeight: t.weight }}>
         {source?.chips && source.chips.length > 0 && (
           <div className="source-chips">
@@ -140,6 +149,21 @@ export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
     path.roundRect(0, 0, shape.props.w, shape.props.h, 10);
     return path;
   }
+}
+
+/**
+ * An option card's levelled dimension lines (`meta.levelPads`, set once the answer is drawn): space
+ * above each dimension's line, which is the paragraph that starts with its bold name.
+ */
+function levelStyle(shape: CardShape) {
+  const pads = levelPadsOf(shape.meta);
+  if (!pads.some((n) => n > 0)) return "";
+  const paras = (shape.props.richText as { content?: { content?: { marks?: { type: string }[] }[] }[] }).content ?? [];
+  const lines = paras.map((p, i) => (p.content?.[0]?.marks?.some((m) => m.type === "bold") ? i : -1)).filter((i) => i >= 0);
+  const id = CSS.escape(shape.id);
+  return lines
+    .map((at, k) => (pads[k] > 0 ? `[data-shape-id="${id}"] .tl-rich-text p:nth-of-type(${at + 1}){margin-top:${pads[k]}px}` : ""))
+    .join("");
 }
 
 /**

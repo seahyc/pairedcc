@@ -101,3 +101,36 @@ describe("review of #165", () => {
     expect(doc.content.every((p: any) => (p.content ?? []).every((t: any) => t.text.length > 0))).toBe(true);
   });
 });
+
+import { levelGaps, levelPadsOf } from "../src/ask-rules";
+import { isDerivedField } from "../src/revision";
+import { changedPaths } from "../src/run-undo";
+
+describe("dimension lines level across a row", () => {
+  it("gives a card whose line sits higher the space to bring it level, in page units", () => {
+    expect(levelGaps([40, 86, 63], [0, 0, 0])).toEqual([46, 0, 23]);
+  });
+  it("levels each row on its own", () => {
+    expect(levelGaps([40, 86, 40, 63], [0, 0, 1, 1])).toEqual([46, 0, 23, 0]);
+  });
+  it("leaves cards alone when they are level", () => {
+    expect(levelGaps([40, 40.04], [0, 0])).toEqual([0, 0]);
+  });
+  it("reads only a list of non-negative numbers back as pads", () => {
+    expect(levelPadsOf({ levelPads: [0, 23.5] })).toEqual([0, 23.5]);
+    expect(levelPadsOf({ levelPads: [-1] })).toEqual([]);
+    expect(levelPadsOf({ levelPads: "23" })).toEqual([]);
+    expect(levelPadsOf(undefined)).toEqual([]);
+  });
+});
+
+describe("levelling never counts as an edit", () => {
+  it("is a derived field, so the answer's revision stays valid", () => {
+    expect(isDerivedField("card", "meta.levelPads")).toBe(true);
+  });
+  it("does not stop the answer's run from undoing", () => {
+    const made = { typeName: "shape", type: "card", id: "shape:a", props: { w: 250, h: 120 }, meta: { option: "A" } };
+    const now = { ...made, props: { w: 250, h: 166 }, meta: { option: "A", levelPads: [46, 0] } };
+    expect(changedPaths(made, now)).toEqual([]);
+  });
+});

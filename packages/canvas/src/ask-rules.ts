@@ -413,3 +413,21 @@ export function landingBox(ask: Rect, answers: readonly Rect[], roomHeight: numb
   if (!answers.length || both.maxY - both.y <= roomHeight) return both;
   return union(answers);
 }
+
+/**
+ * How much space each option card needs above one of its dimension lines so that line sits level
+ * with the lowest one in its row. `offsets` are where each card's line starts below the card's
+ * top and `rows` which row each card is in, in page units; the result is in page units too.
+ */
+export function levelGaps(offsets: number[], rows: number[]) {
+  return offsets.map((o, i) => {
+    const lowest = Math.max(...offsets.filter((_, j) => rows[j] === rows[i]));
+    return Math.max(0, Math.round((lowest - o) * 10) / 10);
+  });
+}
+
+/** A card's `meta.levelPads`: one gap per dimension line, or none when the meta is not that. */
+export function levelPadsOf(meta: unknown): number[] {
+  const pads = (meta as { levelPads?: unknown } | undefined)?.levelPads;
+  return Array.isArray(pads) && pads.every((n) => typeof n === "number" && Number.isFinite(n) && n >= 0) ? pads : [];
+}
