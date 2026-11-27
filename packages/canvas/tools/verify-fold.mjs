@@ -180,6 +180,48 @@ try {
   s = await state();
   check('still folded after a reload', s.hidden[t.ask] && s.lines.some((l) => l.id === t.ask));
 
+  // 5b. From the keyboard: Tab lands on the folded thread's question and opens it while the
+  // person is on it; the next Tab reaches its answers; moving on folds it again.
+  await p.evaluate(() => { window.__pairedEditor.selectNone(); document.querySelector('.tl-container')?.focus(); });
+  await p.locator('.tl-container').focus();
+  await p.keyboard.press('Tab');
+  await p.waitForTimeout(400);
+  s = await state();
+  const sel1 = await p.evaluate(() => window.__pairedEditor.getSelectedShapeIds());
+  check('Tab lands on the folded thread and opens it while the person is on it', sel1[0] === t.ask && !s.hidden[t.ask] && t.answers.every((id) => !s.hidden[id]), JSON.stringify(sel1));
+  await p.keyboard.press('Tab');
+  await p.waitForTimeout(300);
+  const sel2 = await p.evaluate(() => window.__pairedEditor.getSelectedShapeIds());
+  check('the next Tab reaches its answers', t.answers.includes(sel2[0]), JSON.stringify(sel2));
+  await p.keyboard.press('Escape');
+  await p.evaluate(() => { window.__pairedEditor.selectNone(); });
+  await p.waitForTimeout(300);
+  s = await state();
+  check('moving on folds it again', s.hidden[t.ask] && s.lines.some((l) => l.id === t.ask));
+
+  // 5c. Something else between the question and its answer in reading order: Tab still visits
+  // the answers before moving on (the thread would fold away otherwise).
+  const between = await p.evaluate((askId) => {
+    const ed = window.__pairedEditor, b = ed.getShapePageBounds(askId);
+    const r = window.paired.create({ kind: 'note', x: b.maxX + 40, y: b.y + 10, width: 200, text: 'A note to its right' });
+    ed.selectNone();
+    return typeof r === 'string' ? r : r.id;
+  }, t.ask);
+  await p.waitForTimeout(300);
+  await p.evaluate((id) => { window.paired.select([id]); }, t.ask);
+  await p.waitForTimeout(200);
+  await p.locator('.tl-container').focus();
+  const visited = [];
+  for (let i = 0; i < 4; i++) {
+    await p.keyboard.press('Tab');
+    await p.waitForTimeout(250);
+    visited.push((await p.evaluate(() => window.__pairedEditor.getSelectedShapeIds()))[0]);
+  }
+  const firstAnswers = visited.slice(0, 3);
+  check('with a note between the question and its answers, Tab visits every answer first', t.answers.every((id) => firstAnswers.includes(id)) && visited[3] === between, JSON.stringify(visited.map((v) => (v === between ? 'note' : t.answers.indexOf(v)))));
+  await p.evaluate((id) => { window.__pairedEditor.deleteShapes([id]); window.__pairedEditor.selectNone(); }, between);
+  await p.waitForTimeout(300);
+
   // 6. Twelve finished threads; the person unfolds three.
   await p.evaluate(() => { const ed = window.__pairedEditor; ed.deleteShapes([...ed.getCurrentPageShapeIds()]); ed.setCamera({ x: 0, y: 0, z: 1 }); });
   const threads = [];
