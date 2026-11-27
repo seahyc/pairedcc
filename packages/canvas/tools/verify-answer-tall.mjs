@@ -83,6 +83,29 @@ try {
   await p.screenshot({ path: `${out}/tall-ask.png` });
   const short = await ask(3000, 200, 'Which tier first?', 'The team tier.');
   check('a short ask with its answer is still brought into view whole', short.ask.top >= 104 && short.answer.bottom <= short.height - 90 + 1, JSON.stringify(short));
+  // The same card asked again after a long first answer: the new answer is what comes into view.
+  const again = await p.evaluate(() => {
+    const ed = window.__pairedEditor;
+    ed.createShape({ type: 'card', x: 6000, y: 200, props: { w: 320, tone: 'human', richText: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Which tier for schools' }] }] } } });
+    return ed.getCurrentPageShapes().filter((s) => s.type === 'card').at(-1).id;
+  });
+  const sendAndAnswer = async (text) => {
+    await p.evaluate((id) => { const ed = window.__pairedEditor, b = ed.getShapePageBounds(id); ed.setCamera({ x: -b.x + 400, y: -b.y + 120, z: 1 }); window.paired.select([id]); }, again);
+    await p.waitForTimeout(200);
+    const w = post('/asks/wait', { agent: 'Check agent', waitMs: 10000 });
+    await p.keyboard.press('Control+Enter');
+    const g = await w;
+    await p.evaluate(() => { window.__pairedEditor.selectNone(); });
+    await p.mouse.move(1300, 300);
+    await p.waitForTimeout(300);
+    const r = await post('/command', { requestId: randomUUID(), sessionId: g.sessionId, actor: 'Check agent', command: { op: 'answer', input: { id: g.ask.id, text } } });
+    await p.waitForTimeout(900);
+    return r.result.answers[0].id;
+  };
+  await sendAndAnswer(Array.from({ length: 12 }, () => 'A long first answer that runs on and on over many lines.').join(' '));
+  const second = await sendAndAnswer('Start them on the team tier.');
+  const pos = await p.evaluate((id) => { const ed = window.__pairedEditor, r = ed.getShapePageBounds(id); return { top: Math.round(ed.pageToScreen({ x: r.x, y: r.y }).y), bottom: Math.round(ed.pageToScreen({ x: r.maxX, y: r.maxY }).y), height: innerHeight }; }, second);
+  check('asked again after a long answer, the new answer lands in view', pos.top >= 104 && pos.bottom <= pos.height - 90 + 1, JSON.stringify(pos));
   check('no page errors', errs.length === 0, errs.join(' | '));
 } finally {
   await browser.close();
