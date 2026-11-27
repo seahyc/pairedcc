@@ -381,6 +381,10 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   const group = editor.getShapePageBounds(shape)
     ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : []), ...frameObjects.map((s) => s.id)]), keep)
     : { members: [], more: 0 };
+  // A card with no named group of its own around it still sits in its frame's: the one it is in, or
+  // the one it was lifted out of so the frame would not cut it off (item 132). Named as O names a frame.
+  const ownFrame = group.name ? undefined : frameOf(editor, shape);
+  const groupCalled = group.name ?? (ownFrame && keepForAgent([ownFrame], []).kept.length ? groupName(editor, [ownFrame]) : undefined);
   // Pinned for every ask on this page, unless this ask already gives it.
   const alreadyGiven = [...skip, ...group.members.map((m) => m.id), ...(frame ? [frame.id] : []), ...frameObjects.map((s) => s.id), ...givenTargets.flatMap((t) => t.inside?.map((i) => i.id) ?? [])];
   const pins = page ? pinnedOnPage(editor, page.id, alreadyGiven) : { pinned: [], more: 0 };
@@ -409,7 +413,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
       : {}),
     ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
     // What the group the card sits in is called, even when everything in it is already a target.
-    ...(group.name ? { group: group.name } : {}),
+    ...(groupCalled ? { group: groupCalled } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
     ...(withheld.size ? { leftOut: withheld.size } : {}),
     ...(pins.pinned.length ? { pinned: pins.pinned.map((s) => given(editor, s, 400)), ...(pins.more ? { pinnedMore: pins.more } : {}) } : {}),

@@ -40,9 +40,11 @@ export function groupName(editor: Editor, shapes: readonly TLShape[]) {
     return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}) }];
   });
   // The overview (O) draws a frame as a group of its own and names the loose pile beside it
-  // separately; a cluster that holds both is named after the pile, as that box is.
+  // separately; a cluster that holds both is named after the pile, as that box is. A pile with
+  // nothing to be named by but a question (one lifted out of its frame, item 132) is the frame's.
   const loose = items.filter((i) => i.frame === undefined);
-  return items.length ? groupLabel(loose.length ? loose : items) : undefined;
+  const pileNamed = loose.some((i) => !i.ask && i.text.trim());
+  return items.length ? groupLabel(pileNamed || loose.length === items.length ? loose : items) : undefined;
 }
 
 export function overview(editor: Editor, value: unknown = {}) {
