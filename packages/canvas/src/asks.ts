@@ -10,7 +10,7 @@ import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
 import { hiddenFromAgents } from "./fold";
 import { unclipFromFrame } from "./frame-edge";
-import { clusterAround, relation } from "./arrangement";
+import { BESIDE_NEAR, besideGap, clusterAround, relation } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -58,15 +58,11 @@ function setAsk(editor: Editor, shape: TLShape, ask: AskMeta) {
   editor.run(() => editor.updateShape({ id: shape.id, type: shape.type, meta: { ...shape.meta, ask: clean } }), { history: "ignore" });
 }
 
-/** How close another object must be to count as "beside" what was written. */
-const NEAR = 48;
-
 /** What sits right beside a card: position carries meaning, so the agent is given it too. */
 function beside(editor: Editor, host: TLShape, skip: Set<string>) {
   const box = editor.getShapePageBounds(host);
   if (!box) return [];
-  const gap = (b: { x: number; y: number; maxX: number; maxY: number }) =>
-    Math.max(0, b.x - box.maxX, box.x - b.maxX) + Math.max(0, b.y - box.maxY, box.y - b.maxY);
+  const gap = (b: { x: number; y: number; w: number; h: number }) => besideGap(b, box);
   const page = editor.getCurrentPageShapes();
   // What is said about a left-out object (its comments, replies and notes) is as private as it is.
   const leftOut = page.filter((s) => isLeftOut(s.meta)).map((s) => s.id as string);
@@ -75,7 +71,7 @@ function beside(editor: Editor, host: TLShape, skip: Set<string>) {
     .filter((s) => !skip.has(s.id) && !aboutLeftOut.has(s.id) && s.parentId === host.parentId && s.type !== "arrow" && s.type !== "frame" && !s.meta.seed && s.meta.replyTo !== host.id && !hiddenFromAgents(editor, s))
     .flatMap((s) => {
       const b = editor.getShapePageBounds(s);
-      return b && gap(b) <= NEAR ? [{ s, d: gap(b) }] : [];
+      return b && gap(b) <= BESIDE_NEAR ? [{ s, d: gap(b) }] : [];
     })
     .sort((x, y) => x.d - y.d)
     .map((n) => n.s);

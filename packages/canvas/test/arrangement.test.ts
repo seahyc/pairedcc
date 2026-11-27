@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLUSTER_GIVE, clusterAround, relation } from "../src/arrangement";
+import { BESIDE_NEAR, CLUSTER_GAP, CLUSTER_GIVE, besideGap, clusterAround, relation } from "../src/arrangement";
 import { buildPrompt, systemPrompt } from "../tools/resident-prompt";
 
 const box = (id: string, x: number, y: number, w = 200, h = 120) => ({ id, x, y, w, h });
@@ -48,6 +48,42 @@ describe("the cluster an ask sits in", () => {
     // The ask sits in the gap at the pile's middle-right.
     const got = clusterAround([...pile, box("ask", 480, 80)], "ask");
     expect(got.members.map((m) => m.id).sort()).toEqual(["p1", "p2", "p3", "p4"]);
+  });
+});
+
+describe("the group an ask gives already starts from what is beside its card (item 129)", () => {
+  it("beside is never wider than the group gap on either axis", () => {
+    expect(BESIDE_NEAR).toBeLessThanOrEqual(CLUSTER_GAP);
+  });
+  it("every object beside the card is in the card's own group, on any layout", () => {
+    // Deterministic pseudo-random layouts: a card and 12 boxes scattered around it.
+    let seed = 129;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+    let besideSeen = 0;
+    for (let round = 0; round < 500; round++) {
+      const host = box("ask", 400, 400, 200 + rand() * 200, 60 + rand() * 200);
+      const others = Array.from({ length: 12 }, (_, i) => box(`o${i}`, rand() * 1000, rand() * 1000, 80 + rand() * 240, 40 + rand() * 200));
+      const group = new Set(clusterAround([host, ...others], "ask", new Set(), Infinity).members.map((m) => m.id));
+      for (const o of others.filter((o) => besideGap(o, host) <= BESIDE_NEAR)) {
+        besideSeen++;
+        expect(group.has(o.id)).toBe(true);
+      }
+    }
+    expect(besideSeen).toBeGreaterThan(100);
+  });
+  it("on the layout reported in #170, the second idea is in the group when the cards are 40 px apart", () => {
+    // Two 240 px idea cards side by side 40 px apart; the question 40 px under the first.
+    const layout = [box("idea1", 0, 0, 240, 130), box("idea2", 280, 0, 240, 130), box("ask", 0, 170, 240, 130)];
+    expect(besideGap(layout[0], layout[2])).toBeLessThanOrEqual(BESIDE_NEAR);
+    // idea1 is given as a target (beside the card), so the ask leaves it out of the group.
+    expect(clusterAround(layout, "ask", new Set(["idea1"])).members).toEqual([{ id: "idea2", relation: "above" }]);
+  });
+  it("as that task's board really was (200 px sticky notes, 80 px apart), the second idea is in no group with the first", () => {
+    // `create` for a note made by the person ignores width: tldraw sticky notes are 200 by 200.
+    const layout = [box("idea1", 0, 0, 200, 200), box("idea2", 280, 0, 200, 200), box("ask", 0, 170, 200, 272)];
+    expect(clusterAround(layout, "ask").members.map((m) => m.id)).toEqual(["idea1"]);
+    // Starting from idea1 would not help either: idea2 is beyond the group gap from it.
+    expect(clusterAround(layout, "idea1").members.map((m) => m.id)).toEqual(["ask"]);
   });
 });
 

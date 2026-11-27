@@ -9,6 +9,19 @@ export const CLUSTER_GIVE = 8;
 /** Edges within this distance chain objects into one group (as the overview's clusters). */
 export const CLUSTER_GAP = 60;
 
+/**
+ * How close another object must be to count as right "beside" what was written (an ask gives it
+ * as a target). The gaps on both axes are added, so a beside object is always within
+ * CLUSTER_GAP on each axis, and is therefore always in the card's own group: the group an ask
+ * gives already starts from everything beside the card (item 129; tested).
+ */
+export const BESIDE_NEAR = 48;
+
+/** The gap between two boxes, horizontal plus vertical (0 when they touch or overlap). */
+export function besideGap(a: Omit<Placed, "id">, b: Omit<Placed, "id">) {
+  return Math.max(0, a.x - (b.x + b.w), b.x - (a.x + a.w)) + Math.max(0, a.y - (b.y + b.h), b.y - (a.y + a.h));
+}
+
 export type Relation = "left of" | "right of" | "above" | "under" | "overlapping";
 
 /** Where `a` sits relative to `ref`: the side with the larger gap, vertical on a tie. */

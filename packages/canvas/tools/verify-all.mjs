@@ -94,6 +94,7 @@ const CHECKS = [
   { name: 'settled', file: 'verify-settled.mjs', args: (d) => [d] },
   { name: 'notice-hold', file: 'verify-notice-hold.mjs', args: (d) => [d] },
   { name: 'p2-cluster', file: 'verify-p2-cluster.mjs', args: (d) => [d] },
+  { name: 'ask-beside-group', file: 'verify-ask-beside-group.mjs', args: (d) => [d] },
   { name: 'announce-fixes', file: 'verify-announce-fixes.mjs', args: () => [] },
   { name: 'name-follows', file: 'verify-name-follows.ts', args: () => [] },
   { name: 'runs-page', file: 'verify-runs-page.ts', args: () => [] },
