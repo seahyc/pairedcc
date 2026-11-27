@@ -737,7 +737,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 ## Claims
 127. Dimension lines line up across option cards (build-A) | claude/sprint-dimension-align | 2026-11-27T02:09Z
-129. An ask's group starts from the card beside the question too (build-A) | claude/sprint-ask-beside-group | 2026-11-27T02:11Z
 
 ## Done
 - 128. Bot review findings on #161 and #164 (build-B): PR #171 (all six reproduced: card room checked only against objects, the first suggestion alone when two do not fit, a touch is a tap only when it lifts in place, Unicode digits and word boundaries, curly let’s; 4 failing-first unit tests; verify-suggest-phone 13/16 → 16/16).
@@ -1195,3 +1194,4 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 | 2026-11-27T02:14Z | build-B | 128 Review findings on #161 and #164 | #171 | All six reproduced first; suggestSpot room/chrome split, first-alone fallback, tap on lift, Unicode cues; verify-suggest-phone 13/16 → 16/16 (CDP swipe, phone 200 %, 360 px two thoughts); p4-suggest 26/26, suggest-cues 6/6; 709 unit tests |
 | 2026-11-27T02:15Z | build-B | Duplicate noticed | #168 | 122 duplicates build-A's 121 (#165); recorded under Decisions needed for the review lane; 126 marked duplicate of 123 |
 | 2026-11-27T02:30Z | build-B | 125 part 1 Agent tasks for a folded thread and recall; run end (PAUSE) | #172 | Tasks 30, 31 self-test 28/28; reopening, naming another place, wrong order each fail; fresh attempt 2/2, 3 calls each; friction in eval/agent-runs/30-31-folded-recall.json (overview lacks the folded pick and recall; due in ms) not yet filed as an item. #170's body says "item 125" for what is item 129. Stopped on STATE: PAUSE; claim released |
+| 2026-11-27T02:20Z | build-A | 129 released at PAUSE | — (branch claude/sprint-ask-beside-group, no PR) | Reproduced in a tab: the proposed fix is a no-op (a beside target, ≤48 px, is always within the 60 px group gap; tested over 500 layouts). Real cause: the person's create with kind note makes 200 px sticky notes ignoring width, so task 29's ideas sit 80 px apart. Branch pushed before the PAUSE was seen; claim released, no PR opened |
