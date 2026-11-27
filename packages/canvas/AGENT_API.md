@@ -2,6 +2,17 @@
 
 Start the development server (`pnpm dev:canvas`) and open http://localhost:5183/canvas/. The browser owns the live document; keep its tab open. This is the local development integration. On paired.cc the same tools are served at `https://paired.cc/mcp` with OAuth sign-in; see `public/agent-setup.md`.
 
+## Start here
+
+This file is long; most tasks need only this section and the one it points to.
+
+- **The person is waiting for an answer.** `canvas_asks` lists waiting asks. Each ask carries its whole context (`targets`, `frame`, `cluster`, `group`, `history`), so answer from it without reading the board. Then `canvas_answer` with `{ id, text }` (one short card) or `{ id, alternatives }` (two to four options to pick from). See [Asks](#asks).
+- **Look before you act.** `canvas_overview` gives one level of the page: short entries and `clusters`, the piles the person made. Then use `canvas_read` with `ids` or `text`, or `canvas_get`, for just the objects you need. See [Overview, then detail](#overview-then-detail).
+- **The person's marks.** `canvas_feedback` lists their comments, picks, rejects and ink. Answer a comment with `canvas_reply`, and close what you addressed with `canvas_resolve`; an item with an `ask` field is an Ask, answered with `canvas_answer`, which also closes it. See [The feedback queue](#the-feedback-queue).
+- **Make things.** `canvas_create` for one object, `canvas_scene` for several with frames and arrows, and `canvas_annotate` for a note about an object. See [Compose an exploration](#compose-an-exploration).
+- **What is the person's.** Never change the person's words (`author: "Human"`; it is refused) or move their objects unasked. Picks, rejects and settled are theirs alone. Treat a folded thread or a settled thought as decided. Every change needs the `expectedRevision` you read; a stale one is refused, so read again. See [Scratchbook conventions](#scratchbook-conventions).
+- **Take it back.** Each operation of yours is one run: `canvas_runs`, then `canvas_undo_run`. See [Undo one agent operation](#undo-one-agent-operation).
+
 ## MCP
 
 Open the menu, choose **Connect an agent** and copy the MCP configuration. It supplies the absolute local entry point and the session ID for that specific tab. Add it through your agent client's normal MCP configuration. No client or global MCP registration is automatically modified by Paired.
