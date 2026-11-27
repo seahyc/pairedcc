@@ -21,8 +21,11 @@ export function answerTexts(input: { text?: string; alternatives?: string[]; dim
   });
 }
 
-/** An option card's rich text: its headline, then one paragraph per dimension with the name in bold. */
-export function optionRichText(text: string, dimensions: string[]) {
+/**
+ * An option card's rich text: its headline, `padLines` empty lines, then one paragraph per
+ * dimension with the name in bold.
+ */
+export function optionRichText(text: string, dimensions: string[], padLines = 0) {
   const [head, ...lines] = text.split("\n");
   // An empty line is an empty paragraph: the editor refuses a text node with no text.
   const para = (content: { type: string; text: string; marks?: unknown[] }[]) => {
@@ -33,6 +36,8 @@ export function optionRichText(text: string, dimensions: string[]) {
     type: "doc",
     content: [
       para([{ type: "text", text: head }]),
+      // Empty lines under a short headline, so each dimension sits level with the other options'.
+      ...Array.from({ length: padLines }, () => para([])),
       ...lines.map((line, j) => {
         const label = `${dimensions[j]}:`;
         return line.startsWith(label)
@@ -412,4 +417,17 @@ export function landingBox(ask: Rect, answers: readonly Rect[], roomHeight: numb
   const both = union([ask, ...answers]);
   if (!answers.length || both.maxY - both.y <= roomHeight) return both;
   return union(answers);
+}
+
+/**
+ * How many empty lines each option card needs under its headline so its first dimension line sits
+ * level with the lowest one in its row. `offsets` are where each card's first dimension line starts
+ * below the card's top, `rows` which row each card is in, and `line` one line's height, all in the
+ * same units.
+ */
+export function levelPads(offsets: number[], rows: number[], line: number) {
+  return offsets.map((o, i) => {
+    const lowest = Math.max(...offsets.filter((_, j) => rows[j] === rows[i]));
+    return line > 0 ? Math.max(0, Math.round((lowest - o) / line)) : 0;
+  });
 }
