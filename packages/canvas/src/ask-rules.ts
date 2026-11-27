@@ -13,8 +13,10 @@ export function capWords(text: string, max: number) {
 export function answerTexts(input: { text?: string; alternatives?: string[]; dimensions?: string[]; values?: string[][] }) {
   if (!input.alternatives) return [capWords(input.text ?? "", 90)];
   return input.alternatives.map((text, i) => {
-    const head = `${"ABCD"[i]} · ${capWords(text, input.dimensions ? 30 : 60)}`;
-    const lines = (input.dimensions ?? []).map((d, j) => `${d}: ${capWords(input.values?.[i]?.[j] ?? "", 12)}`);
+    // With dimensions each card is one line per field, so a field's own line breaks become spaces.
+    const one = (t: string) => (input.dimensions ? t.replace(/\s+/g, " ").trim() : t);
+    const head = `${"ABCD"[i]} · ${capWords(one(text), input.dimensions ? 30 : 60)}`;
+    const lines = (input.dimensions ?? []).map((d, j) => `${one(d)}: ${capWords(one(input.values?.[i]?.[j] ?? ""), 12)}`);
     return [head, ...lines].join("\n");
   });
 }
@@ -22,7 +24,11 @@ export function answerTexts(input: { text?: string; alternatives?: string[]; dim
 /** An option card's rich text: its headline, then one paragraph per dimension with the name in bold. */
 export function optionRichText(text: string, dimensions: string[]) {
   const [head, ...lines] = text.split("\n");
-  const para = (content: unknown[]) => ({ type: "paragraph", content });
+  // An empty line is an empty paragraph: the editor refuses a text node with no text.
+  const para = (content: { type: string; text: string; marks?: unknown[] }[]) => {
+    const filled = content.filter((t) => t.text.length > 0);
+    return filled.length ? { type: "paragraph", content: filled } : { type: "paragraph" };
+  };
   return {
     type: "doc",
     content: [

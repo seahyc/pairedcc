@@ -46,6 +46,16 @@ try {
   const box: any = await ev(`(p, e, ask) => { const ids = [ask, ...e.getCurrentPageShapes().filter((s) => s.meta.replyTo === ask).map((s) => s.id)]; e.zoomToBounds(e.getShapesPageBounds ? e.getShapesPageBounds(ids) : e.getSelectionPageBounds(), { inset: 80, immediate: true }); return true; }`, ask);
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${out}/option-dimensions.png` });
+  // A headline or value with blank lines in it still answers (review of #165: an empty text node failed the answer).
+  const made2: any = await ev("(p) => p.create({ kind: 'note', x: 2400, y: 1400, width: 260, text: 'Which day should we close?' })");
+  const ask2 = typeof made2 === "string" ? made2 : made2.id;
+  await ev("(p, e, id) => void p.select([id])", ask2);
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await until(async () => (await agent.call("canvas_asks", { state: "all" })).asks.some((a: any) => a.id === ask2) || undefined, "the second ask");
+  let blankError = "";
+  await agent.call("canvas_answer", { id: ask2, alternatives: ["Monday\n\nquietest day", "Tuesday"], dimensions: ["Lost sales"], values: [["Low\n\nabout 30 covers"], ["Medium"]] }).catch((e: Error) => { blankError = e.message; });
+  const second = (await agent.call("canvas_asks", { state: "all" })).asks.find((a: any) => a.id === ask2);
+  check("an option with blank lines in it still answers, each field on one line", !blankError && second?.state === "answered", blankError || second?.state);
   check("no page errors", errors.length === 0, errors.slice(0, 3));
   await agent.close();
   await context.close();

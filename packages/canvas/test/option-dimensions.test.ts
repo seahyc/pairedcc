@@ -78,3 +78,26 @@ describe("dimension labels stand out", () => {
     expect(richTextSearch(doc)).toBe("A · Charge per seat Cost to try: Low Risk: Churn");
   });
 });
+
+describe("review of #165", () => {
+  it("keeps each option's values with it when the model sends a blank option", () => {
+    const r = parseReply('{"kind":"alternatives","alternatives":["Per seat","","Flat fee"],"dimensions":["Cost"],"values":[["Low"],["Medium"],["High"]]}');
+    expect(r.alternatives).toEqual(["Per seat", "Flat fee"]);
+    expect(r.values).toEqual([["Low"], ["High"]]);
+  });
+  it("drops dimensions when there are fewer rows than options were sent", () => {
+    const r = parseReply('{"kind":"alternatives","alternatives":["Per seat","","Flat fee"],"dimensions":["Cost"],"values":[["Low"],["High"]]}');
+    expect(r).not.toHaveProperty("dimensions");
+  });
+  it("puts a headline or value with line breaks on one line, so no paragraph is empty", () => {
+    const input = answerInput.parse({ id: "shape:a", alternatives: ["Charge per seat\n\nBill monthly", "Flat"], dimensions: ["Risk"], values: [["Low\n\nish"], ["High"]] });
+    const [a] = answerTexts(input);
+    expect(a).toBe("A · Charge per seat Bill monthly\nRisk: Low ish");
+    const doc = optionRichText(a, ["Risk"]) as any;
+    expect(doc.content.every((p: any) => p.content.every((t: any) => t.text.length > 0))).toBe(true);
+  });
+  it("never makes an empty text node, even from an empty line", () => {
+    const doc = optionRichText("A · Head\n\nRisk: Low", ["Risk"]) as any;
+    expect(doc.content.every((p: any) => (p.content ?? []).every((t: any) => t.text.length > 0))).toBe(true);
+  });
+});

@@ -90,14 +90,16 @@ export type AgentReply = { read?: string; kind: "answer" | "alternatives" | "que
  * Dimensions and values from the model's reply, only when they line up: up to 4 short names, and
  * one row of short values per option. Anything that does not fit is dropped and the options stand.
  */
-function dimensionsOf(value: Record<string, unknown>, options: number): { dimensions?: string[]; values?: string[][] } {
+function dimensionsOf(value: Record<string, unknown>, sent: number, at: number[]): { dimensions?: string[]; values?: string[][] } {
   const text = (x: unknown) => (typeof x === "string" ? x.trim() : "");
   const dimensions = Array.isArray(value.dimensions) ? value.dimensions.map(text) : [];
   const values = Array.isArray(value.values) ? value.values.map((row) => (Array.isArray(row) ? row.map(text) : [])) : [];
+  // One row per option as sent, or the rows cannot be matched to the options and are dropped.
+  const rows = values.length === sent ? at.map((i) => values[i]) : [];
   const fits =
     dimensions.length >= 1 && dimensions.length <= 4 && dimensions.every((d) => d && d.length <= 40) &&
-    values.length >= options && values.slice(0, options).every((row) => row.length === dimensions.length && row.every((v) => v && v.length <= 200));
-  return fits ? { dimensions, values: values.slice(0, options) } : {};
+    rows.length === at.length && rows.every((row) => row.length === dimensions.length && row.every((v) => v && v.length <= 200));
+  return fits ? { dimensions, values: rows } : {};
 }
 
 /** Read the model's reply. Prose with no JSON is taken as a plain answer rather than lost. */
@@ -108,10 +110,11 @@ export function parseReply(raw: string): AgentReply {
     try {
       const value = JSON.parse(body.slice(start, end + 1)) as Record<string, unknown>;
       const read = typeof value.read === "string" ? value.read.slice(0, 200) : undefined;
-      const options = Array.isArray(value.alternatives)
-        ? value.alternatives.filter((a): a is string => typeof a === "string" && a.trim().length > 0).slice(0, 4)
-        : [];
-      if (value.kind === "alternatives" && options.length >= 2) return { read, kind: "alternatives", alternatives: options, ...dimensionsOf(value, options.length) };
+      // Each kept option remembers where it was sent, so its row of values stays with it.
+      const sent: unknown[] = Array.isArray(value.alternatives) ? value.alternatives : [];
+      const kept = sent.flatMap((a, at) => (typeof a === "string" && a.trim().length > 0 ? [{ text: a, at }] : [])).slice(0, 4);
+      const options = kept.map((k) => k.text);
+      if (value.kind === "alternatives" && options.length >= 2) return { read, kind: "alternatives", alternatives: options, ...dimensionsOf(value, sent.length, kept.map((k) => k.at)) };
       const text = typeof value.text === "string" && value.text.trim() ? value.text.trim() : options.join("\n");
       if (text) return { read, kind: value.kind === "question" ? "question" : "answer", text };
     } catch {
