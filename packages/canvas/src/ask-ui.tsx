@@ -288,7 +288,9 @@ export function AutoAsk({ keepInView }: { keepInView: (box: Box) => void }) {
     const shape = editor.getShape(done);
     if (!shape) return;
     if (shape.meta.askWhenWritten === true && !askOf(shape) && !textOf(shape)) {
-      editor.run(() => editor.deleteShapes([shape.id]), { history: "ignore" });
+      // Its arrows to what it was about go with it: an empty question leaves nothing behind.
+      const arrows = editor.getBindingsInvolvingShape(shape.id).map((b) => b.fromId).filter((id) => id !== shape.id);
+      editor.run(() => editor.deleteShapes([shape.id, ...arrows]), { history: "ignore" });
       return;
     }
     if (shouldSend(shape)) sendCard(editor, shape.id, [], keepInView);

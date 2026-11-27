@@ -172,3 +172,22 @@ describe("counting open items from the objects that can be items", () => {
     expect(board.filter((s) => s.id.includes("plain")).filter(mayBeFeedback)).toEqual([]);
   });
 });
+
+describe("the person's own card sent as a question", () => {
+  const ask = (state: string) =>
+    source("q", { text: "How should we charge?", meta: { ask: { state, attempt: 0, contextIds: [], askedAt: t0 }, targetIds: ["shape:thought"], createdAt: t0 } });
+  it("is in the queue like a comment, open until it is answered", () => {
+    const items = buildFeedback([source("thought", { text: "Per seat" }), ask("waiting")]);
+    expect(items.map((i) => [i.id, i.kind, i.status, i.ask, i.text])).toEqual([["shape:q", "comment", "open", "waiting", "How should we charge?"]]);
+    expect(items[0].targetIds).toEqual(["shape:thought"]);
+    expect(buildFeedback([ask("answered")])[0].status).toBe("resolved");
+    expect(mayBeFeedback({ type: "card", meta: ask("waiting").meta })).toBe(true);
+  });
+  it("carries the agent's answer as its reply", () => {
+    const answer = source("a", { text: "Per seat.", author: "Check agent", meta: { role: "annotation", author: "Check agent", replyTo: "shape:q", createdAt: t0 + 1000 } });
+    expect(buildFeedback([ask("answered"), answer])[0].replies.map((r) => r.text)).toEqual(["Per seat."]);
+  });
+  it("a card the person never sent is not in the queue", () => {
+    expect(buildFeedback([source("plain", { text: "just a thought" })])).toEqual([]);
+  });
+});
