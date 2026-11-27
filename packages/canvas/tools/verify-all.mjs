@@ -103,6 +103,7 @@ const CHECKS = [
   { name: 'answer-room', file: 'verify-answer-room.ts', args: (d) => [d] },
   { name: 'answer-tall', file: 'verify-answer-tall.mjs', args: (d) => [d] },
   { name: 'small-results', file: 'verify-small-results.ts', args: () => [] },
+  { name: 'option-dimensions', file: 'verify-option-dimensions.ts', args: (d) => [d] },
   { name: 'agent-friction-3', file: 'verify-agent-friction-3.ts', args: () => [] },
   { name: 'ask-queue', file: 'verify-ask-queue.mjs', args: (d) => [d] },
   { name: 'recall', file: 'verify-recall.mjs', args: (d) => [d] },
