@@ -2136,3 +2136,26 @@ kbd {
   border-color: #d8d5e6;
   color: #55524c;
 }
+
+/* P1: focus (F). One clear rectangle around the frame or thread; the rest of the board dims. */
+.focus-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100001;
+}
+.focus-hole {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 14px;
+  box-shadow: 0 0 0 200000px rgba(244, 241, 234, 0.82);
+}
+.focus-label {
+  position: absolute;
+  left: 4px;
+  bottom: calc(100% + 6px);
+  white-space: nowrap;
+  font: 500 12px Inter, system-ui, sans-serif;
+  color: #7d7a8c;
+}
