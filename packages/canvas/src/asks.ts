@@ -9,6 +9,7 @@ import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
 import { hiddenFromAgents } from "./fold";
+import { unclipFromFrame } from "./frame-edge";
 import { clusterAround, relation } from "./arrangement";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
@@ -40,7 +41,13 @@ export function askOf(shape: TLShape | undefined): AskMeta | undefined {
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
-const frameOf = (editor: Editor, shape: TLShape) => editor.findShapeAncestor(shape, (s) => s.type === "frame");
+const frameOf = (editor: Editor, shape: TLShape) => {
+  const found = editor.findShapeAncestor(shape, (s) => s.type === "frame");
+  if (found) return found;
+  // A card lifted out of its frame so the frame would not cut it off (item 113) still sits in it.
+  const within = typeof shape.meta.within === "string" ? editor.getShape(shape.meta.within as TLShapeId) : undefined;
+  return within?.type === "frame" ? within : undefined;
+};
 const targetsOf = (shape: TLShape) =>
   Array.isArray(shape.meta.targetIds) ? shape.meta.targetIds.filter((id): id is string => typeof id === "string") : [];
 
@@ -91,6 +98,9 @@ export function askDirect(editor: Editor, hostId: string, otherIds: string[] = [
   const skip = new Set<string>([host.id, ...others.map((s) => s.id), ...kept.map((s) => s.id)]);
   const targets = [...new Map([...kept, ...others, ...beside(editor, host, skip)].map((t) => [t.id, t])).values()];
   const around = frameOf(editor, host);
+  // A question card across the frame's edge would be cut off by it; it is lifted onto the page
+  // where it is (the frame it sat in is still given as its context).
+  unclipFromFrame(editor, host.id);
   const frame = around && keepForAgent([around], targets.map((t) => t.id)).kept.length ? around : undefined;
   const ask: AskMeta = {
     state: "waiting",
@@ -137,7 +147,7 @@ export function retryAsk(editor: Editor, id: string) {
   const shape = editor.getShape(id as TLShapeId), ask = askOf(shape);
   if (!shape || !ask) throw new Error("Not an ask");
   setAsk(editor, shape, { ...ask, state: "waiting", attempt: ask.attempt + 1, askedAt: Date.now(), startedAt: undefined, error: undefined, note: undefined });
-  if (shape.meta.role === "annotation" && shape.meta.status === "resolved") resolveMark(editor, editor.getShape(shape.id)!, "open", HUMAN);
+  if (shape.meta.status === "resolved") resolveMark(editor, editor.getShape(shape.id)!, "open", HUMAN);
 }
 
 type Given = { id: string; type: string; author: string; text: string; mark?: AskMark; settled?: true; inside?: Given[]; insideMore?: number };
@@ -234,7 +244,10 @@ function attachedTo(editor: Editor, frame: TLShape) {
   // a comment about a left-out card is as private as the card.
   const leftOut = subtree.filter((id) => id !== frame.id && isLeftOut(editor.getShape(id as TLShapeId)?.meta));
   const blocked = new Set<string>(leftOut.length ? (editor.getShapeAndDescendantIds(leftOut as TLShapeId[]) as Set<string>) : []);
-  return followers(subtree.filter((id) => !blocked.has(id)), page, new Set())
+  // A card lifted out of the frame (item 113) follows it by `meta.within`; one the person left out
+  // still blocks what hangs off it, wherever it sits.
+  const leftOutAnywhere = new Set(page.filter((s) => isLeftOut(s.meta)).map((s) => s.id as string));
+  return followers(subtree.filter((id) => !blocked.has(id)), page, leftOutAnywhere)
     .flatMap((id) => editor.getShape(id as TLShapeId) ?? [])
     .filter((s) => !within.has(s.id) && !askOf(s) && !hiddenFromAgents(editor, s) && textOf(s));
 }
@@ -515,7 +528,9 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     }
     setAsk(editor, editor.getShape(shape.id)!, { ...ask, state: "answered", agent: actor, answeredAt, read: input.read, note: undefined, error: undefined });
     // A clarifying question hands the turn back, so the ask stays open.
-    if (!input.question && shape.meta.role === "annotation" && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
+    // An answer closes the queue row (a comment's, or the person's own card's); a clarifying
+    // question hands the turn back, so it stays open.
+    if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
     return made;
   });
   return { ask: describeAsk(editor, editor.getShape(shape.id)!), answers: ids.map((id) => describeObject(editor, id, true)) };

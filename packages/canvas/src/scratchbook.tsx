@@ -5,6 +5,7 @@ import {
   useValue,
   type Editor,
   type TLShape,
+  type TLShapeId,
 } from "tldraw";
 import { isLeftOut, isPinned } from "./leave-out";
 import { revision, richTextPlain, shapeName } from "./operations";
@@ -138,6 +139,9 @@ export function resolveMark(editor: Editor, shape: TLShape, status: MarkStatus, 
       status,
       name: status === "resolved" ? "Feedback · resolved" : "Feedback",
     });
+  } else if (shape.meta.ask && typeof shape.meta.ask === "object") {
+    // The person's own card sent as a question: its queue row is open until answered or resolved.
+    meta.status = status;
   } else if (shape.meta.mark === "picked" || shape.meta.mark === "rejected") {
     meta.markStatus = status;
   } else if (shape.type === "draw" && !isAgentShape(shape)) {
@@ -173,6 +177,9 @@ function sourcesOf(editor: Editor, allPages: boolean): { sources: FeedbackSource
     const shapes = [...editor.getPageShapeIds(page.id)].flatMap((id) => editor.getShape(id) ?? []);
     for (const s of shapes) {
       all.push(s);
+      // An answer put away behind an open Check me is not shown in the queue either.
+      const behind = typeof s.meta.revealAfter === "string" ? editor.getShape(s.meta.revealAfter as TLShapeId) : undefined;
+      if (behind && (behind.props as { status?: unknown }).status === "open") continue;
       sources.push(sourceOf(editor, s, page, () => shapes));
     }
   }

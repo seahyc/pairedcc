@@ -15,7 +15,8 @@ export function followers(moved: readonly string[], shapes: readonly Attached[],
   const out: string[] = [], seen = new Set(moved);
   const queue = [...moved];
   for (const s of shapes) {
-    const target = s.meta.targetId, many = s.meta.targetIds;
+    // A card lifted out of a frame so the frame would not cut it off still goes with that frame.
+    const target = typeof s.meta.targetId === "string" ? s.meta.targetId : s.meta.within, many = s.meta.targetIds;
     if (typeof target !== "string") continue;
     if (Array.isArray(many) && many.length > 1) {
       // About several objects: it comes along only when one move carries every one of them.
