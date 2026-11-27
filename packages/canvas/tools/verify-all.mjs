@@ -98,6 +98,9 @@ const CHECKS = [
   { name: 'runs-page', file: 'verify-runs-page.ts', args: () => [] },
   // Its move timings on a 10k board are reported only; its Layers checks give the verdict.
   { name: 'big-edit', file: 'verify-big-edit.mjs', args: () => [] },
+  { name: 'answer-room', file: 'verify-answer-room.ts', args: (d) => [d] },
+  { name: 'answer-tall', file: 'verify-answer-tall.mjs', args: (d) => [d] },
+  { name: 'small-results', file: 'verify-small-results.ts', args: () => [] },
   { name: 'recall', file: 'verify-recall.mjs', args: (d) => [d] },
   { name: 'overview', file: 'verify-overview.mjs', args: (d) => [d] },
   { name: 'fold', file: 'verify-fold.mjs', args: (d) => [d] },
