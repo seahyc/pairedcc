@@ -27,20 +27,24 @@ try {
     id: ask,
     alternatives: ["Charge per seat", "Charge per job post, with a monthly cap so busy months stay predictable"],
     dimensions: ["Cost to try", "Risk"],
-    values: [["Low: one settings change", "Churn when teams shrink"], ["Medium: needs a cap", "Lumpy revenue"]],
+    values: [["Low: one settings change", "Churn when teams shrink"], ["Medium", "Lumpy revenue"]],
   });
   await ev("(p, e) => void e.selectNone()");
   const cards: any[] = await ev(`(p, e, ask) => e.getCurrentPageShapes().filter((s) => s.meta.replyTo === ask).sort((a, b) => a.x - b.x).map((s) => {
     const el = document.querySelector('[data-shape-id="' + s.id + '"]');
     const box = el?.getBoundingClientRect();
     const inner = el ? [...el.querySelectorAll('p')].map((q) => ({ text: q.textContent, bottom: q.getBoundingClientRect().bottom, right: q.getBoundingClientRect().right })) : [];
-    return { id: s.id, option: s.meta.option, lines: inner.map((q) => q.text), fits: !!box && inner.every((q) => q.bottom <= box.bottom + 1 && q.right <= box.right + 1) };
+    const tops = Object.fromEntries([...el.querySelectorAll('p')].filter((q) => q.querySelector('strong')).map((q) => [q.querySelector('strong').textContent, Math.round(q.getBoundingClientRect().top)]));
+    return { id: s.id, option: s.meta.option, lines: inner.map((q) => q.text).filter((t) => t), tops, fits: !!box && inner.every((q) => q.bottom <= box.bottom + 1 && q.right <= box.right + 1) };
   })`, ask);
   check("the answer is two lettered option cards", cards.length === 2 && cards[0].option === "A" && cards[1].option === "B", cards.map((c) => c.option));
   const dims = (c: any) => c.lines.slice(1).map((l: string) => l.split(":")[0]);
   check("each card lists the dimensions under its headline, in the same order", cards.every((c) => JSON.stringify(dims(c)) === JSON.stringify(["Cost to try", "Risk"])), cards.map((c) => c.lines));
   check("each value sits on its own card", /one settings change/.test(cards[0]?.lines.join(" ")) && /Lumpy revenue/.test(cards[1]?.lines.join(" ")));
   check("every line stays inside its card", cards.every((c) => c.fits));
+  // B's headline wraps to more lines than A's; each dimension still sits at one height across the row.
+  const aligned = ["Cost to try:", "Risk:"].every((d) => cards.length === 2 && cards[0].tops[d] !== undefined && Math.abs(cards[0].tops[d] - cards[1].tops[d]) <= 2);
+  check("each dimension line sits at the same height on every option", aligned, cards.map((c) => c.tops));
   const status = await agent.call("canvas_asks", { state: "all" });
   check("the ask says answered", status.asks.find((a: any) => a.id === ask)?.state === "answered");
   const box: any = await ev(`(p, e, ask) => { const ids = [ask, ...e.getCurrentPageShapes().filter((s) => s.meta.replyTo === ask).map((s) => s.id)]; e.zoomToBounds(e.getShapesPageBounds ? e.getShapesPageBounds(ids) : e.getSelectionPageBounds(), { inset: 80, immediate: true }); return true; }`, ask);

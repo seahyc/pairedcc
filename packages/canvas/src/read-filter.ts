@@ -46,5 +46,6 @@ export function richTextSearch(value: unknown): string {
   if (typeof node.text === "string") return node.text;
   if (!Array.isArray(node.content)) return "";
   const children = node.content as Node[];
-  return children.map(richTextSearch).join(children.every(inline) ? "" : " ");
+  // Blocks join with one space, and an empty block (a blank line) adds nothing.
+  return children.every(inline) ? children.map(richTextSearch).join("") : children.map(richTextSearch).filter((t) => t.length > 0).join(" ");
 }

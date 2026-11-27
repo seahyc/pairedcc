@@ -4,7 +4,7 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, levelPads, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
@@ -487,6 +487,7 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         replyTo: shape.id,
         answeredAt,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
+        ...(input.alternatives && input.dimensions ? { dimensions: input.dimensions } : {}),
       }, pageId);
       if (input.alternatives && input.dimensions) {
         const card = editor.getShape(id as TLShapeId)!;
@@ -521,4 +522,49 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     return made;
   });
   return { ask: describeAsk(editor, editor.getShape(shape.id)!), answers: ids.map((id) => describeObject(editor, id, true)) };
+}
+
+/**
+ * Options on dimensions, once drawn: a shorter headline gets empty lines under it so each
+ * dimension line sits level with the other options in its row, and the eye can run along a line.
+ * Measured on the drawn cards, since only the browser's own wrapping is exact; an answer on a page
+ * that is not open is left as it is.
+ */
+export async function levelOptionLines(editor: Editor, askId: string) {
+  if (typeof document === "undefined" || typeof requestAnimationFrame === "undefined") return;
+  const latest = (shapes: TLShape[]) => {
+    const at = Math.max(...shapes.map((s) => Number(s.meta.answeredAt) || 0));
+    return shapes.filter((s) => (Number(s.meta.answeredAt) || 0) === at);
+  };
+  const cards = latest(editor.getCurrentPageShapes().filter((s) => s.meta.replyTo === askId && Array.isArray(s.meta.dimensions)));
+  if (cards.length < 2) return;
+  await document.fonts?.ready;
+  const frame = () => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
+  const dimensions = (cards[0].meta.dimensions as unknown[]).length;
+  // One dimension at a time, top down: levelling a line moves every line under it.
+  for (let k = 0; k < dimensions; k++) {
+    await frame();
+    const zoom = editor.getZoomLevel();
+    const measured = cards.map((card) => {
+      const s = editor.getShape(card.id);
+      const el = document.querySelector(`[data-shape-id="${card.id}"]`);
+      const line = el ? [...el.querySelectorAll("p")].filter((p) => p.querySelector("strong"))[k] : undefined;
+      if (!s || !el || !line) return undefined;
+      return { s, offset: (line.getBoundingClientRect().top - el.getBoundingClientRect().top) / zoom, height: parseFloat(getComputedStyle(line).lineHeight) };
+    });
+    if (measured.some((m) => !m || !Number.isFinite(m.height))) return;
+    const found = measured as { s: TLShape; offset: number; height: number }[];
+    const pads = levelPads(found.map((m) => m.offset), found.map((m) => Math.round(m.s.y)), found[0].height);
+    if (pads.every((n) => !n)) continue;
+    editor.run(() => {
+      found.forEach(({ s }, i) => {
+        const doc = (s.props as { richText?: { type: string; content?: { type: string; content?: { marks?: { type: string }[] }[] }[] } }).richText;
+        // The k-th paragraph that starts with a bold name is dimension k; empty lines go just above it.
+        const at = doc?.content?.map((p, n) => (p.content?.[0]?.marks?.some((m) => m.type === "bold") ? n : -1)).filter((n) => n >= 0)[k];
+        if (!pads[i] || !doc?.content || at === undefined) return;
+        const content = [...doc.content.slice(0, at), ...Array.from({ length: pads[i] }, () => ({ type: "paragraph" })), ...doc.content.slice(at)];
+        editor.updateShape({ id: s.id, type: s.type, props: { richText: { ...doc, content } } } as never);
+      });
+    }, { history: "ignore" });
+  }
 }

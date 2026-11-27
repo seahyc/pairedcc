@@ -101,3 +101,25 @@ describe("review of #165", () => {
     expect(doc.content.every((p: any) => (p.content ?? []).every((t: any) => t.text.length > 0))).toBe(true);
   });
 });
+
+import { levelPads } from "../src/ask-rules";
+
+describe("dimension lines level across a row", () => {
+  it("pads a card whose headline is shorter by whole lines", () => {
+    expect(levelPads([40, 86, 63], [0, 0, 0], 23)).toEqual([2, 0, 1]);
+  });
+  it("levels each row on its own", () => {
+    expect(levelPads([40, 86, 40, 63], [0, 0, 1, 1], 23)).toEqual([2, 0, 1, 0]);
+  });
+  it("leaves cards alone when they are level, or the line height is unknown", () => {
+    expect(levelPads([40, 40], [0, 0], 23)).toEqual([0, 0]);
+    expect(levelPads([40, 86], [0, 0], 0)).toEqual([0, 0]);
+  });
+});
+
+describe("levelling lines does not change what agents read", () => {
+  it("skips empty paragraphs in text", () => {
+    const doc = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "A · Head" }] }, { type: "paragraph" }, { type: "paragraph" }, { type: "paragraph", content: [{ type: "text", text: "Risk:", marks: [{ type: "bold" }] }, { type: "text", text: " Low" }] }] };
+    expect(richTextSearch(doc)).toBe("A · Head Risk: Low");
+  });
+});
