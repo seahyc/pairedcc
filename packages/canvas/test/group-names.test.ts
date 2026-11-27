@@ -94,3 +94,20 @@ describe("a frame beside a loose pile", () => {
     expect(c.label).toBe("Pricing ideas");
   });
 });
+
+describe("a question lifted out of its frame (item 132)", () => {
+  // #155 lifts a question written across a frame's edge onto the page; there it overlaps the frame
+  // and nothing else. The cluster holds the frame and the question, and is named after the frame.
+  const frame = { id: "shape:frame", type: "frame", parentId: "page:p", x: 0, y: 0, rotation: 0, isLocked: false, opacity: 1, index: "a1", typeName: "shape", meta: { revision: 0 }, props: { w: 620, h: 360, name: "Kitchen quotes" } };
+  const question = { ...card("shape:q", 400, 300, "Which of these quotes is cheapest?"), meta: { revision: 0, within: "shape:frame", ask: { state: "waiting" } } };
+  const all = [frame, question];
+  const fake3 = { ...fake, getAncestorPageId: () => "page:p", getCurrentPageId: () => "page:p", getSortedChildIdsForParent: (id: string) => all.filter((s) => s.parentId === id).map((s) => s.id), getCurrentPageShapesSorted: () => all, getCurrentPageShapes: () => all, getShape: (id: string) => all.find((s) => s.id === id),
+    getShapePageBounds: (s: any) => { const x = typeof s === "string" ? all.find((y) => y.id === s) : s; return x ? { x: x.x, y: x.y, w: x.props.w, h: x.props.h, maxX: x.x + x.props.w, maxY: x.y + x.props.h } : undefined; } };
+  const ed3 = new Proxy(fake3, { get: (t, k) => (k in t ? (t as Record<string | symbol, unknown>)[k] : () => { throw new Error(`fake editor lacks ${String(k)}`); }) }) as unknown as Editor;
+  const { clusters } = overview(ed3) as { clusters: { ids: string[]; label?: string }[] };
+  it("names the cluster after the frame, not the question beside it", () => {
+    const c = clusters.find((x) => x.ids.includes("shape:q"))!;
+    expect(c.ids).toContain("shape:frame");
+    expect(c.label).toBe("Kitchen quotes");
+  });
+});
