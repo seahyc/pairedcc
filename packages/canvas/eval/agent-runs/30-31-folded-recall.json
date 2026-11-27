@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-11-27T02:13:47.903Z",
+  "agent": "a fresh general-purpose subagent given only AGENT_API.md and eval/mcp-call.ts",
+  "results": [
+    {
+      "task": "30-build-on-folded",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 57
+    },
+    {
+      "task": "31-recall-first",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 41
+    }
+  ],
+  "note": "A focused attempt on tasks 30 and 31 (item 125), kept apart from latest.json so the scorecard's full attempt is not replaced by a two-task run. The next full attempt counts them.",
+  "friction": [
+    "30: canvas_overview says a thread is folded but not which answer was picked, though the board's folded line shows it; a read was needed for the pick.",
+    "30: no way to read only marks; no default spot for a free canvas_create.",
+    "31: ask targets and overview entries carry no recall; the agent read the whole page to compare schedules.",
+    "31: recall.due is epoch milliseconds; an ISO date would be easier.",
+    "31: the docs do not say whether a settled thought without recall ever comes back (it does not: only after Check me)."
+  ]
+}
