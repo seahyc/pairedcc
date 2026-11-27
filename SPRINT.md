@@ -122,7 +122,7 @@ too flexible"): nothing new is shown until it applies, no new permanent toolbar 
 new key each, and each one undoes in one step. Each PR names the finding it serves, shows a
 before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
 
-- **P1. (Part 1, fold: #144 merged; part 2, focus (F): PR #145 open, awaiting review.) Few things in view (finding 1).** A finished thread (an ask whose answer was picked, or
+- **P1. (Done: fold #144 and focus #145 merged.) Few things in view (finding 1).** A finished thread (an ask whose answer was picked, or
   which the person marks settled) folds to one line showing the question and the picked answer;
   click to unfold. Focus: selecting a frame or a thread and pressing F dims everything else until
   Esc. Done when a board with 12 threads shows at most 4 unfolded by the person's choice, folding
@@ -665,7 +665,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 97. (PR #126 open, awaiting review.) **verify-answer-page's frame step after #104.** On `claude/sprint-int` at 8cea125, `tools/verify-answer-page.mjs` fails "an answer that lands inside a frame on the open page belongs to the frame" (10/11); #104 made answers land clear of frames so they are never clipped. Done when the product choice (answer inside the frame, unclipped, or beside it) is recorded and the check asserts that choice, passing on the branch.
 
-100. ((a)-(c): PR #129 open, awaiting review.) **Bot review findings on build-A's merged PRs (not yet reproduced).** Each needs a failing test
+100. ((a)-(c): #129 merged. (f): PR #150 open, awaiting review (build-A, reproduced: four tall options covered a note 40 px below their estimated room).) **Bot review findings on build-A's merged PRs (not yet reproduced).** Each needs a failing test
     first, then a fix or a recorded decision. #101: (a) two answers announced with identical text in
     a row are spoken once (React keeps the same live-region text); (b) an ask that goes quiet past
     the two-minute timeout gets Retry on screen but no announcement; (c) a clarifying question and a
@@ -714,6 +714,7 @@ P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest 
 105 (e). Smaller tool results (build-A) | claude/sprint-small-results | 2026-11-27T01:13Z
 
 ## Done
+- P1 (part 2). Focus (F) on a frame or thread (build-A): PR #145, merged (one rectangle, the rest dimmed until Esc; F stays the Frame tool otherwise; verify-focus 13/13).
 - P1 (part 1). A finished thread folds to one line (build-A): PR #144, merged (folds once the person moves on; the line unfolds for good, Fold folds again; read/overview `folded: true`; verify-fold 19/19).
 - 105 (c). canvas_runs by page (build-B): PR #139 (pages on each run, page: "current"; live MCP check 1/3 → 3/3; manifest regenerated; workspace green with services).
 - P3 (part 1). Settled mark (build-A): PR #138 (S settles or reopens, print with ✓ in the person's colour, one undo, saved, `settled: true` in read and ask targets; verify-settled 11/11; first screen unchanged).
