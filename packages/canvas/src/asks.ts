@@ -568,7 +568,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
     return made;
   });
-  return { ask: describeAsk(editor, editor.getShape(shape.id)!), answers: ids.map((id) => describeObject(editor, id, true)) };
+  const after = editor.getShape(shape.id)!;
+  // The ask's row in the feedback queue: closed by an answer, still open after a clarifying question.
+  const queue = after.meta.status === "resolved" ? "resolved" : "open";
+  return { ask: describeAsk(editor, after), answers: ids.map((id) => describeObject(editor, id, true)), queue };
 }
 
 /**

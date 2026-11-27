@@ -112,6 +112,7 @@ const CHECKS = [
   { name: 'recall', file: 'verify-recall.mjs', args: (d) => [d] },
   { name: 'overview', file: 'verify-overview.mjs', args: (d) => [d] },
   { name: 'group-names', file: 'verify-group-names.ts', args: (d) => [d] },
+  { name: 'answer-queue', file: 'verify-answer-queue.ts', args: () => [] },
   { name: 'fold', file: 'verify-fold.mjs', args: (d) => [d] },
   { name: 'focus', file: 'verify-focus.mjs', args: (d) => [d] },
 ].filter((c) => existsSync(join(dirname(fileURLToPath(import.meta.url)), c.file)));
