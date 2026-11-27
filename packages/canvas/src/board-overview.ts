@@ -14,6 +14,8 @@ export type OverviewItem = Placed & {
   /** Text an object shows (clipped later), for the label; empty when it has none. */
   text: string;
   heading?: boolean;
+  /** An ask (the person's question card): a group is not named after a question about it. */
+  ask?: boolean;
   /** Counted when it holds text: open unless settled. */
   thought: boolean;
   settled: boolean;
@@ -36,17 +38,18 @@ const clip = (text: string, max = 48) => {
   return one.length > max ? `${one.slice(0, max - 1)}…` : one;
 };
 
-/** A group's label: a frame's name; else its heading; else its first words in reading order. */
+/** A group's label: a frame's name; else its heading; else its first words in reading order, passing over asks. */
 export function groupLabel(members: OverviewItem[]) {
   const frame = members.find((m) => m.frame !== undefined);
   if (frame) return clip(frame.frame || "Frame");
   const ordered = [...members].sort((a, b) => a.y - b.y || a.x - b.x);
-  const named = ordered.find((m) => m.heading && m.text.trim()) ?? ordered.find((m) => m.text.trim());
+  const said = (m: OverviewItem) => Boolean(m.text.trim());
+  const named = ordered.find((m) => !m.ask && m.heading && said(m)) ?? ordered.find((m) => !m.ask && said(m)) ?? ordered.find(said);
   return named ? clip(named.text) : members.length === 1 ? "Untitled" : `${members.length} things`;
 }
 
-/** The board's groups, largest first, at most `limit`; `more` counts the groups left out. */
-export function boardGroups(items: OverviewItem[], limit = OVERVIEW_LIMIT): { groups: OverviewGroup[]; more: number } {
+/** The board's groups, largest first, at most `limit`; `more` counts the groups left out; `open` and `settled` are the whole page's. */
+export function boardGroups(items: OverviewItem[], limit = OVERVIEW_LIMIT): { groups: OverviewGroup[]; more: number; open: number; settled: number } {
   const frames = items.filter((i) => i.frame !== undefined);
   const loose = items.filter((i) => i.frame === undefined);
   const byId = new Map(items.map((i) => [i.id, i]));
@@ -74,7 +77,9 @@ export function boardGroups(items: OverviewItem[], limit = OVERVIEW_LIMIT): { gr
   });
   // Largest first (by thoughts, then objects), then left to right, so the cut keeps what matters.
   groups.sort((a, b) => b.open + b.settled - (a.open + a.settled) || b.count - a.count || a.bounds.x - b.bounds.x);
-  return { groups: groups.slice(0, limit), more: Math.max(0, groups.length - limit) };
+  // The page's totals count every group, including those past the limit that are not drawn.
+  const open = groups.reduce((n, g) => n + g.open, 0), settled = groups.reduce((n, g) => n + g.settled, 0);
+  return { groups: groups.slice(0, limit), more: Math.max(0, groups.length - limit), open, settled };
 }
 
 /** What a group's counts say, in words. */

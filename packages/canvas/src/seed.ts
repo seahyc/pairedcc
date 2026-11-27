@@ -1,6 +1,7 @@
 import { b64Vecs, createShapeId, toRichText, type Editor, type TLShapeId } from "tldraw";
 import { annotateObject, connect, createCard, image } from "./agent-operations";
 import { HUMAN } from "./scratchbook";
+import { calmSeedIds } from "./calm-ids";
 import { firstBoard, keys } from "./keys";
 import { EDGE_MARGIN, MARK_ROOM, toolStrip, type Strip } from "./reframe";
 
@@ -303,12 +304,18 @@ export function calmSeed(editor: Editor) {
   const z = editor.getZoomLevel(), strip = toolStrip(editor);
   const { x, y, width } = firstBoardPlace(editor.getViewportPageBounds(), strip && { right: strip.right / z, bottom: strip.bottom / z });
   const meta = { seed: true };
+  // The same ids on every device for this page, so two devices laying out the calm board on the
+  // same board merge into one (calm-ids.ts). A page that already holds them gets new ones.
+  const fixed = calmSeedIds(editor.getCurrentPageId());
+  const free = Object.values(fixed).every((id) => !editor.getShape(id as TLShapeId));
+  const idOf = (key: keyof typeof fixed) => (free ? (fixed[key] as TLShapeId) : createShapeId());
   editor.run(
     () => {
-      const title = createCard(editor, { x, y, width, text: "Write a thought.", style: "heading" }, AGENT, meta);
+      const title = createCard(editor, { x, y, width, text: "Write a thought.", style: "heading" }, AGENT, meta, undefined, idOf("title"));
       const titleBox = editor.getShapePageBounds(title);
       const hint = (titleBox?.maxY ?? y + 40) + 6;
       editor.createShape({
+        id: idOf("hint"),
         type: "card",
         x,
         y: hint,
@@ -325,6 +332,8 @@ export function calmSeed(editor: Editor) {
         },
         AGENT,
         { name: "How to ask", ...meta },
+        undefined,
+        idOf("ask"),
       );
     },
     { history: "ignore" },

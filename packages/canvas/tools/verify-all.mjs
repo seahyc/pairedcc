@@ -82,6 +82,7 @@ const CHECKS = [
   { name: 'ask-image', file: 'verify-ask-image.mjs', args: (d) => [d] },
   { name: 'ask-unclipped', file: 'verify-ask-unclipped.mjs', args: (d) => [d] },
   { name: 'annotate-clear', file: 'verify-annotate-clear.mjs', args: (d) => [d] },
+  { name: 'calm-pages', file: 'verify-calm-pages.mjs', args: (d) => [d] },
   { name: 'note-beside', file: 'verify-note-beside.mjs', args: (d) => [d] },
   { name: 'phone-margin', file: 'verify-phone-margin.mjs', args: (d) => [d] },
   // These start their own dev servers on other ports.
@@ -103,10 +104,12 @@ const CHECKS = [
   { name: 'answer-room', file: 'verify-answer-room.ts', args: (d) => [d] },
   { name: 'answer-tall', file: 'verify-answer-tall.mjs', args: (d) => [d] },
   { name: 'small-results', file: 'verify-small-results.ts', args: () => [] },
+  { name: 'option-dimensions', file: 'verify-option-dimensions.ts', args: (d) => [d] },
   { name: 'agent-friction-3', file: 'verify-agent-friction-3.ts', args: () => [] },
   { name: 'ask-queue', file: 'verify-ask-queue.mjs', args: (d) => [d] },
   { name: 'recall', file: 'verify-recall.mjs', args: (d) => [d] },
   { name: 'overview', file: 'verify-overview.mjs', args: (d) => [d] },
+  { name: 'group-names', file: 'verify-group-names.ts', args: (d) => [d] },
   { name: 'fold', file: 'verify-fold.mjs', args: (d) => [d] },
   { name: 'focus', file: 'verify-focus.mjs', args: (d) => [d] },
 ].filter((c) => existsSync(join(dirname(fileURLToPath(import.meta.url)), c.file)));
@@ -124,6 +127,8 @@ async function isUp() {
 if (await isUp()) throw new Error(`Something is already serving ${ORIGIN}. Stop it first: the checks need a dev server of this checkout with an empty board store.`);
 
 const boards = mkdtempSync(join(tmpdir(), 'verify-all-boards-'));
+// Checks that read or rewrite the account's stored board (calm-pages) find it here.
+process.env.BOARDS_DIR = boards;
 const scratch = mkdtempSync(join(tmpdir(), 'verify-all-'));
 const stub = join(scratch, 'model-stand-in');
 writeFileSync(stub, '#!/bin/sh\n# Stand-in for the model CLI: a fixed short reply after 3 s, no network.\nsleep 3\nprintf \'%s\' \'{"result":"A team of three at ten a seat pays thirty a month; check what happens at twelve.","is_error":false}\'\n');

@@ -73,8 +73,19 @@ export const answerInput = z
     alternatives: z.array(z.string().min(1).max(400)).min(2).max(4).optional().describe("2 to 4 short options placed side by side, when the ask is a choice."),
     question: z.boolean().default(false).describe("True when `text` is a clarifying question back to the human; the ask then stays open."),
     read: z.string().max(200).optional().describe("What you read to answer, shown on the ask."),
+    dimensions: z.array(z.string().trim().min(1).max(40)).min(1).max(4).optional().describe("With alternatives: up to 4 short names of what the options differ on (for example \"Cost to us\", \"Risk\"). Each option card then lists them in the same order, so the person compares down a line."),
+    values: z.array(z.array(z.string().trim().min(1).max(200)).max(4)).max(4).optional().describe("With dimensions: one row per alternative, in the same order, each with one short value per dimension."),
   })
-  .refine((v) => Boolean(v.text) !== Boolean(v.alternatives), "Give either text or alternatives");
+  .refine((v) => Boolean(v.text) !== Boolean(v.alternatives), "Give either text or alternatives")
+  .superRefine((v, ctx) => {
+    if (!v.dimensions && !v.values) return;
+    const fail = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    if (!v.alternatives) return fail("dimensions and values go with alternatives");
+    if (!v.dimensions || !v.values) return fail("Give dimensions and values together");
+    if (v.values.length !== v.alternatives.length) return fail("Give one row of values per alternative");
+    if (v.values.some((row) => row.length !== v.dimensions!.length)) return fail("Give one value per dimension in each row");
+  });
+export type AnswerInput = z.infer<typeof answerInput>;
 export const commandSchema = z.object({
   op: z.enum([
     "read",
