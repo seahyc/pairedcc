@@ -140,6 +140,11 @@ export async function acceptance(browser: Browser, base: string) {
       const at = await toScreen(chart.bounds.x, chart.bounds.y + chart.bounds.h + 80);
       const text = "Check the February meter swap";
       const before = new Set(objects(await agent.call("canvas_read")).map((o) => o.id));
+      // A notice still up from the import (since #128 a notice takes the pointer and stays while
+      // the pointer is on it) can sit over this spot; a person waits for it to go before
+      // clicking there. Move the pointer off it, then wait until nothing but the board is there.
+      await page.mouse.move(at.x, 120);
+      await page.waitForFunction(([x, y]: number[]) => !document.elementFromPoint(x, y)?.closest(".toast"), [at.x, at.y], { timeout: 20000 });
       await page.keyboard.press("Escape");
       await page.keyboard.press("n");
       await page.mouse.click(at.x, at.y);
