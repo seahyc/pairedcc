@@ -34,6 +34,11 @@ describe("board overview", () => {
     expect(groups).toHaveLength(10);
     expect(more).toBe(20);
   });
+  it("totals the whole page, including groups past the limit", () => {
+    const items = Array.from({ length: 41 }, (_, i) => card(`c${i}`, i * 1000, 0, `T${i}`, { settled: i === 40 }));
+    const { groups, more, open, settled } = boardGroups(items, 40);
+    expect([groups.length, more, open, settled]).toEqual([40, 1, 40, 1]);
+  });
   it("says the counts in words", () => {
     expect(countsLabel(3, 2)).toBe("3 open · 2 settled");
     expect(countsLabel(0, 2)).toBe("2 settled");

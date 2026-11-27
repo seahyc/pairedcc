@@ -80,6 +80,7 @@ import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
 import { calmSeed, seed } from "./seed";
+import { CALM_PAGE_ID, chosenPageName } from "./calm-ids";
 import { checkable, startCheck } from "./learning/check-ui";
 import { AskLayer, AutoAsk, SelectionBar, resendAsk, selectedRetry } from "./ask-ui";
 import { SuggestLayer } from "./suggest-ui";
@@ -1180,7 +1181,12 @@ function Shell() {
     for (const id of landed) {
       const ask = editor.getShapePageBounds(id as TLShape["id"]);
       if (!ask || !view.collides(ask)) continue;
-      const answers = editor.getCurrentPageShapes().filter((s) => s.meta.replyTo === id).flatMap((s) => editor.getShapePageBounds(s) ?? []);
+      // The answer that just landed: its cards share the ask's answeredAt, so earlier rounds
+      // under the same ask do not crowd it out of view.
+      const round = askOf(editor.getShape(id as TLShape["id"]))?.answeredAt;
+      const replies = editor.getCurrentPageShapes().filter((s) => s.meta.replyTo === id);
+      const latest = replies.filter((s) => round !== undefined && s.meta.answeredAt === round);
+      const answers = (latest.length ? latest : replies).flatMap((s) => editor.getShapePageBounds(s) ?? []);
       keepInView(landingBox(ask, answers, visiblePage().h));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1817,7 +1823,7 @@ function Shell() {
     </div>
   );
 }
-import { GeoShapeGeoStyle, PageRecordType, createShapeId, react } from "tldraw";
+import { GeoShapeGeoStyle, PageRecordType, createShapeId, react, type TLPageId } from "tldraw";
 import { TOUCH, keys } from "./keys";
 const scratchShapes = [CardShapeUtil, DataTableShapeUtil, PromptShapeUtil, DatasetShapeUtil, ChartShapeUtil, BoardImageShapeUtil];
 const TEXT_WRAP = 460;
@@ -2039,7 +2045,11 @@ function App() {
       const settings = editor.getDocumentSettings();
       if (settings.meta.calm === 3) return;
       const untouched = editor.getPages().length === 1 && editor.getCurrentPageShapes().length === 0;
-      if (untouched) editor.updatePage({ id: editor.getCurrentPageId(), name: "Board 1", meta: { seeded: 3 } });
+      if (untouched) {
+        // A name someone chose (the person, or an agent's page) is kept (calm-ids.ts).
+        const page = editor.getCurrentPage();
+        editor.updatePage({ id: page.id, name: chosenPageName(page.name) ? page.name : "Board 1", meta: { ...page.meta, seeded: 3 } });
+      }
       else {
         const working = editor.getCurrentPageId();
         // A board that was empty when this tab opened and has been worked on since (an agent
@@ -2047,8 +2057,10 @@ function App() {
         // view: the calm board is laid out on its own page without moving there. If the tab's
         // first page was left empty (an agent made a page of its own), that page takes it.
         const empty = fresh ? editor.getPages().find((p) => p.id !== working && editor.getSortedChildIdsForParent(p.id).length === 0) : undefined;
-        const id = empty?.id ?? PageRecordType.createId();
-        if (empty) editor.updatePage({ id: empty.id, name: "Board 1", meta: { ...empty.meta, seeded: 3 } });
+        // The calm page has the same id on every device, so two devices opening the same older
+        // board before either saves end up with one Thinking page, not two (calm-ids.ts).
+        const id = empty?.id ?? (editor.getPage(CALM_PAGE_ID as TLPageId) ? PageRecordType.createId() : (CALM_PAGE_ID as TLPageId));
+        if (empty) editor.updatePage({ id: empty.id, name: chosenPageName(empty.name) ? empty.name : "Board 1", meta: { ...empty.meta, seeded: 3 } });
         else editor.createPage({ id, name: "Thinking", meta: { seeded: 3 } });
         editor.setCurrentPage(id);
         if (fresh) {

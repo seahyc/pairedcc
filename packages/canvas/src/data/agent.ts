@@ -177,6 +177,14 @@ export function dataFields(editor: Editor, s: TLShape, full = false) {
   return extra;
 }
 
+/** One line for the overview: what a chart shows now, or that it is stale. */
+export function chartLine(editor: Editor, s: TLShape): { summary: string } | { stale: true } {
+  const chart = s as ChartShape;
+  const dataset = editor.getShape(chart.props.datasetId as TLShapeId) as DatasetShape | undefined;
+  if (!dataset || staleness(editor, s).length) return { stale: true };
+  return { summary: describeChart(dataset.props.data, chart.props.state).summary };
+}
+
 function describeData(editor: Editor, s: TLShape) {
   const object = describeObject(editor, s.id)!;
   const { props, ...rest } = object;

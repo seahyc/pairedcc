@@ -4,13 +4,14 @@ import { answerInput, askStates, askStatusInput, asksInput, type AskState } from
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
 import { hiddenFromAgents } from "./fold";
 import { unclipFromFrame } from "./frame-edge";
 import { clusterAround, relation } from "./arrangement";
+import { groupName } from "./overview";
 import { chartText, datasetText, staleReason } from "./data/model";
 import { staleness, type ChartShape, type DatasetShape } from "./data/shapes";
 
@@ -328,7 +329,12 @@ function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep:
   // A left-out member is withheld (and counted as such), like anything else around the ask.
   const kept = new Set<string>(keep(found.members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? [])).map((s) => s.id));
   const members = found.members.filter((m) => kept.has(m.id)).map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
-  return { members, more: found.more };
+  // The group's name, as the overview (O) shows it, from everything in it but the ask's own card
+  // (an ask is never the name of what it asks about) and what the person left out.
+  const whole = clusterAround(placed, host.id, new Set(), Infinity).members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? []);
+  // Filtered without counting: naming the group must not change how many objects the ask says it withheld.
+  const name = whole.length ? groupName(editor, keepForAgent(whole, []).kept) : undefined;
+  return { members, more: found.more, ...(name ? { name } : {}) };
 }
 
 /** Where a target sits relative to the ask's card, in words, when both are on the board and apart from each other. */
@@ -402,6 +408,8 @@ export function describeAsk(editor: Editor, shape: TLShape) {
         }
       : {}),
     ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
+    // What the group the card sits in is called, even when everything in it is already a target.
+    ...(group.name ? { group: group.name } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
     ...(withheld.size ? { leftOut: withheld.size } : {}),
     ...(pins.pinned.length ? { pinned: pins.pinned.map((s) => given(editor, s, 400)), ...(pins.more ? { pinnedMore: pins.more } : {}) } : {}),
@@ -445,6 +453,26 @@ export function setAskStatus(editor: Editor, value: unknown, actor: string) {
 }
 
 /**
+ * The nearest spot at or below `box` that covers nothing on the page (with the same air as
+ * `freeSpot`), stepping past the bottom of whatever it meets, so a tall obstacle is never
+ * accepted as a place to land.
+ */
+function clearSpot(editor: Editor, box: { x: number; y: number; w: number; h: number }, skip: Set<string>, pageId: TLPageId) {
+  const others = [...editor.getPageShapeIds(pageId)]
+    .flatMap((id) => editor.getShape(id) ?? [])
+    .filter((s) => s.type !== "frame" && s.type !== "arrow" && !skip.has(s.id))
+    .flatMap((s) => editor.getShapePageBounds(s) ?? []);
+  const spot = { ...box };
+  for (let i = 0; i < 200; i++) {
+    const room = { x: spot.x - 8, y: spot.y - 14, maxX: spot.x + spot.w + 8, maxY: spot.y + spot.h + 14 };
+    const hit = others.filter((o) => o.x < room.maxX && room.x < o.maxX && o.y < room.maxY && room.y < o.maxY);
+    if (!hit.length) return spot;
+    spot.y = Math.max(...hit.map((o) => o.maxY)) + 14;
+  }
+  return spot;
+}
+
+/**
  * The agent's answer, placed under the ask: one short card, or two to four alternatives
  * side by side. The human's objects are never moved or edited.
  */
@@ -461,9 +489,7 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     .filter((s) => s.meta.replyTo === shape.id)
     .flatMap((s) => editor.getShapePageBounds(s) ?? []);
   const bottom = Math.max(anchor.maxY, ...earlier.map((b) => b.maxY));
-  const texts = input.alternatives
-    ? input.alternatives.map((text, i) => `${"ABCD"[i]} · ${capWords(text, 60)}`)
-    : [capWords(input.text ?? "", 90)];
+  const texts = answerTexts(input);
   // The room the person's window has beside the canvas chrome, so no answer lands off screen.
   const available = (editor.getViewportScreenBounds().w - ANSWER_CHROME) / editor.getZoomLevel();
   const layout = answerLayout({ x: anchor.x, y: bottom }, texts, available);
@@ -503,22 +529,27 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         answeredAt,
         ...(input.alternatives ? { option: "ABCD"[i] } : {}),
       }, pageId);
+      if (input.alternatives && input.dimensions) {
+        const card = editor.getShape(id as TLShapeId)!;
+        editor.updateShape({ id: card.id, type: card.type, props: { richText: optionRichText(text, input.dimensions) } } as never);
+      }
       rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
       return id;
     });
     // The room was checked with estimated heights; the cards now have their measured ones. If
-    // they reach something below that room, the whole answer moves down until it is clear.
+    // they reach something, the whole answer moves: searched again from both of the first
+    // placement's starting points (under the ask, beside it) with its measured size, each shift
+    // compared from its own start, and never to a spot that still covers something.
     const boxes = made.flatMap((id) => editor.getShapePageBounds(id as TLShapeId) ?? []);
     if (boxes.length) {
       const x = Math.min(...boxes.map((b) => b.x)), y = Math.min(...boxes.map((b) => b.y));
       const real = { x, y, w: Math.max(...boxes.map((b) => b.maxX)) - x, h: Math.max(...boxes.map((b) => b.maxY)) - y };
       const skip = new Set<string>([shape.id, ...made]);
-      const down = freeSpot(editor, real, skip, pageId);
-      if (down.y > real.y) {
-        // As when it was placed: under the ask unless that is much further than beside it.
-        const besideReal = { ...real, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
-        const side = freeSpot(editor, besideReal, skip, pageId);
-        const to = pickAnswerSpot(down.y - real.y, side.y - besideReal.y) === "under" ? down : side;
+      if (clearSpot(editor, real, skip, pageId).y !== real.y) {
+        const underStart = { ...real, x: layout.box.x, y: layout.box.y };
+        const besideStart = { ...real, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
+        const under2 = clearSpot(editor, underStart, skip, pageId), beside2 = clearSpot(editor, besideStart, skip, pageId);
+        const to = pickAnswerSpot(under2.y - underStart.y, beside2.y - besideStart.y) === "under" ? under2 : beside2;
         const dx = to.x - real.x, dy = to.y - real.y;
         for (const id of made) {
           const card = editor.getShape(id as TLShapeId);

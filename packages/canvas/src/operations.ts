@@ -62,6 +62,13 @@ export function revision(shape: Pick<TLShape, "meta">) {
   return typeof shape.meta.revision === "number" ? shape.meta.revision : 0;
 }
 
+/** A card's style as agents name it: their own notes are `note`, the person's `handwriting`. */
+export function cardStyle(tone: unknown): string | undefined {
+  if (tone === "agent") return "note";
+  if (tone === "human") return "handwriting";
+  return typeof tone === "string" ? tone : undefined;
+}
+
 export function shapeName(shape: TLShape) {
   if (typeof shape.meta.name === "string") return shape.meta.name;
   if ("name" in shape.props && typeof shape.props.name === "string")
