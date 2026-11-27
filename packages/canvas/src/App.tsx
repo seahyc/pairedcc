@@ -110,7 +110,7 @@ import { followPause, followers } from "./follow";
 import { toggleSettled } from "./settled";
 import { CoverLayer, RecallLine } from "./learning/recall-ui";
 import { BoardOverview } from "./overview-ui";
-import { foldVisibility } from "./fold";
+import { foldVisibility, hiddenFromAgents } from "./fold";
 import { endFocus, focusAtom, focusRect, focusable, startFocus } from "./focus";
 import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
 import { useDialogFocus, useMenuKeys } from "./focus-keys";
@@ -340,7 +340,10 @@ const shortcutGroups: { title: string; rows: [string, string][] }[] = [
  */
 function tabStops(editor: Editor) {
   return editor.getCurrentPageShapesInReadingOrder().flatMap((s) => {
-    const b = s.type === "arrow" || editor.isShapeHidden(s) ? undefined : editor.getShapePageBounds(s.id);
+    // A folded thread is still a stop, at its question: landing on it opens the thread while the
+    // person is on it, so the keyboard reaches what the folded line shows.
+    const folded = Boolean(s.meta.ask) && editor.isShapeHidden(s) && !hiddenFromAgents(editor, s);
+    const b = s.type === "arrow" || (editor.isShapeHidden(s) && !folded) ? undefined : editor.getShapePageBounds(s.id);
     return b ? [{ id: s.id as string, box: { x: b.x, y: b.y, w: b.w, h: b.h } }] : [];
   });
 }
