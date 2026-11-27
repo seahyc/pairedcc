@@ -50,9 +50,29 @@ export function nextFold(foldedNow: boolean, finished: boolean): FoldChoice | un
   return "open";
 }
 
+/**
+ * Replies by the ask they answer, for the open page. Visibility is asked for every reply each
+ * time the board changes, so the page is indexed once per change rather than scanned per reply.
+ */
+let index: { shapes: readonly TLShape[]; byAsk: Map<string, TLShape[]> } | undefined;
+function repliesOnOpenPage(editor: Editor) {
+  const shapes = editor.getCurrentPageShapes();
+  if (index?.shapes !== shapes) {
+    const byAsk = new Map<string, TLShape[]>();
+    for (const s of shapes) {
+      if (typeof s.meta.replyTo !== "string") continue;
+      const list = byAsk.get(s.meta.replyTo);
+      if (list) list.push(s);
+      else byAsk.set(s.meta.replyTo, [s]);
+    }
+    index = { shapes, byAsk };
+  }
+  return index.byAsk;
+}
 const answersOf = (editor: Editor, ask: TLShape) => {
   const pageId = editor.getAncestorPageId(ask);
   if (!pageId) return [];
+  if (pageId === editor.getCurrentPageId()) return repliesOnOpenPage(editor).get(ask.id) ?? [];
   return [...editor.getPageShapeIds(pageId)].flatMap((id) => editor.getShape(id) ?? []).filter((s) => s.meta.replyTo === ask.id);
 };
 const isAsk = (s: TLShape | undefined) => Boolean(s && s.meta.ask && typeof s.meta.ask === "object");
