@@ -80,6 +80,7 @@ const CHECKS = [
   { name: 'ask-image', file: 'verify-ask-image.mjs', args: (d) => [d] },
   { name: 'ask-unclipped', file: 'verify-ask-unclipped.mjs', args: (d) => [d] },
   { name: 'annotate-clear', file: 'verify-annotate-clear.mjs', args: (d) => [d] },
+  { name: 'note-beside', file: 'verify-note-beside.mjs', args: (d) => [d] },
   { name: 'phone-margin', file: 'verify-phone-margin.mjs', args: (d) => [d] },
   // These start their own dev servers on other ports.
   { name: 'answer-view', file: 'verify-answer-view.mjs', args: (d) => [d] },
