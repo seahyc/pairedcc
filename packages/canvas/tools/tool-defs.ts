@@ -88,7 +88,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_overview",
     op: "overview",
     description:
-      "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
+      "Start here on a large board. A compact, paginated listing of one level of the current page: ID, type, name, author, revision, rounded bounds, child count, the person's mark (picked/rejected), card style, settled, a chart's one-line summary and an 80-character text snippet, plus page list, counts by type and open-mark count, and clusters: piles of nearby objects the person put together at that level (ids and bounds), which often carry meaning frames do not. Pass parentId to list a frame's children. Then canvas_read with ids, or canvas_get, for detail.",
     input: overviewInput.shape,
     output: "json",
   },
@@ -249,7 +249,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_runs",
     op: "runs",
     description:
-      "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, the pages each touched, and the object IDs each one created, updated and removed (at most 10 per list, with createdCount/updatedCount/removedCount when there are more). Pass page: \"current\" for only the open page, or runId for one run with every ID. Use a runId with canvas_undo_run.",
+      "List your recent operations on this canvas tab, newest first: runId, operation, actor, time, the pages each touched, and the object IDs each one created, updated and removed (at most 10 per list, with createdCount/updatedCount/removedCount when there are more), with names: a short name for each listed object. Pass page: \"current\" for only the open page, or runId for one run with every ID. Use a runId with canvas_undo_run.",
     input: runsInput.shape,
     output: "json",
   },

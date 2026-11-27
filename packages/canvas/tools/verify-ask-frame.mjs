@@ -1,11 +1,12 @@
 // Browser check for item 45: an ask about a frame is about what it holds.
 // Three cards are put in a frame "Pricing", two of them in a nested frame; the person
-// crosses one out, selects the outer frame and asks. The agent's view of that ask must list
-// the three cards inside the frame, in reading order, with the cross-out, and nothing else.
+// crosses one out, selects the outer frame and asks (Ask opens a pink card beside the frame;
+// the question is written there and sent when they finish). The agent's view of that ask must
+// list the three cards inside the frame, in reading order, with the cross-out, and nothing else.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-ask-frame.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 (`pnpm dev:canvas`). Playwright is not a dependency of this
+// Needs the dev server on :5183 (`pnpm dev:canvas`; CANVAS_BASE overrides the origin). Playwright is not a dependency of this
 // repository; it is loaded from the directory you run this in.
 import { createRequire } from 'node:module';
 import { mkdtempSync } from 'node:fs';
@@ -14,7 +15,7 @@ import { join } from 'node:path';
 const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-ask-frame.mjs <screenshot dir>');
-const BASE = 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 
@@ -39,13 +40,17 @@ async function command(op, input) {
   return body.result;
 }
 
+// The card is the question; there is no question box. Asking about something the person did
+// not write (a frame, an agent's answer) opens a pink card beside it in typing mode: the
+// question is typed there and sent when they finish writing (Escape).
 async function ask(ids, question) {
   await p.evaluate((ids) => window.paired.select(ids), ids);
   await p.waitForTimeout(200);
   await p.locator('.selection-bar button.primary').click();
-  await p.locator('.selection-bar.asking input').fill(question);
-  await p.keyboard.press('Enter');
-  await p.waitForTimeout(400);
+  await p.waitForFunction(() => Boolean(window.__pairedEditor.getEditingShapeId()), null, { timeout: 5000 });
+  await p.keyboard.type(question, { delay: 0 });
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(600);
 }
 
 const made = async (text, x, y) => command('create', { kind: 'note', x, y, width: 220, text });
@@ -66,7 +71,12 @@ const asks = (await command('asks', {})).asks;
 const mine = asks.find((x) => x.question === 'What do these have in common?');
 console.log(JSON.stringify(mine?.targets, null, 2));
 const held = mine?.targets?.[0]?.inside ?? [];
-check('the ask is about the frame', mine?.targets?.length === 1 && mine.targets[0].id === outer.frame.id);
+// The question card is the person's own card beside the frame, so (as with any card that is
+// sent) what sits right beside that card is given too, each with where it sits. The frame is
+// the one object the ask is about: first, and the only target without such a place.
+const besideCard = (mine?.targets ?? []).slice(1);
+check('the ask is about the frame', mine?.targets?.[0]?.id === outer.frame.id && besideCard.every((t) => typeof t.relation === 'string' && t.type !== 'frame'),
+  (mine?.targets ?? []).map((t) => `${t.type}${t.relation ? ` (${t.relation})` : ''}`).join(', '));
 check('it gives the cards inside, nested frame included, in reading order', held.map((o) => o.text).join(' | ') === 'Per seat | Per post | One flat price', held.map((o) => o.text).join(' | '));
 check('the crossed-out card says so', held.find((o) => o.id === post.id)?.mark === 'rejected');
 check('the nested frame itself is not listed as an object', !held.some((o) => o.type === 'frame'));

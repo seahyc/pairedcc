@@ -4,6 +4,7 @@
 // board twice, as a Windows browser and as a Mac browser. On Windows nothing on the first
 // screen, the selection bar, the typing hint, the Ask tooltips or the shortcut sheet may show
 // an Apple key symbol (⌘ ⇧ ⌫), and the way to ask must read Ctrl; on a Mac the hints keep ⌘.
+// The hinted key must really ask: there is no ask box, so it sends the card being written.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-keys.mjs <screenshot dir>
 //
@@ -88,10 +89,13 @@ for (const { tag, platform, ua, apple } of platforms) {
     await p.waitForTimeout(300);
     const hint = await p.locator('.selection-bar.hint').innerText().catch(() => '');
     check(`${tag}: typing hint names ${mod}`, hint.includes(mod) && (apple || !symbols.test(hint)), hint.replace(/\s+/g, ' '));
-    // The hinted key really asks: Ctrl+Enter on Windows, ⌘+Enter on a Mac.
+    // The hinted key really asks: Ctrl+Enter on Windows, ⌘+Enter on a Mac. The card is the
+    // question, so the key sends the card being written (no agent is needed for it to be sent).
+    const writing = await p.evaluate(() => window.__pairedEditor.getEditingShapeId());
     await p.keyboard.press(apple ? 'Meta+Enter' : 'Control+Enter');
     await p.waitForTimeout(400);
-    check(`${tag}: the hinted key opens the Ask box`, await p.locator('.selection-bar.asking input').count() === 1);
+    const sent = await p.evaluate((id) => ({ ask: window.paired.read().objects.find((o) => o.id === id)?.meta.ask?.state ?? null, editing: Boolean(window.__pairedEditor.getEditingShapeId()) }), writing);
+    check(`${tag}: the hinted key sends the card as the ask`, Boolean(writing) && Boolean(sent.ask) && !sent.editing, JSON.stringify(sent));
     await p.keyboard.press('Escape');
     await p.keyboard.press('Escape');
     await p.evaluate(() => { window.__pairedEditor.selectNone(); });

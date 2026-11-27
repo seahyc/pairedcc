@@ -92,7 +92,8 @@ check('nothing is suggested at once: only after a pause', !(await seen()).shown)
 await p.waitForTimeout(PAUSE);
 let s = await seen();
 check('after a pause, at most two suggestions appear', s.shown && s.texts.length >= 1 && s.texts.length <= 2, JSON.stringify(s.texts));
-check('they fit a single thought', s.texts[0] === "What's missing?" && s.texts[1] === 'Give me alternatives', JSON.stringify(s.texts));
+// The thought gives a reason, so the first follows its words (item 120), the second is the usual next step.
+check('they follow what the thought says, then the usual next step', s.texts[0] === "What's the strongest objection?" && s.texts[1] === "What's missing?", JSON.stringify(s.texts));
 check('they are faint', s.opacity > 0 && s.opacity < 0.8, String(s.opacity));
 check('they sit under (or beside) the selection, clear of every object', s.belowSelection === true && s.covered.length === 0, JSON.stringify(s));
 check('they never sit under the selection bar', !s.underBar);

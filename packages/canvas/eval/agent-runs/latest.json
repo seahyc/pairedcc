@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-11-26T14:40:02.386Z",
+  "recordedAt": "2026-11-27T01:31:53.530Z",
   "agent": "a fresh general-purpose subagent given only AGENT_API.md and eval/mcp-call.ts",
   "results": [
     {
@@ -7,42 +7,42 @@
       "pass": true,
       "detail": "ok",
       "toolCalls": 1,
-      "seconds": 56
+      "seconds": 26
     },
     {
       "task": "02-arrange-row",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 28
+      "seconds": 18
     },
     {
       "task": "03-annotate",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 15
+      "seconds": 18
     },
     {
       "task": "04-connect",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 19
+      "seconds": 18
     },
     {
       "task": "05-retext",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 34
+      "seconds": 21
     },
     {
       "task": "06-picked-done",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 19
+      "seconds": 21
     },
     {
       "task": "07-duplicate-frame",
@@ -56,133 +56,147 @@
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 19
-    },
-    {
-      "task": "09-scene-frame",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
       "seconds": 20
     },
     {
-      "task": "10-recolour-after-human",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 22
-    },
-    {
-      "task": "11-locked",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 21
-    },
-    {
-      "task": "12-resolve-marks",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 5,
-      "seconds": 43
-    },
-    {
-      "task": "13-dataset-chart",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 16
-    },
-    {
-      "task": "14-read-chart",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 21
-    },
-    {
-      "task": "15-edit-cell",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 3,
-      "seconds": 29
-    },
-    {
-      "task": "16-clear-filter",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 24
-    },
-    {
-      "task": "17-new-page",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 19
-    },
-    {
-      "task": "18-delete-one",
-      "pass": true,
-      "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 16
-    },
-    {
-      "task": "19-image-caption",
+      "task": "09-scene-frame",
       "pass": true,
       "detail": "ok",
       "toolCalls": 1,
       "seconds": 12
     },
     {
+      "task": "10-recolour-after-human",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 19
+    },
+    {
+      "task": "11-locked",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 18
+    },
+    {
+      "task": "12-resolve-marks",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 5,
+      "seconds": 34
+    },
+    {
+      "task": "13-dataset-chart",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 18
+    },
+    {
+      "task": "14-read-chart",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 18
+    },
+    {
+      "task": "15-edit-cell",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 18
+    },
+    {
+      "task": "16-clear-filter",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 27
+    },
+    {
+      "task": "17-new-page",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 15
+    },
+    {
+      "task": "18-delete-one",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 19
+    },
+    {
+      "task": "19-image-caption",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 1,
+      "seconds": 13
+    },
+    {
       "task": "20-find-in-many",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 17
+      "seconds": 18
     },
     {
       "task": "21-undo-run",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 4,
-      "seconds": 31
+      "toolCalls": 2,
+      "seconds": 18
     },
     {
       "task": "22-answer-ask",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 3,
-      "seconds": 33
+      "toolCalls": 2,
+      "seconds": 19
     },
     {
       "task": "23-reply-in-thread",
       "pass": true,
       "detail": "ok",
       "toolCalls": 4,
-      "seconds": 31
+      "seconds": 36
     },
     {
       "task": "24-converge",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 23
+      "seconds": 21
     },
     {
       "task": "25-person-typo",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 20
+      "seconds": 18
     },
     {
       "task": "26-quote-style",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 22
+      "seconds": 19
+    },
+    {
+      "task": "27-ask-about-the-group",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 17
+    },
+    {
+      "task": "28-undo-on-this-page",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 28
     }
   ]
 }

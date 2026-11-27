@@ -1,10 +1,10 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-27T01:40Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-27T02:30Z by the review lane. Branch: `claude/sprint-int`.
 
-## Read first (27 Nov, 01:40Z)
-- **Four of the five P-items are now live on paired.cc** (pushed to `claude/release` at 01:32Z as
-  `7013ae3`; the deploy status is read on the next run). Behind no flag, nothing on the first
+## Read first (27 Nov, 02:30Z)
+- **Four of the five P-items are live on paired.cc** (`7013ae3`, pushed 01:32Z, deploy status
+  `success`, live 01:38Z). **P4 (suggestions) is merged** (#156) and goes out with the next release. Behind no flag, nothing on the first
   screen changes (same PNG hash as before):
   - **P1 Fold** (#144): once you pick an answer (or settle the question) and move on, the thread
     folds to one line where the question was: the question, ✓ the pick, +N. Press it to unfold;
@@ -18,7 +18,9 @@ Last updated 2026-11-27T01:40Z by the review lane. Branch: `claude/sprint-int`.
   - **P5 part 2** (#149): Check me (E) on a thought you settled covers it face down while you
     explain it, then uncovers it to compare. It then comes back as one quiet line at the bottom
     edge after 1, 3, 7 and 21 days (Later = tomorrow). Nothing appears unless you used it.
-  - P4 (suggestions under a selection) is still being built.
+  - **P4 Suggestions** (#156, merged, not yet released): pause on a selection of your own writing
+    and at most two faint handwritten suggestions appear under it ("What's missing?"); clicking one
+    writes it as your pink card and asks. They go on any action and never cover anything.
 - **Review fixes made inside PRs:** focus stayed armed after its frame/thread was deleted, so an undo
   brought the dimming back (#145); the overview left out folded threads, so a board of finished
   threads looked empty (#146). Both have a browser check that fails without the fix.
@@ -29,8 +31,16 @@ Last updated 2026-11-27T01:40Z by the review lane. Branch: `claude/sprint-int`.
   "⌘↵" on Windows (verify-keys), and an ask inside a frame near the page edge is reported off-page
   (verify-ask-unclipped). Both pre-date today and are filed as items 112 and 113, with fixes in PRs #154 and #155.
 - **The scorecard is green on the merged code:** acceptance 10/10 (#148 fixed the lost first letter),
-  ask loop 5/5, safety 12/12 races with 0 human edits lost. Workspace: server 160, canvas 649, sdk
+  ask loop 5/5, safety 11/11 races with 0 human edits lost. Workspace: server 160, canvas 649, sdk
   12, mcp 4, e2e 1, all passing with Postgres 16 and Redis.
+- **Browser checks now all pass:** #153 rewrote the 16 stale checks to ask the new way, and #154/#155
+  fixed what they then found (your own asks missing from the feedback queue, an empty question
+  leaving its arrow, ⌘↵ shown on Windows, a card across a frame's edge cut off). verify-all on
+  the combined code: 58/58.
+- **Another session is merging PRs into `claude/sprint-int` alongside this review** (#157, #158,
+  #160, #161, #164 were merged by it, and it pushed review commits onto #154 and #155). This run
+  did not review those five; they pass the workspace tests and the browser suite on `0800e5c`.
+  Worth knowing if you expected only one review lane.
 - **This report fell behind:** #91 to #143 were merged and released (c6c406c, live 2026-11-26
   16:12Z) by earlier runs that did not update this file. They are now listed under Merged, one
   line each, without a fresh check from this run.
@@ -42,7 +52,7 @@ Last updated 2026-11-27T01:40Z by the review lane. Branch: `claude/sprint-int`.
 |---|---|---|---|
 | `601800b` | 26 Nov (from your side) | live | First release |
 | `c6c406c` | 26 Nov ~16:10Z | `success`, live on paired.cc 2026-11-26T16:12Z | Everything to #143: the card is the question, settled (S), Check me on answers, P2 arrangement |
-| `7013ae3` | 27 Nov 01:32Z | pending; read on the next run | P1 fold and focus, P3 overview, P5 recall (#144 to #149) |
+| `7013ae3` | 27 Nov 01:32Z | `success`, live on paired.cc 2026-11-27T01:38Z | P1 fold and focus, P3 overview, P5 recall (#144 to #149) |
 
 ## Notes from the 26 Nov review (still relevant)
 - **This run (11:55Z to 13:50Z): 52 PRs reviewed and merged, #40 to #90 and #96; none rejected.**
@@ -257,6 +267,14 @@ recorded with #57 (a fresh one is PR #97, not yet reviewed). Performance reads "
 not: see Read first.
 
 ## Merged
+- [#150](https://github.com/seahyc/pairedcc/pull/150) An answer taller than its estimate moves clear of what is below (e54ca60). verify-answer-room 5/5; fails without the fix.
+- [#151](https://github.com/seahyc/pairedcc/pull/151) A tall ask and its answer bring the answer into view (8d41398). verify-answer-tall 4/4.
+- [#152](https://github.com/seahyc/pairedcc/pull/152) Agent reads stay small: `read` gives words once as text (no `props.richText`), `runs` lists at most 10 ids per list (b05fb63). Manifest regenerates identical; scorecard green. **An outside agent reading `props.richText` from `read` must use `canvas_get`.**
+- [#153](https://github.com/seahyc/pairedcc/pull/153) Browser checks ask without the question box (2a90d90). verify-all 57/57 with #154/#155.
+- [#154](https://github.com/seahyc/pairedcc/pull/154) The person's own asks are in the feedback queue; an empty question leaves no arrow; Ctrl in the shortcut sheet (1cff04f).
+- [#155](https://github.com/seahyc/pairedcc/pull/155) A card written across a frame's edge is lifted onto the page instead of being cut off; it still moves with the frame (0800e5c). verify-all 58/58.
+- [#156](https://github.com/seahyc/pairedcc/pull/156) P4: suggestions on the board, not in a box (084f366). verify-p4-suggest 26/26 and 11 neighbouring checks.
+- Merged by another session, not reviewed by this run: #157, #158, #160, #161, #164.
 - [#144](https://github.com/seahyc/pairedcc/pull/144) P1: a finished thread folds to one line (1add311). verify-fold 19/19, settled 11/11 re-run.
 - [#145](https://github.com/seahyc/pairedcc/pull/145) P1: focus (F) on a frame or thread (774c2bc). Review fix: focus ends when its target is deleted; verify-focus 14/14.
 - [#146](https://github.com/seahyc/pairedcc/pull/146) P3: the whole board (O) (9481fce). Review fix: folded threads are counted; verify-overview 13/13.
@@ -426,4 +444,4 @@ None.
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-PRs opened after 01:20Z on 27 Nov (#150 onward) are reviewed on the next run.
+Open and not yet reviewed: #159, #162, #163, #165 to #170.
