@@ -71,3 +71,23 @@ describe("118 (a): runs say what each id is", () => {
     expect(name.endsWith("…")).toBe(true);
   });
 });
+
+// Item 130, from #172's focused attempt on tasks 30 and 31.
+import { reviewDate } from "../src/learning/recall";
+describe("130 (b): a settled thought's review date, without a full read", () => {
+  const due = Date.UTC(2026, 11, 2, 9, 30);
+  it("is an ISO date when the thought is settled and has a schedule", () => {
+    expect(reviewDate({ settled: true, recall: { step: 1, due } })).toBe("2026-12-02T09:30:00.000Z");
+  });
+  it("is absent with no schedule (only Check me starts one) or once unsettled", () => {
+    expect(reviewDate({ settled: true })).toBeUndefined();
+    expect(reviewDate({ recall: { step: 0, due } })).toBeUndefined();
+    expect(reviewDate({ settled: true, recall: { step: 0, due: "soon" } })).toBeUndefined();
+  });
+  it("is in the overview row", () => {
+    shapes.push(shape("shape:reviewed", "human", { settled: true, recall: { step: 0, due } }));
+    expect(row("shape:reviewed").review).toBe("2026-12-02T09:30:00.000Z");
+    expect(row("shape:mine")).not.toHaveProperty("review");
+    shapes.pop();
+  });
+});
