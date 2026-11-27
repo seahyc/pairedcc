@@ -108,6 +108,7 @@ import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followPause, followers } from "./follow";
 import { toggleSettled } from "./settled";
+import { CoverLayer, RecallLine } from "./learning/recall-ui";
 import { BoardOverview } from "./overview-ui";
 import { foldVisibility } from "./fold";
 import { endFocus, focusAtom, focusRect, focusable, startFocus } from "./focus";
@@ -1728,6 +1729,12 @@ function Shell() {
           <Keyboard size={15} />
         </IconButton>
       </div>
+      <RecallLine
+        onCheck={(id) => {
+          editor.select(id as TLShapeId);
+          startCheck(editor, setNotice, keepInView);
+        }}
+      />
       {notice && (
         <div
           className="toast"
@@ -1815,6 +1822,7 @@ function CanvasLayers() {
       <ScratchbookLayer />
       <AskLayer />
       <DataLayer />
+      <CoverLayer />
       <FocusVeil />
     </>
   );
