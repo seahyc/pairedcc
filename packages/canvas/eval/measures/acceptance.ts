@@ -144,7 +144,7 @@ export async function acceptance(browser: Browser, base: string) {
       // the pointer is on it) can sit over this spot; a person waits for it to go before
       // clicking there. Move the pointer off it, then wait until nothing but the board is there.
       await page.mouse.move(at.x, 120);
-      await page.waitForFunction(([x, y]) => !document.elementFromPoint(x, y)?.closest(".toast"), [at.x, at.y], { timeout: 20000 });
+      await page.waitForFunction(([x, y]: number[]) => !document.elementFromPoint(x, y)?.closest(".toast"), [at.x, at.y], { timeout: 20000 });
       await page.keyboard.press("Escape");
       await page.keyboard.press("n");
       await page.mouse.click(at.x, at.y);
