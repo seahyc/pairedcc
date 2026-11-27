@@ -70,6 +70,10 @@ describe("AGENT_API.md starts with what most tasks need (item 135)", () => {
   it("covers the common loop", () => {
     for (const tool of ["canvas_asks", "canvas_answer", "canvas_overview", "canvas_read", "canvas_undo_run"]) expect(start).toContain(`\`${tool}\``);
   });
+  it("says a feedback item that is an Ask is answered with canvas_answer, not a reply", () => {
+    // A fresh agent that stopped at Start here would otherwise reply and leave the Ask waiting.
+    expect(start).toMatch(/item with an `ask` field[^.]*`canvas_answer`/);
+  });
   it("links only to sections that exist", () => {
     const links = [...start.matchAll(/\]\(#([a-z0-9-]+)\)/g)].map((m) => m[1]);
     expect(links.length).toBeGreaterThan(0);

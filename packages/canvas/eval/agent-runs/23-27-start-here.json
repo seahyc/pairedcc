@@ -1,0 +1,27 @@
+{
+  "recordedAt": "2026-11-27T15:09:51.215Z",
+  "agent": "a fresh general-purpose subagent given only AGENT_API.md (with Start here) and eval/mcp-call.ts",
+  "results": [
+    {
+      "task": "23-reply-in-thread",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 37
+    },
+    {
+      "task": "27-ask-about-the-group",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 21
+    }
+  ],
+  "note": "A focused attempt on tasks 23 and 27 after AGENT_API.md gained its Start here section (item 135), kept apart from latest.json. The previous full attempt (latest.json, 01:31Z) took 4 and 2 calls on these tasks.",
+  "friction": [
+    "23: the Start here bullet on marks said canvas_reply then canvas_resolve; the item was an Ask, which needs canvas_answer. Fixed in the same PR: the bullet now says so.",
+    "23: canvas_answer's result does not show the feedback item's queue status, so confirming the comment closed costs a canvas_feedback call.",
+    "About 50 lines of prototype sections (learning, data, converge) sit between Start here and the core sections.",
+    "27: the ask's group was the first words of one member ('Harbour Street: rent £2,100…'), not much of a name; cluster gave everything needed."
+  ]
+}
