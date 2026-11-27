@@ -8,6 +8,8 @@ import { hiddenFromAgents } from "./fold";
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText as never).trim() : "");
 const MAP_W = 760, MAP_H = 420, BOX_W = 132, BOX_H = 46;
+/** The map's width: 760 px, or what the window leaves inside the dialog (a phone is 390 px wide). */
+const mapWidth = () => Math.max(BOX_W + 24, Math.min(MAP_W, (typeof window === "undefined" ? MAP_W : window.innerWidth) - 24 - 50));
 
 /** The open page as overview items: its top-level objects, a frame counting the thoughts inside it. */
 export function overviewItems(editor: Editor): OverviewItem[] {
@@ -54,7 +56,8 @@ export function BoardOverview({ onClose }: { onClose: () => void }) {
   // Read once when it opens: the overview is a look at the board, not a live panel.
   const items = useValue("overview items", () => overviewItems(editor), [editor]);
   const { groups, more } = useMemo(() => boardGroups(items), [items]);
-  const boxes = useMemo(() => new Map(mapLayout(groups, MAP_W, MAP_H, 12, BOX_W, BOX_H).map((b) => [b.id, b])), [groups]);
+  const width = mapWidth(), height = Math.round(MAP_H * Math.min(1, width / MAP_W) + (width < MAP_W ? 120 : 0));
+  const boxes = useMemo(() => new Map(mapLayout(groups, width, height, 12, BOX_W, BOX_H).map((b) => [b.id, b])), [groups, width, height]);
   const fly = (id: string) => {
     const g = groups.find((x) => x.id === id);
     onClose();
@@ -77,7 +80,7 @@ export function BoardOverview({ onClose }: { onClose: () => void }) {
         {groups.length === 0 ? (
           <p className="overview-empty">Nothing on this page yet.</p>
         ) : (
-          <div className="overview-map" style={{ width: MAP_W, height: Math.max(MAP_H, ...[...boxes.values()].map((b) => b.top + b.height + 12)) }} data-overview-map>
+          <div className="overview-map" style={{ width, height: Math.max(height, ...[...boxes.values()].map((b) => b.top + b.height + 12)) }} data-overview-map>
             {groups.map((g) => {
               const b = boxes.get(g.id)!;
               const done = g.settled > 0 && g.open === 0;
