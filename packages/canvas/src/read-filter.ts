@@ -36,7 +36,8 @@ const inline = (n: Node) => n.type === "text" || n.type === "hardBreak" || typeo
 /**
  * The words of a rich-text document as they read on the canvas: runs inside one paragraph
  * join with nothing between them (a partly bold word stays one word), blocks and line
- * breaks with a space. Used for searching only; `read` still reports richTextPlain.
+ * breaks with a space. Used for searching and for the `text` that `read` gives for each object
+ * and annotation, which is the only form of the words `read` returns.
  */
 export function richTextSearch(value: unknown): string {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return "";

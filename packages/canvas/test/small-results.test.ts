@@ -25,6 +25,22 @@ describe("read gives text once", () => {
     expect(first.props).not.toHaveProperty("richText");
     expect(first.props).toMatchObject({ w: 240, tone: "note" });
   });
+  it("keeps a partly bold word whole, since text is now the only form read gives", () => {
+    const bold = card("bold", "x");
+    (bold.props as { richText: unknown }).richText = {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "pr", marks: [{ type: "bold" }] }, { type: "text", text: "icing page" }] },
+        { type: "paragraph", content: [{ type: "text", text: "second" }, { type: "hardBreak" }, { type: "text", text: "line" }] },
+      ],
+    };
+    shapes.push(bold);
+    try {
+      expect(readCanvas(editor, { ids: ["shape:bold"] }).objects[0].text).toBe("pricing page second line");
+    } finally {
+      shapes.pop();
+    }
+  });
   it("is at least 40% smaller than with rich text (30,563 → 16,193 bytes on this board)", () => {
     const now = JSON.stringify(readCanvas(editor)).length;
     const withRichText = now + shapes.reduce((n, s) => n + JSON.stringify((s.props as { richText: unknown }).richText).length, 0);

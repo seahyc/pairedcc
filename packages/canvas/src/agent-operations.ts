@@ -520,7 +520,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         props,
         ...dataFields(editor, s),
         text:
-          "richText" in s.props ? richTextPlain(s.props.richText) : undefined,
+          "richText" in s.props ? richTextSearch(s.props.richText) : undefined,
         author: authorOf(s),
         ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         ...(s.meta.settled === true ? { settled: true } : {}),
@@ -539,7 +539,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
       targetId: s.meta.targetId,
       status: s.meta.status,
       author: s.meta.author,
-      text: "richText" in s.props ? richTextPlain(s.props.richText) : "",
+      text: "richText" in s.props ? richTextSearch(s.props.richText) : "",
     }));
   return {
     page: editor.getCurrentPage(),
