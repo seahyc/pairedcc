@@ -82,14 +82,15 @@ for (const [name, id] of Object.entries(all)) {
   const s = await state(id);
   if (name === 'ask') {
     // Since 7cc29ef the card is the question: the ask is the person's own card, written where
-    // they put it. It stays in the frame they wrote it in (moving their card out would rearrange
-    // their work), so what must hold is that none of it is cut off: it lies wholly inside the frame.
-    const inside = await p.evaluate(([id, frameId]) => {
+    // they put it. Wholly inside the frame it stays there (moving their card would rearrange
+    // their work); across the frame's edge it is lifted onto the page (item 113). Either way none
+    // of it may be cut off.
+    const where = await p.evaluate(([id, frameId]) => {
       const e = window.__pairedEditor, b = e.getShapePageBounds(id), f = e.getShapePageBounds(frameId);
-      return { parent: e.getShape(id).parentId === frameId, whole: b.x >= f.x && b.y >= f.y && b.maxX <= f.maxX && b.maxY <= f.maxY };
+      return { inFrame: e.getShape(id).parentId === frameId, whole: b.x >= f.x && b.y >= f.y && b.maxX <= f.maxX && b.maxY <= f.maxY, masked: Boolean(e.getShapeMask(id)) };
     }, [id, frame]);
-    check('the ask (the person\'s own card) stays in the frame where they wrote it', inside.parent, JSON.stringify(s));
-    check('none of the ask is cut off by the frame', inside.whole, JSON.stringify(inside));
+    check('none of the ask (the person\'s own card) is cut off by the frame', where.inFrame ? where.whole : !where.masked, JSON.stringify(where));
+    check('it stays in the frame only if it lies wholly inside it', where.inFrame === where.whole, JSON.stringify(where));
     continue;
   }
   check(`the ${name} is not clipped by the frame`, s && !s.clipped, JSON.stringify(s));
