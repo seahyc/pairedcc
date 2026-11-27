@@ -10,6 +10,7 @@ import { richTextPlain, shapeName } from "./operations";
 import { toggleMark } from "./scratchbook";
 import { isLeftOut, isPinned, leftOutLabel, pinnedLabel, toggleLeftOut, togglePinned } from "./leave-out";
 import { toggleSettled } from "./settled";
+import { foldLine, isFoldedNow, threadFinished, toggleFold } from "./fold";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
 import { checkable, startCheck } from "./learning/check-ui";
@@ -67,6 +68,13 @@ export function resendAsk(editor: Editor, id: string) {
   sendAsk(editor, id);
 }
 
+/** The folded line spans what it folds (the ask and its answers), within readable limits. */
+function foldWidth(ask: { x: number; w: number }, answers: { maxX: number }[]) {
+  const span = Math.max(ask.x + ask.w, ...answers.map((a) => a.maxX)) - ask.x;
+  return Math.round(Math.min(560, Math.max(320, span)));
+}
+type Outline = { id: string; x: number; y: number; w: number; h: number };
+type Group = { x: number; y: number; w: number; h: number; count: number };
 /** Page-space layer: each ask's state under it, and an outline around what the agent was given. */
 export function AskLayer() {
   const editor = useEditor();
@@ -87,6 +95,10 @@ export function AskLayer() {
         const ask = askOf(s), b = editor.getShapePageBounds(s);
         if (!ask || !b) return [];
         const answers = editor.getCurrentPageShapes().filter((r) => r.meta.replyTo === s.id);
+        // A finished thread folded away is one line where its question was: nothing else is drawn.
+        const finished = threadFinished(s.meta, answers.map((r) => r.meta));
+        if (isFoldedNow(editor, s))
+          return [{ id: s.id, ask, question: textOf(s), answers: 0, x: b.x, y: b.y, w: foldWidth(b, answers.flatMap((r) => editor.getShapePageBounds(r) ?? [])), given: "", outlines: [] as Outline[], group: undefined as Group | undefined, finished, fold: foldLine(textOf(s), answers.map((r) => ({ text: textOf(r), meta: r.meta }))) }];
         const focused = selected.has(s.id) || answers.some((r) => selected.has(r.id)) || ask.state === "working";
         const view = focused || anyLeftOut || anyPinned ? describeAsk(editor, s) : undefined;
         const pinnedIds = view?.pinned?.map((p) => p.id) ?? [];
@@ -111,7 +123,7 @@ export function AskLayer() {
         const pins = anyPinned && view ? pinnedLabel(pinnedIds.length + (view.pinnedMore ?? 0)) : "";
         const groupSaid = group ? `${group.count} more in its group` : "";
         const base = [givenLabel(editor, ask.contextIds.filter((id) => id !== s.id)), groupSaid].filter(Boolean).join(" + ");
-        return [{ id: s.id, ask, question: textOf(s), answers: optionsInLatestRound(answers.map((r) => ({ answeredAt: typeof r.meta.answeredAt === "number" ? r.meta.answeredAt : undefined, at: typeof r.meta.createdAt === "number" ? r.meta.createdAt : undefined }))), x: b.x, y: b.maxY, w: b.w, given: givenWith(base, pins, kept), outlines, group }];
+        return [{ id: s.id, ask, question: textOf(s), answers: optionsInLatestRound(answers.map((r) => ({ answeredAt: typeof r.meta.answeredAt === "number" ? r.meta.answeredAt : undefined, at: typeof r.meta.createdAt === "number" ? r.meta.createdAt : undefined }))), x: b.x, y: b.maxY, w: b.w, given: givenWith(base, pins, kept), outlines, group, finished, fold: undefined as ReturnType<typeof foldLine> | undefined }];
       });
     },
     [editor],
@@ -151,6 +163,27 @@ export function AskLayer() {
         document.body,
       )}
       {asks.map((a) => {
+        if (a.fold)
+          return (
+            <button
+              key={a.id}
+              type="button"
+              className="fold-line"
+              data-fold-line={a.id}
+              aria-expanded={false}
+              title="Unfold this thread"
+              style={{ transform: `translate(${a.x}px, ${a.y}px)`, width: a.w }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFold(editor, a.id);
+              }}
+            >
+              <span className="fold-q">{a.fold.question}</span>
+              <span className="fold-a">{a.fold.answer ? `✓ ${a.fold.answer}` : "✓ settled"}</span>
+              {a.fold.more > 0 && <span className="fold-more" aria-label={`${a.fold.more} more folded`}>+{a.fold.more}</span>}
+            </button>
+          );
         const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given, recent });
         return (
           <div key={a.id}>
@@ -176,6 +209,21 @@ export function AskLayer() {
                   }}
                 >
                   {line.tone === "nobody" ? "Send again" : "Retry"}
+                </button>
+              )}
+              {a.finished && (
+                <button
+                  className="fold-button"
+                  data-fold={a.id}
+                  aria-expanded={true}
+                  title="Fold this thread to one line"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFold(editor, a.id);
+                  }}
+                >
+                  Fold
                 </button>
               )}
             </div>

@@ -107,6 +107,7 @@ import { canvasOptions } from "./canvas-options";
 import { layerTree } from "./layer-tree";
 import { followPause, followers } from "./follow";
 import { toggleSettled } from "./settled";
+import { foldVisibility } from "./fold";
 import { firstTabStop, keyboardCardSpot, selectionAnnouncement, stopAnnouncement } from "./keyboard-nav";
 import { useDialogFocus, useMenuKeys } from "./focus-keys";
 import { localMcpConfig } from "./mcp-config";
@@ -1791,6 +1792,9 @@ function CanvasLayers() {
     </>
   );
 }
+/** Out of view: a result still behind a learning prompt, or a finished thread folded to one line. */
+const boardVisibility = (shape: TLShape, editor: Editor) =>
+  learningVisibility(shape, editor) === "hidden" || foldVisibility(shape, editor) === "hidden" ? "hidden" : "inherit";
 function App() {
   const [ready, setReady] = useState(false);
   const [agentEditor, setAgentEditor] = useState<Editor | null>(null);
@@ -2022,7 +2026,7 @@ function App() {
           persistenceKey="picabird-canvas-v1"
           assets={boardImageStore}
           shapeUtils={scratchShapes}
-          getShapeVisibility={learningVisibility}
+          getShapeVisibility={boardVisibility}
           tools={scratchTools}
           hideUi
           options={editorOptions}
