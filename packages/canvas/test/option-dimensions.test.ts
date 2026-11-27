@@ -134,3 +134,27 @@ describe("levelling never counts as an edit", () => {
     expect(changedPaths(made, now)).toEqual([]);
   });
 });
+
+import { readFileSync } from "node:fs";
+import { cardLook, cardTextWidth } from "../src/card-shape";
+
+describe("a row not drawn is measured at the width its text wraps at", () => {
+  it("is the card less its padding and its drawn side borders (an agent option card: 250 → 215)", () => {
+    expect(cardTextWidth("agent", false, 250)).toBe(215);
+    expect(cardTextWidth("human", false, 300)).toBe(300 - 36 - 5);
+    expect(cardTextWidth("human", true, 300)).toBe(300 - cardLook("human", true).pad * 2 - 3);
+    expect(cardTextWidth("heading", false, 300)).toBe(300);
+  });
+  it("uses the borders style.css draws", () => {
+    const css = readFileSync(new URL("../src/style.css", import.meta.url), "utf8");
+    const side = (selector: string) => {
+      const body = css.match(new RegExp(`^\\${selector} \\{([^}]*)\\}`, "m"))?.[1] ?? "";
+      const all = Number(body.match(/border(?:-width)?:\s*([\d.]+)px/)?.[1] ?? 0);
+      const left = Number(body.match(/border-left:\s*([\d.]+)px/)?.[1] ?? 0);
+      return left ? left + (/border:\s*none/.test(body) ? 0 : all) : all * 2;
+    };
+    for (const tone of ["agent", "code", "human", "quote", "source"] as const)
+      expect(300 - cardLook(tone, false).pad * 2 - cardTextWidth(tone, false, 300), tone).toBe(side(`.scrap--${tone}`));
+    expect(300 - cardLook("human", true).pad * 2 - cardTextWidth("human", true, 300)).toBe(side(".scrap--settled"));
+  });
+});

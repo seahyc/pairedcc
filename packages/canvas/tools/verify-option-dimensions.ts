@@ -71,6 +71,33 @@ try {
   const tops2: number[] = await ev(`(p, e, ask) => e.getCurrentPageShapes().filter((s) => s.meta.replyTo === ask).map((s) => { const q = [...document.querySelectorAll('[data-shape-id="' + s.id + '"] p')].find((q) => q.querySelector('strong')); return q ? q.getBoundingClientRect().top / e.getZoomLevel() : NaN; })`, ask2);
   check("a row partly out of view when it lands is levelled too", tops2.length === 2 && Math.abs(tops2[0] - tops2[1]) <= 2, tops2.map(Math.round));
   await page.screenshot({ path: `${out}/option-dimensions-offscreen-row.png` });
+  // An answer that lands while the person is on another page (it goes to its ask's page, #69) is
+  // levelled too: opening that page shows the dimension lines level across the row (item 137).
+  const made3: any = await ev("(p) => p.create({ kind: 'note', x: 4600, y: 1400, width: 260, text: 'Which plan should we pilot?' })");
+  const ask3 = typeof made3 === "string" ? made3 : made3.id;
+  await ev("(p, e, id) => void p.select([id])", ask3);
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await until(async () => (await agent.call("canvas_asks", { state: "all" })).asks.some((a: any) => a.id === ask3) || undefined, "the third ask");
+  const home: string = await ev("(p, e) => e.getCurrentPageId()");
+  await ev("(p, e) => { e.selectNone(); e.createPage({ name: 'Elsewhere' }); const pg = e.getPages().find((x) => x.name === 'Elsewhere'); e.setCurrentPage(pg.id); }");
+  await page.waitForTimeout(300);
+  await agent.call("canvas_answer", {
+    id: ask3,
+    alternatives: ["One team", "Every team in the north office for a whole quarter, then decide together"],
+    dimensions: ["Effort", "What we learn"],
+    values: [["Low", "Whether one team keeps using it"], ["High", "Whether it holds across teams"]],
+  });
+  const away: string = await ev("(p, e) => e.getCurrentPageId()");
+  check("the third answer landed while another page was open", away !== home, { away, home });
+  await page.waitForTimeout(800);
+  await ev("(p, e, id) => void e.setCurrentPage(id)", home);
+  await page.waitForTimeout(300);
+  await ev(`(p, e, ask) => { const ids = [ask, ...e.getCurrentPageShapes().filter((s) => s.meta.replyTo === ask).map((s) => s.id)]; e.zoomToBounds(e.getShapesPageBounds(ids), { inset: 80, immediate: true }); }`, ask3);
+  await page.waitForTimeout(500);
+  const tops3: Record<string, number>[] = await ev(`(p, e, ask) => e.getCurrentPageShapes().filter((s) => s.meta.replyTo === ask).sort((a, b) => a.x - b.x).map((s) => Object.fromEntries([...document.querySelectorAll('[data-shape-id="' + s.id + '"] p')].filter((q) => q.querySelector('strong')).map((q) => [q.querySelector('strong').textContent, Math.round(q.getBoundingClientRect().top / e.getZoomLevel())])))`, ask3);
+  const level3 = tops3.length === 2 && ["Effort:", "What we learn:"].every((d) => tops3[0][d] !== undefined && Math.abs(tops3[0][d] - tops3[1][d]) <= 2);
+  check("an answer that lands on another page has its dimension lines level when that page is opened", level3, tops3);
+  await page.screenshot({ path: `${out}/option-dimensions-other-page.png` });
   const padsOf = (id: string) => ev("(p, e, id) => e.getShape(id)?.meta.levelPads ?? null", id);
   const a2 = answered2?.answers?.[0];
 

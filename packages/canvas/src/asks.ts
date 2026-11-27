@@ -5,7 +5,7 @@ import { describeObject, revision, richTextPlain, shapeName } from "./operations
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
 import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
 import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, levelGaps, levelPadsOf, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
-import { cardLook, type CardTone } from "./card-shape";
+import { cardLook, cardTextWidth, type CardTone } from "./card-shape";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
@@ -574,10 +574,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
 /**
  * Options on dimensions, once drawn: space goes above a dimension line on the cards whose headline
  * (or value above it) took fewer lines, so each dimension sits level across the row and the eye can
- * run along a line. Measured on the drawn cards, since only the browser's own wrapping is exact; an
- * answer on a page that is not open is left as it is. The space is `meta.levelPads`, a derived
- * field like the card's height: the text is untouched, the answer's revision stays valid and its run
- * still undoes.
+ * run along a line. Measured on the drawn cards, since only the browser's own wrapping is exact; a
+ * row that is not drawn (out of view, or on a page that is not open) by the editor's text measure
+ * at the width the card's text really wraps at. The space is `meta.levelPads`, a derived field like
+ * the card's height: the text is untouched, the answer's revision stays valid and its run still undoes.
  */
 export async function levelOptionLines(editor: Editor, askId: string) {
   if (typeof document === "undefined") return;
@@ -585,7 +585,12 @@ export async function levelOptionLines(editor: Editor, askId: string) {
     const at = Math.max(...shapes.map((s) => Number(s.meta.answeredAt) || 0));
     return shapes.filter((s) => (Number(s.meta.answeredAt) || 0) === at);
   };
-  const cards = latest(editor.getCurrentPageShapes().filter((s) => s.meta.replyTo === askId && Array.isArray(s.meta.dimensions)));
+  // The answer goes to its ask's page, which need not be the open one (#69); nothing there is
+  // drawn, so that row is measured by estimate, as a row out of view is.
+  const ask = editor.getShape(askId as TLShapeId);
+  const pageId = (ask && editor.getAncestorPageId(ask)) ?? editor.getCurrentPageId();
+  const onPage = [...editor.getPageShapeIds(pageId)].map((id) => editor.getShape(id)).filter((s): s is TLShape => !!s);
+  const cards = latest(onPage.filter((s) => s.meta.replyTo === askId && Array.isArray(s.meta.dimensions)));
   if (cards.length < 2) return;
   // A hidden tab draws no frames; never hold the answer back waiting for one.
   const frame = () =>
@@ -635,7 +640,7 @@ function estimateLine(editor: Editor, id: TLShapeId, k: number) {
   const html = renderHtmlFromRichTextForMeasurement(editor, { ...props.richText, content: paras.slice(0, at) } as TLRichText);
   const above = editor.textMeasure.measureHtml(html || "&nbsp;", {
     fontFamily: t.font, fontSize: t.size, lineHeight: t.lineHeight, fontStyle: t.style, fontWeight: t.weight,
-    maxWidth: Math.max(40, props.w - t.pad * 2 - 8), padding: "0px",
+    maxWidth: cardTextWidth(props.tone, s.meta.settled === true, props.w), padding: "0px",
   }).h;
   const pads = levelPadsOf(s.meta).slice(0, k + 1).reduce((a, b) => a + b, 0);
   return { s, offset: t.pad + above + pads };
