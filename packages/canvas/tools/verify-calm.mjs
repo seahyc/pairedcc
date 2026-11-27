@@ -2,9 +2,14 @@
 // the ask loop with the resident agent, pick / cross out / comment, reload, the
 // no-agent state and an older saved board.
 //
+// The card is the question: there is no ask box. The person writes a thought, then writes
+// the question on a card right beside it and presses ⌘↵ while writing; that card is sent, with
+// the thought beside it as context. Asking about someone else's card opens a new pink card
+// beside it to write the question on.
+//
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-calm.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 and the resident agent running. Playwright is not a
+// Needs the dev server on :5183 (or CANVAS_BASE) and the resident agent running. Playwright is not a
 // dependency of this repository; it is loaded from the directory you run this in.
 // The no-agent step stops and restarts the macOS LaunchAgent com.paired.canvas.agent
 // and is skipped where that is not installed.
@@ -17,7 +22,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-calm.mjs <screenshot dir>');
-const URL = 'http://localhost:5183/canvas/';
+const URL = `${process.env.CANVAS_BASE ?? 'http://localhost:5183'}/canvas/`;
 const profile = mkdtempSync(join(tmpdir(), 'calm-profile-'));
 const results = [];
 const check = (name, ok, detail = '') => { results.push({ name, ok }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
@@ -104,12 +109,25 @@ check('New board is one click and opens calm', objs.length <= 4 && (await p.eval
 await p.keyboard.press('n');
 await p.mouse.click(330, 560); await p.waitForTimeout(300);
 await p.keyboard.type('Maybe we should charge per seat instead of per job post', { delay: 2 });
-await p.keyboard.press('ControlOrMeta+Enter'); await p.waitForTimeout(400);
-check('⌘↵ while writing opens the ask box', await p.locator('.selection-bar.asking input').count() === 1);
-await shot('06-ask-box');
-await p.locator('.selection-bar.asking input').fill("What's missing from this?");
+await p.keyboard.press('Escape'); await p.waitForTimeout(300); await p.keyboard.press('Escape');
+const asksNow = () => p.evaluate(() => window.paired.read().objects.filter(o => o.meta.ask).length);
+check('finishing a thought with no question mark does not send it', await asksNow() === 0);
+// The question goes on a card right beside the thought, so the thought is given with it.
+const under = await p.evaluate(() => {
+  const ed = window.__pairedEditor;
+  const s = window.paired.read().objects.find(o => (o.text ?? '').startsWith('Maybe we should charge'));
+  const b = s && ed.getShapePageBounds(s.id);
+  return b ? ed.pageToScreen({ x: b.x, y: b.maxY + 24 }) : { x: 330, y: 700 };
+});
+await p.keyboard.press('n');
+await p.mouse.click(under.x + 4, under.y); await p.waitForTimeout(300);
+// A card's text is set with typographic quotes, so the apostrophe may come back as ’.
+await p.keyboard.type("What's missing from this?", { delay: 2 });
 const t0 = Date.now();
-await p.keyboard.press('Enter');
+await p.keyboard.press('ControlOrMeta+Enter'); await p.waitForTimeout(400);
+const sent = await p.evaluate(() => ({ editing: Boolean(window.__pairedEditor.getEditingShapeId()), ask: window.paired.read().objects.find(o => o.meta.ask && /^What['’]s missing/.test(o.text ?? '')) }));
+check('⌘↵ while writing sends the card as the ask, with no box', Boolean(sent.ask) && !sent.editing && await p.locator('.selection-bar.asking, .ask-starters').count() === 0, `editing ${sent.editing}; ask ${sent.ask ? sent.ask.id : 'none'}`);
+await shot('06-ask-sent');
 await p.waitForSelector('.ask-status', { timeout: 5000 });
 const seen = new Set(); let shotWorking = false;
 let answered = false;
@@ -125,7 +143,7 @@ const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
 await p.waitForTimeout(600);
 await shot('08-ask-answered');
 objs = await objects();
-const ask = objs.find(o => o.meta.ask && o.text.startsWith("What's missing"));
+const ask = objs.find(o => o.meta.ask && /^What['’]s missing/.test(o.text));
 const answers = objs.filter(o => ask && o.meta.replyTo === ask.id);
 check('Ask produces an answer on the board', answered && answers.length >= 1, `${elapsed}s, states seen: ${[...seen].join(' → ')}`);
 console.log('ELAPSED_SECONDS', elapsed);
@@ -135,18 +153,29 @@ const words = answers.map(a => a.text.split(/\s+/).length);
 check('the answer is short (≤ 90 words per card, ≤ 4 cards)', answers.length <= 4 && words.every(w => w <= 92), `${words.join(', ')} words`);
 check('the answer is agent work beside the ask', answers.every(a => a.author === 'Claude' && a.y > ask.y), answers.map(a => a.author).join(','));
 const statusText = await p.locator('.ask-status').last().textContent();
-check('the ask shows what the agent was given', /given “Maybe we should/.test(statusText), statusText);
+check('the ask shows what the agent was given', /(given|with|also read) “Maybe we should/.test(statusText), statusText);
 const thought = objs.find(o => o.text.startsWith('Maybe we should charge'));
 const before = await p.evaluate((id) => window.paired.read().objects.find(o => o.id === id).revision, thought.id);
 check("the human's card was not edited or moved", thought.text === 'Maybe we should charge per seat instead of per job post', `revision ${before}`);
 
 // 4. Pick, cross out, comment, queue
 await p.evaluate((id) => window.paired.select([id]), answers[0].id); await p.waitForTimeout(300);
-check('selection bar offers Ask, Pick, Cross out, Comment', (await p.locator('.selection-bar > button').allTextContents()).map(t => t.replace(/\s*(Ctrl[ +]?|⌘)?[↵PXC]$/u, '').replace('✦ ', '').trim()).join(',') === 'Ask,Pick,Cross out,Comment', (await p.locator('.selection-bar > button').allTextContents()).join('|'));
+// On an agent's answer Ask reads "Ask about this" (it opens a card for the question); Settle
+// and, on one agent answer, Check me have joined the bar since this check was written.
+check('selection bar on an answer offers Ask about this, Pick, Cross out, Settle, Comment, Check me', (await p.locator('.selection-bar > button').allTextContents()).map(t => t.replace(/\s*(Ctrl[ +]?|⌘)?[↵PXCSE]$/u, '').replace('✦ ', '').trim()).join(',') === 'Ask about this,Pick,Cross out,Settle,Comment,Check me', (await p.locator('.selection-bar > button').allTextContents()).join('|'));
 await shot('09-selection-bar');
+// ⌘↵ on the agent's card opens a new pink card beside it to write the question on; the
+// agent's card itself is not edited. Leaving the new card empty removes it.
+const countBeforeAsk = (await objects()).length;
 await p.keyboard.press('ControlOrMeta+Enter'); await p.waitForTimeout(500);
-check('⌘↵ on a selected card opens the ask box and does not start editing', await p.locator('.selection-bar.asking input').count() === 1 && await p.locator('.selection-bar.hint').count() === 0);
-await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+const opened = await p.evaluate((answerId) => {
+  const ed = window.__pairedEditor, id = ed.getEditingShapeId(), s = id && ed.getShape(id);
+  return s ? { answerEdited: id === answerId, human: !s.meta.createdBy || s.meta.createdBy === 'Human', targets: s.meta.targetIds ?? [], askWhenWritten: s.meta.askWhenWritten === true } : null;
+}, answers[0].id);
+check("⌘↵ on an agent's card opens a pink card beside it for the question, and does not edit the answer", Boolean(opened) && !opened.answerEdited && opened.human && opened.askWhenWritten && opened.targets.includes(answers[0].id) && await p.locator('.selection-bar.asking').count() === 0, JSON.stringify(opened));
+await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+const leftBehind = (await objects()).slice(countBeforeAsk);
+check('…and leaving it empty takes it away again, with nothing left behind', leftBehind.length === 0, `${countBeforeAsk} → ${countBeforeAsk + leftBehind.length} objects; left: ${leftBehind.map(o => `${o.type} by ${o.author}`).join(', ')}`);
 await p.evaluate((id) => window.paired.select([id]), answers[0].id); await p.waitForTimeout(200);
 await p.keyboard.press('p'); await p.waitForTimeout(250);
 let fb = await p.evaluate(() => window.paired.read().objects.filter(o => o.meta.mark).map(o => ({ kind: o.meta.mark === 'picked' ? 'pick' : 'reject' })));
@@ -164,7 +193,7 @@ const rows = await p.locator('.feedback-item').count();
 check('feedback queue opens with Shift+C and lists the marks', rows >= 2, `${rows} open rows`);
 await shot('10-feedback-queue');
 await p.locator('.feedback-filters button', { hasText: 'All' }).click(); await p.waitForTimeout(200);
-check('the ask is in the queue with its answer', await p.locator('.feedback-item', { hasText: "What's missing" }).locator('.feedback-reply').count() >= 1);
+check('the ask is in the queue with its answer', await p.locator('.feedback-item', { hasText: /What['’]s missing/ }).locator('.feedback-reply').count() >= 1, `queue: ${(await p.locator('.feedback-item .feedback-text').allTextContents()).join(' | ')}`);
 await p.keyboard.press('Shift+C'); await p.waitForTimeout(300);
 check('Shift+C closes the queue again', await p.locator('.right-panel:visible').count() === 0);
 
@@ -186,10 +215,13 @@ execSync(`launchctl bootout gui/${uid}/com.paired.canvas.agent`);
 try {
   await p.waitForFunction(() => /No agent listening/.test(document.querySelector('.agent-chip')?.textContent ?? ''), null, { timeout: 20000 });
   check('top bar says no agent is listening once it stops', true);
+  // The card is the question: write "Give me alternatives" right beside the thought and send it.
   const t = (await objects()).find(o => o.text.startsWith('Maybe we should charge'));
-  await p.evaluate((id) => window.paired.select([id]), t.id); await p.waitForTimeout(300);
-  await p.locator('.selection-bar > button', { hasText: 'Ask' }).click(); await p.waitForTimeout(300);
-  await p.locator('.ask-starters button', { hasText: 'Give me alternatives' }).click();
+  const left = await p.evaluate((id) => { const ed = window.__pairedEditor, b = ed.getShapePageBounds(id); ed.centerOnPoint({ x: b.x, y: b.y }); return ed.pageToScreen({ x: b.x - 24 - 240, y: b.y }); }, t.id);
+  await p.keyboard.press('Escape'); await p.keyboard.press('n');
+  await p.mouse.click(left.x, left.y + 4); await p.waitForTimeout(300);
+  await p.keyboard.type('Give me alternatives', { delay: 2 });
+  await p.keyboard.press('ControlOrMeta+Enter'); await p.waitForTimeout(300);
   await p.waitForSelector('.ask-status[data-ask-tone="nobody"]', { timeout: 8000 });
   const nobody = await p.locator('.ask-status[data-ask-tone="nobody"]').textContent();
   check('an ask with no agent explains itself and says how to fix it', /No agent is listening/.test(nobody) && /pnpm --filter @pairedcc\/canvas agent/.test(nobody), nobody);

@@ -6,7 +6,7 @@
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-ask-unclipped.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 (`pnpm dev:canvas`) with an empty board store (PAIRED_BOARDS_DIR
+// Needs the dev server on :5183 (`pnpm dev:canvas`; set CANVAS_BASE for another) with an empty board store (PAIRED_BOARDS_DIR
 // set to a new folder).
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
@@ -14,7 +14,7 @@ const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-ask-unclipped.mjs <screenshot dir>');
 mkdirSync(out, { recursive: true });
-const BASE = 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 
@@ -80,6 +80,19 @@ const noteId = note ?? objs.find((o) => o.text === 'A worked example would help 
 const all = { ask: ask.id, comment: comment.id, answer, reply, 'agent note': noteId };
 for (const [name, id] of Object.entries(all)) {
   const s = await state(id);
+  if (name === 'ask') {
+    // Since 7cc29ef the card is the question: the ask is the person's own card, written where
+    // they put it. Wholly inside the frame it stays there (moving their card would rearrange
+    // their work); across the frame's edge it is lifted onto the page (item 113). Either way none
+    // of it may be cut off.
+    const where = await p.evaluate(([id, frameId]) => {
+      const e = window.__pairedEditor, b = e.getShapePageBounds(id), f = e.getShapePageBounds(frameId);
+      return { inFrame: e.getShape(id).parentId === frameId, whole: b.x >= f.x && b.y >= f.y && b.maxX <= f.maxX && b.maxY <= f.maxY, masked: Boolean(e.getShapeMask(id)) };
+    }, [id, frame]);
+    check('none of the ask (the person\'s own card) is cut off by the frame', where.inFrame ? where.whole : !where.masked, JSON.stringify(where));
+    check('it stays in the frame only if it lies wholly inside it', where.inFrame === where.whole, JSON.stringify(where));
+    continue;
+  }
   check(`the ${name} is not clipped by the frame`, s && !s.clipped, JSON.stringify(s));
   check(`the ${name} sits on the page`, s?.onPage === true);
 }

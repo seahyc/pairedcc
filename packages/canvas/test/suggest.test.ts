@@ -43,7 +43,7 @@ describe("P4: where suggestions go", () => {
     expect(suggestSpot(sel, size, [])).toEqual({ x: 100, y: 194 });
   });
   it("leaves room for the selection bar when it sits under the selection", () => {
-    expect(suggestSpot(sel, size, [], 50)).toEqual({ x: 100, y: 244 });
+    expect(suggestSpot(sel, size, [], { under: 50 })).toEqual({ x: 100, y: 244 });
   });
   it("slides down a little past something just under the selection", () => {
     const card = { x: 100, y: 200, w: 300, h: 30 };
@@ -80,5 +80,47 @@ describe("P4: size and identity", () => {
   });
   it("names a selection the same whatever order it was made in", () => {
     expect(selectionKey(["b", "a"])).toBe(selectionKey(["a", "b"]));
+  });
+});
+
+import { suggestScale, SUGGEST_FONT, SUGGEST_LINE, SUGGEST_LINE_TOUCH } from "../src/suggest";
+describe("117: readable and in view at any zoom", () => {
+  it("keeps the same size on screen whatever the zoom", () => {
+    for (const zoom of [0.25, 0.37, 1, 2]) {
+      const scale = suggestScale(zoom);
+      expect(SUGGEST_FONT * scale * zoom).toBeCloseTo(SUGGEST_FONT);
+      const page = suggestSize(["What's missing?", "Give me alternatives"], { scale });
+      const base = suggestSize(["What's missing?", "Give me alternatives"]);
+      expect(page.w * zoom).toBeCloseTo(base.w);
+      expect(page.h * zoom).toBeCloseTo(base.h);
+    }
+    expect(SUGGEST_FONT).toBeGreaterThanOrEqual(15);
+  });
+  it("gives taps at least 32 px a line on a touch screen", () => {
+    expect(SUGGEST_LINE_TOUCH).toBeGreaterThanOrEqual(32);
+    expect(suggestSize(["a", "b"], { touch: true }).h).toBeGreaterThan(suggestSize(["a", "b"]).h);
+    expect(SUGGEST_LINE).toBeLessThan(SUGGEST_LINE_TOUCH);
+  });
+  const sel = { x: 100, y: 100, w: 300, h: 80 };
+  const size = { w: 220, h: 68 };
+  it("is placed only wholly inside the view", () => {
+    const view = { x: 0, y: 0, w: 1000, h: 250 };
+    const spot = suggestSpot(sel, size, [], { view })!;
+    expect(spot.x).toBeGreaterThanOrEqual(sel.x + sel.w);
+    expect(spot.y + size.h).toBeLessThanOrEqual(view.y + view.h);
+  });
+  it("is not shown when no clear spot is in view", () => {
+    expect(suggestSpot(sel, size, [], { view: { x: 90, y: 90, w: 320, h: 120 } })).toBeNull();
+  });
+  it("keeps its gaps the same on screen when zoomed out", () => {
+    const scale = 1 / 0.37;
+    const spot = suggestSpot(sel, size, [], { scale })!;
+    expect((spot.y - (sel.y + sel.h)) / scale).toBeCloseTo(suggestSpot(sel, size, [])!.y - (sel.y + sel.h));
+  });
+  it("treats the window's own controls as things not to cover", () => {
+    const toolbar = { x: 0, y: 190, w: 1000, h: 60 };
+    const spot = suggestSpot(sel, size, [toolbar], { view: { x: 0, y: 0, w: 1000, h: 1000 } })!;
+    const hits = spot.y < toolbar.y + toolbar.h && toolbar.y < spot.y + size.h && spot.x < toolbar.x + toolbar.w && toolbar.x < spot.x + size.w;
+    expect(hits).toBe(false);
   });
 });
