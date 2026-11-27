@@ -190,6 +190,8 @@ export function AskLayer() {
             </button>
           );
         const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given, recent });
+        // A failed or unheard ask says what to do next; that is never cut short.
+        const tight = a.tight && line.tone !== "failed" && line.tone !== "nobody";
         return (
           <div key={a.id}>
             {a.group && (
@@ -198,9 +200,9 @@ export function AskLayer() {
             {a.outlines.map((o) => (
               <div key={o.id} className="ask-given" style={{ transform: `translate(${o.x - 6}px, ${o.y - 6}px)`, width: o.w + 12, height: o.h + 12 }} />
             ))}
-            <div className={`ask-status ${line.tone}${a.tight ? " ask-status--tight" : ""}`} data-ask-state={a.ask.state} data-ask-tone={line.tone} style={{ transform: `translate(${a.x}px, ${a.y + 6}px)`, maxWidth: statusWidth(a.w) }}>
+            <div className={`ask-status ${line.tone}${tight ? " ask-status--tight" : ""}`} data-ask-state={a.ask.state} data-ask-tone={line.tone} style={{ transform: `translate(${a.x}px, ${a.y + 6}px)`, maxWidth: statusWidth(a.w) }}>
               {(line.tone === "working" || line.tone === "waiting") && <span className="ask-pulse" />}
-              <span className="ask-status-text" title={a.tight ? `${line.text}${line.tone !== "done" && line.tone !== "failed" && line.tone !== "nobody" && a.given ? ` · with ${a.given}` : ""}` : undefined}>
+              <span className="ask-status-text" title={tight ? `${line.text}${line.tone !== "done" && line.tone !== "failed" && line.tone !== "nobody" && a.given ? ` · with ${a.given}` : ""}` : undefined}>
                 {line.tone === "working" || line.tone === "done" ? "✦ " : ""}
                 {line.text}
                 {line.tone !== "done" && line.tone !== "failed" && line.tone !== "nobody" && a.given ? ` · with ${a.given}` : ""}
