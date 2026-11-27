@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-11-27T14:45:26.722Z",
+  "agent": "a fresh general-purpose subagent given only AGENT_API.md and eval/mcp-call.ts",
+  "results": [
+    {
+      "task": "32-ask-across-frame-edge",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 84
+    }
+  ],
+  "note": "A focused attempt on task 32 (item 125, the card lifted out of a frame by #155), kept apart from latest.json so the scorecard's full attempt is not replaced by a one-task run. The next full attempt counts it.",
+  "friction": [
+    "32: the ask carried no group, though the overview puts the lifted question in a cluster with the frame and AGENT_API says group is present whenever the card sits in a group; an overview call was needed to see nothing else was near.",
+    "32: the overview labelled that cluster with the ask's own words ('Which of these quotes is cheapest?'), where AGENT_API says a label is the frame's name first and passes over an ask card.",
+    "32: AGENT_API does not say which frame a card across a frame's edge belongs to (the ask gave the frame it was written in).",
+    "AGENT_API.md (about 45 KB) is too long to read at once; the agent searched it for the asks section."
+  ]
+}
