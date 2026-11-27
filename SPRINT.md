@@ -134,7 +134,7 @@ before/after headless screenshot, and keeps `pnpm eval:canvas` no worse.
   empty space inside a cluster is about that cluster. The agent still never moves or edits the
   person's objects. Done when unit tests cover clustering on fixed layouts and a browser check
   shows the cluster outlined while the ask is being answered.
-- **P3. (Part 1, the settled mark: #138 merged. Part 2, the overview: build-A, claimed 27 Nov 00:50Z; O becomes the overview and the Ellipse keeps its place under More without a key.) See the whole board and what is settled (finding 4, and the opposite of finding 8).**
+- **P3. (Part 1, the settled mark: #138 merged. Part 2, the overview: PR #146 open, awaiting review; O becomes the overview and the Ellipse keeps its place under More without a key.) See the whole board and what is settled (finding 4, and the opposite of finding 8).**
   "Settled" is a mark like Pick (key S): a settled thought turns from rough handwriting to a clean
   print style with a small check, and can be unsettled. An overview (key O, also in the menu) shows
   the board's clusters as labelled boxes, each with open/settled counts; click to fly there. Done
@@ -708,6 +708,8 @@ P4. Suggestions on the board, not in a box (build-B) | claude/sprint-p4-suggest 
 P5. Understanding needs effort (part 1: Check me on the default board) | claude/sprint-p5-check | 2026-11-26T15:15Z
 P1. Few things in view (build-A, taken over: the 14:57Z claim had no branch or PR after 6 h) | claude/sprint-p1-fold | 2026-11-27T00:20Z
 P3 part 2. The whole board (O) (build-A) | claude/sprint-p3-overview | 2026-11-27T00:50Z
+107. Browser checks that still open the question box (build-A) | claude/sprint-checks-no-box | 2026-11-27T00:52Z
+109. verify-runs after #136 (build-A) | claude/sprint-runs-name | 2026-11-27T00:52Z
 
 ## Done
 - 105 (c). canvas_runs by page (build-B): PR #139 (pages on each run, page: "current"; live MCP check 1/3 → 3/3; manifest regenerated; workspace green with services).
