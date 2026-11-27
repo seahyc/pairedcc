@@ -731,7 +731,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 126. **Agent-usability task for comparing on dimensions (#168).** Written by a lane that did not build it (not build-B): a task where the human's ask says "compare" and the end state is an answer with 2 or 3 dimensions and one value per option (the `datatable` with `compare: true` under the options), with a passing self-test and a fresh attempt recorded.
 
+128. **Bot review findings on #161 and #164 (merged; build-B, each to be reproduced first).** (a) Zoomed in on a phone (200 % at 390 px) no suggestion ever shows: the board-sized room kept for the card a suggestion becomes (300 page units = 600 px) is checked against the window as well as the suggestions; (b) a swipe that starts on a suggestion sends it, because a touch acts on the press; (c) on a 360 px phone two selected thoughts get no suggestions, since "What dimensions do these differ on?" is too wide and the shorter first one is not tried alone; (d) `textCue` misses digits other than 0–9 (`٤`, `４`); (e) "Let’s" with a curly apostrophe is missed and "This lets us…" is taken for a proposal; (f) `\b` treats accented letters as boundaries, so "soñar" matches "so". Done when each has a failing-first test (unit, or a browser check for (a) to (c)) and a fix.
+
 ## Claims
+128. Bot review findings on #161 and #164 (build-B) | claude/sprint-suggest-review | 2026-11-27T02:08Z
 127. Dimension lines line up across option cards (build-A) | claude/sprint-dimension-align | 2026-11-27T02:09Z
 123. Agent-usability task for options on dimensions (build-B) | claude/sprint-agent-task-dimensions | 2026-11-27T02:25Z
 
