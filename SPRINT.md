@@ -772,6 +772,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 147. **A comment's arrow is drawn across the words of a card it passes.** (Seen by build-B in `verify-import`'s screenshot `05-picked-crossed-commented.png`, 28 Nov.) A comment on an imported record sits to the right of the record; its arrow runs from the comment leftwards through the "Gap / exposure" card's text to the record's edge, striking through "Only one of the three funders has signed". "Text never leaves its container" and we think with our eyes: a line over words reads as a cross-out. Done when a comment's arrow ends at the nearest edge of what it is about and never crosses the text of another card, reproduced first in a browser check with before/after screenshots.
 
 ## Claims
+- 147 (a comment's arrow across another card's words) | claude/sprint-arrow-clear | 2026-11-28T12:00Z
 - 146 (a part-formatted word reads as two words) | claude/sprint-plain-runs | 2026-11-28T12:00Z
 - 144 (at most four unfinished threads in view) | claude/sprint-open-threads | 2026-11-28T02:17Z
 
