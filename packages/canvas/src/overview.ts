@@ -45,6 +45,11 @@ export function groupName(editor: Editor, shapes: readonly TLShape[]) {
   // nothing to be named by but a question (one lifted out of its frame, item 132) is the frame's.
   const loose = items.filter((i) => i.frame === undefined);
   const pileNamed = loose.some((i) => !i.ask && i.text.trim());
+  if (!pileNamed) {
+    // The frame a card in the pile was lifted out of, before any neighbouring frame.
+    const own = shapes.flatMap((s) => (typeof s.meta.within === "string" ? items.filter((i) => i.frame !== undefined && i.id === s.meta.within) : []))[0];
+    if (own) return groupLabel([own]);
+  }
   return items.length ? groupLabel(pileNamed || loose.length === items.length ? loose : items) : undefined;
 }
 
