@@ -14,7 +14,10 @@ export default task({
       await make(0, 0, "Charge per seat: £8 a month for each recruiter on the account"),
       await make(280, 0, "Charge per job post: £30 a post, capped at £300 a month"),
     ];
-    refs.ask = await make(0, 170, "Seat or job post: which should we test first? Put them side by side on what it costs us to try and how risky it is.");
+    // The question goes 40 px under the taller idea, as a person writes it under the row (#129:
+    // the person's notes are cards at the width asked for, so their height follows their words).
+    const under = await person<number>("(p, e, ids) => Math.max(...ids.map((id) => e.getShapePageBounds(id).maxY))", refs.ideas);
+    refs.ask = await make(0, Math.round(under) + 40, "Seat or job post: which should we test first? Put them side by side on what it costs us to try and how risky it is.");
     await person("(p, e, id) => p.select([id])", refs.ask);
     await page.waitForTimeout(200);
     await page.keyboard.press("ControlOrMeta+Enter");
