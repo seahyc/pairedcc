@@ -17,11 +17,14 @@ export function recallOf(meta: Record<string, unknown>): Recall | undefined {
 
 /**
  * Comes back on the board: the person's own thought with a schedule. An agent's copy of a settled
- * thought can carry the recall meta it was copied with, but it is not the person's to recall.
+ * thought can carry the recall meta it was copied with, but it is not the person's to recall. A
+ * copy of the person's comment still names them as the annotation's author, so the copy is known
+ * by what duplication stamps on it: who made it.
  * One rule for the board's reminder and for the review date agents are given.
  */
 export function recallable(meta: Record<string, unknown>, author: string) {
-  return author === "Human" && recallOf(meta) !== undefined;
+  const agentCopy = meta.duplicated === true && typeof meta.createdBy === "string" && meta.createdBy !== "Human";
+  return author === "Human" && !agentCopy && recallOf(meta) !== undefined;
 }
 
 /**

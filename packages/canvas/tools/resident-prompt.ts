@@ -43,8 +43,8 @@ const who = (author: string) => (author === "Human" ? "the person" : author.star
 const judged = (mark?: Mark) => (mark === "picked" ? ", which the person picked" : mark === "rejected" ? ", which the person crossed out" : "");
 const judgedAfter = (mark?: Mark) => (mark === "picked" ? " (the person picked this)" : mark === "rejected" ? " (the person crossed this out)" : "");
 
-/** A settled thought's next return for review (an ISO date), written beside it as the day. */
-const reviewed = (t: Given) => (t.review ? `, which comes back for the person to review on ${t.review.slice(0, 10)}` : "");
+/** A settled thought's next return for review, written beside it in full (an ISO time), so two due the same day keep their order. */
+const reviewed = (t: Given) => (t.review ? `, which comes back for the person to review at ${t.review}` : "");
 
 /** A frame's name from how the canvas gives an object with no text: "(Pricing, no text)". */
 const frameName = (t: Given) => t.text.replace(/^\((.*), no text\)$/, "$1");

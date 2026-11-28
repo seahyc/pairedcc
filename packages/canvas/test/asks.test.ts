@@ -204,6 +204,19 @@ describe("resident agent prompt", () => {
     expect(line("Seats beat usage")).toContain("2026-12-09");
     expect(line("Seats beat usage")).not.toContain("2026-12-02");
   });
+  // Review of #186: two thoughts due the same day keep their times, so the order is readable.
+  it("gives the full review time, so two thoughts due the same day can be told apart", () => {
+    const prompt = buildPrompt({
+      question: "Which comes back first?",
+      targets: [
+        { id: "shape:a", type: "card", author: "Human", text: "Churn is a pricing problem", review: "2026-12-02T14:00:00.000Z" },
+        { id: "shape:b", type: "card", author: "Human", text: "Seats beat usage", review: "2026-12-02T09:30:00.000Z" },
+      ],
+    });
+    const line = (t: string) => prompt.split("\n").find((l) => l.includes(t)) ?? "";
+    expect(line("Churn is a pricing problem")).toContain("2026-12-02T14:00:00.000Z");
+    expect(line("Seats beat usage")).toContain("2026-12-02T09:30:00.000Z");
+  });
   it("holds the model to one short step", () => {
     expect(systemPrompt).toContain("At most 60 words");
     expect(systemPrompt).toContain("One step, then stop");
