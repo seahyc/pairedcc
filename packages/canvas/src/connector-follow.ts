@@ -1,4 +1,5 @@
 import type { Editor, TLArrowBinding, TLShape, TLShapeId } from "tldraw";
+import { clearRoute, type Route } from "./arrow-route";
 
 // Connectors made by `connect` (agent connections, annotations, feedback) attach to the sides
 // of their two objects that face each other. When either object moves or resizes, the
@@ -26,6 +27,32 @@ export function bendFor({ vertical, dx, dy }: { vertical: boolean; dx: number; d
   return Math.max(-60, Math.min(60, (vertical ? dx : -dy) * 0.12)) * (vertical ? (dy > 0 ? 1 : -1) : dx > 0 ? 1 : -1);
 }
 
+/** Shapes whose words an arrow must not be drawn over: not connectors, frames, groups or ink. */
+const UNMARKED = new Set(["arrow", "frame", "group", "draw", "line", "highlight"]);
+
+/** The boxes of everything an arrow between these two shapes must keep clear of. */
+export function routeObstacles(editor: Editor, from: TLShape, to: TLShape) {
+  const pageId = editor.getAncestorPageId(from) ?? editor.getCurrentPageId();
+  const own = new Set<string>([...editor.getShapeAndDescendantIds([from.id, to.id])]);
+  for (const end of [from, to]) for (const a of editor.getShapeAncestors(end)) own.add(a.id);
+  return [...editor.getPageShapeIds(pageId)]
+    .flatMap((id) => editor.getShape(id) ?? [])
+    .filter((s) => !UNMARKED.has(s.type) && !own.has(s.id))
+    .flatMap((s) => editor.getShapePageBounds(s) ?? []);
+}
+
+/**
+ * The sides and bend for a comment's arrow (relation "feedback"): the facing sides when that line
+ * is clear, else the shortest arc that is drawn over no other card (arrow-route.ts, #147).
+ */
+export function feedbackRoute(editor: Editor, from: TLShape, to: TLShape): Route & { preferred: boolean } {
+  const a = editor.getShapePageBounds(from)!, b = editor.getShapePageBounds(to)!;
+  const want = chooseAnchors(a, b);
+  const preferred = { start: want.start, end: want.end, bend: bendFor(want) };
+  const route = clearRoute(a, b, routeObstacles(editor, from, to), preferred) ?? preferred;
+  return { ...route, preferred: route === preferred };
+}
+
 const same = (p: Anchor | undefined, q: Anchor) => !!p && p.x === q.x && p.y === q.y;
 
 /** Whether a connector follows its ends: made by `connect` without explicit anchors. */
@@ -45,16 +72,23 @@ export function reanchor(editor: Editor, arrow: TLShape): boolean {
   const a = from && editor.getShapePageBounds(from), b = to && editor.getShapePageBounds(to);
   if (!a || !b) return false;
   const want = chooseAnchors(a, b);
+  // A comment's arrow also keeps off the words of the cards around it.
+  const routed = arrow.meta.relation === "feedback" ? feedbackRoute(editor, from, to) : undefined;
+  const ends = routed ?? want;
   let changed = false;
+  if (routed && !routed.preferred && "bend" in arrow.props && arrow.props.bend !== routed.bend) {
+    editor.updateShape({ id: arrow.id, type: "arrow", props: { bend: routed.bend } });
+    changed = true;
+  }
   for (const binding of [startBinding, endBinding]) {
-    const anchor = binding.props.terminal === "start" ? want.start : want.end;
+    const anchor = binding.props.terminal === "start" ? ends.start : ends.end;
     if (same(binding.props.normalizedAnchor, anchor)) continue;
     // meta.followed marks the anchor as derived, so selective agent undo does not count the
     // re-route as someone's edit (src/run-undo.ts).
     editor.updateBinding({ ...binding, meta: { ...binding.meta, followed: true }, props: { ...binding.props, normalizedAnchor: anchor } });
     changed = true;
   }
-  if (changed && "bend" in arrow.props) editor.updateShape({ id: arrow.id, type: "arrow", props: { bend: bendFor(want) } });
+  if (changed && "bend" in arrow.props) editor.updateShape({ id: arrow.id, type: "arrow", props: { bend: routed?.bend ?? bendFor(want) } });
   return changed;
 }
 
