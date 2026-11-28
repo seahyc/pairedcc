@@ -3,8 +3,8 @@ import { z } from "zod";
 import { answerInput, askStates, askStatusInput, asksInput, type AskState } from "./protocol";
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
-import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, levelGaps, levelPadsOf, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { atomic, createCard, createComment, freeSpot, othersOnPage } from "./agent-operations";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, levelGaps, levelPadsOf, readsAsAnswerTo, slideRight, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { cardLook, type CardTone } from "./card-shape";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
@@ -505,7 +505,18 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   const under = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
   const besideBox = { ...layout.box, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
   const beside = freeSpot(editor, besideBox, new Set([shape.id]), pageId);
-  const spot = pickAnswerSpot(under.y - layout.box.y, beside.y - besideBox.y) === "under" ? under : beside;
+  let spot = pickAnswerSpot(under.y - layout.box.y, beside.y - besideBox.y) === "under" ? under : beside;
+  // Both taken (questions written close under each other, their answers beside them): where the
+  // row slid to may sit just beside or under another question and read as its answer. Then it
+  // stays level with its own question instead, to the right of the rows in the way.
+  const questions = [...editor.getPageShapeIds(pageId)]
+    .flatMap((id) => editor.getShape(id) ?? [])
+    .filter((s) => s.id !== shape.id && askOf(s))
+    .flatMap((s) => editor.getShapePageBounds(s) ?? []);
+  if (questions.some((q) => readsAsAnswerTo(spot, q))) {
+    const level = slideRight(besideBox, othersOnPage(editor, new Set([shape.id]), pageId));
+    if (level && !questions.some((q) => readsAsAnswerTo(level, q))) spot = level;
+  }
   // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
   // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
   // work here must not silently remove an answer they cannot see (canvas_undo_run still can).
