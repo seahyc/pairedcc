@@ -81,6 +81,14 @@ try {
   check("the frame context gives its twelve objects (the unrelated notes)", sent.length === 12 && sent.every((id: string) => loose.includes(id)), { frame: sent.length });
   check("beyond the frame's cap, the ask is still given the ring: eight listed with relations, the rest counted", cl3.length === 8 && cl3.every((m: any) => ring2.includes(m.id) && typeof m.relation === "string") && cl3.length + (view3.clusterMore ?? 0) === ring2.length, { listed: cl3.length, more: view3.clusterMore, group: view3.group });
   check("what the frame context gave is not repeated in the group", !cl3.some((m: any) => sent.includes(m.id)));
+  // The person leaves out the ring note nearest the question. It is withheld before the cap, so the
+  // next shareable note takes its place: still eight listed, and three (not four) counted.
+  const ringGaps: number[] = await ev("(p, e, a) => { const q = e.getShapePageBounds(a.q); return a.ids.map((id) => { const b = e.getShapePageBounds(id); return Math.hypot(Math.max(0, b.x - q.maxX, q.x - b.maxX), Math.max(0, b.y - q.maxY, q.y - b.maxY)); }); }", { q: q3, ids: ring2 });
+  const nearest = ring2[ringGaps.indexOf(Math.min(...ringGaps))];
+  await ev("(p, e, id) => { const s = e.getShape(id); e.updateShape({ id, type: s.type, meta: { ...s.meta, leftOut: true } }); }", nearest);
+  const view4: any = (await agent.call("canvas_asks", { state: "all" })).asks.find((a: any) => a.id === q3);
+  const cl4 = view4?.cluster ?? [];
+  check("a left-out ring note frees its slot: eight shareable notes listed, three counted", cl4.length === 8 && !cl4.some((m: any) => m.id === nearest) && cl4.every((m: any) => ring2.includes(m.id)) && view4.clusterMore === 3, { listed: cl4.length, more: view4?.clusterMore, leftOutListed: cl4.some((m: any) => m.id === nearest) });
   check("no page errors", errors.length === 0, errors.slice(0, 3));
   await agent.close();
   await context.close();

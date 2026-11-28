@@ -43,6 +43,13 @@ describe("the cluster an ask sits in", () => {
     expect(got.more).toBe(3);
     expect(got.members[0].id).toBe("r0");
   });
+  it("a left-out member past the cap frees its slot for the next one, and is not counted as more", () => {
+    // Twelve in a row; the person left out the nearest. Eight shareable are given, three counted.
+    const row = Array.from({ length: CLUSTER_GIVE + 4 }, (_, i) => box(`r${i}`, i * 240, 0));
+    const got = clusterAround([...row, box("ask", 0, 160)], "ask", new Set(), CLUSTER_GIVE, (ids) => ids.filter((id) => id !== "r0"));
+    expect(got.members.map((m) => m.id)).toEqual(["r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8"]);
+    expect(got.more).toBe(3);
+  });
   it("an ask written on empty space inside a pile is about that pile", () => {
     const pile = [box("p1", 0, 0), box("p2", 240, 0), box("p3", 0, 160), box("p4", 240, 160)];
     // The ask sits in the gap at the pile's middle-right.
