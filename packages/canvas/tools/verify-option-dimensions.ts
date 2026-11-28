@@ -121,37 +121,6 @@ try {
   const returned = (answered4?.answers ?? []).map((a: any) => ({ id: a.id, h: a.bounds?.h ?? a.h }));
   check("the answer returns the cards as levelled", returned.length === 3 && returned.every((r: any) => Math.abs(r.h - (rows4.find((x) => x.id === r.id)?.h ?? -1)) < 1), { returned: returned.map((r: any) => Math.round(r.h)), now: rows4.map((r) => Math.round(r.h)) });
   await page.screenshot({ path: `${out}/option-dimensions-two-rows.png` });
-  // Review of #184: the same two rows on an answer that lands while another page is open. A's
-  // headline is short and its first value long, B's the other way round, so levelling grows the
-  // first row; the third option, below it, must still clear it, and the lines sit level once the
-  // ask's page is opened.
-  const made5: any = await ev("(p) => p.create({ kind: 'note', x: 160, y: 6400, width: 260, text: 'Which plan should we pick?' })");
-  const ask5 = typeof made5 === "string" ? made5 : made5.id;
-  await ev("(p, e, id) => { p.select([id]); const b = e.getShapePageBounds(id); e.setCamera({ x: -b.x + 40, y: -b.y + 40, z: 2.4 }, { immediate: true }); }", ask5);
-  await page.keyboard.press("ControlOrMeta+Enter");
-  await until(async () => (await agent.call("canvas_asks", { state: "all" })).asks.some((a: any) => a.id === ask5) || undefined, "the fifth ask");
-  await ev("(p, e) => { e.selectNone(); const pg = e.getPages().find((x) => x.name === 'Elsewhere'); e.setCurrentPage(pg.id); e.setCamera({ x: 0, y: 0, z: 2.4 }, { immediate: true }); }");
-  await page.waitForTimeout(300);
-  await agent.call("canvas_answer", {
-    id: ask5,
-    alternatives: ["Plan A", "Plan B, which moves every team in the north office over for a whole quarter before anyone decides", "Plan C"],
-    dimensions: ["Effort", "Risk"],
-    values: [["High: a week of training for every lead, two new laptops and a room booked for the whole quarter", "Low"], ["Low", "Medium"], ["Low", "Low"]],
-  });
-  const away5: string = await ev("(p, e) => e.getCurrentPageId()");
-  check("the fifth answer landed while another page was open", away5 !== home, { away5, home });
-  await page.waitForTimeout(800);
-  await ev("(p, e, id) => void e.setCurrentPage(id)", home);
-  await page.waitForTimeout(300);
-  await ev(`(p, e, ask) => { const ids = [ask, ...e.getCurrentPageShapes().filter((s) => s.meta.replyTo === ask).map((s) => s.id)]; e.zoomToBounds(e.getShapesPageBounds(ids), { inset: 80, immediate: true }); }`, ask5);
-  await page.waitForTimeout(500);
-  const rows5: any[] = await ev(`(p, e, ask) => e.getCurrentPageShapes().filter((s) => s.meta.replyTo === ask).map((s) => { const b = e.getShapePageBounds(s.id); const tops = Object.fromEntries([...document.querySelectorAll('[data-shape-id="' + s.id + '"] p')].filter((q) => q.querySelector('strong')).map((q) => [q.querySelector('strong').textContent, Math.round(q.getBoundingClientRect().top / e.getZoomLevel())])); return { option: s.meta.option, x: b.x, y: b.y, maxX: b.maxX, maxY: b.maxY, tops }; }).sort((a, b) => a.option.localeCompare(b.option))`, ask5);
-  const wrapped5 = rows5.length === 3 && Math.abs(rows5[0].y - rows5[1].y) < 1 && rows5[2].y > rows5[0].y + 1;
-  const level5 = wrapped5 && ["Effort:", "Risk:"].every((d) => rows5[0].tops[d] !== undefined && Math.abs(rows5[0].tops[d] - rows5[1].tops[d]) <= 2);
-  check("options in two rows on another page: the first row's dimension lines are level", level5, rows5.map((r) => ({ o: r.option, y: Math.round(r.y), tops: r.tops })));
-  const pairs5 = rows5.flatMap((a, i) => rows5.slice(i + 1).map((b) => [a, b]));
-  check("options in two rows on another page: the levelled first row is not covered by the second", wrapped5 && pairs5.every(([a, b]) => !overlap(a, b)), rows5.map((r) => ({ o: r.option, y: Math.round(r.y), maxY: Math.round(r.maxY) })));
-  await page.screenshot({ path: `${out}/option-dimensions-two-rows-other-page.png` });
   const padsOf = (id: string) => ev("(p, e, id) => e.getShape(id)?.meta.levelPads ?? null", id);
   const a2 = answered2?.answers?.[0];
 

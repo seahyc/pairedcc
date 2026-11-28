@@ -3,8 +3,9 @@ import { z } from "zod";
 import { answerInput, askStates, askStatusInput, asksInput, type AskState } from "./protocol";
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
-import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, levelGaps, levelPadsOf, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { hasCommentRow } from "./feedback";
+import { atomic, createCard, createComment, freeSpot, othersOnPage } from "./agent-operations";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, levelGaps, levelPadsOf, readsAsAnswerTo, slideRight, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
 import { cardLook, cardTextWidth, type CardTone } from "./card-shape";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
@@ -384,6 +385,10 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   const group = editor.getShapePageBounds(shape)
     ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : []), ...frameObjects.map((s) => s.id)]), keep)
     : { members: [], more: 0 };
+  // A card with no named group of its own around it still sits in its frame's: the one it is in, or
+  // the one it was lifted out of so the frame would not cut it off (item 132). Named as O names a frame.
+  const ownFrame = group.name ? undefined : frameOf(editor, shape);
+  const groupCalled = group.name ?? (ownFrame && keepForAgent([ownFrame], []).kept.length ? groupName(editor, [ownFrame]) : undefined);
   // Pinned for every ask on this page, unless this ask already gives it.
   const alreadyGiven = [...skip, ...group.members.map((m) => m.id), ...(frame ? [frame.id] : []), ...frameObjects.map((s) => s.id), ...givenTargets.flatMap((t) => t.inside?.map((i) => i.id) ?? [])];
   const pins = page ? pinnedOnPage(editor, page.id, alreadyGiven) : { pinned: [], more: 0 };
@@ -412,7 +417,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
       : {}),
     ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
     // What the group the card sits in is called, even when everything in it is already a target.
-    ...(group.name ? { group: group.name } : {}),
+    ...(groupCalled ? { group: groupCalled } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
     ...(withheld.size ? { leftOut: withheld.size } : {}),
     ...(pins.pinned.length ? { pinned: pins.pinned.map((s) => given(editor, s, 400)), ...(pins.more ? { pinnedMore: pins.more } : {}) } : {}),
@@ -501,7 +506,18 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   const under = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
   const besideBox = { ...layout.box, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
   const beside = freeSpot(editor, besideBox, new Set([shape.id]), pageId);
-  const spot = pickAnswerSpot(under.y - layout.box.y, beside.y - besideBox.y) === "under" ? under : beside;
+  let spot = pickAnswerSpot(under.y - layout.box.y, beside.y - besideBox.y) === "under" ? under : beside;
+  // Both taken (questions written close under each other, their answers beside them): where the
+  // row slid to may sit just beside or under another question and read as its answer. Then it
+  // stays level with its own question instead, to the right of the rows in the way.
+  const questions = [...editor.getPageShapeIds(pageId)]
+    .flatMap((id) => editor.getShape(id) ?? [])
+    .filter((s) => s.id !== shape.id && askOf(s))
+    .flatMap((s) => editor.getShapePageBounds(s) ?? []);
+  if (questions.some((q) => readsAsAnswerTo(spot, q))) {
+    const level = slideRight(besideBox, othersOnPage(editor, new Set([shape.id]), pageId));
+    if (level && !questions.some((q) => readsAsAnswerTo(level, q))) spot = level;
+  }
   // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
   // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
   // work here must not silently remove an answer they cannot see (canvas_undo_run still can).
@@ -579,7 +595,11 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
     return made;
   });
-  return { ask: describeAsk(editor, editor.getShape(shape.id)!), answers: ids.map((id) => describeObject(editor, id, true)) };
+  const after = editor.getShape(shape.id)!;
+  // The ask's row in the feedback queue: closed by an answer, still open after a clarifying question;
+  // left out when the ask has no row (a starter card the person rewrote is still Paired's).
+  const queue = hasCommentRow(authorOf(after), after.meta) ? (after.meta.status === "resolved" ? "resolved" : "open") : undefined;
+  return { ask: describeAsk(editor, after), answers: ids.map((id) => describeObject(editor, id, true)), ...(queue ? { queue } : {}) };
 }
 
 /**

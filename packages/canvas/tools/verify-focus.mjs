@@ -85,9 +85,13 @@ try {
   };
   const contains = (h, r) => h && h.x <= r.x + 1 && h.y <= r.y + 1 && h.r >= r.r - 1 && h.b >= r.b - 1;
   const outside = (h, r) => h && (r.x >= h.r || r.r <= h.x || r.y >= h.b || r.b <= h.y);
-  /** Average brightness of a small patch of the screen around a point (0..255), from a PNG screenshot. */
-  const shade = async (x, y) => {
-    const buf = await p.screenshot({ clip: { x: x - 4, y: y - 4, width: 8, height: 8 } });
+  /**
+   * How dark the object's ink is (0..255): the mean of the darkest tenth of its pixels, from a PNG
+   * screenshot of its rectangle. Dimming fades the ink, whatever colour the card itself is (a pale
+   * pink card barely changes at its middle, its writing does).
+   */
+  const shade = async (r) => {
+    const buf = await p.screenshot({ clip: { x: r.x + 2, y: r.y + 2, width: Math.max(4, r.r - r.x - 4), height: Math.max(4, r.b - r.y - 4) } });
     return p.evaluate(async (b64) => {
       const img = new Image();
       img.src = `data:image/png;base64,${b64}`;
@@ -97,16 +101,17 @@ try {
       const g = c.getContext('2d');
       g.drawImage(img, 0, 0);
       const d = g.getImageData(0, 0, c.width, c.height).data;
-      let sum = 0;
-      for (let i = 0; i < d.length; i += 4) sum += (d[i] + d[i + 1] + d[i + 2]) / 3;
-      return sum / (d.length / 4);
+      const v = [];
+      for (let i = 0; i < d.length; i += 4) v.push((d[i] + d[i + 1] + d[i + 2]) / 3);
+      v.sort((a, b) => a - b);
+      const dark = v.slice(0, Math.max(1, Math.floor(v.length / 10)));
+      return dark.reduce((a, b) => a + b, 0) / dark.length;
     }, buf.toString('base64'));
   };
   const revisions = async () => JSON.stringify((await command('read', {})).objects.map((o) => [o.id, o.revision]));
   await p.waitForTimeout(300);
   const outRect = await screenRect(ids.out);
-  const outCenter = { x: (outRect.x + outRect.r) / 2, y: (outRect.y + outRect.b) / 2 };
-  const brightBefore = await shade(outCenter.x, outCenter.y);
+  const brightBefore = await shade(outRect);
   await p.screenshot({ path: `${out}/1-before-focus.png` });
   const revBefore = await revisions();
 
@@ -118,13 +123,13 @@ try {
   let h = await hole();
   check('F on a selected frame draws one clear rectangle around it', contains(h, await screenRect(ids.frame)), JSON.stringify(h));
   check('the card outside the frame is outside the rectangle', outside(h, outRect));
-  const brightAfter = await shade(outCenter.x, outCenter.y);
+  const brightAfter = await shade(outRect);
   check('the card outside is dimmed', Math.abs(brightAfter - brightBefore) > 20, `${brightBefore.toFixed(0)} → ${brightAfter.toFixed(0)}`);
   check('F did not switch to the Frame tool', (await p.evaluate(() => window.__pairedEditor.getCurrentToolId())) === 'select');
   await p.screenshot({ path: `${out}/2-focus-frame.png` });
   await p.keyboard.press('Escape');
   await p.waitForTimeout(300);
-  check('Esc brings everything back', (await hole()) === null && Math.abs((await shade(outCenter.x, outCenter.y)) - brightBefore) < 3);
+  check('Esc brings everything back', (await hole()) === null && Math.abs((await shade(outRect)) - brightBefore) < 3);
 
   // 2. A thread.
   const qid = await p.evaluate(() => { const r = window.paired.create({ kind: 'note', x: 160, y: 520, width: 300, text: 'Which should we try first?' }); return typeof r === 'string' ? r : r.id; });
