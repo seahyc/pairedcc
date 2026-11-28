@@ -766,6 +766,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 144. **At most four unfinished threads in view (finding 1's last gap: "Nothing yet limits how many unfinished threads are open at once"; P1's "a board with 12 threads shows at most 4 unfolded by the person's choice").** Folding (#144) applies only to finished threads, so a page of answered but undecided asks stays fully open. Done when, on a page, an answered thread that is neither picked nor settled folds to one line ("question · N options, none picked yet") once four more recently asked unfinished threads are open; the thread the person is on, a waiting, working or failed ask, and a thread the person unfolded never fold by this rule; pressing the line unfolds it and that is saved; agents read it as folded with the same rule; nothing moves and nothing is deleted. Failing-first unit tests on the rule and a browser check with 12 threads (before/after screenshots); the choice recorded under Decisions needed.
 
 ## Claims
+- 130 (friction from #172's attempt: overview gives the pick and next review date) | claude/sprint-overview-pick-recall | 2026-11-28T11:44Z
 - 144 (at most four unfinished threads in view) | claude/sprint-open-threads | 2026-11-28T02:17Z
 
 ## Done
