@@ -310,6 +310,44 @@ export function pickAnswerSpot(underSlide: number, besideSlide: number): "under"
   return underSlide <= ANSWER_SLIDE || underSlide <= besideSlide ? "under" : "beside";
 }
 
+type XYWH = { x: number; y: number; w: number; h: number };
+/**
+ * Where an answer row starting at `row` would be read as the answer to the question `q`: just
+ * under it (left edges aligned) or just beside it (level with its top).
+ */
+export function readsAsAnswerTo(row: { x: number; y: number }, q: XYWH) {
+  const under = Math.abs(row.x - q.x) <= 4 && row.y >= q.y + q.h && row.y <= q.y + q.h + 90;
+  const beside = row.x >= q.x + q.w && row.x <= q.x + q.w + 90 && Math.abs(row.y - q.y) <= 30;
+  return under || beside;
+}
+
+/**
+ * The same row moved right, level, until it covers nothing (with the air `freeSpot` leaves), or
+ * undefined when nothing within `reach` is clear. For an answer whose question has its neighbours'
+ * answers both under and beside it: level with its own question, past the rows in the way.
+ */
+export function slideRight(box: XYWH, others: readonly XYWH[], reach = 1600) {
+  const hit = (a: XYWH, b: XYWH) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  const roomy = (x: number) => ({ x: x - 8, y: box.y - 14, w: box.w + 16, h: box.h + 28 });
+  for (let x = box.x; x <= box.x + reach; ) {
+    const blocking = others.filter((o) => hit(roomy(x), o));
+    if (!blocking.length) return { ...box, x };
+    // Jump past the furthest-right thing in the way rather than creeping.
+    x = Math.max(x + 28, ...blocking.map((o) => o.x + o.w + 8 + 1));
+  }
+  return undefined;
+}
+
+/**
+ * How much room there is under a question for its state line: the gap to the nearest object below
+ * it that the line would run into (`width` wide from the question's left edge).
+ */
+export function statusRoom(q: XYWH, others: readonly XYWH[], width: number) {
+  const bottom = q.y + q.h;
+  const below = others.filter((o) => o.x < q.x + width && o.x + o.w > q.x && o.y + o.h > bottom && o.y >= bottom - 4);
+  return below.length ? Math.max(0, Math.min(...below.map((o) => o.y)) - bottom) : Infinity;
+}
+
 /**
  * What a screen reader is told when an ask's state changes, once per change: sent and
  * waiting, taken by an agent, answered (and where), or failed (and that Retry is there).
