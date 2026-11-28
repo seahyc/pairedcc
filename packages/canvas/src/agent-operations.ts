@@ -26,6 +26,8 @@ import {
 } from "./protocol";
 import {
   createObject,
+  createInput,
+  nameFrom,
   patchObject,
   describeObject,
   shapeName,
@@ -47,7 +49,6 @@ import { windowControls } from "./window-controls";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, levelOptionLines, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
-import { clip } from "./text";
 import { importForAgent } from "./import-board";
 
 const cardInput = z.object({
@@ -57,6 +58,9 @@ const cardInput = z.object({
   text: z.string().max(50000).default(""),
   name: z.string().max(200).optional(),
   style: z.enum(["note", "heading", "quote", "code"]).optional(),
+  // The same bounds as createInput, so a scripted note keeps them as other primitives do.
+  opacity: createInput.shape.opacity,
+  rotation: createInput.shape.rotation,
 });
 /** A comfortable line of handwriting: about six words. */
 export const HUMAN_CARD_W = 300;
@@ -80,8 +84,11 @@ export function createCard(editor: Editor, value: unknown, author: string, meta:
     ...(pageId ? { parentId: pageId } : {}),
     x: input.x,
     y: input.y,
+    ...(input.opacity !== undefined ? { opacity: input.opacity } : {}),
+    ...(input.rotation !== undefined ? { rotation: input.rotation } : {}),
     meta: {
-      name: input.name ?? (clip(input.text.split("\n")[0], 48) || (human ? "Note" : "Agent note")),
+      // Named as nameAfterText expects, so the name follows the text when it is replaced.
+      name: input.name ?? (nameFrom(input.text) || (human ? "Note" : "Agent note")),
       revision: 0,
       ...(human ? {} : { createdBy: author }),
       ...meta,
@@ -123,15 +130,18 @@ function placeCreated(editor: Editor, id: string, selection: ReturnType<typeof p
 }
 
 /**
- * Agents' notes become cards; other primitives pass through unchanged. With `pageId` the object
- * is made straight on that page; without it, tldraw puts it in a frame that covers its x/y.
+ * Notes become cards: an agent's note is its typed card (and is selected), the person's is their
+ * handwritten card, as the Write tool makes, at the width asked for. A sticky note cannot take a
+ * width, so a person's note made by script would otherwise sit wider apart than it said. Other
+ * primitives pass through unchanged. With `pageId` the object is made straight on that page;
+ * without it, tldraw puts it in a frame that covers its x/y.
  */
-function createFor(editor: Editor, value: unknown, actor: string, pageId?: TLPageId) {
+export function createFor(editor: Editor, value: unknown, actor: string, pageId?: TLPageId) {
   const kind = value && typeof value === "object" ? (value as { kind?: unknown }).kind : undefined;
-  if (kind === "note" && actor !== HUMAN) {
+  if (kind === "note") {
     editor.markHistoryStoppingPoint("create card");
     const id = createCard(editor, value, actor, {}, pageId);
-    editor.select(id);
+    if (actor !== HUMAN) editor.select(id);
     return id;
   }
   return createObject(editor, value, pageId);
@@ -426,7 +436,7 @@ type Rect = { x: number; y: number; w: number; h: number };
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
 /** The boxes of everything a new card must not cover on a page: not frames or arrows. */
-function othersOnPage(editor: Editor, ignore: Set<string>, pageId: TLPageId = editor.getCurrentPageId()) {
+export function othersOnPage(editor: Editor, ignore: Set<string>, pageId: TLPageId = editor.getCurrentPageId()) {
   return [...editor.getPageShapeIds(pageId)]
     .flatMap((id) => editor.getShape(id) ?? [])
     .filter((s) => s.type !== "frame" && s.type !== "arrow" && !ignore.has(s.id))
@@ -569,7 +579,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         // A finished thread the person has out of view as one line: still theirs, still in context.
         ...(foldedForAgent(editor, s) ? { folded: true } : {}),
         ...(foldedPick(editor, s) ? { pick: foldedPick(editor, s) } : {}),
-        ...(reviewDate(s.meta) ? { review: reviewDate(s.meta) } : {}),
+        ...(reviewDate(s.meta, authorOf(s)) ? { review: reviewDate(s.meta, authorOf(s)) } : {}),
         meta: s.meta,
         asset,
       };
@@ -834,7 +844,8 @@ export async function executeCommand(
       const result = answerAsk(editor, command.input, actor);
       // Options on dimensions: level the dimension lines across the row once the cards are drawn.
       await levelOptionLines(editor, z.object({ id: z.string() }).parse(command.input).id);
-      return result;
+      // The cards as they are now, with any space the levelling added (#174's review).
+      return { ...result, answers: result.answers.map((a) => (a ? describeObject(editor, a.id, true) ?? a : a)) };
     }
     case "import":
       return importForAgent(editor, command.input, actor);

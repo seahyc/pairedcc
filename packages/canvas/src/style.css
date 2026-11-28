@@ -1677,6 +1677,15 @@ kbd {
 .ask-status.done {
   color: #7d7a8c;
 }
+.ask-status--tight {
+  /* Something sits close under the question: one line, never over that card; the whole line is its title. */
+  white-space: nowrap;
+}
+.ask-status--tight .ask-status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .ask-status button {
   pointer-events: all;
   flex: none;

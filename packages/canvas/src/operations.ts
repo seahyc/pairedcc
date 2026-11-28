@@ -98,7 +98,8 @@ export function richTextPlain(value: unknown): string {
 }
 
 const NAME_MAX = 48;
-const nameFrom = (text: string) => {
+/** The automatic layer name for an object's text: its first line, cut at 48 characters with an ellipsis. */
+export const nameFrom = (text: string) => {
   const first = text.split("\n")[0].trim();
   return first.length > NAME_MAX ? `${first.slice(0, NAME_MAX - 1)}…` : first;
 };
@@ -107,11 +108,13 @@ const nameFrom = (text: string) => {
  * The layer name an object should take when its text changes from `oldText` to `newText`, or
  * undefined to keep it. A name made from the old text (its first line, possibly cut at 48
  * characters) follows the text; a name someone chose is kept, and so is any name when the new
- * text has no first line.
+ * text has no first line. Cards saved before they were named with `nameFrom` carry a plain
+ * 48-character prefix of their first line, which counts as made from the text too.
  */
 export function nameAfterText(oldName: unknown, oldText: string, newText: string): string | undefined {
   const first = oldText.split("\n")[0].trim();
-  if (typeof oldName !== "string" || (oldName !== first && oldName !== nameFrom(oldText))) return undefined;
+  const made = [first, nameFrom(oldText), clip(oldText.split("\n")[0], NAME_MAX)];
+  if (typeof oldName !== "string" || !made.includes(oldName)) return undefined;
   const next = nameFrom(newText);
   return next || undefined;
 }

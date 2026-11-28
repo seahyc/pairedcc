@@ -111,3 +111,22 @@ describe("a question lifted out of its frame (item 132)", () => {
     expect(c.label).toBe("Kitchen quotes");
   });
 });
+
+describe("review of #179: a lifted question beside two frames", () => {
+  // A neighbouring frame first in shape order must not name the cluster: the question still goes
+  // with the frame it was lifted out of (`meta.within`), as its ask says.
+  const frame = (id: string, x: number, name: string) => ({ id, type: "frame", parentId: "page:p", x, y: 0, rotation: 0, isLocked: false, opacity: 1, index: "a1", typeName: "shape", meta: { revision: 0 }, props: { w: 620, h: 360, name } });
+  const travel = frame("shape:travel", 660, "Travel budget");
+  const kitchen = frame("shape:kitchen", 0, "Kitchen quotes");
+  const question = { ...card("shape:q", 500, 100, "Which of these quotes is cheapest?"), meta: { revision: 0, within: "shape:kitchen", ask: { state: "waiting" } } };
+  const all = [travel, kitchen, question];
+  const fake4 = { ...fake, getAncestorPageId: () => "page:p", getCurrentPageId: () => "page:p", getSortedChildIdsForParent: (id: string) => all.filter((s) => s.parentId === id).map((s) => s.id), getCurrentPageShapesSorted: () => all, getCurrentPageShapes: () => all, getShape: (id: string) => all.find((s) => s.id === id),
+    getShapePageBounds: (s: any) => { const x = typeof s === "string" ? all.find((y) => y.id === s) : s; return x ? { x: x.x, y: x.y, w: x.props.w, h: x.props.h, maxX: x.x + x.props.w, maxY: x.y + x.props.h } : undefined; } };
+  const ed4 = new Proxy(fake4, { get: (t, k) => (k in t ? (t as Record<string | symbol, unknown>)[k] : () => { throw new Error(`fake editor lacks ${String(k)}`); }) }) as unknown as Editor;
+  it("names the cluster after the frame the question was lifted out of", () => {
+    const { clusters } = overview(ed4) as { clusters: { ids: string[]; label?: string }[] };
+    const c = clusters.find((x) => x.ids.includes("shape:q"))!;
+    expect(c.ids).toEqual(expect.arrayContaining(["shape:travel", "shape:kitchen"]));
+    expect(c.label).toBe("Kitchen quotes");
+  });
+});
