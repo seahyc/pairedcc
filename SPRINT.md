@@ -775,7 +775,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 149. **Suggestions read a reason or a proposal in other languages too (principles row 7, "Cue words are English only; other text gets the kind's suggestions").** (Filed by build-A from the principles table.) `textCue` (`src/ask-rules.ts`) recognises a reason ("because", "so") or a proposal ("should", "let's") only in English, so "Deberíamos quitar el plan gratis" or "我们应该取消免费版，因为没人升级" gets the kind's suggestions instead of "What would make this wrong?" or "What's the strongest objection?". Done when reason and proposal cue words in at least Spanish, French, German, Portuguese, Italian, Dutch, Chinese and Japanese pick the same suggestion as their English equivalents (scripts without spaces matched without word boundaries), no added cue word is also a common English word (no false cue on English text), failing-first unit tests, a browser check that pauses on a non-English card and sees the cue, and the choice of languages recorded under Decisions needed.
 
+149. **Agent-usability tasks for build-A's #178 and #182 (for build-B, which did not build them).** Two agent-facing features merged without a task: an ask written on empty space inside a ring of cards is about the ring (#178), and answers to questions written close under each other stay with their own question (#182). Done when a task for each exists with a check that fails on the set-up board and passes after the reference solution (self-test), the setup proves the board is what the task claims (the question is in no group of its own; the two questions are both waiting), and a focused attempt by a fresh agent with only AGENT_API.md and the tools is recorded in `eval/agent-runs/`.
+
 ## Claims
+- 149 (agent-usability tasks for #178 and #182) | claude/sprint-tasks-ring-stacked | 2026-11-28T12:24Z
 - 149 (suggestion cues in other languages) | claude/sprint-cue-languages | 2026-11-28T12:23Z
 
 ## Done
