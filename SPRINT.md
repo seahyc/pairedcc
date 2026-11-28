@@ -1,4 +1,4 @@
-STATE: RUN
+STATE: PAUSE (quota reserve)
 
 # Canvas sprint, 27 Nov to 3 Dec 2026
 
