@@ -796,7 +796,8 @@ export async function executeCommand(
       const result = answerAsk(editor, command.input, actor);
       // Options on dimensions: level the dimension lines across the row once the cards are drawn.
       await levelOptionLines(editor, z.object({ id: z.string() }).parse(command.input).id);
-      return result;
+      // The cards as they are now, with any space the levelling added (#174's review).
+      return { ...result, answers: result.answers.map((a) => (a ? describeObject(editor, a.id, true) ?? a : a)) };
     }
     case "import":
       return importForAgent(editor, command.input, actor);

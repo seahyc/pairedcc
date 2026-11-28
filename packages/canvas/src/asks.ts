@@ -533,8 +533,18 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   const ids = place(() => {
     // Rows stack under the measured height of the row above (a card sizes to its text when made).
     let rowY = spot.y, rowBottom = spot.y, row = 0;
+    let rowIds: string[] = [];
+    // Options on dimensions: a row's lines are levelled before the next row is placed (and before
+    // the room is checked), so rows stack and clear the board at their levelled heights (#174's
+    // review). The drawn cards are measured again once the answer is drawn (levelOptionLines).
+    const closeRow = () => {
+      if (input.dimensions && rowIds.length > 1) levelByEstimate(editor, rowIds);
+      rowBottom = Math.max(rowBottom, ...rowIds.map((id) => editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY));
+      rowIds = [];
+    };
     const made = texts.map((text, i) => {
       if (layout.cards[i].row !== row) {
+        closeRow();
         row = layout.cards[i].row;
         rowY = rowBottom + OPTION_GAP;
       }
@@ -553,9 +563,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         const card = editor.getShape(id as TLShapeId)!;
         editor.updateShape({ id: card.id, type: card.type, props: { richText: optionRichText(text, input.dimensions) } } as never);
       }
-      rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
+      rowIds.push(id);
       return id;
     });
+    closeRow();
     // The room was checked with estimated heights; the cards now have their measured ones. If
     // they reach something, the whole answer moves: searched again from both of the first
     // placement's starting points (under the ask, beside it) with its measured size, each shift
@@ -645,6 +656,28 @@ export async function levelOptionLines(editor: Editor, askId: string) {
         editor.updateShape({ id: s.id, type: s.type, meta: { ...s.meta, levelPads: pads } } as never);
       });
     }, { history: "ignore" });
+  }
+}
+
+/**
+ * Levels one row of option cards by the editor's text measure, synchronously: space above each
+ * dimension line, top down, on the cards whose line sits higher. Leaves the row as it is when a card
+ * has lost its dimension lines.
+ */
+function levelByEstimate(editor: Editor, ids: string[]) {
+  const first = editor.getShape(ids[0] as TLShapeId);
+  const dimensions = Array.isArray(first?.meta.dimensions) ? first.meta.dimensions.length : 0;
+  for (let k = 0; k < dimensions; k++) {
+    const found = ids.map((id) => estimateLine(editor, id as TLShapeId, k));
+    if (found.some((m) => !m)) return;
+    const rows = found as { s: TLShape; offset: number }[];
+    const gaps = levelGaps(rows.map((m) => m.offset), rows.map(() => 0));
+    rows.forEach(({ s }, i) => {
+      if (gaps[i] < 0.5) return;
+      const pads = Array.from({ length: dimensions }, (_, j) => levelPadsOf(s.meta)[j] ?? 0);
+      pads[k] += gaps[i];
+      editor.updateShape({ id: s.id, type: s.type, meta: { ...s.meta, levelPads: pads } } as never);
+    });
   }
 }
 
