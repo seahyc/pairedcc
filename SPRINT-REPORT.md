@@ -1,15 +1,21 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-28T12:30Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-28T12:52Z by the review lane. Branch: `claude/sprint-int`.
 
-## Read first (28 Nov, 12:30Z)
+## Read first (28 Nov, 12:52Z)
+- **Second release of the day:** `af491b1` plus this report, pushed to `claude/release` at about 12:52Z; deploy status is read on the next run. The first (`de1f3da`) is **live on paired.cc since 12:38Z** (`paired.cc deploy` success).
+- **What you will notice in the second:** a comment's arrow now goes round other cards instead of being drawn over their words, which read as a cross-out (#200). A word you bolded part of is no longer read as two words by names, suggestions and asks (#198). The README and the working spec's "implemented" sections are current (#201).
+- **Checks on `af491b1`:** workspace green (server 160, canvas 846, sdk 12, mcp 4, e2e 1); browser suite 85/85.
+- **Worth knowing:** the arrow routing (#200) re-routes a comment's arrow on every move of either end by scanning the page's objects. The performance measure does not include comment arrows, so a very large board with many comments is untested for drag speed.
+
+## Earlier (28 Nov, 12:30Z)
 - **Released `de1f3da` (code as `7d437a6`)**, the day's first release, to `claude/release` at 12:27Z. Deploy status is read on the next run. The previous release (`04f60c2`, 27 Nov) went **live at 15:24Z** (`paired.cc deploy` success).
 - **What you will notice:** the overview (O) and the agent now see the same groups: a frame and the loose pile beside it are two groups, a card lifted out of a nested frame counts in its outer frame's box, folded threads inside frames are counted, and a thought you are recalling with Check me never names a group (it would give the answer away) (#191). An agent that adds a note or card without saying where now puts it beside what you have selected, or in the middle of your view, never covering anything or the window's controls (#190), and can put a comment note to the right of a card (#196).
 - **For agents:** the feedback queue says when a target's words changed after the comment (`editedAt`; bolding does not count) (#194); change results are about half the size and keep a card's lines (#195); AGENT_API explains closing a pick, row order, image sizes and what a frame ask covers (#192).
 - **Checks on `7d437a6`:** full workspace green with Postgres 16 and Redis (server 160, canvas 837, sdk 12, mcp 4, e2e 1); headless browser suite 83/83 (on the identical code before the squash) plus the server board-sync check by hand: pass.
 - **Housekeeping:** #169 had committed a Vite build artifact (`packages/web/vite.config.ts.timestamp-*.mjs`, containing a local path); removed and ignored. Claim 144 (at most four unfinished threads) lapsed after 10 h with no PR and is back in the backlog.
 - **Merged by another session, not reviewed by this lane:** #176, #179 to #189 and #193 (27 Nov 23:20Z to 28 Nov 10:21Z). The workspace and the full browser suite pass with them in.
-- Open, not yet reviewed: #198, #200, #201 (items 146 to 148, opened during this run).
+- #198, #200 and #201 (items 146 to 148) were reviewed and merged later in this run; see above.
 
 ## Earlier (27 Nov, 15:25Z)
 - **Third release of the day** (the daily limit): #174, #175, #177 and #178 on top of what is live, pushed to `claude/release` at about 15:25Z. Deploy status will be read on the next run.
@@ -80,7 +86,8 @@ Last updated 2026-11-28T12:30Z by the review lane. Branch: `claude/sprint-int`.
 | `3eabe49` (code as `65e7d79`) | 27 Nov 14:24Z | `success`, live on paired.cc 2026-11-27T14:38Z | P4 suggestions (#156), #157 to #173: options on dimensions, group names, overview phone fit, calm page ids, suggestion fixes, agent tasks 29 to 31 |
 | `04f60c2` (code as `e2f2b7f`) | 27 Nov ~15:22Z | `success`, live on paired.cc 2026-11-27T15:24Z | Dimension lines level across option cards (#174), an ask inside a ring of cards is about the ring (#178), overview gives picks and review dates (#177), agent task 32 (#175) |
 
-| `de1f3da` (code as `7d437a6`) | 28 Nov 12:27Z | pending (read next run) | Overview and agent clusters agree (#191), create without x/y beside the selection or in view (#190), notes beside (#196), queue editedAt (#194), compact change results (#195), AGENT_API (#192), plus #176 to #189 and #193 |
+| `de1f3da` (code as `7d437a6`) | 28 Nov 12:27Z | `success`, live on paired.cc 2026-11-28T12:38Z | Overview and agent clusters agree (#191), create without x/y beside the selection or in view (#190), notes beside (#196), queue editedAt (#194), compact change results (#195), AGENT_API (#192), plus #176 to #189 and #193 |
+| (this report's commit; code as `af491b1`) | 28 Nov ~12:52Z | pending (read next run) | Comment arrows go round cards (#200), a part-bold word is one word (#198), spec and README current (#201) |
 ## Notes from the 26 Nov review (still relevant)
 - **This run (11:55Z to 13:50Z): 52 PRs reviewed and merged, #40 to #90 and #96; none rejected.**
   Each was merged with the integration branch, then built and tested across the workspace
@@ -294,6 +301,9 @@ recorded with #57 (a fresh one is PR #97, not yet reviewed). Performance reads "
 not: see Read first.
 
 ## Merged
+- [#200](https://github.com/seahyc/pairedcc/pull/200) A comment's arrow goes round other cards (af491b1). verify-arrow-clear 14/14 and 7 related checks pass; perf rerun in the PR shows no change on boards without comment arrows.
+- [#201](https://github.com/seahyc/pairedcc/pull/201) Working spec and README brought up to date (86f9751). Review: the README said no production deployment was made; corrected. PR numbers spot-checked.
+- [#198](https://github.com/seahyc/pairedcc/pull/198) A partly formatted word stays one word in every plain reading of a card (81fb991). Unit test fails on the old join; plain-runs and 6 related checks pass.
 - [#196](https://github.com/seahyc/pairedcc/pull/196) canvas_annotate `side: "beside"` (889b579). verify-note-beside 17/17.
 - [#197](https://github.com/seahyc/pairedcc/pull/197) Playtest feedback 8 (import and paste) marked addressed (1f96a1e). Docs only.
 - [#192](https://github.com/seahyc/pairedcc/pull/192) AGENT_API: closing a pick, row order, image size, frame ask scope (7f86664). Review: resolved the conflict with the moved prototype sections; manifest regenerates identical.
@@ -490,4 +500,4 @@ through GitHub and show as merged; #2 to #7 show as closed because they were squ
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-Open and not yet reviewed: #198, #200, #201.
+Nothing open into `claude/sprint-int` was left unreviewed at 12:52Z.
