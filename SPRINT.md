@@ -764,7 +764,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 143. **Bot review findings on build-A's #176, #184, #185 and #186 (not yet reproduced).** Each needs a failing test first, then a fix, or a recorded reason it is not a bug. (a) #176: a note the person's script creates with `opacity` or `rotation` comes out at full opacity and no rotation (the card path ignores both). (b) #176: a scripted note whose first line is over 48 characters is named with a plain 48-character prefix that `nameAfterText` does not recognise, so after a text edit the old name stays and search still finds removed words. (c) #184: an answer levelled on another page can grow a row after the rows were placed, so a lower row or nearby card is covered (check whether #188, stacked on #184, already covers it). (d) #185: `groupOf` applies the eight-card limit before dropping left-out cards, so a left-out card takes a slot and `more` is miscounted. (e) #186: the resident prompt cuts review dates to the day, so two thoughts due the same day lose their order. (f) #186: an agent's duplicate of a checked comment (author still Human, `createdBy` agent, `duplicated: true`) still counts as recallable and carries a review date.
 
 ## Claims
-- 143 (review findings on #176, #184, #185, #186) | claude/sprint-review-176-186 (fixes pushed to each PR's branch) | 2026-11-28T02:25Z
+- 143 (review findings on #176, #184, #185, #186) | claude/sprint-review-176-186 (fixes pushed to each PR's branch) | 2026-11-28T02:11Z
 - 140 (friction from the 32-task attempt) | claude/sprint-agent-friction-5 | 2026-11-28T02:07Z
 
 ## Done
