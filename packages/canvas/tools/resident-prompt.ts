@@ -20,7 +20,7 @@ Reply with one JSON object and nothing else:
 {"read":"<what you read, under 12 words, e.g. 'your card on pricing and the frame Pricing'>","kind":"answer"|"alternatives"|"question","text":"<for answer or question>","alternatives":["<for alternatives>"],"dimensions":["<with alternatives: what they differ on>"],"values":[["<option A's value on each dimension>"],["<option B's>"]]}`;
 
 type Mark = "picked" | "rejected";
-type Given = { id: string; type: string; author: string; text: string; mark?: Mark; inside?: Given[]; insideMore?: number; relation?: string };
+type Given = { id: string; type: string; author: string; text: string; mark?: Mark; review?: string; inside?: Given[]; insideMore?: number; relation?: string };
 export type AskForPrompt = {
   question: string;
   targets: Given[];
@@ -43,6 +43,9 @@ const who = (author: string) => (author === "Human" ? "the person" : author.star
 const judged = (mark?: Mark) => (mark === "picked" ? ", which the person picked" : mark === "rejected" ? ", which the person crossed out" : "");
 const judgedAfter = (mark?: Mark) => (mark === "picked" ? " (the person picked this)" : mark === "rejected" ? " (the person crossed this out)" : "");
 
+/** A settled thought's next return for review, written beside it in full (an ISO time), so two due the same day keep their order. */
+const reviewed = (t: Given) => (t.review ? `, which comes back for the person to review at ${t.review}` : "");
+
 /** A frame's name from how the canvas gives an object with no text: "(Pricing, no text)". */
 const frameName = (t: Given) => t.text.replace(/^\((.*), no text\)$/, "$1");
 
@@ -58,26 +61,26 @@ export function buildPrompt(ask: AskForPrompt) {
   for (const t of ask.targets) {
     if (!t.inside) {
       const where = t.relation ? `, ${t.relation === "overlapping" ? "overlapping it" : `${t.relation} it`}` : "";
-      lines.push(`- ${t.type} written by ${who(t.author)}${judged(t.mark)}${where}: """${t.text}"""`);
+      lines.push(`- ${t.type} written by ${who(t.author)}${judged(t.mark)}${reviewed(t)}${where}: """${t.text}"""`);
       continue;
     }
     // A selected frame is what the person put together: the ask is about everything in it.
     lines.push(`- the frame "${frameName(t)}"${judged(t.mark)}, which holds${t.inside.length ? ":" : " nothing with text."}`);
-    for (const o of t.inside) lines.push(`  - ${o.type} by ${who(o.author)}${judged(o.mark)}: """${o.text}"""`);
+    for (const o of t.inside) lines.push(`  - ${o.type} by ${who(o.author)}${judged(o.mark)}${reviewed(o)}: """${o.text}"""`);
     if (t.insideMore) lines.push(`  - and ${t.insideMore} more not shown`);
   }
   if (ask.frame) {
     lines.push("", `They sit in the frame "${ask.frame.name}"${ask.frame.objects.length ? ", which also holds:" : "."}`);
-    for (const o of ask.frame.objects) lines.push(`- ${o.type} by ${who(o.author)}${judged(o.mark)}: """${o.text}"""`);
+    for (const o of ask.frame.objects) lines.push(`- ${o.type} by ${who(o.author)}${judged(o.mark)}${reviewed(o)}: """${o.text}"""`);
   }
   if (ask.pinned?.length) {
     lines.push("", "The person pinned these for every ask, as standing context:");
-    for (const o of ask.pinned) lines.push(`- ${o.type} written by ${who(o.author)}${judged(o.mark)}: """${o.text}"""`);
+    for (const o of ask.pinned) lines.push(`- ${o.type} written by ${who(o.author)}${judged(o.mark)}${reviewed(o)}: """${o.text}"""`);
     if (ask.pinnedMore) lines.push(`- and ${ask.pinnedMore} more not shown`);
   }
   if (ask.cluster?.length) {
     lines.push("", `In the same group as what the person wrote (they put these together${ask.group ? `; the group reads as "${ask.group}"` : ""}):`);
-    for (const o of ask.cluster) lines.push(`- ${o.type} by ${who(o.author)}${judged(o.mark)}, ${o.relation === "overlapping" ? "overlapping it" : `${o.relation} it`}: """${o.text}"""`);
+    for (const o of ask.cluster) lines.push(`- ${o.type} by ${who(o.author)}${judged(o.mark)}${reviewed(o)}, ${o.relation === "overlapping" ? "overlapping it" : `${o.relation} it`}: """${o.text}"""`);
     if (ask.clusterMore) lines.push(`- and ${ask.clusterMore} more in the group, not shown`);
   }
   if (ask.group && !ask.cluster?.length) lines.push("", `What the person wrote sits in a group that reads as "${ask.group}".`);

@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-11-27T01:31:53.530Z",
+  "recordedAt": "2026-11-27T15:29:25.480Z",
   "agent": "a fresh general-purpose subagent given only AGENT_API.md and eval/mcp-call.ts",
   "results": [
     {
@@ -7,112 +7,112 @@
       "pass": true,
       "detail": "ok",
       "toolCalls": 1,
-      "seconds": 26
+      "seconds": 27
     },
     {
       "task": "02-arrange-row",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 17
     },
     {
       "task": "03-annotate",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 15
     },
     {
       "task": "04-connect",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 15
     },
     {
       "task": "05-retext",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 21
+      "seconds": 17
     },
     {
       "task": "06-picked-done",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 2,
-      "seconds": 21
+      "toolCalls": 3,
+      "seconds": 23
     },
     {
       "task": "07-duplicate-frame",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 15
     },
     {
       "task": "08-grid",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 20
+      "seconds": 17
     },
     {
       "task": "09-scene-frame",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 1,
-      "seconds": 12
+      "toolCalls": 2,
+      "seconds": 18
     },
     {
       "task": "10-recolour-after-human",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 19
+      "seconds": 16
     },
     {
       "task": "11-locked",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 16
     },
     {
       "task": "12-resolve-marks",
       "pass": true,
       "detail": "ok",
       "toolCalls": 5,
-      "seconds": 34
+      "seconds": 31
     },
     {
       "task": "13-dataset-chart",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 15
     },
     {
       "task": "14-read-chart",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 16
     },
     {
       "task": "15-edit-cell",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 16
     },
     {
       "task": "16-clear-filter",
       "pass": true,
       "detail": "ok",
-      "toolCalls": 3,
-      "seconds": 27
+      "toolCalls": 2,
+      "seconds": 18
     },
     {
       "task": "17-new-page",
@@ -126,14 +126,14 @@
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 19
+      "seconds": 15
     },
     {
       "task": "19-image-caption",
       "pass": true,
       "detail": "ok",
       "toolCalls": 1,
-      "seconds": 13
+      "seconds": 11
     },
     {
       "task": "20-find-in-many",
@@ -147,21 +147,21 @@
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 16
     },
     {
       "task": "22-answer-ask",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 19
+      "seconds": 17
     },
     {
       "task": "23-reply-in-thread",
       "pass": true,
       "detail": "ok",
       "toolCalls": 4,
-      "seconds": 36
+      "seconds": 25
     },
     {
       "task": "24-converge",
@@ -175,28 +175,69 @@
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 18
+      "seconds": 16
     },
     {
       "task": "26-quote-style",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 19
+      "seconds": 17
     },
     {
       "task": "27-ask-about-the-group",
       "pass": true,
       "detail": "ok",
       "toolCalls": 2,
-      "seconds": 17
+      "seconds": 16
     },
     {
       "task": "28-undo-on-this-page",
       "pass": true,
       "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 15
+    },
+    {
+      "task": "29-compare-on-dimensions",
+      "pass": true,
+      "detail": "ok",
       "toolCalls": 3,
-      "seconds": 28
+      "seconds": 25
+    },
+    {
+      "task": "30-build-on-folded",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 2,
+      "seconds": 18
+    },
+    {
+      "task": "31-recall-first",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 26
+    },
+    {
+      "task": "32-ask-across-frame-edge",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 26
     }
+  ],
+  "friction": [
+    "06, 11, 26: annotate puts a note under its target; nothing says how to put it beside, so the agent passed its own x/y (task 11).",
+    "06: unclear whether a 'Done:' note should also resolve the pick it answers.",
+    "12: the queue does not show whether a comment's target was edited after the comment.",
+    "15: the docs say rows are zero-based but not that the displayed order is the stored order.",
+    "17: create with style: heading does not echo style in its result.",
+    "19: no size guidance for an inline image; captionId in the result is undocumented.",
+    "23: an unneeded overview, from not knowing feedback targets carry each option's full text (they do).",
+    "29: the second option sat 80 px from the question, outside the 60 px group, so the ask lacked it (item 129's case).",
+    "31: a question about 'my settled thoughts' gave one target; an overview was needed to compare review dates.",
+    "32: the ask gives the frame's contents but says nothing of objects just outside its edge; an overview was used to make sure.",
+    "General: mutation results return full props and richText; canvas_read returns the whole page list every time."
   ]
 }

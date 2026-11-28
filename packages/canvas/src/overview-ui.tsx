@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useEditor, useValue, type Editor, type TLShape } from "tldraw";
+import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
 import { boardGroups, countsLabel, mapLayout, type OverviewItem } from "./board-overview";
 import { useDialogFocus } from "./focus-keys";
 import { richTextPlain } from "./operations";
@@ -32,6 +32,13 @@ export function overviewItems(editor: Editor): OverviewItem[] {
     walk(frame, frame.type === "group" && isSettled(frame.meta));
     return { open, settled };
   };
+  // O draws only the page's own frames, a nested frame counted inside its outer one: a card lifted
+  // out of a nested frame goes with the outermost frame around it.
+  const topFrame = (id: string) => {
+    let frame = editor.getShape(id as TLShapeId);
+    while (frame && frame.parentId !== pageId) frame = editor.getShape(frame.parentId as TLShapeId);
+    return (frame?.id as string | undefined) ?? id;
+  };
   return editor.getSortedChildIdsForParent(pageId).flatMap((id): OverviewItem[] => {
     const s = editor.getShape(id);
     // A finished thread folded to one line is still on the board, so it counts; a result behind a
@@ -48,7 +55,7 @@ export function overviewItems(editor: Editor): OverviewItem[] {
       const first = editor.getSortedChildIdsForParent(s.id).flatMap((c) => editor.getShape(c) ?? []).map((c) => ({ c, b: editor.getShapePageBounds(c) })).filter((x) => x.b && textOf(x.c)).sort((a, b) => a.b!.y - b.b!.y || a.b!.x - b.b!.x)[0];
       return [{ ...base, text: first ? textOf(first.c) : "", inside: thoughtsIn(s) }];
     }
-    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}), ...(typeof s.meta.within === "string" ? { within: s.meta.within } : {}) }];
+    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}), ...(typeof s.meta.within === "string" ? { within: topFrame(s.meta.within) } : {}) }];
   });
 }
 

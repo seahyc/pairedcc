@@ -146,7 +146,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_annotate",
     op: "annotate",
     description:
-      "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. It does not close the mark it answers: canvas_resolve that. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar. Without x/y it goes under the object, or beside it when that space is taken, never covering anything, on a card as wide as the note needs.",
+      "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. It does not close the mark it answers: canvas_resolve that. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar. Without x/y it goes under the object (side: beside puts it to the right instead), or the nearest clear spot when that is taken, never covering anything, on a card as wide as the note needs.",
     // Authorship is never the caller's to set: the canvas attributes the note to the agent.
     input: annotationInput.omit({ author: true }).shape,
     output: "json",
@@ -195,7 +195,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_answer",
     op: "answer",
     description:
-      "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X); with alternatives, name what they differ on in `dimensions` and give each option a short value on each in `values`, so every card lists them in the same order. Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved. In canvas_feedback the answer is listed as the ask's reply and the item is resolved (left open for a clarifying question).",
+      "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X); with alternatives, name what they differ on in `dimensions` and give each option a short value on each in `values`, so every card lists them in the same order. Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved. In canvas_feedback the answer is listed as the ask's reply and the item is resolved (left open for a clarifying question); the result's `queue` says which (`resolved` or `open`; absent when the ask has no queue row).",
     input: answerInput.shape,
     output: "json",
   },

@@ -79,4 +79,14 @@ describe("AGENT_API.md starts with what most tasks need (item 135)", () => {
     expect(links.length).toBeGreaterThan(0);
     expect(links.filter((l) => !anchors.has(l))).toEqual([]);
   });
+  it("puts the prototype sections after the core ones (item 136)", () => {
+    // An agent reading from the top meets overview, asks and the feedback queue before any prototype.
+    const headings = [...agentApi.matchAll(/^### (.+)$/gm)].map((m) => ({ name: m[1], at: m.index! }));
+    const http = agentApi.indexOf("\n## HTTP");
+    const mcp = headings.filter((h) => h.at < http);
+    const firstPrototype = mcp.findIndex((h) => /prototype/i.test(h.name));
+    expect(firstPrototype).toBeGreaterThan(0);
+    expect(mcp.slice(firstPrototype).filter((h) => !/prototype/i.test(h.name)).map((h) => h.name)).toEqual([]);
+    for (const core of ["Overview, then detail", "Asks", "The feedback queue"]) expect(mcp.slice(0, firstPrototype).map((h) => h.name)).toContain(core);
+  });
 });

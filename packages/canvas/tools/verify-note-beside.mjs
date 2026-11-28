@@ -89,6 +89,20 @@ const spilled = await p.evaluate((ids) => ids.flatMap((id) => {
 }), [shortId, long.id]);
 check('each note\'s text stays inside its card', spilled.length === 0, spilled.join(' | '));
 
+// Item 140 (a): side: "beside" puts the note to the right of its card, level with it, covering nothing.
+await command('page', { name: 'Beside' });
+await p.waitForTimeout(300);
+const lone = await command('create', { kind: 'note', x: 200, y: 200, text: 'Weekly sign-ups: 140' });
+const loneB = await bounds(lone.id);
+const side = await command('annotate', { targetId: lone.id, text: 'Up from 120', side: 'beside' });
+const sideB = await bounds(side.id);
+check('(140 a) a note with side "beside" sits to the right of its card, level with its top', sideB.x >= loneB.x + loneB.w && Math.abs(sideB.y - loneB.y) <= 2 && gap(sideB, loneB) <= 80, `note ${JSON.stringify(sideB)}, card ${JSON.stringify(loneB)}`);
+const sideC = await coveredBy(side.id);
+check('(140 a) and covers nothing', sideC.length === 0, sideC.map((o) => o.text || o.id).join(' | '));
+const under = await command('annotate', { targetId: lone.id, text: 'Where from?' });
+const underB = await bounds(under.id);
+check('(140 a) without side, a note still goes under its card', underB.y >= loneB.y + loneB.h, JSON.stringify(underB));
+
 // (d), (e) An ask about an agent's note opens a pink card that is a feedback item.
 await command('page', { name: 'Asks' });
 await p.waitForTimeout(300);
