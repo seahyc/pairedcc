@@ -1,7 +1,8 @@
 // Browser check for item 120: suggestions follow what the thought says.
 //
 // On a fresh profile at 1440 x 900 the person writes four thoughts, one at a time, each selected
-// and left alone for a moment: a proposal, a number, a short list, and a plain thought with no cue.
+// and left alone for a moment: a proposal, a number, a short list, and a plain thought with no cue;
+// then a Spanish proposal and a Chinese reason (item 149).
 // The first suggestion under each must follow its words (what would make it wrong; where the
 // number comes from; which matters most) and the second must be the usual "What's missing?"; the
 // plain thought keeps "What's missing?" and "Give me alternatives". Clicking the cued suggestion
@@ -79,6 +80,14 @@ check('a list: which matters most', list.texts[0] === 'Which of these matters mo
 const plain = await suggestedFor('Charge per seat', origin.x + 520, origin.y + 320);
 check('a plain thought keeps the usual pair', plain.texts[0] === "What's missing?" && plain.texts[1] === 'Give me alternatives', JSON.stringify(plain.texts));
 await p.screenshot({ path: `${out}/3-plain.png` });
+// Item 149: a proposal or a reason in another language invites the same suggestion as in English.
+await p.evaluate((o) => { window.__pairedEditor.centerOnPoint({ x: o.x + 500, y: o.y + 860 }, { animation: { duration: 0 } }); }, origin);
+const spanish = await suggestedFor('Deberíamos quitar el plan gratis', origin.x, origin.y + 640);
+check('a proposal in Spanish: what would make it wrong', spanish.texts[0] === 'What would make this wrong?' && spanish.texts[1] === "What's missing?", JSON.stringify(spanish.texts));
+await p.screenshot({ path: `${out}/3b-spanish-proposal.png` });
+const chinese = await suggestedFor('按席位收费，因为成本随团队增长', origin.x + 520, origin.y + 640);
+check('a reason in Chinese: the strongest objection', chinese.texts[0] === "What's the strongest objection?" && chinese.texts[1] === "What's missing?", JSON.stringify(chinese.texts));
+await p.screenshot({ path: `${out}/3c-chinese-reason.png` });
 
 // Clicking the cued suggestion writes exactly that question, sent as an ask about the thought.
 await p.evaluate((id) => { window.paired.select([]); }, number.id);

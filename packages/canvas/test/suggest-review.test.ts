@@ -40,6 +40,9 @@ describe("128: review findings on #161 and #164", () => {
   it("(f) cue words are whole words in any script", () => {
     expect(textCue("No dejes de soñar")).toBe(undefined);
     expect(textCue("Ship it, so we learn")).toBe("What's the strongest objection?");
-    expect(textCue("Debería cambiar")).toBe(undefined);
+    // An English cue word joined to an accented letter is not that word (item 149 made
+    // "Debería cambiar" a Spanish proposal on purpose, so the boundary is checked here instead).
+    expect(textCue("Mustélidos en el jardín")).toBe(undefined);
+    expect(textCue("Shouldé vibes")).toBe(undefined);
   });
 });
