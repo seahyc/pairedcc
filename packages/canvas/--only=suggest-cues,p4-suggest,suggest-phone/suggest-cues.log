@@ -1,0 +1,10 @@
+PASS  a proposal: what would make it wrong, then the usual next step  — ["What would make this wrong?","What's missing?"]
+PASS  a number: where it comes from  — ["Where does this number come from?","What's missing?"]
+PASS  a list: which matters most  — ["Which of these matters most?","What's missing?"]
+PASS  a plain thought keeps the usual pair  — ["What's missing?","Give me alternatives"]
+PASS  a proposal in Spanish: what would make it wrong  — ["What would make this wrong?","What's missing?"]
+PASS  a reason in Chinese: the strongest objection  — ["What's the strongest objection?","What's missing?"]
+PASS  clicking it writes that question as the person's card, sent as an ask  — {"text":"Where does this number come from?","author":"Human","state":"waiting"}
+PASS  no page errors
+
+8/8 passed

@@ -1,0 +1,18 @@
+PASS  the person wrote a card on the phone  — shape:9sFMDh00v4i9pMNA6eeF7
+PASS  suggestions appear on the phone  — {"shown":true,"zoom":1,"font":19,"tap":34,"inView":true,"chrome":[],"covered":[],"texts":["What's the strongest objection?","What's missing?"]}
+PASS  their text is legible on screen (at least 15 px) at the board's zoom  — font 19 px at zoom 1
+PASS  each is a tap target at least 32 px tall  — 34 px
+PASS  they are wholly inside the window  — {"shown":true,"zoom":1,"font":19,"tap":34,"inView":true,"chrome":[],"covered":[],"texts":["What's the strongest objection?","What's missing?"]}
+PASS  they cover no control, bar or object  — {"chrome":[],"covered":[]}
+PASS  tapping one writes the person's card and sends it  — {"author":"Human","state":"waiting"}
+PASS  near the bottom edge, suggestions are wholly in view and cover nothing, or are not shown  — {"shown":false}
+PASS  suggestions are back for the swipe step
+PASS  a swipe that starts on a suggestion sends nothing  — {"asksBefore":0,"asksAfter":0}
+PASS  at 200 % on the phone, suggestions show, in view, covering nothing  — {"shown":true,"zoom":2,"font":19,"tap":34,"inView":true,"chrome":[],"covered":[],"texts":["What's the strongest objection?","What's missing?"]}
+PASS  no page errors on the phone
+PASS  on a 360 px phone, two thoughts still get a suggestion (the first, if both do not fit)  — {"shown":true,"zoom":1,"font":19,"tap":34,"inView":true,"chrome":[],"covered":[],"texts":["Compare these"]}
+PASS  at 50 % suggestions show, in view, covering nothing  — {"shown":true,"zoom":0.5,"font":19,"tap":26,"inView":true,"chrome":[],"covered":[],"texts":["What's the strongest objection?","What's missing?"]}
+PASS  at 200 % suggestions show, in view, covering nothing  — {"shown":true,"zoom":2,"font":19,"tap":26,"inView":true,"chrome":[],"covered":[],"texts":["What's the strongest objection?","What's missing?"]}
+PASS  their text is the same size on screen at 50 % and 200 %  — [19,19]
+
+16/16 passed

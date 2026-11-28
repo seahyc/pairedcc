@@ -1,0 +1,28 @@
+PASS  the first screen shows no suggestions
+PASS  nothing is suggested while typing
+PASS  nothing is suggested at once: only after a pause
+PASS  after a pause, at most two suggestions appear  — ["What's the strongest objection?","What's missing?"]
+PASS  they follow what the thought says, then the usual next step  — ["What's the strongest objection?","What's missing?"]
+PASS  they are faint  — 0.55
+PASS  they sit under (or beside) the selection, clear of every object  — {"shown":true,"texts":["What's the strongest objection?","What's missing?"],"covered":[],"underBar":false,"inside":true,"belowSelection":true,"opacity":0.55}
+PASS  they never sit under the selection bar
+PASS  their text stays inside their box
+PASS  any other action makes them go
+PASS  they are not offered again for the same selection
+PASS  clicking the selected card again does not bring them back
+PASS  selecting again offers them again  — ["What's the strongest objection?","What's missing?"]
+PASS  clicking one writes it as the person's own card  — {"id":"shape:fwOrG-nP1gEhQRszEfu-J","text":"What's missing?","author":"Human","ask":"waiting","targets":["shape:P5Qe_0gjJj1HQaJv9ggMy"],"under":true,"overlaps":0,"count":6}
+PASS  the card is an ask about the selection  — {"id":"shape:fwOrG-nP1gEhQRszEfu-J","text":"What's missing?","author":"Human","ask":"waiting","targets":["shape:P5Qe_0gjJj1HQaJv9ggMy"],"under":true,"overlaps":0,"count":6}
+PASS  the card is under (or, when that is taken, beside) the selection and on top of nothing  — {"id":"shape:fwOrG-nP1gEhQRszEfu-J","text":"What's missing?","author":"Human","ask":"waiting","targets":["shape:P5Qe_0gjJj1HQaJv9ggMy"],"under":true,"overlaps":0,"count":6}
+PASS  the suggestions are gone, and nothing stays selected to cover the thought
+PASS  an ask gets no suggestions of its own
+PASS  one undo takes the card (and its arrow) back  — {"before":4,"gone":true,"count":4}
+PASS  two thoughts are offered comparison  — ["Compare these","What dimensions do these differ on?"]
+PASS  placed clear of every object  — []
+PASS  with a note right under the card, suggestions are clear of it (or not shown)  — {"shown":true,"texts":["What's the strongest objection?","What's missing?"],"covered":[],"underBar":false,"inside":true,"belowSelection":true,"opacity":0.55}
+PASS  an agent's card gets no suggestions
+PASS  a selection with an agent's card in it gets none
+PASS  an untouched first-board card gets none
+PASS  no page errors
+
+26/26 passed

@@ -98,14 +98,41 @@ export const recordStarters = ["Is this point valid?", "Is the defence enough?",
 const word = (alternatives: string) => new RegExp(`(?<![\\p{L}\\p{M}\\p{N}])(?:${alternatives})(?![\\p{L}\\p{M}\\p{N}])`, "iu");
 /** Abstract nouns: a short thought made of them is a claim that needs an example. */
 const ABSTRACT = word("\\p{L}+(?:ity|ness|ism|ance|ence)|quality|quantity|value|strategy|vision|culture|growth|freedom|focus");
-const REASON = word("because|since|so|therefore|thus|hence");
-const PROPOSAL = word("should|must|ought|need to|needs to|let['’]s");
+/**
+ * A reason or a proposal, in English and in other languages people write their thoughts in
+ * (item 149): Spanish, French, German, Portuguese, Italian and Dutch as whole words; Chinese and
+ * Japanese, written without spaces, as they stand. A word that is also common English ("car",
+ * "also", "da") is left out, so English text never gets a false cue.
+ */
+const REASON_WORDS = [
+  "because|since|so|therefore|thus|hence",
+  "porque|ya que|así que|por eso|por lo tanto", // es
+  "parce que|parce qu['’]|puisque|donc|c['’]est pourquoi", // fr
+  "weil|deshalb|daher|deswegen|darum", // de
+  "portanto|por isso|já que", // pt ("pois" is also French for peas)
+  "perché|poiché|quindi|dunque", // it
+  "omdat|dus|daarom", // nl ("want" is English)
+];
+const PROPOSAL_WORDS = [
+  "should|must|ought|need to|needs to|let['’]s",
+  "deberíamos|debemos|debería|hay que|tenemos que", // es
+  "il faut|devrions|devons|devrait|on doit", // fr
+  "sollten|sollte|müssen|muss", // de
+  "devemos|deveríamos|devia|precisamos", // pt
+  "dovremmo|dobbiamo|bisogna|dovrebbe", // it
+  "moeten|zouden|zou moeten|laten we", // nl
+];
+const REASON = word(REASON_WORDS.join("|"));
+const PROPOSAL = word(PROPOSAL_WORDS.join("|"));
+const REASON_CJK = /因为|因為|所以|因此|ので|だから|なぜなら/u;
+const PROPOSAL_CJK = /应该|應該|必须|必須|我们要|べき|しなければ|しましょう/u;
 
 /**
  * What one thought's own words invite, if anything (principles row 7, recognising beats
  * recalling; and row 5, concrete before abstract): a list, which matters most; a number, where it
  * comes from; a reason, the strongest objection; a proposal, what would make it wrong; a short
- * abstract claim, a concrete example. English cue words only: other text keeps the kind's starters.
+ * abstract claim, a concrete example. Reasons and proposals are read in several languages; the
+ * abstract-claim cue is English only (it goes by English suffixes).
  */
 export function textCue(text: string): string | undefined {
   const t = text.trim();
@@ -113,8 +140,8 @@ export function textCue(text: string): string | undefined {
   const lines = t.split(/\n+/).map((l) => l.trim()).filter(Boolean);
   if (lines.length >= 2) return "Which of these matters most?";
   if (/\p{Nd}/u.test(t)) return "Where does this number come from?";
-  if (REASON.test(t)) return "What's the strongest objection?";
-  if (PROPOSAL.test(t)) return "What would make this wrong?";
+  if (REASON.test(t) || REASON_CJK.test(t)) return "What's the strongest objection?";
+  if (PROPOSAL.test(t) || PROPOSAL_CJK.test(t)) return "What would make this wrong?";
   const words = t.split(/\s+/).length;
   if (words <= 6 && ABSTRACT.test(t)) return "Give me a concrete example";
   return undefined;
