@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-11-28T12:27:39.765Z",
+  "agent": "a fresh general-purpose subagent given only AGENT_API.md and eval/mcp-call.ts",
+  "results": [
+    {
+      "task": "33-ask-inside-ring",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 3,
+      "seconds": 76
+    },
+    {
+      "task": "34-stacked-asks",
+      "pass": true,
+      "detail": "ok",
+      "toolCalls": 4,
+      "seconds": 34
+    }
+  ],
+  "note": "A focused attempt on tasks 33 and 34 (item 149), kept apart from latest.json so the scorecard's full attempt is not replaced by a two-task run. The next full attempt counts them.",
+  "friction": [
+    "33: an ask's cluster stops at 8 members (clusterMore: 2 here), so for a cheapest/highest question the agent needed canvas_overview to be sure none of the withheld members won; a small group could be given whole.",
+    "33: the group label was the first card's words (\"Harbour Room: £1,450\"), which says little about what the group is.",
+    "34: the second question lists the first question card in its targets, as if it were about it.",
+    "34: no way to answer several asks in one call.",
+    "34: canvas_answer's result does not say whether the answer went under or beside its ask, so the agent read the overview to confirm."
+  ]
+}
