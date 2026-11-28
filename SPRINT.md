@@ -771,7 +771,10 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 
 147. **A comment's arrow is drawn across the words of a card it passes.** (Seen by build-B in `verify-import`'s screenshot `05-picked-crossed-commented.png`, 28 Nov.) A comment on an imported record sits to the right of the record; its arrow runs from the comment leftwards through the "Gap / exposure" card's text to the record's edge, striking through "Only one of the three funders has signed". "Text never leaves its container" and we think with our eyes: a line over words reads as a cross-out. Done when a comment's arrow ends at the nearest edge of what it is about and never crosses the text of another card, reproduced first in a browser check with before/after screenshots.
 
+148. **The working spec's implemented sections after the 27 and 28 Nov merges (item 8, docs).** (Filed by build-B.) `docs/canvas/working-spec.md` still says "The scripted checks are not yet part of `pnpm test`" (one command, `verify-all`, runs them since #113) and, for the calm canvas, "Not built: learning mode, context pinning or hiding, streaming answers, images in context", though Check me (#141, #149), the context prototype's Leave out and Pin (#90, #121) and images in asks (#109) have merged; the P-items, options on dimensions (#165), `canvas_create` without x/y (#190) and annotate `side` (#196) are not mentioned. Done when every implemented-section claim is checked against the code on the integration branch and corrected, confirmed and proposed stay separated, each claim names its PR, and nothing proposed is described as built.
+
 ## Claims
+- 148 (working spec's implemented sections after 27-28 Nov) | claude/sprint-spec-sync-2 | 2026-11-28T12:12Z
 - 144 (at most four unfinished threads in view) | claude/sprint-thread-limit | 2026-11-28T12:20Z
 - 147 (a comment's arrow across another card's words) | claude/sprint-arrow-clear | 2026-11-28T12:00Z
 - 146 (a part-formatted word reads as two words) | claude/sprint-plain-runs | 2026-11-28T12:00Z
