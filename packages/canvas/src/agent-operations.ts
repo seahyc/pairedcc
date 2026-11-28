@@ -44,6 +44,8 @@ import { matchesText, richTextSearch } from "./read-filter";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { rewriteRefusal } from "./authorship";
 import { notePlace, noteWidth } from "./note-place";
+import { blocksCreate, createSpot } from "./create-spot";
+import { windowControls } from "./window-controls";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, levelOptionLines, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
@@ -96,21 +98,53 @@ export function createCard(editor: Editor, value: unknown, author: string, meta:
   return id;
 }
 
+/** `create` without x/y: a provisional spot, placed for real once the object has its size. */
+function unplaced(value: unknown) {
+  if (!value || typeof value !== "object") return undefined;
+  const { x, y } = value as { x?: unknown; y?: unknown };
+  if (x === undefined && y === undefined) return { x: 0, y: 0 };
+  if (x === undefined || y === undefined) throw new Error("Give both x and y, or neither to place it beside the person's selection or in the middle of their view");
+  return undefined;
+}
+
+/** The box around what the person has selected of their own, if anything. */
+function personSelection(editor: Editor) {
+  const boxes = editor.getSelectedShapes().filter((s) => authorOf(s) === HUMAN && s.type !== "arrow").flatMap((s) => editor.getShapePageBounds(s) ?? []);
+  if (!boxes.length) return undefined;
+  const x = Math.min(...boxes.map((b) => b.minX)), y = Math.min(...boxes.map((b) => b.minY));
+  return { x, y, w: Math.max(...boxes.map((b) => b.maxX)) - x, h: Math.max(...boxes.map((b) => b.maxY)) - y };
+}
+
+/** Beside the person's selection or in the middle of their view, clear of everything (create-spot.ts). */
+function placeCreated(editor: Editor, id: string, selection: ReturnType<typeof personSelection>) {
+  const made = editor.getShapePageBounds(id as TLShapeId);
+  if (!made) return;
+  const v = editor.getViewportPageBounds();
+  const shape = find(editor, id);
+  const others = [...editor.getPageShapeIds(editor.getCurrentPageId())]
+    .flatMap((other) => editor.getShape(other) ?? [])
+    .filter((s) => s.id !== id && blocksCreate(s.type, shape.type))
+    .flatMap((s) => editor.getShapePageBounds(s) ?? []);
+  const spot = createSpot({ w: made.w, h: made.h }, { view: { x: v.x, y: v.y, w: v.w, h: v.h }, selection }, [...others, ...windowControls(editor)]);
+  editor.updateShape({ id: shape.id, type: shape.type, x: spot.x + (shape.x - made.x), y: spot.y + (shape.y - made.y) });
+}
+
 /**
  * Notes become cards: an agent's note is its typed card (and is selected), the person's is their
  * handwritten card, as the Write tool makes, at the width asked for. A sticky note cannot take a
  * width, so a person's note made by script would otherwise sit wider apart than it said. Other
- * primitives pass through unchanged.
+ * primitives pass through unchanged. With `pageId` the object is made straight on that page;
+ * without it, tldraw puts it in a frame that covers its x/y.
  */
-export function createFor(editor: Editor, value: unknown, actor: string) {
+export function createFor(editor: Editor, value: unknown, actor: string, pageId?: TLPageId) {
   const kind = value && typeof value === "object" ? (value as { kind?: unknown }).kind : undefined;
   if (kind === "note") {
     editor.markHistoryStoppingPoint("create card");
-    const id = createCard(editor, value, actor);
+    const id = createCard(editor, value, actor, {}, pageId);
     if (actor !== HUMAN) editor.select(id);
     return id;
   }
-  return createObject(editor, value);
+  return createObject(editor, value, pageId);
 }
 
 function placeCaption(editor: Editor, imageId: string) {
@@ -740,7 +774,14 @@ export async function executeCommand(
     case "create": {
       const inputIds = z.object({ inputs: z.array(z.string().startsWith("shape:")).max(50).optional() }).parse(command.input ?? {}).inputs;
       const inputs = inputIds ? recordInputs(editor, inputIds) : undefined;
-      const id = createFor(editor, command.input, actor);
+      const placing = unplaced(command.input);
+      const selection = placing ? personSelection(editor) : undefined;
+      // A provisional spot at the origin must not take the new object into a frame that covers the
+      // origin: it would stay that frame's child, clipped by it, once moved into the person's view.
+      const id = placing
+        ? createFor(editor, { ...(command.input as object), ...placing }, actor, editor.getCurrentPageId())
+        : createFor(editor, command.input, actor);
+      if (placing) placeCreated(editor, id, selection);
       const s = find(editor, id);
       editor.updateShape({
         id: s.id,

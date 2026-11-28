@@ -115,7 +115,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_create",
     op: "create",
     description:
-      "Create a frame, rectangle, ellipse, text or note at canvas coordinates. Preserve alternatives instead of overwriting them. Notes take a style: note (default casual card), heading (large title, no card), quote (serif italic, for excerpts from a source; include the source) or code (monospace, for numbers, data and code).",
+      "Create a frame, rectangle, ellipse, text or note at canvas coordinates, or leave out x and y to put it beside the person's selection (or in the middle of their view) clear of everything. Preserve alternatives instead of overwriting them. Notes take a style: note (default casual card), heading (large title, no card), quote (serif italic, for excerpts from a source; include the source) or code (monospace, for numbers, data and code).",
     input: createInput.shape,
     output: "json",
   },
