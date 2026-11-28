@@ -3,7 +3,7 @@ import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "
 import { richTextPlain } from "../operations";
 import { authorOf } from "../scratchbook";
 import { coveredThoughts } from "./check-ui";
-import { dueRecall, recallLine, recallOf, snoozeRecall } from "./recall";
+import { dueRecall, recallable, recallLine, recallOf, snoozeRecall } from "./recall";
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText as never).trim() : "");
 
@@ -42,7 +42,7 @@ export function recallNow(editor: Editor, now: number) {
   return dueRecall(
     editor
       .getCurrentPageShapes()
-      .filter((s) => s.meta.recall !== undefined && authorOf(s) === "Human" && !checking.has(s.id))
+      .filter((s) => recallable(s.meta, authorOf(s)) && !checking.has(s.id))
       .map((s) => ({ id: s.id, settled: s.meta.settled === true, text: textOf(s), meta: s.meta })),
     now,
   );

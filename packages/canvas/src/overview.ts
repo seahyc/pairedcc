@@ -95,7 +95,7 @@ export function overview(editor: Editor, value: unknown = {}) {
         ...(s.type === "card" && cardStyle((s.props as { tone?: unknown }).tone) ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         ...(s.meta.settled === true ? { settled: true } : {}),
         // A settled thought the person checked themselves on comes back for review on this date.
-        ...(reviewDate(s.meta) ? { review: reviewDate(s.meta) } : {}),
+        ...(reviewDate(s.meta, authorOf(s)) ? { review: reviewDate(s.meta, authorOf(s)) } : {}),
         ...(s.type === "chart" ? { chart: chartLine(editor, s) } : {}),
         ...(snippet(s) ? { text: snippet(s) } : {}),
       };

@@ -73,21 +73,38 @@ describe("118 (a): runs say what each id is", () => {
 });
 
 // Item 130, from #172's focused attempt on tasks 30 and 31.
-import { reviewDate } from "../src/learning/recall";
+import { recallable, reviewDate } from "../src/learning/recall";
 describe("130 (b): a settled thought's review date, without a full read", () => {
   const due = Date.UTC(2026, 11, 2, 9, 30);
   it("is an ISO date when the thought is settled and has a schedule", () => {
-    expect(reviewDate({ settled: true, recall: { step: 1, due } })).toBe("2026-12-02T09:30:00.000Z");
+    expect(reviewDate({ settled: true, recall: { step: 1, due } }, "Human")).toBe("2026-12-02T09:30:00.000Z");
   });
   it("is absent with no schedule (only Check me starts one) or once unsettled", () => {
-    expect(reviewDate({ settled: true })).toBeUndefined();
-    expect(reviewDate({ recall: { step: 0, due } })).toBeUndefined();
-    expect(reviewDate({ settled: true, recall: { step: 0, due: "soon" } })).toBeUndefined();
+    expect(reviewDate({ settled: true }, "Human")).toBeUndefined();
+    expect(reviewDate({ recall: { step: 0, due } }, "Human")).toBeUndefined();
+    expect(reviewDate({ settled: true, recall: { step: 0, due: "soon" } }, "Human")).toBeUndefined();
   });
   it("is in the overview row", () => {
     shapes.push(shape("shape:reviewed", "human", { settled: true, recall: { step: 0, due } }));
     expect(row("shape:reviewed").review).toBe("2026-12-02T09:30:00.000Z");
     expect(row("shape:mine")).not.toHaveProperty("review");
     shapes.pop();
+  });
+  // Review of #177: only what comes back on the board (the person's own thought) has a date.
+  it("is absent on an agent's copy that kept the recall meta", () => {
+    shapes.push(shape("shape:copy", "agent", { settled: true, recall: { step: 0, due }, createdBy: "Claude" }));
+    expect(row("shape:copy")).not.toHaveProperty("review");
+    expect(reviewDate({ settled: true, recall: { step: 0, due } }, "Claude")).toBeUndefined();
+    shapes.pop();
+  });
+  // Review of #186: an agent's duplicate of the person's comment keeps author "Human" on the
+  // annotation, but it was made by the agent, so only the original comes back.
+  it("is absent on an agent's duplicate of a comment whose annotation author is the person", () => {
+    const comment = { role: "annotation", author: "Human", settled: true, recall: { step: 0, due } };
+    const copy = { ...comment, createdBy: "Claude", duplicated: true };
+    expect(reviewDate(comment, "Human")).toBe("2026-12-02T09:30:00.000Z");
+    expect(reviewDate(copy, "Human")).toBeUndefined();
+    expect(recallable(copy, "Human")).toBe(false);
+    expect(recallable(comment, "Human")).toBe(true);
   });
 });

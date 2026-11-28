@@ -35,11 +35,22 @@ export function foldedShown(ask: Meta, answers: Meta[], touched: boolean) {
   return foldedSaved(ask, answers) && !touched;
 }
 
+/**
+ * The thread's primary answer, one rule for the folded line and an agent's `pick`: the first
+ * answer the person picked; only when nothing is picked, the first settled one (`picked: false`).
+ * `others` counts the rest that were picked or settled.
+ */
+export function primaryAnswer<T extends { meta: Meta }>(answers: readonly T[]) {
+  const chosen = answers.filter((a) => a.meta.mark === "picked" || a.meta.settled === true);
+  const answer = answers.find((a) => a.meta.mark === "picked") ?? chosen[0];
+  return answer ? { answer, picked: answer.meta.mark === "picked", others: chosen.length - 1 } : undefined;
+}
+
 /** What the folded line says: the question, the answer the person picked (or that it is settled). */
 export function foldLine(question: string, answers: { text: string; meta: Meta }[]) {
-  const picked = answers.filter((a) => a.meta.mark === "picked" || a.meta.settled === true);
-  const first = picked[0]?.text.trim();
-  const answer = first ? `${first}${picked.length > 1 ? ` (+${picked.length - 1})` : ""}` : "";
+  const primary = primaryAnswer(answers);
+  const first = primary?.answer.text.trim();
+  const answer = first ? `${first}${primary!.others > 0 ? ` (+${primary!.others})` : ""}` : "";
   const more = answers.length - (first ? 1 : 0);
   return { question: question.trim() || "(question)", answer, more };
 }
@@ -119,8 +130,10 @@ export function foldedForAgent(editor: Editor, shape: TLShape) {
  */
 export function foldedPick(editor: Editor, shape: TLShape): { id: string; text: string } | undefined {
   if (!isAsk(shape) || !foldedForAgent(editor, shape)) return undefined;
-  const picked = answersOf(editor, shape).find((a) => a.meta.mark === "picked");
-  if (!picked) return undefined;
+  // The folded line's answer, but only an explicit pick: a settled-only answer is not a pick.
+  const primary = primaryAnswer(answersOf(editor, shape));
+  if (!primary?.picked) return undefined;
+  const picked = primary.answer;
   const text = "richText" in picked.props ? richTextSearch(picked.props.richText) : "";
   return { id: picked.id, text: text.length > 120 ? `${text.slice(0, 119)}…` : text };
 }

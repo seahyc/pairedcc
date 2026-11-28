@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { foldChoice, foldLine, foldedSaved, foldedShown, nextFold, threadFinished } from "../src/fold";
+import type { Editor, TLShape } from "tldraw";
+import { foldChoice, foldLine, foldedPick, foldedSaved, foldedShown, nextFold, threadFinished } from "../src/fold";
 
 const ask = (meta: Record<string, unknown> = {}) => ({ ask: { state: "answered" }, ...meta });
 
@@ -47,5 +48,35 @@ describe("folding a finished thread", () => {
     expect(foldLine("How should we charge? ", answers)).toEqual({ question: "How should we charge?", answer: "B · flat fee", more: 2 });
     expect(foldLine("Done?", [])).toEqual({ question: "Done?", answer: "", more: 0 });
     expect(foldLine("Q", [{ text: "A", meta: { mark: "picked" } }, { text: "B", meta: { mark: "picked" } }]).answer).toBe("A (+1)");
+  });
+});
+
+// Review of #177 (item 130): the folded line and an agent's `pick` name the same answer.
+describe("the folded line and the agent's pick agree", () => {
+  const a = { text: "A · per seat", meta: { settled: true } };
+  const b = { text: "B · flat fee", meta: { mark: "picked" } };
+  it("prefers the picked answer over a settled one before it", () => {
+    expect(foldLine("Q", [a, b]).answer.startsWith("B · flat fee")).toBe(true);
+  });
+  it("falls back to a settled answer when nothing is picked", () => {
+    expect(foldLine("Q", [a, { text: "C", meta: {} }]).answer).toBe("A · per seat");
+  });
+  const doc = (t: string) => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: t }] }] });
+  const shape = (id: string, meta: Record<string, unknown>, t: string) => ({ id, type: "card", parentId: "page:p", meta, props: { richText: doc(t) } });
+  const editorWith = (answers: ReturnType<typeof shape>[]) => {
+    const all = [shape("shape:ask", { ask: { state: "answered" } }, "Q"), ...answers];
+    const editor = {
+      getAncestorPageId: () => "page:p",
+      getCurrentPageId: () => "page:p",
+      getCurrentPageShapes: () => all,
+      getShape: (id: string) => all.find((s) => s.id === id),
+    } as unknown as Editor;
+    return { editor, ask: all[0] as unknown as TLShape };
+  };
+  it("pick is the picked answer, and absent when an answer is only settled", () => {
+    const both = editorWith([shape("shape:a", { replyTo: "shape:ask", settled: true }, a.text), shape("shape:b", { replyTo: "shape:ask", mark: "picked" }, b.text)]);
+    expect(foldedPick(both.editor, both.ask)).toEqual({ id: "shape:b", text: b.text });
+    const settledOnly = editorWith([shape("shape:a", { replyTo: "shape:ask", settled: true }, a.text)]);
+    expect(foldedPick(settledOnly.editor, settledOnly.ask)).toBeUndefined();
   });
 });

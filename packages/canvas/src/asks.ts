@@ -206,7 +206,7 @@ const given = (editor: Editor, s: TLShape, max = 2000, keep: Keep = (x) => x): G
     text: clip(sourceText(s, textOf(s)) || textOf(s) || dataText(editor, s) || mediaText(editor, s, keep) || `(${shapeName(s)}, no text)`, max),
     ...(mark ? { mark } : {}),
     ...(s.meta.settled === true ? { settled: true as const } : {}),
-    ...(reviewDate(s.meta) ? { review: reviewDate(s.meta) } : {}),
+    ...(reviewDate(s.meta, authorOf(s)) ? { review: reviewDate(s.meta, authorOf(s)) } : {}),
   };
 };
 const said = (editor: Editor, s: TLShape, max: number, keep: Keep = (x) => x): HistoryEntry => {
