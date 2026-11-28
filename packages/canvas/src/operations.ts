@@ -90,12 +90,22 @@ export function shapeName(shape: TLShape) {
  */
 export function richTextPlain(value: unknown): string {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return "";
-  const { text, content } = value as { text?: unknown; content?: unknown };
+  const { type, text, content } = value as { type?: unknown; text?: unknown; content?: unknown };
+  if (type === "hardBreak") return " ";
   if (text !== undefined && typeof text !== "string") return "";
   if (content !== undefined && !Array.isArray(content)) return "";
   if (text !== undefined) return text;
-  return (content ?? []).map(richTextPlain).join(" ");
+  const children = (content ?? []) as unknown[];
+  // Runs inside one paragraph join as written, so a partly bold word stays one word (item 146);
+  // paragraphs and other blocks are separated by a space, and a hard break is a space.
+  return children.map(richTextPlain).join(children.length && children.every(isInline) ? "" : " ");
 }
+
+const isInline = (n: unknown) => {
+  if (typeof n !== "object" || n === null || Array.isArray(n)) return false;
+  const { type, text } = n as { type?: unknown; text?: unknown };
+  return type === "text" || type === "hardBreak" || typeof text === "string";
+};
 
 const NAME_MAX = 48;
 /** The automatic layer name for an object's text: its first line, cut at 48 characters with an ellipsis. */
