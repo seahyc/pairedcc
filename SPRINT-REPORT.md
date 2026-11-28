@@ -1,8 +1,16 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-27T14:24Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-27T15:25Z by the review lane. Branch: `claude/sprint-int`.
 
-## Read first (27 Nov, 14:24Z)
+## Read first (27 Nov, 15:25Z)
+- **Third release of the day** (the daily limit): #174, #175, #177 and #178 on top of what is live, pushed to `claude/release` at about 15:25Z. Deploy status will be read on the next run.
+- **What you will notice:** when the agent lays options out on dimensions, each dimension line now sits at the same height on every card, even when one headline wraps to more lines (#174). A question written in the empty middle of a ring of cards is now about that ring: the agent is given the whole group (#178, P2 "about everything over here").
+- **For agents:** the overview and `read` now give a folded thread's picked answer and a settled thought's next review date as an ISO date (#177).
+- **Checks on `e2f2b7f`:** full workspace green with Postgres 16 and Redis (server 160, canvas 770, sdk 12, mcp 4, e2e 1); headless browser suite 77/77 (two skipped by design; board-sync-server also run by hand with services: pass).
+- **Held back on purpose: #176** (a person's note made by script is a real card at the width asked for). It is sound, but it makes the answer-beside browser check fail, because the check now finds a real bug that the old test setup hid: questions written close together and answered out of order get their answers placed so they read as the wrong question's, and the state line runs over the card below (item 132, being fixed in a PR stacked on #176). It will be merged once that fix is ready, so the integration branch stays releasable.
+- In review next: #179 (a question lifted out of its frame is in the frame's group), #180 (O keeps a lifted card in its frame's box), #181 (AGENT_API.md opens with a short "Start here").
+
+## Earlier (27 Nov, 14:24Z)
 - **Released again (the day's second release)**: everything up to #173, pushed to `claude/release` at 14:24Z. That covers P4 suggestions (#156) and the work below. Deploy status `success`: live on paired.cc at 14:38Z.
 - **What you will notice:** when the agent offers options, each lettered card can now list the same dimensions in the same order (for example "Cost to try", "Risk"), with the names in bold (#165). The overview and an ask now name a pile of cards after its title, never after the question in it (#169). On a phone the overview fits the screen (#166). Suggestions behave better on phones: a swipe no longer sends one, and on a narrow screen one suggestion is shown rather than none (#171).
 - **A product choice made for you:** two lanes built "options on dimensions" at the same time. I merged #165 (the dimensions sit inside the option cards, so nothing new appears on the board) and closed #168 (a separate table under the options). If you would rather have the table, #168's branch still exists.
@@ -61,6 +69,7 @@ Last updated 2026-11-27T14:24Z by the review lane. Branch: `claude/sprint-int`.
 | `c6c406c` | 26 Nov ~16:10Z | `success`, live on paired.cc 2026-11-26T16:12Z | Everything to #143: the card is the question, settled (S), Check me on answers, P2 arrangement |
 | `7013ae3` | 27 Nov 01:32Z | `success`, live on paired.cc 2026-11-27T01:38Z | P1 fold and focus, P3 overview, P5 recall (#144 to #149) |
 | `3eabe49` (code as `65e7d79`) | 27 Nov 14:24Z | `success`, live on paired.cc 2026-11-27T14:38Z | P4 suggestions (#156), #157 to #173: options on dimensions, group names, overview phone fit, calm page ids, suggestion fixes, agent tasks 29 to 31 |
+| `e021a25` (code as `e2f2b7f`) | 27 Nov ~15:25Z | pending (read next run) | Dimension lines level across option cards (#174), an ask inside a ring of cards is about the ring (#178), overview gives picks and review dates (#177), agent task 32 (#175) |
 
 ## Notes from the 26 Nov review (still relevant)
 - **This run (11:55Z to 13:50Z): 52 PRs reviewed and merged, #40 to #90 and #96; none rejected.**
@@ -275,6 +284,10 @@ recorded with #57 (a fresh one is PR #97, not yet reviewed). Performance reads "
 not: see Read first.
 
 ## Merged
+- [#178](https://github.com/seahyc/pairedcc/pull/178) P2: an ask written on empty space inside a group is about that group (0769640). Review: 4 of its unit tests fail with the fix removed; verify-ask-inside-group 6/6.
+- [#174](https://github.com/seahyc/pairedcc/pull/174) Dimension lines line up across option cards, levelled as derived space so the answer still undoes (9cc9356). verify-option-dimensions 12/12.
+- [#175](https://github.com/seahyc/pairedcc/pull/175) Agent task 32: a question across a frame's edge is about the frame (d827340). Self-test 1/1.
+- [#177](https://github.com/seahyc/pairedcc/pull/177) Overview and read give a folded thread's pick and a settled thought's next review date (e2f2b7f). Review: resolved a verify-all conflict; verify-overview-pick-review 9/9.
 - [#169](https://github.com/seahyc/pairedcc/pull/169) P2: groups have names that agents can use, and a group is never named after an ask in it (7a610c7). Review: resolved the AGENT_API conflict and put a doc comment back where it belongs; verify-group-names 5/5.
 - [#165](https://github.com/seahyc/pairedcc/pull/165) Options laid out on stated dimensions, inside the option cards (ec41baa). verify-option-dimensions 7/7; the manifest regenerates identical.
 - [#166](https://github.com/seahyc/pairedcc/pull/166) Review follow-ups: overview totals, groups and phone fit; the answer-room search; the landing round (7d47281). Review: added verify-group-names to verify-all.

@@ -48,7 +48,7 @@ export function overviewItems(editor: Editor): OverviewItem[] {
       const first = editor.getSortedChildIdsForParent(s.id).flatMap((c) => editor.getShape(c) ?? []).map((c) => ({ c, b: editor.getShapePageBounds(c) })).filter((x) => x.b && textOf(x.c)).sort((a, b) => a.b!.y - b.b!.y || a.b!.x - b.b!.x)[0];
       return [{ ...base, text: first ? textOf(first.c) : "", inside: thoughtsIn(s) }];
     }
-    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}) }];
+    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}), ...(typeof s.meta.within === "string" ? { within: s.meta.within } : {}) }];
   });
 }
 

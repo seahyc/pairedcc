@@ -53,3 +53,40 @@ describe("agent documentation", () => {
     expect((readme + agentApi).match(/\/Users\/[a-z]+\/\S*/g) ?? []).toEqual([]);
   });
 });
+
+describe("AGENT_API.md starts with what most tasks need (item 135)", () => {
+  const start = /\n## Start here\n([\s\S]*?)\n## /.exec(agentApi)?.[1] ?? "";
+  const slug = (heading: string) => heading.toLowerCase().replace(/[^a-z0-9 -]/g, "").trim().replace(/ /g, "-");
+  const anchors = new Set([...agentApi.matchAll(/^#{1,4} (.+)$/gm)].map((m) => slug(m[1])));
+  it("is the first section, and short", () => {
+    expect(start, "AGENT_API.md should have a Start here section").not.toBe("");
+    expect(/^## (.+)$/m.exec(agentApi)?.[1]).toBe("Start here");
+    expect(new TextEncoder().encode(start).length).toBeLessThanOrEqual(3000);
+  });
+  it("names only tools that exist", () => {
+    const names = new Set(toolDefs.map((t) => t.name));
+    expect([...start.matchAll(/`(canvas_[a-z_]+)`/g)].map((m) => m[1]).filter((n) => !names.has(n))).toEqual([]);
+  });
+  it("covers the common loop", () => {
+    for (const tool of ["canvas_asks", "canvas_answer", "canvas_overview", "canvas_read", "canvas_undo_run"]) expect(start).toContain(`\`${tool}\``);
+  });
+  it("says a feedback item that is an Ask is answered with canvas_answer, not a reply", () => {
+    // A fresh agent that stopped at Start here would otherwise reply and leave the Ask waiting.
+    expect(start).toMatch(/item with an `ask` field[^.]*`canvas_answer`/);
+  });
+  it("links only to sections that exist", () => {
+    const links = [...start.matchAll(/\]\(#([a-z0-9-]+)\)/g)].map((m) => m[1]);
+    expect(links.length).toBeGreaterThan(0);
+    expect(links.filter((l) => !anchors.has(l))).toEqual([]);
+  });
+  it("puts the prototype sections after the core ones (item 136)", () => {
+    // An agent reading from the top meets overview, asks and the feedback queue before any prototype.
+    const headings = [...agentApi.matchAll(/^### (.+)$/gm)].map((m) => ({ name: m[1], at: m.index! }));
+    const http = agentApi.indexOf("\n## HTTP");
+    const mcp = headings.filter((h) => h.at < http);
+    const firstPrototype = mcp.findIndex((h) => /prototype/i.test(h.name));
+    expect(firstPrototype).toBeGreaterThan(0);
+    expect(mcp.slice(firstPrototype).filter((h) => !/prototype/i.test(h.name)).map((h) => h.name)).toEqual([]);
+    for (const core of ["Overview, then detail", "Asks", "The feedback queue"]) expect(mcp.slice(0, firstPrototype).map((h) => h.name)).toContain(core);
+  });
+});

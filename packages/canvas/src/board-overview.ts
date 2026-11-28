@@ -19,6 +19,8 @@ export type OverviewItem = Placed & {
   /** Counted when it holds text: open unless settled. */
   thought: boolean;
   settled: boolean;
+  /** A card lifted out of a frame so the frame would not cut it off (#155): the frame's id. It is counted in that frame's box. */
+  within?: string;
   /** For a frame: how many thoughts inside it are open and settled. */
   inside?: { open: number; settled: number };
 };
@@ -51,12 +53,15 @@ export function groupLabel(members: OverviewItem[]) {
 /** The board's groups, largest first, at most `limit`; `more` counts the groups left out; `open` and `settled` are the whole page's. */
 export function boardGroups(items: OverviewItem[], limit = OVERVIEW_LIMIT): { groups: OverviewGroup[]; more: number; open: number; settled: number } {
   const frames = items.filter((i) => i.frame !== undefined);
-  const loose = items.filter((i) => i.frame === undefined);
+  const frameIds = new Set(frames.map((f) => f.id));
+  // A card lifted out of a frame that is still here goes in that frame's box, not a pile.
+  const lifted = items.filter((i) => i.frame === undefined && i.within !== undefined && frameIds.has(i.within));
+  const loose = items.filter((i) => i.frame === undefined && !lifted.includes(i));
   const byId = new Map(items.map((i) => [i.id, i]));
   const piles = clusters(loose, 60, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
   const grouped = new Set(piles.flatMap((p) => p.ids));
   const memberSets = [
-    ...frames.map((f) => [f]),
+    ...frames.map((f) => [f, ...lifted.filter((l) => l.within === f.id)]),
     ...piles.map((p) => p.ids.map((id) => byId.get(id)!)),
     ...loose.filter((i) => !grouped.has(i.id)).map((i) => [i]),
   ];

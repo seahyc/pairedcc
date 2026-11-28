@@ -39,6 +39,27 @@ try {
   const labels: string[] = await ev("() => [...document.querySelectorAll('.overview-box, [class*=overview] button')].map((el) => el.textContent?.trim() ?? '')");
   if (process.argv[2]) await page.screenshot({ path: `${process.argv[2]}/group-names-overview.png` });
   check("the overview (O) shows that label on a box", labels.some((l) => l.includes(pile?.label ?? "\u0000")), { label: pile?.label, boxes: labels.slice(0, 6) });
+  // Item 132: a question written across a frame's edge is lifted onto the page (#155), where its
+  // only neighbour is the frame. It sits in the frame's group: the ask says so, and
+  // canvas_overview names that cluster after the frame, not after the question.
+  await page.keyboard.press("Escape");
+  await agent.call("canvas_page", { name: "Group names, lifted" });
+  const frameMade: any = await ev("(p) => p.create({ kind: 'frame', x: 0, y: 0, width: 620, height: 360, name: 'Kitchen quotes' })");
+  const frame = typeof frameMade === "string" ? frameMade : frameMade.id;
+  const inFrame = async (x: number, y: number, width: number, text: string) =>
+    ev("(p, e, a) => { const r = p.create({ kind: 'note', x: a.x, y: a.y, width: a.width, text: a.text }); const id = typeof r === 'string' ? r : r.id; e.reparentShapes([id], a.frame); return id; }", { x, y, width, text, frame }) as Promise<string>;
+  await inFrame(30, 50, 170, "Oakline Joinery: £8,400");
+  await inFrame(220, 50, 170, "Brook & Sons: £7,250");
+  const lifted = await inFrame(400, 300, 260, "Which of these quotes is cheapest?");
+  await ev("(p, e, id) => void p.select([id])", lifted);
+  await page.keyboard.press("ControlOrMeta+Enter");
+  const liftedAsk = await until(async () => (await agent.call("canvas_asks", { state: "all" })).asks.find((x: any) => x.id === lifted), "the lifted ask");
+  const where: any = await ev("(p, e, id) => { const s = e.getShape(id); return { onPage: s.parentId === e.getCurrentPageId(), within: s.meta.within ?? null }; }", lifted);
+  check("a question across the frame's edge is lifted onto the page", where.onPage && where.within === frame, where);
+  check("its ask says it sits in the frame's group", liftedAsk.group === "Kitchen quotes", { group: liftedAsk.group, frame: liftedAsk.frame?.name });
+  const ov2 = await agent.call("canvas_overview", {});
+  const withFrame = ov2.clusters.find((c: any) => c.ids.includes(lifted));
+  check("canvas_overview names that cluster after the frame, not the question", withFrame?.label === "Kitchen quotes", withFrame && { label: withFrame.label, ids: withFrame.ids.length });
   check("no page errors", errors.length === 0, errors.slice(0, 3));
   await agent.close();
   await context.close();
