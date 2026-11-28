@@ -760,6 +760,7 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 139. **Bot review findings on build-A's #166 and #169 still open on the branch (verified by reading the code, not yet reproduced).** (a) #166: the overview (O) labels a group by its first child's words even when Check me has hidden that child, so opening O gives away the answer. (b) #166: `thoughtsIn` skips every hidden shape, so a folded thread inside a frame or group drops out of that box's open/settled counts, though it is on the board as one line. (c) #169: `canvas_overview` clusters frames together with nearby loose cards and names the cluster after the frame, while O shows the frame and the loose pile as separate groups, so the agent's name points at a different set of objects than the person's map. Done when each has a failing-first test and a fix.
 
 ## Claims
+- 139 (full agent-usability attempt, PR from the pushed branch) | claude/sprint-agent-attempt-32 | 2026-11-28T01:50Z
 
 ## Done
 - 138. Bot review findings on #174, #177, #178 (build-A, slices in parallel): PRs #188 (a, b: rows levelled inside the answer's operation before the next row is placed; answer returns levelled cards; verify-option-dimensions 14/16 → 16/16, stacked on #184), #185 (c: group skip set is only what the frame context sent; verify-ask-inside-group 9/10 → 10/10), #186 (d-f: one primaryAnswer rule for folded line and pick; review dates in the resident prompt; recallable() for agent copies; 3 failing-first unit tests).
