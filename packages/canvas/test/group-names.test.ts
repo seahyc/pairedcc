@@ -90,8 +90,14 @@ describe("a frame beside a loose pile", () => {
   it("names the cluster after the pile, as the overview names that pile, not after the frame", () => {
     const { clusters } = overview(ed2) as { clusters: { ids: string[]; label?: string }[] };
     const c = clusters.find((x) => x.ids.includes("shape:p1"))!;
-    expect(c.ids).toContain("shape:frame");
     expect(c.label).toBe("Pricing ideas");
+  });
+  // Item 142 (c), review of #169: O draws the frame and the pile as two boxes, so the cluster an
+  // agent is given holds the pile alone; the name then points at the same objects as the person's map.
+  it("keeps the frame out of the pile's cluster, as O does", () => {
+    const { clusters } = overview(ed2) as { clusters: { ids: string[]; label?: string }[] };
+    expect(clusters.find((x) => x.ids.includes("shape:p1"))!.ids).toEqual(["shape:p1", "shape:p2"]);
+    expect(clusters.some((x) => x.ids.includes("shape:frame"))).toBe(false);
   });
 });
 
@@ -112,6 +118,38 @@ describe("a question lifted out of its frame (item 132)", () => {
   });
 });
 
+import { boardGroups } from "../src/board-overview";
+import { overviewItems } from "../src/overview-ui";
+
+describe("a card lifted out of a nested frame (review of #191)", () => {
+  // #155 lifts a card finished across the edge of "Quotes", a frame inside "Renovation", onto the
+  // page and records the nearest frame, Quotes, in meta.within. It moves with Renovation and sits
+  // over it, so at the page's level it belongs to Renovation, in O and for agents alike.
+  const frame = (id: string, parentId: string, x: number, y: number, w: number, h: number, name: string) => ({ id, type: "frame", parentId, x, y, rotation: 0, isLocked: false, opacity: 1, index: "a1", typeName: "shape", meta: { revision: 0 }, props: { w, h, name } });
+  const outer = frame("shape:reno", "page:p", 0, 0, 800, 500, "Renovation");
+  const inner = frame("shape:quotes", "shape:reno", 20, 20, 300, 200, "Quotes");
+  const lifted = { ...card("shape:lift", 250, 180, "Second quote came in lower"), meta: { revision: 0, within: "shape:quotes" } };
+  const far = card("shape:far", 2000, 0, "Garden");
+  const all = [outer, inner, lifted, far];
+  const fake4 = { ...fake, isShapeHidden: () => false, getAncestorPageId: () => "page:p", getCurrentPageId: () => "page:p", getSortedChildIdsForParent: (id: string) => all.filter((s) => s.parentId === id).map((s) => s.id), getCurrentPageShapesSorted: () => all, getCurrentPageShapes: () => all, getShape: (id: string) => all.find((s) => s.id === id),
+    getShapePageBounds: (s: any) => { const x = typeof s === "string" ? all.find((y) => y.id === s) : s; return x ? { x: x.x, y: x.y, w: x.props.w, h: x.props.h, maxX: x.x + x.props.w, maxY: x.y + x.props.h } : undefined; } };
+  const ed4 = new Proxy(fake4, { get: (t, k) => (k in t ? (t as Record<string | symbol, unknown>)[k] : () => { throw new Error(`fake editor lacks ${String(k)}`); }) }) as unknown as Editor;
+  it("O counts it in the outer frame's box, not as a loose pile", () => {
+    const { groups } = boardGroups(overviewItems(ed4));
+    expect(groups.find((g) => g.id === "shape:reno")!.count).toBe(2);
+    expect(groups.some((g) => g.id === "shape:lift")).toBe(false);
+  });
+  it("canvas_overview and O put it in the same group, named the same", () => {
+    const { clusters } = overview(ed4) as { clusters: { ids: string[]; label?: string }[] };
+    const { groups } = boardGroups(overviewItems(ed4));
+    const c = clusters.find((x) => x.ids.includes("shape:lift"))!;
+    const g = groups.find((x) => x.id === c.ids[0])!;
+    expect(c.ids).toEqual(["shape:reno", "shape:lift"]);
+    expect(g.count).toBe(c.ids.length);
+    expect(g.label).toBe(c.label);
+  });
+});
+
 describe("review of #179: a lifted question beside two frames", () => {
   // A neighbouring frame first in shape order must not name the cluster: the question still goes
   // with the frame it was lifted out of (`meta.within`), as its ask says.
@@ -126,7 +164,9 @@ describe("review of #179: a lifted question beside two frames", () => {
   it("names the cluster after the frame the question was lifted out of", () => {
     const { clusters } = overview(ed4) as { clusters: { ids: string[]; label?: string }[] };
     const c = clusters.find((x) => x.ids.includes("shape:q"))!;
-    expect(c.ids).toEqual(expect.arrayContaining(["shape:travel", "shape:kitchen"]));
+    // Since #191 (c) a frame is never in one cluster with another frame or a pile beside it: the
+    // question is in the cluster of the frame it was lifted out of, alone.
+    expect(c.ids).toEqual(["shape:kitchen", "shape:q"]);
     expect(c.label).toBe("Kitchen quotes");
   });
 });
