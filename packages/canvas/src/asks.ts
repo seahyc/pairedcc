@@ -369,8 +369,11 @@ export function describeAsk(editor: Editor, shape: TLShape) {
   const around = frameOf(editor, selected[0] ?? shape);
   const frame = around && keep([around]).length ? around : undefined;
   const skip = new Set<string>([shape.id, ...targets.map((t) => t.id)]);
+  // Another question the person wrote (one with its own ask) is context, not this ask's subject:
+  // said as such, so an agent answering this one does not answer that one too (item 150 c).
+  const otherQuestion = (id: string) => (id !== shape.id && askOf(editor.getShape(id as TLShapeId)) ? { question: true as const } : {});
   const givenTargets = targets.map((t) => {
-    if (t.type !== "frame") return { ...given(editor, t, 2000, keep), ...whereFrom(editor, t, shape) };
+    if (t.type !== "frame") return { ...given(editor, t, 2000, keep), ...whereFrom(editor, t, shape), ...otherQuestion(t.id) };
     const held = inside(editor, t, skip, keep);
     return { ...given(editor, t, 2000, keep), inside: held.inside, ...(held.more ? { insideMore: held.more } : {}) };
   });
@@ -421,7 +424,7 @@ export function describeAsk(editor: Editor, shape: TLShape) {
           },
         }
       : {}),
-    ...(group.members.length ? { cluster: group.members, ...(group.more ? { clusterMore: group.more } : {}) } : {}),
+    ...(group.members.length ? { cluster: group.members.map((m) => ({ ...m, ...otherQuestion(m.id) })), ...(group.more ? { clusterMore: group.more } : {}) } : {}),
     // What the group the card sits in is called, even when everything in it is already a target.
     ...(groupCalled ? { group: groupCalled } : {}),
     // Counted once the parts above are built: how many objects the person kept out of this ask.
@@ -605,7 +608,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   // The ask's row in the feedback queue: closed by an answer, still open after a clarifying question;
   // left out when the ask has no row (a starter card the person rewrote is still Paired's).
   const queue = hasCommentRow(authorOf(after), after.meta) ? (after.meta.status === "resolved" ? "resolved" : "open") : undefined;
-  return { ask: describeAsk(editor, after), answers: ids.map((id) => describeObject(editor, id, true)), ...(queue ? { queue } : {}) };
+  // Where the answer went relative to its ask ("under", or "right of" when the space under it was
+  // taken), so an agent need not read the board to know (item 150 d).
+  const placed = ids.length ? whereFrom(editor, editor.getShape(ids[0] as TLShapeId)!, after).relation : undefined;
+  return { ask: describeAsk(editor, after), answers: ids.map((id) => describeObject(editor, id, true)), ...(placed ? { placed } : {}), ...(queue ? { queue } : {}) };
 }
 
 /**

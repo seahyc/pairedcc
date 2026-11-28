@@ -404,3 +404,19 @@ describe("retryLabel: the selection bar's first button on one selected ask", () 
     expect(retryLabel(line(ask("waiting")))).toBeUndefined();
   });
 });
+
+describe("another question beside the ask (item 150 c)", () => {
+  it("is given as context the agent should not answer here, in targets and in the group", () => {
+    const prompt = buildPrompt({
+      question: "Which prints faster?",
+      targets: [{ id: "q1", type: "card", author: "Human", text: "Which is cheaper per page?", relation: "above", question: true }],
+      cluster: [
+        { id: "c1", type: "card", author: "Human", text: "Inkwell 300: 2p a page", relation: "above" },
+        { id: "q0", type: "card", author: "Human", text: "Which one is quieter?", relation: "left of", question: true },
+      ],
+    });
+    expect(prompt).toMatch(/above it \(another question the person asked, answered on its own; do not answer it here\): """Which is cheaper per page\?"""/);
+    expect(prompt).toMatch(/left of it \(another question the person asked[^)]*\): """Which one is quieter\?"""/);
+    expect(prompt).not.toMatch(/another question[^\n]*Inkwell/);
+  });
+});

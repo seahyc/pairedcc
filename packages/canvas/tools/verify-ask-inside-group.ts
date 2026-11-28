@@ -7,6 +7,7 @@
 // context's twelve objects, the ring past that cap is still given as the group. Starts its own
 // dev server (port 5194) unless PAIRED_URL is set:
 //   node --import tsx tools/verify-ask-inside-group.ts [screenshot dir]
+import { CLUSTER_GIVE } from "../src/arrangement";
 import { launch, mcpAgent, openCanvas, startServer, until } from "../eval/lib";
 
 const out = process.argv[2] ?? ".";
@@ -57,7 +58,7 @@ try {
   check("a question outside the ring is given no group", !(view2.cluster ?? []).some((m: any) => ids.includes(m.id)), view2.cluster);
   // The same ring inside a frame that holds more than the frame context's twelve objects: twelve
   // unrelated notes first in the frame's order, then the ring. The frame context gives the twelve;
-  // the ring is still given as the group (eight listed with relations, the rest counted), and
+  // the ring is still given as the group (up to CLUSTER_GIVE listed with relations, the rest counted), and
   // nothing the frame context gave is repeated in it.
   await agent.call("canvas_page", { name: "Framed ring" });
   const ring2: string[] = [];
@@ -79,16 +80,20 @@ try {
   const sent = (view3.frame?.objects ?? []).map((o: any) => o.id);
   const cl3 = view3.cluster ?? [];
   check("the frame context gives its twelve objects (the unrelated notes)", sent.length === 12 && sent.every((id: string) => loose.includes(id)), { frame: sent.length });
-  check("beyond the frame's cap, the ask is still given the ring: eight listed with relations, the rest counted", cl3.length === 8 && cl3.every((m: any) => ring2.includes(m.id) && typeof m.relation === "string") && cl3.length + (view3.clusterMore ?? 0) === ring2.length, { listed: cl3.length, more: view3.clusterMore, group: view3.group });
+  const cap = Math.min(CLUSTER_GIVE, ring2.length);
+  check(`beyond the frame's cap, the ask is still given the ring: ${cap} of ${ring2.length} listed with relations, the rest counted`, cl3.length === cap && cl3.every((m: any) => ring2.includes(m.id) && typeof m.relation === "string") && cl3.length + (view3.clusterMore ?? 0) === ring2.length, { listed: cl3.length, more: view3.clusterMore, group: view3.group });
   check("what the frame context gave is not repeated in the group", !cl3.some((m: any) => sent.includes(m.id)));
-  // The person leaves out the ring note nearest the question. It is withheld before the cap, so the
-  // next shareable note takes its place: still eight listed, and three (not four) counted.
+  // The person leaves out the ring note nearest the question. It is withheld before the cap, so it
+  // takes no slot and is not counted: the other shareable notes are listed up to the cap, the rest
+  // counted. (With the cap at twelve this twelve-note ring is listed whole; test/arrangement.test.ts
+  // covers a left-out member freeing its slot past the cap.)
   const ringGaps: number[] = await ev("(p, e, a) => { const q = e.getShapePageBounds(a.q); return a.ids.map((id) => { const b = e.getShapePageBounds(id); return Math.hypot(Math.max(0, b.x - q.maxX, q.x - b.maxX), Math.max(0, b.y - q.maxY, q.y - b.maxY)); }); }", { q: q3, ids: ring2 });
   const nearest = ring2[ringGaps.indexOf(Math.min(...ringGaps))];
   await ev("(p, e, id) => { const s = e.getShape(id); e.updateShape({ id, type: s.type, meta: { ...s.meta, leftOut: true } }); }", nearest);
   const view4: any = (await agent.call("canvas_asks", { state: "all" })).asks.find((a: any) => a.id === q3);
   const cl4 = view4?.cluster ?? [];
-  check("a left-out ring note frees its slot: eight shareable notes listed, three counted", cl4.length === 8 && !cl4.some((m: any) => m.id === nearest) && cl4.every((m: any) => ring2.includes(m.id)) && view4.clusterMore === 3, { listed: cl4.length, more: view4?.clusterMore, leftOutListed: cl4.some((m: any) => m.id === nearest) });
+  const shareable = ring2.length - 1, listed4 = Math.min(CLUSTER_GIVE, shareable);
+  check(`a left-out ring note is withheld before the cap: ${listed4} shareable notes listed, ${shareable - listed4} counted`, cl4.length === listed4 && !cl4.some((m: any) => m.id === nearest) && cl4.every((m: any) => ring2.includes(m.id)) && (view4.clusterMore ?? 0) === shareable - listed4, { listed: cl4.length, more: view4?.clusterMore, leftOutListed: cl4.some((m: any) => m.id === nearest) });
   check("no page errors", errors.length === 0, errors.slice(0, 3));
   await agent.close();
   await context.close();

@@ -4,8 +4,11 @@
 // still read "these three belong together, and the question is under them".
 import { clusters, type Placed } from "./clusters";
 
-/** How many members of the ask's group are given; the rest are counted. */
-export const CLUSTER_GIVE = 8;
+/**
+ * How many members of the ask's group are given; the rest are counted. Twelve, as a frame gives
+ * twelve of the objects it holds, so a "which is cheapest?" about a ring of ten needs nothing more (item 150 a).
+ */
+export const CLUSTER_GIVE = 12;
 /** Edges within this distance chain objects into one group (as the overview's clusters). */
 export const CLUSTER_GAP = 60;
 

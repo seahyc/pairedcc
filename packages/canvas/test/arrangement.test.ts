@@ -44,10 +44,11 @@ describe("the cluster an ask sits in", () => {
     expect(got.members[0].id).toBe("r0");
   });
   it("a left-out member past the cap frees its slot for the next one, and is not counted as more", () => {
-    // Twelve in a row; the person left out the nearest. Eight shareable are given, three counted.
+    // Four more than the cap in a row; the person left out the nearest. A full cap of shareable
+    // members is given (r1 onwards), and three are counted.
     const row = Array.from({ length: CLUSTER_GIVE + 4 }, (_, i) => box(`r${i}`, i * 240, 0));
     const got = clusterAround([...row, box("ask", 0, 160)], "ask", new Set(), CLUSTER_GIVE, (ids) => ids.filter((id) => id !== "r0"));
-    expect(got.members.map((m) => m.id)).toEqual(["r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8"]);
+    expect(got.members.map((m) => m.id)).toEqual(Array.from({ length: CLUSTER_GIVE }, (_, i) => `r${i + 1}`));
     expect(got.more).toBe(3);
   });
   it("an ask written on empty space inside a pile is about that pile", () => {
@@ -77,10 +78,17 @@ describe("an ask written on empty space inside a group (item 131)", () => {
     expect(got.members.find((m) => m.id === "l1")?.relation).toBe("left of");
   });
   it("still leaves out what the ask already gives, and caps and counts the rest", () => {
-    const got = clusterAround([...ring, middle], "ask", new Set(["t2"]));
+    const got = clusterAround([...ring, middle], "ask", new Set(["t2"]), 8);
     expect(got.members.map((m) => m.id)).not.toContain("t2");
-    expect(got.members).toHaveLength(CLUSTER_GIVE);
-    expect(got.more).toBe(ring.length - 1 - CLUSTER_GIVE);
+    expect(got.members).toHaveLength(8);
+    expect(got.more).toBe(ring.length - 1 - 8);
+  });
+  it("a group of up to twelve is given whole, as a frame's twelve objects are (item 150 a)", () => {
+    // A cheapest-of question about a ten-card ring must not have to look past the ask for the rest.
+    const got = clusterAround([...ring, middle], "ask");
+    expect(got.members).toHaveLength(ring.length);
+    expect(got.more).toBe(0);
+    expect(CLUSTER_GIVE).toBe(12);
   });
   it("a question outside every group's bounds is given none", () => {
     expect(clusterAround([...ring, box("ask", 900, 260, 120, 60)], "ask").members).toEqual([]);
