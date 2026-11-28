@@ -266,16 +266,16 @@ Last updated 2026-11-27T15:25Z by the review lane. Branch: `claude/sprint-int`.
 | e2e | 1 passed; needs Postgres and Redis, which `pnpm eval:canvas` now starts itself when they are installed |
 
 <!-- scorecard:start -->
-Scorecard from `pnpm eval:canvas` at 2026-11-26T13:42Z on `20ccac9`:
+Scorecard from `pnpm eval:canvas` at 2026-11-28T01:45Z on `8cabe62`:
 
 | Measure | Target | Result | Status |
 |---|---|---|---|
 | Acceptance scenario | every step passes | 10/10 steps | pass |
 | Ask loop | every step passes | 5/5 steps | pass |
-| Agent usability | ≥90% of ≥20 tasks | 23/24 (96%), median 3 tool calls | pass |
-| Safety of shared edits | 0 human edits lost | 0 lost; 10/10 races pass | pass |
+| Agent usability | ≥90% of ≥20 tasks | 32/32 (100%), median 2 tool calls | pass |
+| Safety of shared edits | 0 human edits lost | 0 lost; 11/11 races pass | pass |
 | Persistence | identical in a clean profile | identical | pass |
-| Performance | reported, not worse | 1k: load 1403 ms, pan 16.7 ms/frame; 10k: load 9864 ms, pan 78.5 ms/frame (worse: 10000 panMedianFrameMs 49 → 78.5) | regressed |
+| Performance | reported, not worse | 1k: load 919 ms, pan 16.6 ms/frame; 10k: load 6377 ms, pan 45.5 ms/frame | reported |
 | Existing product | green | build passes; tests: all packages pass | pass |
 <!-- scorecard:end -->
 
