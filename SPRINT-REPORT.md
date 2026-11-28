@@ -1,9 +1,9 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-28T13:45Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-28T12:30Z by the review lane. Branch: `claude/sprint-int`.
 
-## Read first (28 Nov, 13:45Z)
-- **Released `7d437a6`** (the day's first release) to `claude/release`. Deploy status is read on the next run. The previous release (`04f60c2`, 27 Nov) went **live at 15:24Z** (`paired.cc deploy` success).
+## Read first (28 Nov, 12:30Z)
+- **Released `de1f3da` (code as `7d437a6`)**, the day's first release, to `claude/release` at 12:27Z. Deploy status is read on the next run. The previous release (`04f60c2`, 27 Nov) went **live at 15:24Z** (`paired.cc deploy` success).
 - **What you will notice:** the overview (O) and the agent now see the same groups: a frame and the loose pile beside it are two groups, a card lifted out of a nested frame counts in its outer frame's box, folded threads inside frames are counted, and a thought you are recalling with Check me never names a group (it would give the answer away) (#191). An agent that adds a note or card without saying where now puts it beside what you have selected, or in the middle of your view, never covering anything or the window's controls (#190), and can put a comment note to the right of a card (#196).
 - **For agents:** the feedback queue says when a target's words changed after the comment (`editedAt`; bolding does not count) (#194); change results are about half the size and keep a card's lines (#195); AGENT_API explains closing a pick, row order, image sizes and what a frame ask covers (#192).
 - **Checks on `7d437a6`:** full workspace green with Postgres 16 and Redis (server 160, canvas 837, sdk 12, mcp 4, e2e 1); headless browser suite 83/83 (on the identical code before the squash) plus the server board-sync check by hand: pass.
@@ -80,7 +80,7 @@ Last updated 2026-11-28T13:45Z by the review lane. Branch: `claude/sprint-int`.
 | `3eabe49` (code as `65e7d79`) | 27 Nov 14:24Z | `success`, live on paired.cc 2026-11-27T14:38Z | P4 suggestions (#156), #157 to #173: options on dimensions, group names, overview phone fit, calm page ids, suggestion fixes, agent tasks 29 to 31 |
 | `04f60c2` (code as `e2f2b7f`) | 27 Nov ~15:22Z | `success`, live on paired.cc 2026-11-27T15:24Z | Dimension lines level across option cards (#174), an ask inside a ring of cards is about the ring (#178), overview gives picks and review dates (#177), agent task 32 (#175) |
 
-| `7d437a6` | 28 Nov ~13:45Z | pending (read next run) | Overview and agent clusters agree (#191), create without x/y beside the selection or in view (#190), notes beside (#196), queue editedAt (#194), compact change results (#195), AGENT_API (#192), plus #176 to #189 and #193 |
+| `de1f3da` (code as `7d437a6`) | 28 Nov 12:27Z | pending (read next run) | Overview and agent clusters agree (#191), create without x/y beside the selection or in view (#190), notes beside (#196), queue editedAt (#194), compact change results (#195), AGENT_API (#192), plus #176 to #189 and #193 |
 ## Notes from the 26 Nov review (still relevant)
 - **This run (11:55Z to 13:50Z): 52 PRs reviewed and merged, #40 to #90 and #96; none rejected.**
   Each was merged with the integration branch, then built and tested across the workspace
