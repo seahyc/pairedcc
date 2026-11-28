@@ -37,7 +37,7 @@ import {
   revision,
 } from "./operations";
 import { createPrompt } from "./learning/prompt-shape";
-import { bendFor, chooseAnchors } from "./connector-follow";
+import { bendFor, chooseAnchors, feedbackRoute } from "./connector-follow";
 import { convergeInput, placeBeside, synthesisText } from "./converge/model";
 import { overview } from "./overview";
 import { matchesText, richTextSearch } from "./read-filter";
@@ -266,10 +266,12 @@ export function connect(editor: Editor, value: unknown, actor: string, anchors?:
   // side of a card share one anchor point, so several of them fan out from it.
   // Facing sides; src/connector-follow.ts re-picks them when either object moves.
   const facing = chooseAnchors(a, b);
-  const startAnchor = anchors?.start ?? facing.start;
-  const endAnchor = anchors?.end ?? facing.end;
+  // A comment's arrow takes the facing sides too, unless that line would cross another card's words.
+  const routed = !anchors && input.relation === "feedback" ? feedbackRoute(editor, from, to) : undefined;
+  const startAnchor = anchors?.start ?? routed?.start ?? facing.start;
+  const endAnchor = anchors?.end ?? routed?.end ?? facing.end;
   // A fixed edge-to-edge route runs straight; the bend is tuned for the chosen sides only.
-  const bend = anchors ? 0 : bendFor(facing);
+  const bend = anchors ? 0 : routed?.bend ?? bendFor(facing);
   editor.markHistoryStoppingPoint("connect objects");
   editor.run(() => {
     editor.createShape({

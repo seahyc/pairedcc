@@ -82,6 +82,7 @@ const CHECKS = [
   { name: 'ask-image', file: 'verify-ask-image.mjs', args: (d) => [d] },
   { name: 'ask-unclipped', file: 'verify-ask-unclipped.mjs', args: (d) => [d] },
   { name: 'annotate-clear', file: 'verify-annotate-clear.mjs', args: (d) => [d] },
+  { name: 'arrow-clear', file: 'verify-arrow-clear.mjs', args: (d) => [d] },
   { name: 'calm-pages', file: 'verify-calm-pages.mjs', args: (d) => [d] },
   { name: 'note-beside', file: 'verify-note-beside.mjs', args: (d) => [d] },
   { name: 'phone-margin', file: 'verify-phone-margin.mjs', args: (d) => [d] },
