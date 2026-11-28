@@ -7,9 +7,7 @@ import { HUMAN_CARD_W } from "./agent-operations";
 import { richTextPlain } from "./operations";
 import { SUGGEST_FONT, SUGGEST_LINE, SUGGEST_LINE_TOUCH, SUGGEST_PAUSE_MS, selectionKey, suggestScale, suggestSize, suggestSpot, suggestionsFor, type Rect, type Selected } from "./suggest";
 import { TOUCH } from "./keys";
-
-/** The window's own controls over the board: suggestions never go under them. */
-const CHROME = ".topbar, .tool-strip, .bottom-left, .zoom-controls, .left-panel, .right-panel, .toast";
+import { windowControls } from "./window-controls";
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
 
@@ -67,13 +65,7 @@ export function offerFor(editor: Editor): Offer | null {
   const under = bar && bar.top >= bottom - 1 ? (bar.bottom - bottom + 6) / zoom : 0;
   // The window's controls, as page rectangles: covering the tool strip or the zoom bar is as bad
   // as covering a card. Only what is shown counts.
-  const chrome: Rect[] = [];
-  for (const el of document.querySelectorAll(CHROME)) {
-    const r = el.getBoundingClientRect();
-    if (!r.width || !r.height) continue;
-    const a = editor.screenToPage({ x: r.left, y: r.top }), b = editor.screenToPage({ x: r.right, y: r.bottom });
-    chrome.push({ x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y });
-  }
+  const chrome: Rect[] = windowControls(editor);
   const v = editor.getViewportPageBounds(), view = { x: v.x, y: v.y, w: v.w, h: v.h };
   const sel = { x: box.x, y: box.y, w: box.w, h: box.h };
   // Both suggestions if they fit; on a narrow window, the first alone rather than none.

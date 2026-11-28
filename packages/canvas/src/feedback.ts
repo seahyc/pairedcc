@@ -2,6 +2,8 @@
 // the board, across pages, with the agent's replies. One list feeds the Feedback panel,
 // the agent API (`feedback` op) and the JSON/Markdown export.
 
+import { richTextSearch } from "./read-filter";
+
 export const HUMAN_AUTHOR = "Human";
 
 export type FeedbackKind = "comment" | "pick" | "reject" | "ink";
@@ -24,7 +26,8 @@ export type FeedbackSource = {
   inkTargets?: string[];
 };
 
-export type FeedbackTarget = { id: string; type?: string; name?: string; text?: string; missing?: true };
+/** `editedAt`: when the target's words last changed, given only when that was after the item was made. */
+export type FeedbackTarget = { id: string; type?: string; name?: string; text?: string; missing?: true; editedAt?: string };
 export type FeedbackReply = { id: string; author: string; text: string; createdAt?: string };
 export type FeedbackItem = {
   id: string;
@@ -61,6 +64,21 @@ function commentTargets(meta: Record<string, unknown>) {
   return typeof meta.targetId === "string" ? [meta.targetId] : [];
 }
 
+/**
+ * The timestamps a text edit leaves on an object: `updatedAt` whenever the rich text changes
+ * (formatting too), `wordsEditedAt` only when the words do. Words are read as they show on the
+ * canvas, with runs inside a paragraph joined, so bolding all or part of a word is not a change.
+ * A card from before `wordsEditedAt` existed keeps its last text change as its word change.
+ */
+export function textEditStamps(before: unknown, after: unknown, meta: Record<string, unknown>, now: number) {
+  if (before === after) return undefined;
+  if (richTextSearch(before) !== richTextSearch(after)) return { updatedAt: now, wordsEditedAt: now };
+  // First formatting change: record the words' last change (or null for none) so the queue does
+  // not fall back to the updatedAt this change moves.
+  const known = "wordsEditedAt" in meta ? {} : { wordsEditedAt: typeof meta.updatedAt === "number" ? meta.updatedAt : null };
+  return { updatedAt: now, ...known };
+}
+
 /** Build the queue from board objects. Open items first, then oldest first. */
 /**
  * Only these objects can be feedback items: a pick or cross-out, a comment, or ink (see
@@ -84,17 +102,21 @@ export function hasCommentRow(author: string, m: Record<string, unknown>) {
 export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
   const byId = new Map(sources.map((s) => [s.id, s]));
   const items: FeedbackItem[] = [];
-  const describe = (id: string): FeedbackTarget => {
+  const describe = (id: string, since: unknown): FeedbackTarget => {
     const s = byId.get(id);
     if (!s) return { id, missing: true };
-    return { id, type: s.type, name: s.name, ...(s.text ? { text: clip(s.text) } : {}) };
+    // Edited after the comment (or pick, or ink): the item may already be dealt with, or no longer fit.
+    // A card from before wordsEditedAt existed goes by updatedAt, its last text change.
+    const edited = "wordsEditedAt" in s.meta ? s.meta.wordsEditedAt : s.meta.updatedAt;
+    const after = typeof edited === "number" && typeof since === "number" && edited > since;
+    return { id, type: s.type, name: s.name, ...(s.text ? { text: clip(s.text) } : {}), ...(after ? { editedAt: iso(edited) } : {}) };
   };
   const item = (
     s: FeedbackSource,
     kind: FeedbackKind,
     status: unknown,
     targetIds: string[],
-    times: { createdAt?: unknown; updatedAt?: unknown; resolvedAt?: unknown },
+    times: { createdAt?: unknown; updatedAt?: unknown; resolvedAt?: unknown; editsSince?: unknown },
   ): FeedbackItem => {
     const resolved = status === "resolved";
     return {
@@ -107,7 +129,7 @@ export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
       pageId: s.pageId,
       pageName: s.pageName,
       targetIds,
-      targets: targetIds.map(describe),
+      targets: targetIds.map((id) => describe(id, times.editsSince ?? times.createdAt)),
       ...(s.bounds ? { position: { x: Math.round(s.bounds.x), y: Math.round(s.bounds.y) }, bounds: round(s.bounds) } : {}),
       createdAt: iso(times.createdAt),
       updatedAt: iso(times.updatedAt),
@@ -135,6 +157,8 @@ export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
           createdAt: m.createdAt,
           updatedAt: m.updatedAt ?? m.createdAt,
           resolvedAt: m.resolvedAt,
+          // An Ask made from an existing card: what the agent sees is the card as it was sent.
+          editsSince: isAsk(m) && typeof (m.ask as { askedAt?: unknown }).askedAt === "number" ? (m.ask as { askedAt: number }).askedAt : undefined,
         }),
         ...(m.ask && typeof m.ask === "object" && typeof (m.ask as { state?: unknown }).state === "string"
           ? { ask: (m.ask as { state: string }).state }
