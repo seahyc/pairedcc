@@ -6,7 +6,8 @@
  * to the nearest clear spot around the target, sliding out from close beside it. It stays
  * under the target if that is within NOTE_STAY_UNDER of the card, so a note keeps to its card's
  * column on an open board; on a crowded grid it no longer runs hundreds of pixels down the page
- * past every row (item 118 (c)). It never covers anything.
+ * past every row (item 118 (c)). It never covers anything. With `side: "beside"` the same holds
+ * to the right of the target (item 140 (a)).
  */
 export type Rect = { x: number; y: number; w: number; h: number };
 
@@ -17,6 +18,8 @@ export const NOTE_MIN_GAP = 12;
 export const NOTE_AIR = 6;
 /** Under the target is kept while it is no further than this from the card. */
 export const NOTE_STAY_UNDER = 200;
+/** Asked for beside, the note keeps to the right while it is no further than this from the card. */
+export const NOTE_STAY_BESIDE = 600;
 const FAR = 1200, STEP = 4;
 
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -47,14 +50,19 @@ function nearest(t: Rect, size: { w: number; h: number }, others: Rect[], side: 
   return undefined;
 }
 
-export function notePlace(target: Rect, size: { w: number; h: number }, others: Rect[]): Rect {
-  const usual = at(target, size, "under", NOTE_GAP, false);
+/** Which side the note is for: under the target (the default), or beside it (to the right). */
+export type NoteSide = "under" | "beside";
+
+export function notePlace(target: Rect, size: { w: number; h: number }, others: Rect[], side: NoteSide = "under"): Rect {
+  const first: Side = side === "beside" ? "right" : "under";
+  const usual = at(target, size, first, NOTE_GAP, false);
   if (clear(usual, others)) return usual;
-  const under = nearest(target, size, others, "under");
-  if (under && under.d <= NOTE_STAY_UNDER) return under.spot;
-  let best = under;
-  for (const side of ["right", "above", "left"] as const) {
-    const found = nearest(target, size, others, side);
+  const near = nearest(target, size, others, first);
+  if (near && near.d <= (side === "beside" ? NOTE_STAY_BESIDE : NOTE_STAY_UNDER)) return near.spot;
+  let best = near;
+  for (const s of ["under", "right", "above", "left"] as const) {
+    if (s === first) continue;
+    const found = nearest(target, size, others, s);
     if (found && (!best || found.d < best.d)) best = found;
   }
   if (best) return best.spot;
