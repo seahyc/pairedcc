@@ -1,8 +1,17 @@
 # Canvas sprint report, 27 Nov to 3 Dec 2026
 
-Last updated 2026-11-27T15:25Z by the review lane. Branch: `claude/sprint-int`.
+Last updated 2026-11-28T13:45Z by the review lane. Branch: `claude/sprint-int`.
 
-## Read first (27 Nov, 15:25Z)
+## Read first (28 Nov, 13:45Z)
+- **Released `7d437a6`** (the day's first release) to `claude/release`. Deploy status is read on the next run. The previous release (`04f60c2`, 27 Nov) went **live at 15:24Z** (`paired.cc deploy` success).
+- **What you will notice:** the overview (O) and the agent now see the same groups: a frame and the loose pile beside it are two groups, a card lifted out of a nested frame counts in its outer frame's box, folded threads inside frames are counted, and a thought you are recalling with Check me never names a group (it would give the answer away) (#191). An agent that adds a note or card without saying where now puts it beside what you have selected, or in the middle of your view, never covering anything or the window's controls (#190), and can put a comment note to the right of a card (#196).
+- **For agents:** the feedback queue says when a target's words changed after the comment (`editedAt`; bolding does not count) (#194); change results are about half the size and keep a card's lines (#195); AGENT_API explains closing a pick, row order, image sizes and what a frame ask covers (#192).
+- **Checks on `7d437a6`:** full workspace green with Postgres 16 and Redis (server 160, canvas 837, sdk 12, mcp 4, e2e 1); headless browser suite 83/83 (on the identical code before the squash) plus the server board-sync check by hand: pass.
+- **Housekeeping:** #169 had committed a Vite build artifact (`packages/web/vite.config.ts.timestamp-*.mjs`, containing a local path); removed and ignored. Claim 144 (at most four unfinished threads) lapsed after 10 h with no PR and is back in the backlog.
+- **Merged by another session, not reviewed by this lane:** #176, #179 to #189 and #193 (27 Nov 23:20Z to 28 Nov 10:21Z). The workspace and the full browser suite pass with them in.
+- Open, not yet reviewed: #198, #200, #201 (items 146 to 148, opened during this run).
+
+## Earlier (27 Nov, 15:25Z)
 - **Third release of the day** (the daily limit): #174, #175, #177 and #178 on top of what is live, pushed to `claude/release` at about 15:25Z. Deploy status will be read on the next run.
 - **What you will notice:** when the agent lays options out on dimensions, each dimension line now sits at the same height on every card, even when one headline wraps to more lines (#174). A question written in the empty middle of a ring of cards is now about that ring: the agent is given the whole group (#178, P2 "about everything over here").
 - **For agents:** the overview and `read` now give a folded thread's picked answer and a settled thought's next review date as an ISO date (#177).
@@ -69,8 +78,9 @@ Last updated 2026-11-27T15:25Z by the review lane. Branch: `claude/sprint-int`.
 | `c6c406c` | 26 Nov ~16:10Z | `success`, live on paired.cc 2026-11-26T16:12Z | Everything to #143: the card is the question, settled (S), Check me on answers, P2 arrangement |
 | `7013ae3` | 27 Nov 01:32Z | `success`, live on paired.cc 2026-11-27T01:38Z | P1 fold and focus, P3 overview, P5 recall (#144 to #149) |
 | `3eabe49` (code as `65e7d79`) | 27 Nov 14:24Z | `success`, live on paired.cc 2026-11-27T14:38Z | P4 suggestions (#156), #157 to #173: options on dimensions, group names, overview phone fit, calm page ids, suggestion fixes, agent tasks 29 to 31 |
-| `e021a25` (code as `e2f2b7f`) | 27 Nov ~15:25Z | pending (read next run) | Dimension lines level across option cards (#174), an ask inside a ring of cards is about the ring (#178), overview gives picks and review dates (#177), agent task 32 (#175) |
+| `04f60c2` (code as `e2f2b7f`) | 27 Nov ~15:22Z | `success`, live on paired.cc 2026-11-27T15:24Z | Dimension lines level across option cards (#174), an ask inside a ring of cards is about the ring (#178), overview gives picks and review dates (#177), agent task 32 (#175) |
 
+| `7d437a6` | 28 Nov ~13:45Z | pending (read next run) | Overview and agent clusters agree (#191), create without x/y beside the selection or in view (#190), notes beside (#196), queue editedAt (#194), compact change results (#195), AGENT_API (#192), plus #176 to #189 and #193 |
 ## Notes from the 26 Nov review (still relevant)
 - **This run (11:55Z to 13:50Z): 52 PRs reviewed and merged, #40 to #90 and #96; none rejected.**
   Each was merged with the integration branch, then built and tested across the workspace
@@ -284,6 +294,13 @@ recorded with #57 (a fresh one is PR #97, not yet reviewed). Performance reads "
 not: see Read first.
 
 ## Merged
+- [#196](https://github.com/seahyc/pairedcc/pull/196) canvas_annotate `side: "beside"` (889b579). verify-note-beside 17/17.
+- [#197](https://github.com/seahyc/pairedcc/pull/197) Playtest feedback 8 (import and paste) marked addressed (1f96a1e). Docs only.
+- [#192](https://github.com/seahyc/pairedcc/pull/192) AGENT_API: closing a pick, row order, image size, frame ask scope (7f86664). Review: resolved the conflict with the moved prototype sections; manifest regenerates identical.
+- [#190](https://github.com/seahyc/pairedcc/pull/190) canvas_create without x/y goes beside the selection or in view, clear of everything (08a6927). Review: resolved an AGENT_API conflict; verify-create-spot 14/14, 6 related checks pass.
+- [#191](https://github.com/seahyc/pairedcc/pull/191) O and canvas_overview give the same groups; a recalled thought never names one (11fcd89). Review: resolved a verify-all conflict; verify-overview-review 8/8, 7 related checks pass.
+- [#194](https://github.com/seahyc/pairedcc/pull/194) Feedback queue `editedAt` on targets whose words changed (e7f01ff). Review: resolved a verify-all conflict; verify-feedback-edited 11/11.
+- [#195](https://github.com/seahyc/pairedcc/pull/195) Change results give text and style, not rich text; read's pages are id and name (7d437a6). Full browser suite 83/83 on the merged code.
 - [#178](https://github.com/seahyc/pairedcc/pull/178) P2: an ask written on empty space inside a group is about that group (0769640). Review: 4 of its unit tests fail with the fix removed; verify-ask-inside-group 6/6.
 - [#174](https://github.com/seahyc/pairedcc/pull/174) Dimension lines line up across option cards, levelled as derived space so the answer still undoes (9cc9356). verify-option-dimensions 12/12.
 - [#175](https://github.com/seahyc/pairedcc/pull/175) Agent task 32: a question across a frame's edge is about the frame (d827340). Self-test 1/1.
@@ -473,4 +490,4 @@ through GitHub and show as merged; #2 to #7 show as closed because they were squ
     with this link can edit", but another signed-in user gets 404 until invited through Share.
 
 ## Not yet covered
-Open and not yet reviewed: #159, #162, #163, #165 to #170.
+Open and not yet reviewed: #198, #200, #201.
