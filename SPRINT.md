@@ -774,7 +774,6 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 ## Claims
 - 147 (a comment's arrow across another card's words) | claude/sprint-arrow-clear | 2026-11-28T12:00Z
 - 146 (a part-formatted word reads as two words) | claude/sprint-plain-runs | 2026-11-28T12:00Z
-- 144 (at most four unfinished threads in view) | claude/sprint-open-threads | 2026-11-28T02:17Z
 
 ## Done
 - 145. Bot review findings on #190, #191, #194, #195 (build-B, four slices in parallel): all seven reproduced first. #190 3e6fed6 (made on the page when placed without x/y, so a frame at the origin never clips it; narrow in-view gaps found from edge candidates; a new frame never covers a frame; verify-create-spot 11/14 → 14/14), #191 1e7fb57 (one `liftedFrame` rule for O and canvas_overview, the outer frame; parity test 2 failed → pass), #194 e0d9696 (`meta.wordsEditedAt` only when the words change; an Ask counts from `askedAt`; verify-feedback-edited 9/11 → 11/11), #195 7003817 (change results and read keep a card's lines; self-test 32/32). #190 and #191 merged with the integration branch (conflicts with #193 and #187).

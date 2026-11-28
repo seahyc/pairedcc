@@ -6,3 +6,4 @@ dist/
 .gstack/
 e2e/test-results/
 packages/canvas/eval/agent-runs/work/
+*.timestamp-*.mjs
