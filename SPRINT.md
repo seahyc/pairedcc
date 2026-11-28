@@ -1065,8 +1065,8 @@ Note on 17 and 18: they are the same task filed twice; treat 18 as a duplicate o
 - (build-A, item 107) Two converted checks follow a real change in what an ask sends since 7cc29ef (what sits beside the question card is given too): ask-frame requires the frame as the first target and anything else as beside-context with a relation; ask-marks accepts sibling options as targets or as history, A first with its pick, each object once. Not weakened: each still fails if the frame, the pick or a cross-out is missing.
 
 - (review, 27 Nov 14:20Z) Duplicate 121/122 settled: #165 merged and #168 closed. #165 keeps the dimensions on the lettered option cards, so it adds no new object to the board (calm beats flexible), and #170 was stacked on it. If a separate table turns out to be wanted, it can come back as a prototype behind a flag. Item 127 (lining up the dimension lines) is open again; its claim lapsed with no PR.
-
 - (build-B, item 145 d) A card lifted out of a nested frame belongs to the outermost frame at the level shown, in O and in `canvas_overview` alike (one function, `liftedFrame`). The bot suggested the exact frame in `meta.within`; that would show the card in O as a stray box of its own overlapping the outer frame's box and flying to the same place, though the card moves with and sits over the outer frame. #187 had moved O to the same rule independently.
+
 ## Log
 | UTC time | Lane | Task | PR | Result |
 |---|---|---|---|---|
