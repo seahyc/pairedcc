@@ -31,70 +31,9 @@ Tools: `canvas_sessions`, `canvas_read`, `canvas_get`, `canvas_create`, `canvas_
 
 Composition tools: `canvas_scene`, `canvas_arrange`, `canvas_duplicate`, `canvas_group`.
 
-### Learning prompts (prototype)
-
-`canvas_learn` is a prototype tool for learning mode. Use it only when the person has asked to understand or learn something. It runs only in a tab opened with `?prototype=learning`; other tabs refuse it and change nothing. It places a prompt card and hides `hideIds` until the person answers:
-
-- In `predict` mode, the person guesses before the result is shown.
-- In `generate` mode, the person explains in their own words before your explanation is shown.
-
-Only objects an agent made can be hidden; the person's own work is refused. The person can always skip in one click, and the hidden objects then appear directly. Their layer names are hidden too. Agents cannot answer a prompt. Read its `props.status` (open, committed or skipped) and `props.response`, then compare the answer with the outcome. To try it by hand, open the canvas with `?prototype=learning` and use **Learning prototype page**.
-
-On every board the person can also ask to be checked on one of your answers (**Check me**, key E). That makes a prompt with `meta.check` set to the answer's id and `createdBy: "Human"`; your answer is hidden from the person (not from you) until they commit or skip, and `meta.revealAfter` on it names the prompt. Do not repeat the answer elsewhere while such a prompt is open; read its `props.response` afterwards if the person asks how they did.
-
-Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
-
-Data prototype tools: `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` (see [Data prototype](#data-prototype)).
-
-Converge prototype tool: `canvas_converge` (see [Converge](#converge-prototype)).
-
-Prototype tools (`canvas_learn`, `canvas_converge` and the data tools) are flagged `prototype` in `tools/tool-defs.ts`. The local stdio server always offers them. The hosted endpoint offers them while `hostedPrototypeTools` is true (the default); set it to false and run `pnpm --filter @pairedcc/canvas manifest` to leave them, and their guidance in the instructions, out of the hosted manifest.
-
 ### Overview, then detail
 
 `canvas_overview` returns one level of the current page: ID, type, name, author, revision, rounded bounds, `children` (how many objects it holds, present only when it holds any), `locked: true` (present only when the object or a frame around it is locked; agents cannot change it, so check this before moving or editing), `leftOut: true` (present only when the person left it out of asks; do not use it to answer one), `mark` (`picked` or `rejected`, present only when the person judged it), `style` on cards (as `read` gives it), `settled: true` (present only when settled), `review` (a settled thought's next return for review, as an ISO date; present only when it has one), `pick` on a folded thread's ask (see Folded threads), `chart` on charts (`summary`, the one line `read`'s `widget` gives, or `stale: true`), and an 80-character text snippet for each object, plus the page list, counts by type and the open-mark count. It also returns `clusters`: piles of nearby objects at that level, each with `ids` (the first 50 members), `count`, `bounds` and `label`, largest first (at most 50 clusters). `label` is what the person's overview (O) calls the group: a frame's name, else a heading in it, else its first words in reading order, passing over an ask card. A cluster that holds a frame and a pile beside it is named after the pile, unless the pile's only words are a question (such as one lifted out of the frame's edge, below): then it is the frame's. Objects are in one cluster when their edges are within 60 px of a neighbour's, in chains, and arrows are left out. Arrangement is often how the person groups ideas without drawing a frame, so treat a cluster as a likely group and ask before acting on it. There are no props, meta or full text. Pass `parentId` to list a frame's children, and `limit` (default 100) with `cursor` (from `nextCursor`) to page through a large level. Then use `canvas_read` with `ids`, or `canvas_get`, for detail on just those objects. To find objects by their words, pass `text` to `canvas_read`: only objects whose text or name contains it (ignoring case and accents) are returned, and it combines with `ids`. Marks and annotations are still listed in full.
-
-### Data prototype
-
-A prototype of the working spec's first acceptance scenario: a dataset, a bar chart over it that the person filters by clicking, an exact read of what the chart shows, and stale marking when an input changes. These tools are labelled PROTOTYPE in their descriptions and, today, every connected agent sees them, but a tab runs them only when it was opened with `?prototype=data`. Any other tab refuses `canvas_dataset`, `canvas_chart`, `canvas_chart_state` and `canvas_cell` with an error that says so, and changes nothing; ask the person to open the canvas with the flag. Datasets and charts already on a saved board still show in every tab. To try it by hand, open the canvas with `?prototype=data` and use **Data prototype page**. With the same flag, the person can drop a `.csv` file on the canvas to create a dataset: a column is a number column when every value in it is numeric, otherwise text. A file with any problem creates nothing, and a message names the row and column. Use synthetic or openly licensed data only.
-
-- `canvas_dataset` places a table. Pass `synthetic: "orders"` for the built-in synthetic café orders (48 rows: `month`, `region`, `product`, `orders`), or supply `columns` (`name`, `type` text or number) and `rows` (at most 5,000), with a `title` and a `source` that says where the data came from. Every row must have every column with the right type; unknown columns are rejected.
-- `canvas_chart` places a bar chart over a dataset on the current page: `datasetId` and a `state` of `x` (category column), `y` (numeric column, ignored by count), `aggregate` (`sum`, `mean` or `count`, default sum), `filter` (`{column: [values]}`, keeping rows whose value is listed) and `selected` (bar keys). The person toggles filter chips and selects bars by clicking; both change this same state.
-- `canvas_chart_state` changes a chart's `state` exactly as clicking would and recomputes it on the dataset's current data. Pass `id` and `expectedRevision`; omitted fields keep their value, while `filter` and `selected`, when given, replace the old ones: `{ "filter": {} }` clears every filter and `{ "selected": [] }` clears the selection. A stale revision or a locked chart is rejected. Read first: the person may have filtered it.
-- `canvas_cell` sets one value: `id`, `expectedRevision`, zero-based `row`, `column` and `value` (of the column's type). It bumps the dataset's content version, so everything derived from the dataset shows as stale.
-- `canvas_create` takes `inputs`: the IDs of the objects a result was derived from, such as the chart you are explaining. Their current content versions are stored in the new object's `meta.inputs`. Any kind of object can record inputs.
-
-`read` summarises data objects so a board never dumps every row. Their `props` leave out `data` and `bars`; instead each carries:
-
-| Field | On | Meaning |
-|---|---|---|
-| `dataset` | dataset | `title`, `source`, `columns`, `rowCount`, `version` (content version, bumped only when data changes). `get` adds `rows`; `read` never does. |
-| `widget` | chart | What the chart shows: `state`, `summary` (for example "sum of orders by region; product = Cake; 16 of 48 rows"), `rowsInView`, `bars` (`key`, `value`, `count`), `selected` (selected bars, each with the `rows` behind it), `datasetId`, `datasetVersion` (the dataset version the bars were computed from) and the chart's own content `version`. |
-| `stale` | any derived object | Present only when stale: a list of `{ id, recorded, current }`, one per stale input. `current` differs from `recorded` when that input changed since it was used, and is `null` if it was deleted. An input that is unchanged but is itself stale is listed with `upstream`, the same list for that input, so a note derived from a chart is stale as soon as the chart's dataset changes, and `upstream` names the dataset. When several paths lead through the same input, its `upstream` is given the first time and later entries for it carry `repeated: true` instead, so the list stays short on boards where notes build on notes. A chart's input is its dataset; any other object's inputs are its `meta.inputs`. |
-
-When a chart is stale, `widget` still describes what the person sees: the older `bars` and `selected`, without `summary`, `rowsInView` or selected rows, plus a `note` saying so. Set its state (even unchanged) to recompute it on current data. The person sees a dashed chart with a Recompute button, and a "stale" flag on each derived object. A filter or selection on a stale chart, by the person or an agent, also recomputes it.
-
-Suggested loop: read the chart's `widget`, cite `summary` and the selected values in your explanation, create it with `inputs: [chartId]`, and re-read when the person changes something. If your note is stale, revise it rather than repeating it.
-
-### Converge (prototype)
-
-`canvas_converge` pulls several alternatives, branches or hypotheses into one synthesis. It runs only in a tab opened with `?prototype=converge`. Pass `sourceIds` (2 to 20 objects on the open page, each once, none hidden) and `text` (what they add up to and where they still disagree). Optionally pass `points`, claims that each cite the `sourceIds` they rest on, a `name`, and an `x`, `y` position. By default the card goes 80 px right of a column of sources (top-aligned) or 80 px below a row of them (left-aligned), so no arrow crosses a source.
-
-It creates one agent card with `meta.role: "synthesis"`, `meta.convergedFrom` (the source IDs) and `meta.inputs` (each source's version at that moment), plus a derived-from arrow from each source labelled A, B, C… The card lists each point with the letters of the sources it cites, and keeps `meta.points`. The result is `{ synthesis, sources, labels, connections }`, where `labels` maps each source ID to its letter. Because the sources are recorded as inputs, `read` reports the synthesis as `stale` once any source changes, and the board flags it. Revise it then. The sources are never moved or deleted, and the whole operation is one run, so `canvas_undo_run` removes the card and arrows together.
-
-The person can converge too: open the canvas with `?prototype=converge`, select two or more objects and press **Pull into a synthesis** in Properties. That makes the same linked card, in their handwriting and empty, ready for them to write their own conclusion.
-
-### Relationships, sources and transformations (prototype)
-
-`canvas_get` adds three read-only fields from the working spec's proposed primitives. They are derived from what the board already records, so they never disagree with it:
-
-| Field | Meaning |
-|---|---|
-| `relationships` | `outgoing` and `incoming` lists for this object on its page. Each has `kind` (`alternative`, `reference`, `derived-from`, `feedback`, `depends-on`, `annotates`, or `decorative` for a hand-drawn arrow with no meaning), `from`, `to`, `via` (`arrow`, `inputs`, `chart` or `annotation`), and `arrowId`, `label` and `author` where they apply. |
-| `source` | Datasets and images: `origin` (a dataset's source note) or `url`, a dataset's content `version`, and `generated`, true when an agent made it without naming an origin. |
-| `transformation` | Charts: `name: "aggregate"`, the dataset and the version used as `inputs`, and the chart state as `parameters`. Objects created with `inputs`: `name: "derive"` and those inputs. |
-
-Use `relationships` to see what an object depends on and what depends on it before you change or remove it.
 
 ### Undo one agent operation
 
@@ -140,7 +79,7 @@ Answering is three steps, the same for the resident agent (`pnpm --filter @paire
 
 2. **Say you have it.** `ask_status` with `{ id, state: "working", note: "reading 2 cards" }`. The note appears on the ask. This step is optional: when you can answer at once, go straight to `answer`, which is accepted from `waiting` as from `working`; send `working` when the answer will take more than a moment (reading the board, thinking it through), so the person sees it has been picked up. If you cannot answer, send `state: "failed"` with a plain `error`; the human gets a Retry button, and a retry reaches the wait endpoint as a new attempt.
 
-3. **Answer.** `answer` with `{ id, text }` for one short card (about 60 words; over 90 is cut, over 700 characters is rejected), or `{ id, alternatives: [..] }` with two to four short options, which are lettered and placed side by side for the human to pick (P) or cross out (X); on a window too narrow for one row (a phone) they wrap into rows that fit, and a card narrows to the window. With alternatives, name what they differ on: `dimensions` (one to four short names, at most 40 characters each, such as `["Cost to try", "Risk"]`) and `values`, one row per alternative in the same order with one short value per dimension (cut at 12 words). Each option card then lists the dimensions under its headline, in the same order, with the names in bold, so the person compares down a line; keep headlines short (with dimensions, a headline is cut at 30 words). When the answer lands on the page the person has open, each dimension line is levelled across the row: a card whose headline or value took fewer lines gets space above the next line, kept as `meta.levelPads` (page units per dimension, derived like a card's height, so it never changes the card's text or revision and is dropped when the text is edited). Option cards carry `meta.dimensions`. Dimensions without alternatives, or values that do not line up, are rejected. If the person is looking at the ask when the answer lands, their view pans to show all of it. Add `read` to say what you read, and `question: true` when your text is a clarifying question back (the ask then stays open in the queue). The cards go under the ask (or beside it, level with it, when the space under it is taken, such as by later asks stacked below), on the ask's page even if the human has since opened another page (they are told who answered and where, with a Show button that takes them to it); the human's objects are never moved.
+3. **Answer.** `answer` with `{ id, text }` for one short card (about 60 words; over 90 is cut, over 700 characters is rejected), or `{ id, alternatives: [..] }` with two to four short options, which are lettered and placed side by side for the human to pick (P) or cross out (X); on a window too narrow for one row (a phone) they wrap into rows that fit, and a card narrows to the window. With alternatives, name what they differ on: `dimensions` (one to four short names, at most 40 characters each, such as `["Cost to try", "Risk"]`) and `values`, one row per alternative in the same order with one short value per dimension (cut at 12 words). Each option card then lists the dimensions under its headline, in the same order, with the names in bold, so the person compares down a line; keep headlines short (with dimensions, a headline is cut at 30 words). When the answer lands on the page the person has open, each dimension line is levelled across the row: a card whose headline or value took fewer lines gets space above the next line, kept as `meta.levelPads` (page units per dimension, derived like a card's height, so it never changes the card's text or revision and is dropped when the text is edited). Option cards carry `meta.dimensions`. Dimensions without alternatives, or values that do not line up, are rejected. If the person is looking at the ask when the answer lands, their view pans to show all of it. Add `read` to say what you read, and `question: true` when your text is a clarifying question back (the ask then stays open in the queue). The result has the `ask`, the `answers` and `queue`: `resolved` when the answer closed the ask's row in the feedback queue, `open` after a clarifying question; absent when the ask has no row there (a starter card the person rewrote as a question is still Paired's card). The cards go under the ask (or beside it, level with it, when the space under it is taken, such as by later asks stacked below), on the ask's page even if the human has since opened another page (they are told who answered and where, with a Show button that takes them to it); the human's objects are never moved.
 
 An ask carries everything the human sees as its context, and nothing else needs to be read to answer it:
 
@@ -256,6 +195,67 @@ A useful first request:
 > Read the current canvas. Create three visual alternatives beside the reference. Preserve all originals. Read the annotations attached to those alternatives before making revisions, and use a screenshot to inspect your results.
 
 The adapter does not include an LLM or image-generation provider. Use the agent's existing tools to generate assets, then insert them using `canvas_image`. Supply images as base64 image data URLs, including animated GIFs. `canvas_screenshot` returns a PNG image block; `canvas_get` omits raw assets unless `includeAsset` is true to avoid filling context with image bytes.
+
+### Learning prompts (prototype)
+
+`canvas_learn` is a prototype tool for learning mode. Use it only when the person has asked to understand or learn something. It runs only in a tab opened with `?prototype=learning`; other tabs refuse it and change nothing. It places a prompt card and hides `hideIds` until the person answers:
+
+- In `predict` mode, the person guesses before the result is shown.
+- In `generate` mode, the person explains in their own words before your explanation is shown.
+
+Only objects an agent made can be hidden; the person's own work is refused. The person can always skip in one click, and the hidden objects then appear directly. Their layer names are hidden too. Agents cannot answer a prompt. Read its `props.status` (open, committed or skipped) and `props.response`, then compare the answer with the outcome. To try it by hand, open the canvas with `?prototype=learning` and use **Learning prototype page**.
+
+On every board the person can also ask to be checked on one of your answers (**Check me**, key E). That makes a prompt with `meta.check` set to the answer's id and `createdBy: "Human"`; your answer is hidden from the person (not from you) until they commit or skip, and `meta.revealAfter` on it names the prompt. Do not repeat the answer elsewhere while such a prompt is open; read its `props.response` afterwards if the person asks how they did.
+
+Overview and run tools: `canvas_overview`, `canvas_runs`, `canvas_undo_run`.
+
+Data prototype tools: `canvas_dataset`, `canvas_chart`, `canvas_chart_state`, `canvas_cell` (see [Data prototype](#data-prototype)).
+
+Converge prototype tool: `canvas_converge` (see [Converge](#converge-prototype)).
+
+Prototype tools (`canvas_learn`, `canvas_converge` and the data tools) are flagged `prototype` in `tools/tool-defs.ts`. The local stdio server always offers them. The hosted endpoint offers them while `hostedPrototypeTools` is true (the default); set it to false and run `pnpm --filter @pairedcc/canvas manifest` to leave them, and their guidance in the instructions, out of the hosted manifest.
+
+### Data prototype
+
+A prototype of the working spec's first acceptance scenario: a dataset, a bar chart over it that the person filters by clicking, an exact read of what the chart shows, and stale marking when an input changes. These tools are labelled PROTOTYPE in their descriptions and, today, every connected agent sees them, but a tab runs them only when it was opened with `?prototype=data`. Any other tab refuses `canvas_dataset`, `canvas_chart`, `canvas_chart_state` and `canvas_cell` with an error that says so, and changes nothing; ask the person to open the canvas with the flag. Datasets and charts already on a saved board still show in every tab. To try it by hand, open the canvas with `?prototype=data` and use **Data prototype page**. With the same flag, the person can drop a `.csv` file on the canvas to create a dataset: a column is a number column when every value in it is numeric, otherwise text. A file with any problem creates nothing, and a message names the row and column. Use synthetic or openly licensed data only.
+
+- `canvas_dataset` places a table. Pass `synthetic: "orders"` for the built-in synthetic café orders (48 rows: `month`, `region`, `product`, `orders`), or supply `columns` (`name`, `type` text or number) and `rows` (at most 5,000), with a `title` and a `source` that says where the data came from. Every row must have every column with the right type; unknown columns are rejected.
+- `canvas_chart` places a bar chart over a dataset on the current page: `datasetId` and a `state` of `x` (category column), `y` (numeric column, ignored by count), `aggregate` (`sum`, `mean` or `count`, default sum), `filter` (`{column: [values]}`, keeping rows whose value is listed) and `selected` (bar keys). The person toggles filter chips and selects bars by clicking; both change this same state.
+- `canvas_chart_state` changes a chart's `state` exactly as clicking would and recomputes it on the dataset's current data. Pass `id` and `expectedRevision`; omitted fields keep their value, while `filter` and `selected`, when given, replace the old ones: `{ "filter": {} }` clears every filter and `{ "selected": [] }` clears the selection. A stale revision or a locked chart is rejected. Read first: the person may have filtered it.
+- `canvas_cell` sets one value: `id`, `expectedRevision`, zero-based `row`, `column` and `value` (of the column's type). It bumps the dataset's content version, so everything derived from the dataset shows as stale.
+- `canvas_create` takes `inputs`: the IDs of the objects a result was derived from, such as the chart you are explaining. Their current content versions are stored in the new object's `meta.inputs`. Any kind of object can record inputs.
+
+`read` summarises data objects so a board never dumps every row. Their `props` leave out `data` and `bars`; instead each carries:
+
+| Field | On | Meaning |
+|---|---|---|
+| `dataset` | dataset | `title`, `source`, `columns`, `rowCount`, `version` (content version, bumped only when data changes). `get` adds `rows`; `read` never does. |
+| `widget` | chart | What the chart shows: `state`, `summary` (for example "sum of orders by region; product = Cake; 16 of 48 rows"), `rowsInView`, `bars` (`key`, `value`, `count`), `selected` (selected bars, each with the `rows` behind it), `datasetId`, `datasetVersion` (the dataset version the bars were computed from) and the chart's own content `version`. |
+| `stale` | any derived object | Present only when stale: a list of `{ id, recorded, current }`, one per stale input. `current` differs from `recorded` when that input changed since it was used, and is `null` if it was deleted. An input that is unchanged but is itself stale is listed with `upstream`, the same list for that input, so a note derived from a chart is stale as soon as the chart's dataset changes, and `upstream` names the dataset. When several paths lead through the same input, its `upstream` is given the first time and later entries for it carry `repeated: true` instead, so the list stays short on boards where notes build on notes. A chart's input is its dataset; any other object's inputs are its `meta.inputs`. |
+
+When a chart is stale, `widget` still describes what the person sees: the older `bars` and `selected`, without `summary`, `rowsInView` or selected rows, plus a `note` saying so. Set its state (even unchanged) to recompute it on current data. The person sees a dashed chart with a Recompute button, and a "stale" flag on each derived object. A filter or selection on a stale chart, by the person or an agent, also recomputes it.
+
+Suggested loop: read the chart's `widget`, cite `summary` and the selected values in your explanation, create it with `inputs: [chartId]`, and re-read when the person changes something. If your note is stale, revise it rather than repeating it.
+
+### Converge (prototype)
+
+`canvas_converge` pulls several alternatives, branches or hypotheses into one synthesis. It runs only in a tab opened with `?prototype=converge`. Pass `sourceIds` (2 to 20 objects on the open page, each once, none hidden) and `text` (what they add up to and where they still disagree). Optionally pass `points`, claims that each cite the `sourceIds` they rest on, a `name`, and an `x`, `y` position. By default the card goes 80 px right of a column of sources (top-aligned) or 80 px below a row of them (left-aligned), so no arrow crosses a source.
+
+It creates one agent card with `meta.role: "synthesis"`, `meta.convergedFrom` (the source IDs) and `meta.inputs` (each source's version at that moment), plus a derived-from arrow from each source labelled A, B, C… The card lists each point with the letters of the sources it cites, and keeps `meta.points`. The result is `{ synthesis, sources, labels, connections }`, where `labels` maps each source ID to its letter. Because the sources are recorded as inputs, `read` reports the synthesis as `stale` once any source changes, and the board flags it. Revise it then. The sources are never moved or deleted, and the whole operation is one run, so `canvas_undo_run` removes the card and arrows together.
+
+The person can converge too: open the canvas with `?prototype=converge`, select two or more objects and press **Pull into a synthesis** in Properties. That makes the same linked card, in their handwriting and empty, ready for them to write their own conclusion.
+
+### Relationships, sources and transformations (prototype)
+
+`canvas_get` adds three read-only fields from the working spec's proposed primitives. They are derived from what the board already records, so they never disagree with it:
+
+| Field | Meaning |
+|---|---|
+| `relationships` | `outgoing` and `incoming` lists for this object on its page. Each has `kind` (`alternative`, `reference`, `derived-from`, `feedback`, `depends-on`, `annotates`, or `decorative` for a hand-drawn arrow with no meaning), `from`, `to`, `via` (`arrow`, `inputs`, `chart` or `annotation`), and `arrowId`, `label` and `author` where they apply. |
+| `source` | Datasets and images: `origin` (a dataset's source note) or `url`, a dataset's content `version`, and `generated`, true when an agent made it without naming an origin. |
+| `transformation` | Charts: `name: "aggregate"`, the dataset and the version used as `inputs`, and the chart state as `parameters`. Objects created with `inputs`: `name: "derive"` and those inputs. |
+
+Use `relationships` to see what an object depends on and what depends on it before you change or remove it.
 
 ## HTTP
 

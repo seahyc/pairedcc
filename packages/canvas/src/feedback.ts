@@ -72,6 +72,15 @@ export const mayBeFeedback = (s: { type: string; meta: Record<string, unknown> }
 /** An ask: since the card is the question, the person's own card can be one, not only a comment. */
 const isAsk = (m: Record<string, unknown>) => Boolean(m.ask && typeof m.ask === "object" && typeof (m.ask as { state?: unknown }).state === "string");
 
+/**
+ * Whether an object has a comment row in the queue: the person's comment, or a card the person sent
+ * as a question (open until an answer, not a clarifying question, resolves it). A starter card the
+ * person rewrote is still Paired's, so it has none. Shared with the answer's `queue` status.
+ */
+export function hasCommentRow(author: string, m: Record<string, unknown>) {
+  return author === HUMAN_AUTHOR && (m.role === "annotation" || isAsk(m));
+}
+
 export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
   const byId = new Map(sources.map((s) => [s.id, s]));
   const items: FeedbackItem[] = [];
@@ -119,10 +128,8 @@ export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
         }),
       );
     if (s.author !== HUMAN_AUTHOR) continue;
-    // A card the person sent as a question is in the queue like a comment: open until an answer
-    // (not a clarifying question) resolves it.
     const ownAsk = m.role !== "annotation" && isAsk(m);
-    if (m.role === "annotation" || ownAsk)
+    if (hasCommentRow(s.author, m))
       items.push({
         ...item(s, "comment", ownAsk ? (m.status ?? "open") : m.status, commentTargets(m), {
           createdAt: m.createdAt,
