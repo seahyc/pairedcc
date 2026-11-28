@@ -293,7 +293,7 @@ Create an object:
 }
 ```
 
-The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. Failed canvas operations return `ok: false` and an error. Invalid HTTP envelopes, disconnected/ambiguous sessions, and forbidden origins use appropriate non-2xx HTTP status codes.
+The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. Failed canvas operations return `ok: false` and an error. A change (create, update, scene, duplicate, arrange, annotate, reply, answer and the rest) returns each object it made or changed with its words once, as plain `text`, and a card's `style`; its `props` leave out `richText`, which `get` returns. `read` lists `pages` as `id` and `name`. Invalid HTTP envelopes, disconnected/ambiguous sessions, and forbidden origins use appropriate non-2xx HTTP status codes.
 
 ### Operations
 

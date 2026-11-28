@@ -551,7 +551,8 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
     }));
   return {
     page: editor.getCurrentPage(),
-    pages: editor.getPages(),
+    // Each page's id and name, as canvas_overview lists them: what an agent needs to switch pages.
+    pages: editor.getPages().map((p) => ({ id: p.id, name: p.name })),
     selection: editor.getSelectedShapeIds(),
     objects,
     annotations,

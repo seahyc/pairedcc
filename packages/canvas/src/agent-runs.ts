@@ -4,6 +4,7 @@ import { clip } from "./text";
 
 const NAME_MAX = 48;
 import { executeCommand } from "./agent-operations";
+import { briefResult } from "./result-brief";
 import type { CanvasCommand } from "./protocol";
 import { changedPaths, documentDiff, isEmptyDiff, planUndo, runsInput, undoRunInput, type RunDiff } from "./run-undo";
 
@@ -169,5 +170,6 @@ export async function runCommand(editor: Editor, ledger: RunLedger, command: Can
     const pageOf = (id: string) => (id && editor.getShape(id as never) ? editor.getAncestorPageId(id as never) : undefined);
     ledger.add({ runId, op: command.op, actor, at: new Date().toISOString(), changes, undone: false, pages: pagesOfRun(changes, pageOf) });
   }
-  return result;
+  // Each object a change describes gives its words once, as text (canvas_get has the rich text).
+  return briefResult(result);
 }
