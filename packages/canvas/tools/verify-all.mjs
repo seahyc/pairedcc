@@ -84,6 +84,7 @@ const CHECKS = [
   { name: 'annotate-clear', file: 'verify-annotate-clear.mjs', args: (d) => [d] },
   { name: 'calm-pages', file: 'verify-calm-pages.mjs', args: (d) => [d] },
   { name: 'note-beside', file: 'verify-note-beside.mjs', args: (d) => [d] },
+  { name: 'plain-runs', file: 'verify-plain-runs.mjs', args: (d) => [d] },
   { name: 'phone-margin', file: 'verify-phone-margin.mjs', args: (d) => [d] },
   // These start their own dev servers on other ports.
   { name: 'answer-view', file: 'verify-answer-view.mjs', args: (d) => [d] },

@@ -1,3 +1,4 @@
+import { richTextPlain } from "./operations";
 // Finding objects by their words, for `read`'s `text` filter: an agent can ask for "the card
 // about pricing" without reading the whole board.
 
@@ -30,21 +31,10 @@ export function matchesText(query: string, ...fields: (string | undefined | null
   return fields.some((f) => typeof f === "string" && containsWhole(fold(f), q));
 }
 
-type Node = { type?: unknown; text?: unknown; content?: unknown };
-const inline = (n: Node) => n.type === "text" || n.type === "hardBreak" || typeof n.text === "string";
-
 /**
  * The words of a rich-text document as they read on the canvas: runs inside one paragraph
  * join with nothing between them (a partly bold word stays one word), blocks and line
  * breaks with a space. Used for searching and for the `text` that `read` gives for each object
- * and annotation, which is the only form of the words `read` returns.
+ * and annotation. Since item 146 every plain-text reading of a card works this way.
  */
-export function richTextSearch(value: unknown): string {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return "";
-  const node = value as Node;
-  if (node.type === "hardBreak") return " ";
-  if (typeof node.text === "string") return node.text;
-  if (!Array.isArray(node.content)) return "";
-  const children = node.content as Node[];
-  return children.map(richTextSearch).join(children.every(inline) ? "" : " ");
-}
+export const richTextSearch = richTextPlain;
