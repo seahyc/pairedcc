@@ -15,7 +15,7 @@ const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-overview-review.mjs <screenshot dir>');
 mkdirSync(out, { recursive: true });
-const BASE = 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 

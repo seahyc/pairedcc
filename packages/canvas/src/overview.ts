@@ -8,7 +8,7 @@ import { chartLine } from "./data/agent";
 import { authorOf, collectMarks } from "./scratchbook";
 import { clusters } from "./clusters";
 import { coveredThoughts } from "./learning/check-ui";
-import { groupLabel, type OverviewItem } from "./board-overview";
+import { groupLabel, liftedFrame, type OverviewItem } from "./board-overview";
 
 // Overview-then-detail: a compact, paginated listing of one level of the board, so an
 // agent can find what matters and then canvas_read/canvas_get only those IDs.
@@ -59,16 +59,8 @@ export function groupName(editor: Editor, shapes: readonly TLShape[]) {
  */
 function levelGroups(editor: Editor, level: readonly TLShape[], byId: Map<string, TLShape>) {
   const frameIds = new Set(level.filter((s) => s.type === "frame").map((s) => s.id as string));
-  // The frame at this level a card was lifted out of (meta.within may name a frame nested in it).
-  const ownFrame = (s: TLShape) => {
-    if (typeof s.meta.within !== "string") return undefined;
-    let id: string | undefined = s.meta.within;
-    for (let i = 0; id && i < 50; i++) {
-      if (frameIds.has(id)) return id;
-      id = editor.getShape(id as TLShapeId)?.parentId;
-    }
-    return undefined;
-  };
+  // The frame at this level a card was lifted out of, by the rule O uses.
+  const ownFrame = (s: TLShape) => liftedFrame(s.meta.within, frameIds, (id) => editor.getShape(id as TLShapeId)?.parentId);
   const box = (s: TLShape) => {
     const b = s.type === "arrow" ? undefined : editor.getShapePageBounds(s);
     return b ? [{ id: s.id as string, x: b.x, y: b.y, w: b.w, h: b.h }] : [];

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { useEditor, useValue, type Editor, type TLShape } from "tldraw";
-import { boardGroups, countsLabel, mapLayout, type OverviewItem } from "./board-overview";
+import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { boardGroups, countsLabel, liftedFrame, mapLayout, type OverviewItem } from "./board-overview";
 import { useDialogFocus } from "./focus-keys";
 import { richTextPlain } from "./operations";
 import { isSettled } from "./settled";
@@ -39,7 +39,11 @@ export function overviewItems(editor: Editor): OverviewItem[] {
   // give away what the person is recalling.
   const covered = new Set<string>(coveredThoughts(editor).map((c) => c.id));
   const words = (s: TLShape) => (covered.has(s.id) ? "" : textOf(s));
-  return editor.getSortedChildIdsForParent(pageId).flatMap((id): OverviewItem[] => {
+  const top = editor.getSortedChildIdsForParent(pageId);
+  // A lifted card goes in the box of the page-level frame it belongs to, by the rule agents get.
+  const frameIds = new Set<string>(top.filter((id) => editor.getShape(id)?.type === "frame"));
+  const ownFrame = (s: TLShape) => liftedFrame(s.meta.within, frameIds, (id) => editor.getShape(id as TLShapeId)?.parentId);
+  return top.flatMap((id): OverviewItem[] => {
     const s = editor.getShape(id);
     // A finished thread folded to one line is still on the board, so it counts; a result behind a
     // learning prompt does not.
@@ -54,7 +58,7 @@ export function overviewItems(editor: Editor): OverviewItem[] {
       const first = editor.getSortedChildIdsForParent(s.id).flatMap((c) => editor.getShape(c) ?? []).filter((c) => !hiddenFromAgents(editor, c)).map((c) => ({ c, b: editor.getShapePageBounds(c) })).filter((x) => x.b && words(x.c)).sort((a, b) => a.b!.y - b.b!.y || a.b!.x - b.b!.x)[0];
       return [{ ...base, text: first ? words(first.c) : "", inside: thoughtsIn(s) }];
     }
-    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}), ...(typeof s.meta.within === "string" ? { within: s.meta.within } : {}) }];
+    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}), ...(ownFrame(s) ? { within: ownFrame(s) } : {}) }];
   });
 }
 
