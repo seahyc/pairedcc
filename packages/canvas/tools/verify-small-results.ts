@@ -40,6 +40,9 @@ try {
   check("create says the card's style and its words as text", heading.style === "heading" && heading.text === "Onboarding" && !("richText" in (heading.props ?? {})), { style: heading.style, text: heading.text, props: Object.keys(heading.props ?? {}) });
   const updated = await agent.call("canvas_update", { id: heading.id, expectedRevision: heading.revision, text: "Onboarding emails" });
   check("update gives the new words as text, without rich text", updated.text === "Onboarding emails" && !("richText" in (updated.props ?? {})), { text: updated.text });
+  const code = await agent.call("canvas_create", { kind: "note", x: 600, y: 3000, text: "const a = 1\nconst b = 2\nreturn a + b", style: "code" });
+  const codeRead = (await agent.call("canvas_read", { ids: [code.id] })).objects[0];
+  check("a multi-line card's result keeps its lines, as read gives them", code.text === "const a = 1\nconst b = 2\nreturn a + b" && codeRead?.text === code.text, { result: code.text, read: codeRead?.text });
   const reread = await agent.call("canvas_read", { ids: [heading.id] });
   check("read lists each page by id and name only", reread.pages.every((p: any) => Object.keys(p).sort().join() === "id,name"), reread.pages[0]);
   console.log(`sizes: read ${readBytes} bytes for 40 notes; runs listing ${runsBytes} bytes`);

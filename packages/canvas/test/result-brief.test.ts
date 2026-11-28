@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { briefResult } from '../src/result-brief'
+import { optionRichText } from '../src/ask-rules'
 
 const doc = (...paras: string[]) => ({ type: 'doc', content: paras.map((t) => ({ type: 'paragraph', content: [{ type: 'text', text: t }] })) })
 const card = (tone: string, ...paras: string[]) => ({ id: 'shape:a', type: 'card', revision: 0, props: { w: 420, tone, richText: doc(...paras) } })
@@ -27,6 +28,15 @@ describe('briefResult (item 140 (e), (i))', () => {
     expect(briefResult(geo)).toEqual(geo)
     expect(briefResult(null)).toBeNull()
     expect(briefResult('ok')).toBe('ok')
+  })
+  it('keeps a card\'s lines: paragraphs and hard breaks come back as newlines', () => {
+    const code = { id: 'shape:c', type: 'card', props: { tone: 'code', richText: { type: 'doc', content: [
+      { type: 'paragraph', content: [{ type: 'text', text: 'const a = 1' }, { type: 'hardBreak' }, { type: 'text', text: 'const b = 2' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'return a + b' }] },
+    ] } } }
+    expect((briefResult(code) as any).text).toBe('const a = 1\nconst b = 2\nreturn a + b')
+    const option = { id: 'shape:o', type: 'card', props: { tone: 'agent', richText: optionRichText('A · Charge per seat\nCost to try: Low\nRisk: Churn', ['Cost to try', 'Risk']) } }
+    expect((briefResult(option) as any).text).toBe('A · Charge per seat\nCost to try: Low\nRisk: Churn')
   })
   it('makes a result smaller', () => {
     const big = card('agent', ...Array.from({ length: 20 }, (_, i) => `Paragraph ${i} with some words in it`))

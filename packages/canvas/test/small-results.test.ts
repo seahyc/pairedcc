@@ -25,7 +25,7 @@ describe("read gives text once", () => {
     expect(first.props).not.toHaveProperty("richText");
     expect(first.props).toMatchObject({ w: 240, tone: "note" });
   });
-  it("keeps a partly bold word whole, since text is now the only form read gives", () => {
+  it("keeps a partly bold word whole and each line its own, since text is now the only form read gives", () => {
     const bold = card("bold", "x");
     (bold.props as { richText: unknown }).richText = {
       type: "doc",
@@ -36,7 +36,7 @@ describe("read gives text once", () => {
     };
     shapes.push(bold);
     try {
-      expect(readCanvas(editor, { ids: ["shape:bold"] }).objects[0].text).toBe("pricing page second line");
+      expect(readCanvas(editor, { ids: ["shape:bold"] }).objects[0].text).toBe("pricing page\nsecond\nline");
     } finally {
       shapes.pop();
     }

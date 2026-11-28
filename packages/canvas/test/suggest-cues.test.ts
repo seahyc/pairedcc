@@ -55,7 +55,7 @@ describe("120: suggestions follow what the thought says", () => {
   });
 });
 
-import { textLines } from "../src/suggest-ui";
+import { textLines } from "../src/text-lines";
 describe("120: a card's lines reach the cue", () => {
   const p = (...content: unknown[]) => ({ type: "paragraph", content });
   const t = (text: string) => ({ type: "text", text });

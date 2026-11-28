@@ -293,13 +293,13 @@ Create an object:
 }
 ```
 
-The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. Failed canvas operations return `ok: false` and an error. A change (create, update, scene, duplicate, arrange, annotate, reply, answer and the rest) returns each object it made or changed with its words once, as plain `text`, and a card's `style`; its `props` leave out `richText`, which `get` returns. `read` lists `pages` as `id` and `name`. Invalid HTTP envelopes, disconnected/ambiguous sessions, and forbidden origins use appropriate non-2xx HTTP status codes.
+The response is `{ "id": "transport request ID", "ok": true, "result": ... }`. Failed canvas operations return `ok: false` and an error. A change (create, update, scene, duplicate, arrange, annotate, reply, answer and the rest) returns each object it made or changed with its words once, as plain `text` (one line per paragraph or line break, as `read` gives it), and a card's `style`; its `props` leave out `richText`, which `get` returns. `read` lists `pages` as `id` and `name`. Invalid HTTP envelopes, disconnected/ambiguous sessions, and forbidden origins use appropriate non-2xx HTTP status codes.
 
 ### Operations
 
 | `op` | `input` |
 |---|---|
-| `read` | Optional `ids`; returns page, selection, objects (with `author`, `text` as plain text, `style` on cards, and `dataset`, `widget` or `stale` where they apply; `props` leave out `richText`, which `get` returns), annotations, open/resolved human `marks` and arrow bindings |
+| `read` | Optional `ids`; returns page, selection, objects (with `author`, `text` as plain text with one line per paragraph or line break, `style` on cards, and `dataset`, `widget` or `stale` where they apply; `props` leave out `richText`, which `get` returns), annotations, open/resolved human `marks` and arrow bindings |
 | `get` | `id`, optional `includeAsset`; cards report `style` (note, heading, quote, code, handwriting for the person, caption); a dataset's `dataset` includes its `rows`; prototype `relationships`, `source` and `transformation` (see below) |
 | `create` | `kind` (frame, rectangle, ellipse, text, note), `x`, `y`, optional dimensions, text, color, name, note `style` (note, heading, quote, code), `inputs` (IDs it was derived from) |
 | `update` | `id`, `expectedRevision`, changed position/dimensions/text/color/name. A name made from the old text (its first line) follows new `text`; a name someone chose is kept. Changing the `text` of something the person wrote or imported (`author: "Human"`) is refused (what you imported with `import` is yours and can be corrected), because their words stay theirs: comment on it with `annotate`, or answer beside it. Asked to fix the person's own words (a typo, a rewording), say the change beside their card with `annotate`: that answers the request, and they make the edit. The same holds for an agent's copy of the person's card, which keeps their hand |
