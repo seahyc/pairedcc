@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLPageId, type TLShape, type TLShapeId } from "tldraw";
 import { clip } from "./text";
 
 const color = z.enum(DefaultColorStyle.values);
@@ -16,7 +16,8 @@ const styles = {
 export const createInput = z.object({
   ...styles,
   kind: z.enum(["rectangle", "ellipse", "text", "note", "frame"]),
-  ...point,
+  x: point.x.optional().describe("Left edge in canvas coordinates. Leave out x and y to place it beside the person's selection, or in the middle of their view, clear of everything."),
+  y: point.y.optional().describe("Top edge in canvas coordinates; give both x and y or neither."),
   width: z.number().min(1).max(20000).default(240),
   height: z.number().min(1).max(20000).default(160),
   text: z.string().max(50000).default(""),
@@ -97,7 +98,8 @@ export function richTextPlain(value: unknown): string {
 }
 
 const NAME_MAX = 48;
-const nameFrom = (text: string) => {
+/** The automatic layer name for an object's text: its first line, cut at 48 characters with an ellipsis. */
+export const nameFrom = (text: string) => {
   const first = text.split("\n")[0].trim();
   return first.length > NAME_MAX ? `${first.slice(0, NAME_MAX - 1)}…` : first;
 };
@@ -106,18 +108,26 @@ const nameFrom = (text: string) => {
  * The layer name an object should take when its text changes from `oldText` to `newText`, or
  * undefined to keep it. A name made from the old text (its first line, possibly cut at 48
  * characters) follows the text; a name someone chose is kept, and so is any name when the new
- * text has no first line.
+ * text has no first line. Cards saved before they were named with `nameFrom` carry a plain
+ * 48-character prefix of their first line, which counts as made from the text too.
  */
 export function nameAfterText(oldName: unknown, oldText: string, newText: string): string | undefined {
   const first = oldText.split("\n")[0].trim();
-  if (typeof oldName !== "string" || (oldName !== first && oldName !== nameFrom(oldText))) return undefined;
+  const made = [first, nameFrom(oldText), clip(oldText.split("\n")[0], NAME_MAX)];
+  if (typeof oldName !== "string" || !made.includes(oldName)) return undefined;
   const next = nameFrom(newText);
   return next || undefined;
 }
 
-export function createObject(editor: Editor, value: unknown) {
-  const input = createInput.parse(value),
-    id = createShapeId();
+/**
+ * Without `parentId`, tldraw puts the new object into whatever frame covers its x/y. Pass the page
+ * to keep it a page child: for a provisional spot that is moved once the object has its size.
+ */
+export function createObject(editor: Editor, value: unknown, parentId?: TLPageId) {
+  const parsed = createInput.parse(value),
+    input = { ...parsed, x: parsed.x ?? 0, y: parsed.y ?? 0 },
+    id = createShapeId(),
+    parent = parentId ? { parentId } : {};
   editor.markHistoryStoppingPoint("create object");
   const meta = {
     name: input.name ?? (input.text.split("\n")[0] || input.kind),
@@ -130,6 +140,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "geo",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,
@@ -150,6 +161,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "text",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,
@@ -167,6 +179,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "note",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,
@@ -182,6 +195,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "frame",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,

@@ -115,7 +115,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_create",
     op: "create",
     description:
-      "Create a frame, rectangle, ellipse, text or note at canvas coordinates. Preserve alternatives instead of overwriting them. Notes take a style: note (default casual card), heading (large title, no card), quote (serif italic, for excerpts from a source; include the source) or code (monospace, for numbers, data and code).",
+      "Create a frame, rectangle, ellipse, text or note at canvas coordinates, or leave out x and y to put it beside the person's selection (or in the middle of their view) clear of everything. Preserve alternatives instead of overwriting them. Notes take a style: note (default casual card), heading (large title, no card), quote (serif italic, for excerpts from a source; include the source) or code (monospace, for numbers, data and code).",
     input: createInput.shape,
     output: "json",
   },
@@ -131,7 +131,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_image",
     op: "image",
     description:
-      "Place an image or animated GIF as an editable canvas object. Supply base64 data URL, dimensions, optional original source URL and a short caption (shown under the image with ✦, e.g. 'B · Catch: the hand grabs the shot (rough)'). This tool does not generate images.",
+      "Place an image or animated GIF as an editable canvas object. Supply base64 data URL, width and height (its size on the board, not scaled for you: keep the aspect ratio and at most 600 on the longest side), optional original source URL and a short caption (shown under the image with ✦, e.g. 'B · Catch: the hand grabs the shot (rough)'). The result adds `captionId`, the caption card, which you move or remove separately. This tool does not generate images.",
     input: imageInput.shape,
     output: "json",
   },
@@ -146,7 +146,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_annotate",
     op: "annotate",
     description:
-      "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar. Without x/y it goes under the object, or beside it when that space is taken, never covering anything, on a card as wide as the note needs.",
+      "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. It does not close the mark it answers: canvas_resolve that. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar. Without x/y it goes under the object (side: beside puts it to the right instead), or the nearest clear spot when that is taken, never covering anything, on a card as wide as the note needs.",
     // Authorship is never the caller's to set: the canvas attributes the note to the agent.
     input: annotationInput.omit({ author: true }).shape,
     output: "json",
@@ -163,7 +163,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_feedback",
     op: "feedback",
     description:
-      "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text, position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback. Answer an item with canvas_reply, not canvas_annotate, so the answer sits under the comment and is listed in the queue; an item with an `ask` field is an Ask: answer it with canvas_answer, which also records the answer on the Ask.",
+      "Read the human's feedback queue for the whole board in one call: comments (on objects or pinned to a spot), picks, rejects and ink over objects. Each item has id, revision, kind, status (open/resolved), text, author, page, targetIds with target names and text (and editedAt on a target whose words changed after the item was made), position, createdAt/updatedAt/resolvedAt and replies. Also returns counts and `notes` (other things the human wrote on the board). Start here when asked to act on feedback. Answer an item with canvas_reply, not canvas_annotate, so the answer sits under the comment and is listed in the queue; an item with an `ask` field is an Ask: answer it with canvas_answer, which also records the answer on the Ask.",
     input: feedbackInput.shape,
     output: "json",
   },
@@ -195,7 +195,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_answer",
     op: "answer",
     description:
-      "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X); with alternatives, name what they differ on in `dimensions` and give each option a short value on each in `values`, so every card lists them in the same order. Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved. In canvas_feedback the answer is listed as the ask's reply and the item is resolved (left open for a clarifying question).",
+      "Answer an ask on the board, placed under it. Give `text` (about 60 words: one step, then stop; start from a concrete example) or 2 to 4 short `alternatives`, set side by side for the human to pick (P) or cross out (X); with alternatives, name what they differ on in `dimensions` and give each option a short value on each in `values`, so every card lists them in the same order. Set `question` when your text is a clarifying question back. `read` says what you read. Long text is cut. The human's objects are never moved. In canvas_feedback the answer is listed as the ask's reply and the item is resolved (left open for a clarifying question); the result's `queue` says which (`resolved` or `open`; absent when the ask has no queue row).",
     input: answerInput.shape,
     output: "json",
   },

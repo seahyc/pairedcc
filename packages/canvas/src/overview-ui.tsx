@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import { useEditor, useValue, type Editor, type TLShape } from "tldraw";
-import { boardGroups, countsLabel, mapLayout, type OverviewItem } from "./board-overview";
+import { useEditor, useValue, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { boardGroups, countsLabel, liftedFrame, mapLayout, type OverviewItem } from "./board-overview";
 import { useDialogFocus } from "./focus-keys";
 import { richTextPlain } from "./operations";
 import { isSettled } from "./settled";
 import { hiddenFromAgents } from "./fold";
+import { coveredThoughts } from "./learning/check-ui";
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText as never).trim() : "");
 const MAP_W = 760, MAP_H = 420, BOX_W = 132, BOX_H = 46;
@@ -20,7 +21,9 @@ export function overviewItems(editor: Editor): OverviewItem[] {
     const walk = (parent: TLShape, settledAbove: boolean) => {
       for (const id of editor.getSortedChildIdsForParent(parent.id)) {
         const child = editor.getShape(id);
-        if (!child || child.type === "arrow" || editor.isShapeHidden(child)) continue;
+        // A folded thread is on the board as one line, so it counts here as it does on the page;
+        // a result behind a learning prompt does not.
+        if (!child || child.type === "arrow" || hiddenFromAgents(editor, child)) continue;
         const done = settledAbove || isSettled(child.meta);
         if (textOf(child)) {
           if (done) settled++;
@@ -32,23 +35,30 @@ export function overviewItems(editor: Editor): OverviewItem[] {
     walk(frame, frame.type === "group" && isSettled(frame.meta));
     return { open, settled };
   };
-  return editor.getSortedChildIdsForParent(pageId).flatMap((id): OverviewItem[] => {
+  // A settled thought covered by an open Check me still counts, but never names a group: O would
+  // give away what the person is recalling.
+  const covered = new Set<string>(coveredThoughts(editor).map((c) => c.id));
+  const words = (s: TLShape) => (covered.has(s.id) ? "" : textOf(s));
+  const top = editor.getSortedChildIdsForParent(pageId);
+  // A lifted card goes in the box of the page-level frame it belongs to, by the rule agents get.
+  const frameIds = new Set<string>(top.filter((id) => editor.getShape(id)?.type === "frame"));
+  const ownFrame = (s: TLShape) => liftedFrame(s.meta.within, frameIds, (id) => editor.getShape(id as TLShapeId)?.parentId);
+  return top.flatMap((id): OverviewItem[] => {
     const s = editor.getShape(id);
     // A finished thread folded to one line is still on the board, so it counts; a result behind a
     // learning prompt does not.
     if (!s || s.type === "arrow" || hiddenFromAgents(editor, s)) return [];
     const b = editor.getShapePageBounds(s);
     if (!b) return [];
-    const text = textOf(s);
-    const base = { id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, text, thought: Boolean(text), settled: isSettled(s.meta) };
+    const base = { id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, text: words(s), thought: Boolean(textOf(s)), settled: isSettled(s.meta) };
     if (s.type === "frame") return [{ ...base, text: "", thought: false, frame: String((s.props as { name?: unknown }).name ?? ""), inside: thoughtsIn(s) }];
     // An imported record is a group of cards: its title counts once, the cards inside it are its thoughts.
     if (s.type === "group") {
       // Labelled by its first words (an imported record's title), in reading order.
-      const first = editor.getSortedChildIdsForParent(s.id).flatMap((c) => editor.getShape(c) ?? []).map((c) => ({ c, b: editor.getShapePageBounds(c) })).filter((x) => x.b && textOf(x.c)).sort((a, b) => a.b!.y - b.b!.y || a.b!.x - b.b!.x)[0];
-      return [{ ...base, text: first ? textOf(first.c) : "", inside: thoughtsIn(s) }];
+      const first = editor.getSortedChildIdsForParent(s.id).flatMap((c) => editor.getShape(c) ?? []).filter((c) => !hiddenFromAgents(editor, c)).map((c) => ({ c, b: editor.getShapePageBounds(c) })).filter((x) => x.b && words(x.c)).sort((a, b) => a.b!.y - b.b!.y || a.b!.x - b.b!.x)[0];
+      return [{ ...base, text: first ? words(first.c) : "", inside: thoughtsIn(s) }];
     }
-    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}), ...(typeof s.meta.within === "string" ? { within: s.meta.within } : {}) }];
+    return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}), ...(ownFrame(s) ? { within: ownFrame(s) } : {}) }];
   });
 }
 

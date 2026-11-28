@@ -19,7 +19,7 @@ export type OverviewItem = Placed & {
   /** Counted when it holds text: open unless settled. */
   thought: boolean;
   settled: boolean;
-  /** A card lifted out of a frame so the frame would not cut it off (#155): the frame's id. It is counted in that frame's box. */
+  /** A card lifted out of a frame so the frame would not cut it off (#155): the id of the frame at this level it belongs to (`liftedFrame`). It is counted in that frame's box. */
   within?: string;
   /** For a frame: how many thoughts inside it are open and settled. */
   inside?: { open: number; settled: number };
@@ -32,6 +32,21 @@ export type OverviewGroup = {
   open: number;
   settled: number;
 };
+
+/**
+ * The frame at this level a lifted card (#155) belongs to, for O and `canvas_overview` alike.
+ * `meta.within` names the nearest frame, which may be nested (Quotes inside Renovation); the card
+ * moves with that frame and so with every frame around it, and sits over them, so at a level that
+ * shows only the outer frame it is that frame's. `parentOf` walks up from the named frame.
+ */
+export function liftedFrame(within: unknown, frameIds: ReadonlySet<string>, parentOf: (id: string) => string | undefined) {
+  let id = typeof within === "string" ? within : undefined;
+  for (let i = 0; id && i < 50; i++) {
+    if (frameIds.has(id)) return id;
+    id = parentOf(id);
+  }
+  return undefined;
+}
 
 /** How many groups the overview draws; the rest are counted, never silently dropped. */
 export const OVERVIEW_LIMIT = 40;

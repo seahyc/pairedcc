@@ -139,7 +139,8 @@ check('one undo takes a leave-out back', (await meta(p, aside))?.leftOut === und
 await command('answer', { id: first.id, text: 'Nothing about usage yet.' });
 await p.waitForTimeout(400);
 const again = await send(p, seat);
-check('brought back, it is given again', again?.attempt > first.attempt && JSON.stringify(again?.frame ?? {}).includes('not sure I trust') && again?.leftOut === undefined, `attempt ${again?.attempt}, state ${again?.state}`);
+// Given again wherever it now belongs: in the frame's list, or as a target when it sits right beside the card.
+check('brought back, it is given again', again?.attempt > first.attempt && JSON.stringify({ frame: again?.frame ?? {}, targets: again?.targets ?? [] }).includes('not sure I trust') && again?.leftOut === undefined, `attempt ${again?.attempt}, state ${again?.state}`);
 check('no page errors (flagged tab)', errors.length === 0, errors.join(' | '));
 await ctx.close();
 
