@@ -1,17 +1,19 @@
 // Browser check for item 140 (c), task 12: the feedback queue says when a comment's target was
 // edited after the comment. The person writes a card, comments on it, then edits the card's words
-// in the tab; the agent's canvas_feedback gives that target `editedAt`. A target left alone has none.
+// in the tab; the agent's canvas_feedback gives that target `editedAt`. A target left alone has none,
+// and neither has one whose words were only bolded. For an Ask sent from a card the person already
+// had, an edit made before the question was sent is not reported; one made after it is.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-feedback-edited.mjs <screenshot dir>
 //
-// Needs the dev server (PAIRED_URL, default http://localhost:5183) with an empty board store.
+// Needs the dev server (CANVAS_BASE or PAIRED_URL, default http://localhost:5183) with an empty board store.
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-feedback-edited.mjs <screenshot dir>');
 mkdirSync(out, { recursive: true });
-const BASE = process.env.PAIRED_URL ?? 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? process.env.PAIRED_URL ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 
@@ -61,6 +63,49 @@ const after = await command('feedback', {});
 const t = item(after, ids.edited)?.targets[0];
 check('after the person edits the card, its comment\'s target carries editedAt', typeof t?.editedAt === 'string' && Date.parse(t.editedAt) > Date.parse(item(after, ids.edited).createdAt), JSON.stringify(t));
 check('the card nobody edited still has none', !item(after, ids.left)?.targets[0].editedAt, JSON.stringify(item(after, ids.left)?.targets[0]));
+
+// Bolding the other card's words (part of a word too) is formatting, not an edit of its words.
+await p.waitForTimeout(50);
+await p.evaluate((id) => {
+  const e = window.__pairedEditor, s = e.getShape(id);
+  const bold = (n) => n.type === 'text' && n.text.startsWith('Launch')
+    ? [{ type: 'text', text: 'Lau' }, { type: 'text', text: n.text.slice(3), marks: [{ type: 'bold' }] }]
+    : [{ ...n, ...(n.content ? { content: n.content.flatMap(bold) } : {}) }];
+  e.updateShape({ id, type: s.type, props: { richText: bold(s.props.richText)[0] } });
+}, ids.left);
+await p.waitForTimeout(200);
+const bolded = await command('feedback', {});
+const leftShape = await p.evaluate((id) => window.__pairedEditor.getShape(id), ids.left);
+check('bolding part of a card\'s words changed its formatting', JSON.stringify(leftShape.props.richText).includes('"bold"'));
+check('a card whose words were only bolded has no editedAt', !item(bolded, ids.left)?.targets[0].editedAt, JSON.stringify(item(bolded, ids.left)?.targets[0]));
+
+// An Ask from a card the person already had: they edit the card it is about, then send the question.
+const about = await p.evaluate(() => window.paired.create({ kind: 'note', x: 100, y: 820, width: 240, text: 'Charge per seat' }));
+const aboutId = typeof about === 'string' ? about : about.id;
+const question = await p.evaluate(() => window.paired.create({ kind: 'note', x: 100, y: 1100, width: 240, text: 'What is missing here?' }));
+const questionId = typeof question === 'string' ? question : question.id;
+await p.evaluate(([q, a]) => {
+  const e = window.__pairedEditor, b = e.getShapePageBounds(a);
+  e.updateShape({ id: q, type: e.getShape(q).type, x: b.x, y: b.maxY + 30 });
+}, [questionId, aboutId]);
+await p.waitForTimeout(300);
+await p.evaluate((id) => { const o = window.paired.read().objects.find((x) => x.id === id); window.paired.update({ id, expectedRevision: o.revision, text: 'Charge per seat, yearly' }); }, aboutId);
+await p.waitForTimeout(300);
+await p.evaluate((id) => { window.paired.select([id]); }, questionId);
+await p.keyboard.press('ControlOrMeta+Enter');
+await p.waitForTimeout(600);
+const askRow = (q) => q.items.find((i) => i.id === questionId);
+const sent = await command('feedback', {});
+const sentTarget = askRow(sent)?.targets.find((t) => t.id === aboutId);
+check('the Ask is in the queue, about the card beside it', Boolean(askRow(sent)?.ask) && Boolean(sentTarget), JSON.stringify(askRow(sent)));
+check('an edit made before the question was sent is not reported', Boolean(sentTarget) && !sentTarget.editedAt, JSON.stringify(sentTarget));
+await p.waitForTimeout(50);
+await p.evaluate((id) => { const o = window.paired.read().objects.find((x) => x.id === id); window.paired.update({ id, expectedRevision: o.revision, text: 'Charge per seat, monthly' }); }, aboutId);
+await p.waitForTimeout(200);
+const later = await command('feedback', {});
+const laterTarget = askRow(later)?.targets.find((t) => t.id === aboutId);
+check('an edit made after the question was sent is', typeof laterTarget?.editedAt === 'string', JSON.stringify(laterTarget));
+check('the Ask keeps its createdAt', askRow(later)?.createdAt === askRow(sent)?.createdAt, `${askRow(sent)?.createdAt} ${askRow(later)?.createdAt}`);
 await p.screenshot({ path: `${out}/feedback-edited.png` });
 check('no page errors', errors.length === 0, errors.join(' | '));
 await browser.close();

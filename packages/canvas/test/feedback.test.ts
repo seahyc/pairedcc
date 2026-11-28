@@ -6,6 +6,7 @@ import {
   feedbackTitle,
   filterFeedback,
   mayBeFeedback,
+  textEditStamps,
   type FeedbackSource,
 } from "../src/feedback";
 import { commandSchema, feedbackInput, replyInput } from "../src/protocol";
@@ -215,5 +216,58 @@ describe("a target edited after the comment", () => {
     const items = buildFeedback([picked, card("target", t0 + 2000), ink]);
     expect(items.find((i) => i.kind === "pick")!.targets[0].editedAt).toBe(new Date(t0 + 3000).toISOString());
     expect(items.find((i) => i.kind === "ink")!.targets[0].editedAt).toBe(new Date(t0 + 2000).toISOString());
+  });
+});
+
+// Bolding words is not editing them: the queue's editedAt follows the words, not their formatting.
+describe("what counts as a change to a target's words", () => {
+  const doc = (...runs: { text: string; marks?: { type: string }[] }[]) => ({ type: "doc", content: [{ type: "paragraph", content: runs.map((r) => ({ type: "text", ...r })) }] });
+  const plain = doc({ text: "Price: £40 a month" });
+  it("formatting only (bolding all or part of a word) moves updatedAt but not wordsEditedAt", () => {
+    const bold = doc({ text: "Price: £" }, { text: "40", marks: [{ type: "bold" }] }, { text: " a month" });
+    const half = doc({ text: "Pri" }, { text: "ce: £40 a month", marks: [{ type: "bold" }] });
+    expect(textEditStamps(plain, bold, {}, t0 + 5000)).toEqual({ updatedAt: t0 + 5000, wordsEditedAt: null });
+    expect(textEditStamps(plain, half, { wordsEditedAt: t0 }, t0 + 5000)).toEqual({ updatedAt: t0 + 5000 });
+  });
+  it("a real wording edit moves both", () => {
+    expect(textEditStamps(plain, doc({ text: "Price: £30 a month" }), {}, t0 + 5000)).toEqual({ updatedAt: t0 + 5000, wordsEditedAt: t0 + 5000 });
+  });
+  it("nothing when the text is unchanged", () => {
+    expect(textEditStamps(plain, plain, {}, t0 + 5000)).toBeUndefined();
+  });
+  it("a formatting-only edit keeps an older card's last word change (recorded before wordsEditedAt existed)", () => {
+    const bold = doc({ text: "Price: £40 a month", marks: [{ type: "bold" }] });
+    expect(textEditStamps(plain, bold, { updatedAt: t0 + 1000 }, t0 + 5000)).toEqual({ updatedAt: t0 + 5000, wordsEditedAt: t0 + 1000 });
+  });
+  it("the queue goes by wordsEditedAt, so a later formatting change is not an edit", () => {
+    const card = source("styled", { text: "Price: £40", meta: { createdAt: t0, updatedAt: t0 + 9000, wordsEditedAt: t0 + 1000 } });
+    const [item] = buildFeedback([card, comment("c", "too expensive?", { targetId: "shape:styled", createdAt: t0 + 5000 })]);
+    expect(item.targets[0].editedAt).toBeUndefined();
+    // A card only ever bolded (its words never changed) has none either.
+    const bolded = source("bolded", { text: "Price: £40", meta: { createdAt: t0, ...textEditStamps(plain, doc({ text: "Price: £40 a month", marks: [{ type: "bold" }] }), {}, t0 + 9000) } });
+    expect(buildFeedback([bolded, comment("c", "hm", { targetId: "shape:bolded", createdAt: t0 + 5000 })])[0].targets[0].editedAt).toBeUndefined();
+  });
+});
+
+// An Ask made from an existing card: the baseline is when the question was sent, not when the card was made.
+describe("a target edited around an Ask from an existing card", () => {
+  const asked = (updatedAt: number) => [
+    source("thought", { text: "Per seat", meta: { createdAt: t0, updatedAt } }),
+    source("q", { text: "How should we charge?", meta: { ask: { state: "waiting", attempt: 0, contextIds: ["shape:thought"], askedAt: t0 + 5000 }, targetIds: ["shape:thought"], createdAt: t0 } }),
+  ];
+  it("an edit made before the question was sent is not reported", () => {
+    const [item] = buildFeedback(asked(t0 + 2000));
+    expect(item.targets[0].editedAt).toBeUndefined();
+    expect(item.createdAt).toBe(new Date(t0).toISOString());
+  });
+  it("an edit made after the question was sent is", () => {
+    const [item] = buildFeedback(asked(t0 + 8000));
+    expect(item.targets[0].editedAt).toBe(new Date(t0 + 8000).toISOString());
+    expect(item.createdAt).toBe(new Date(t0).toISOString());
+  });
+  it("without askedAt, falls back to when the card was made", () => {
+    const [thought, q] = asked(t0 + 2000);
+    const bare = { ...q, meta: { ...q.meta, ask: { state: "waiting", attempt: 0, contextIds: [] } } };
+    expect(buildFeedback([thought, bare])[0].targets[0].editedAt).toBe(new Date(t0 + 2000).toISOString());
   });
 });
