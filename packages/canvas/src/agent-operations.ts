@@ -26,6 +26,8 @@ import {
 } from "./protocol";
 import {
   createObject,
+  createInput,
+  nameFrom,
   patchObject,
   describeObject,
   shapeName,
@@ -45,7 +47,6 @@ import { notePlace, noteWidth } from "./note-place";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, levelOptionLines, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
-import { clip } from "./text";
 import { importForAgent } from "./import-board";
 
 const cardInput = z.object({
@@ -55,6 +56,9 @@ const cardInput = z.object({
   text: z.string().max(50000).default(""),
   name: z.string().max(200).optional(),
   style: z.enum(["note", "heading", "quote", "code"]).optional(),
+  // The same bounds as createInput, so a scripted note keeps them as other primitives do.
+  opacity: createInput.shape.opacity,
+  rotation: createInput.shape.rotation,
 });
 /** A comfortable line of handwriting: about six words. */
 export const HUMAN_CARD_W = 300;
@@ -78,8 +82,11 @@ export function createCard(editor: Editor, value: unknown, author: string, meta:
     ...(pageId ? { parentId: pageId } : {}),
     x: input.x,
     y: input.y,
+    ...(input.opacity !== undefined ? { opacity: input.opacity } : {}),
+    ...(input.rotation !== undefined ? { rotation: input.rotation } : {}),
     meta: {
-      name: input.name ?? (clip(input.text.split("\n")[0], 48) || (human ? "Note" : "Agent note")),
+      // Named as nameAfterText expects, so the name follows the text when it is replaced.
+      name: input.name ?? (nameFrom(input.text) || (human ? "Note" : "Agent note")),
       revision: 0,
       ...(human ? {} : { createdBy: author }),
       ...meta,
