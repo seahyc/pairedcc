@@ -194,3 +194,26 @@ describe("the person's own card sent as a question", () => {
     expect(buildFeedback([source("plain", { text: "just a thought" })])).toEqual([]);
   });
 });
+
+// Item 140 (c), task 12: the queue says when a comment's target was edited after the comment, so
+// an agent knows the comment may already be dealt with (or no longer fit) without reading history.
+describe("a target edited after the comment", () => {
+  const card = (id: string, updatedAt?: number) => source(id, { text: "Price: £40", meta: { createdAt: t0, ...(updatedAt ? { updatedAt } : {}) } });
+  it("carries editedAt when its words changed after the comment was made", () => {
+    const [item] = buildFeedback([card("edited", t0 + 9000), comment("c", "too expensive?", { targetId: "shape:edited", createdAt: t0 + 5000 })]);
+    expect(item.targets[0].editedAt).toBe(new Date(t0 + 9000).toISOString());
+  });
+  it("says nothing when the last edit came before the comment, or there was none", () => {
+    const before = buildFeedback([card("old", t0 + 1000), comment("c", "hm", { targetId: "shape:old", createdAt: t0 + 5000 })]);
+    const never = buildFeedback([card("never"), comment("c", "hm", { targetId: "shape:never", createdAt: t0 + 5000 })]);
+    expect(before[0].targets[0].editedAt).toBeUndefined();
+    expect(never[0].targets[0].editedAt).toBeUndefined();
+  });
+  it("works for a pick (against when it was marked) and for ink", () => {
+    const picked = source("p", { text: "Option A", author: "Agent", meta: { createdBy: "Agent", mark: "picked", markStatus: "open", markedAt: t0 + 1000, updatedAt: t0 + 3000 } });
+    const ink = source("ink", { type: "draw", inkTargets: ["shape:target"], meta: { createdAt: t0 + 1000 } });
+    const items = buildFeedback([picked, card("target", t0 + 2000), ink]);
+    expect(items.find((i) => i.kind === "pick")!.targets[0].editedAt).toBe(new Date(t0 + 3000).toISOString());
+    expect(items.find((i) => i.kind === "ink")!.targets[0].editedAt).toBe(new Date(t0 + 2000).toISOString());
+  });
+});

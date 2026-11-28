@@ -24,7 +24,8 @@ export type FeedbackSource = {
   inkTargets?: string[];
 };
 
-export type FeedbackTarget = { id: string; type?: string; name?: string; text?: string; missing?: true };
+/** `editedAt`: when the target's words last changed, given only when that was after the item was made. */
+export type FeedbackTarget = { id: string; type?: string; name?: string; text?: string; missing?: true; editedAt?: string };
 export type FeedbackReply = { id: string; author: string; text: string; createdAt?: string };
 export type FeedbackItem = {
   id: string;
@@ -84,10 +85,13 @@ export function hasCommentRow(author: string, m: Record<string, unknown>) {
 export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
   const byId = new Map(sources.map((s) => [s.id, s]));
   const items: FeedbackItem[] = [];
-  const describe = (id: string): FeedbackTarget => {
+  const describe = (id: string, since: unknown): FeedbackTarget => {
     const s = byId.get(id);
     if (!s) return { id, missing: true };
-    return { id, type: s.type, name: s.name, ...(s.text ? { text: clip(s.text) } : {}) };
+    // Edited after the comment (or pick, or ink): the item may already be dealt with, or no longer fit.
+    const edited = s.meta.updatedAt;
+    const after = typeof edited === "number" && typeof since === "number" && edited > since;
+    return { id, type: s.type, name: s.name, ...(s.text ? { text: clip(s.text) } : {}), ...(after ? { editedAt: iso(edited) } : {}) };
   };
   const item = (
     s: FeedbackSource,
@@ -107,7 +111,7 @@ export function buildFeedback(sources: FeedbackSource[]): FeedbackItem[] {
       pageId: s.pageId,
       pageName: s.pageName,
       targetIds,
-      targets: targetIds.map(describe),
+      targets: targetIds.map((id) => describe(id, times.createdAt)),
       ...(s.bounds ? { position: { x: Math.round(s.bounds.x), y: Math.round(s.bounds.y) }, bounds: round(s.bounds) } : {}),
       createdAt: iso(times.createdAt),
       updatedAt: iso(times.updatedAt),
