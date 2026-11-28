@@ -85,6 +85,7 @@ const CHECKS = [
   { name: 'calm-pages', file: 'verify-calm-pages.mjs', args: (d) => [d] },
   { name: 'note-beside', file: 'verify-note-beside.mjs', args: (d) => [d] },
   { name: 'overview-review', file: 'verify-overview-review.mjs', args: (d) => [d] },
+  { name: 'create-spot', file: 'verify-create-spot.mjs', args: (d) => [d] },
   { name: 'phone-margin', file: 'verify-phone-margin.mjs', args: (d) => [d] },
   // These start their own dev servers on other ports.
   { name: 'answer-view', file: 'verify-answer-view.mjs', args: (d) => [d] },

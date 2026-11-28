@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLPageId, type TLShape, type TLShapeId } from "tldraw";
 import { clip } from "./text";
 
 const color = z.enum(DefaultColorStyle.values);
@@ -16,7 +16,8 @@ const styles = {
 export const createInput = z.object({
   ...styles,
   kind: z.enum(["rectangle", "ellipse", "text", "note", "frame"]),
-  ...point,
+  x: point.x.optional().describe("Left edge in canvas coordinates. Leave out x and y to place it beside the person's selection, or in the middle of their view, clear of everything."),
+  y: point.y.optional().describe("Top edge in canvas coordinates; give both x and y or neither."),
   width: z.number().min(1).max(20000).default(240),
   height: z.number().min(1).max(20000).default(160),
   text: z.string().max(50000).default(""),
@@ -118,9 +119,15 @@ export function nameAfterText(oldName: unknown, oldText: string, newText: string
   return next || undefined;
 }
 
-export function createObject(editor: Editor, value: unknown) {
-  const input = createInput.parse(value),
-    id = createShapeId();
+/**
+ * Without `parentId`, tldraw puts the new object into whatever frame covers its x/y. Pass the page
+ * to keep it a page child: for a provisional spot that is moved once the object has its size.
+ */
+export function createObject(editor: Editor, value: unknown, parentId?: TLPageId) {
+  const parsed = createInput.parse(value),
+    input = { ...parsed, x: parsed.x ?? 0, y: parsed.y ?? 0 },
+    id = createShapeId(),
+    parent = parentId ? { parentId } : {};
   editor.markHistoryStoppingPoint("create object");
   const meta = {
     name: input.name ?? (input.text.split("\n")[0] || input.kind),
@@ -133,6 +140,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "geo",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,
@@ -153,6 +161,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "text",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,
@@ -170,6 +179,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "note",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,
@@ -185,6 +195,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "frame",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,
