@@ -116,6 +116,7 @@ const CHECKS = [
   { name: 'answer-queue', file: 'verify-answer-queue.ts', args: () => [] },
   { name: 'overview-lifted', file: 'verify-overview-lifted.ts', args: (d) => [d] },
   { name: 'fold', file: 'verify-fold.mjs', args: (d) => [d] },
+  { name: 'open-threads', file: 'verify-open-threads.mjs', args: (d) => [d] },
   { name: 'focus', file: 'verify-focus.mjs', args: (d) => [d] },
 ].filter((c) => existsSync(join(dirname(fileURLToPath(import.meta.url)), c.file)));
 const SKIPPED = [

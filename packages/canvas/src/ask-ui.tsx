@@ -11,7 +11,7 @@ import { toggleMark } from "./scratchbook";
 import { isLeftOut, isPinned, leftOutLabel, pinnedLabel, toggleLeftOut, togglePinned } from "./leave-out";
 import { toggleSettled } from "./settled";
 import { unclipFromFrame } from "./frame-edge";
-import { foldLine, isFoldedNow, threadFinished, toggleFold } from "./fold";
+import { foldLine, isFoldedNow, threadFinished, toggleFold, undecidedLine } from "./fold";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
 import { checkable, startCheck } from "./learning/check-ui";
@@ -185,8 +185,8 @@ export function AskLayer() {
               }}
             >
               <span className="fold-q">{a.fold.question}</span>
-              <span className="fold-a">{a.fold.answer ? `✓ ${a.fold.answer}` : "✓ settled"}</span>
-              {a.fold.more > 0 && <span className="fold-more" aria-label={`${a.fold.more} more folded`}>+{a.fold.more}</span>}
+              <span className="fold-a">{a.fold.answer ? `✓ ${a.fold.answer}` : a.finished ? "✓ settled" : undecidedLine(a.fold.more)}</span>
+              {a.fold.more > 0 && (a.fold.answer || a.finished) && <span className="fold-more" aria-label={`${a.fold.more} more folded`}>+{a.fold.more}</span>}
             </button>
           );
         const line = askStatusLine(a.ask, { listeners: hosted ? listeners : (listeners ?? []), hosted, now: Math.max(now, Date.now()), given: a.given, recent });

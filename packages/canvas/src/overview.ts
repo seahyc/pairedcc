@@ -1,5 +1,5 @@
 import { isLeftOut } from "./leave-out";
-import { foldedForAgent, foldedPick } from "./fold";
+import { foldedForAgent, foldedPick, foldedUndecided } from "./fold";
 import { reviewDate } from "./learning/recall";
 import { z } from "zod";
 import type { Editor, TLShape } from "tldraw";
@@ -88,6 +88,7 @@ export function overview(editor: Editor, value: unknown = {}) {
         ...(isLeftOut(s.meta) ? { leftOut: true } : {}),
         // A finished thread folded to one line on the board (the question and the pick).
         ...(foldedForAgent(editor, s) ? { folded: true } : {}),
+        ...(foldedUndecided(editor, s) ? { undecided: true } : {}),
         // On a folded thread's ask: the answer the person picked, as the folded line shows it.
         ...(foldedPick(editor, s) ? { pick: foldedPick(editor, s) } : {}),
         // What would otherwise take a full read: the person's judgement, the card's style, settled, what a chart shows.
