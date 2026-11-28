@@ -76,6 +76,7 @@ import { prototypeEnabled, canvasReturnTo } from "./prototype-flags";
 import { toggleLeftOut, togglePinned } from "./leave-out";
 import { followConnectors } from "./connector-follow";
 import { FeedbackPanel, SaveState, AgentChip } from "./feedback-panel";
+import { textEditStamps } from "./feedback";
 import { boardHistory, boardSync, startBoardSync } from "./board-sync-browser";
 import { HistoryDialog, SavedBoardsDialog } from "./history-dialog";
 import { bringContentIntoView } from "./reframe";
@@ -1948,8 +1949,9 @@ function App() {
     );
     editor.sideEffects.registerBeforeChangeHandler("shape", (previous, next, source) => {
       if (source !== "user" || !("richText" in previous.props) || !("richText" in next.props)) return next;
-      if (previous.props.richText === next.props.richText) return next;
-      return { ...next, meta: { ...next.meta, updatedAt: Date.now() } };
+      // updatedAt on any text change, wordsEditedAt only when the words differ (not bolding).
+      const stamps = textEditStamps(previous.props.richText, next.props.richText, previous.meta, Date.now());
+      return stamps ? { ...next, meta: { ...next.meta, ...stamps } } : next;
     });
     // The bridge stands in for the person: a note it creates is the person's card, as they write it.
     window.paired = { ...createBridge(editor), create: (input: unknown) => createFor(editor, input, HUMAN) };

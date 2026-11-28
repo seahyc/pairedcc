@@ -160,6 +160,8 @@ curl -s http://localhost:5183/api/canvas/command \
 
 `notes` lists other things the human wrote on the board (plain notes and text) since timestamps were recorded, so nothing typed during a session is missed.
 
+Each of an item's `targets` gives `id`, `type`, `name` and `text`, and `editedAt` (ISO) when the target's words changed after the comment, pick or ink was made (for an Ask, after the question was sent; a formatting change such as bold does not count): the person may already have dealt with it, or the comment may no longer fit, so read the target's current text before acting on it.
+
 `reply` (`id`, `text`) puts your answer directly under the item and threads it in the queue. The item must be on the open page. Replying does not change the item or its revision, so `resolve` it afterwards with the revision you read. `resolve` closes an item on any page and records who closed it; the human can reopen it. Use a fresh `requestId` for every read: a repeated ID returns the earlier result.
 
 **After acting on a pick or reject.** The item's `id` is the picked or rejected object itself. Do the work, then say what you did and close the item:
