@@ -30,19 +30,29 @@ const distance = (a: Placed, b: Placed) => {
  * The other members of the group `hostId` sits in, nearest first, each with its relation to
  * the host, leaving out `skip` (what the ask already gives). An ask written on empty space
  * inside a pile joins that pile, so it is about the pile: beside a member (within the group gap),
- * or anywhere inside the pile's bounds when it is in no group of its own.
+ * or anywhere inside the pile's bounds when it is in no group of its own. `keep` takes the
+ * candidates nearest first and returns those that may be given (what the person left out is not),
+ * before the cap, so a withheld member neither takes a slot nor is counted as more.
  */
-export function clusterAround(items: readonly Placed[], hostId: string, skip: ReadonlySet<string> = new Set(), limit = CLUSTER_GIVE) {
+export function clusterAround(
+  items: readonly Placed[],
+  hostId: string,
+  skip: ReadonlySet<string> = new Set(),
+  limit = CLUSTER_GIVE,
+  keep: (ids: readonly string[]) => readonly string[] = (ids) => ids,
+) {
   const host = items.find((i) => i.id === hostId);
   if (!host) return { members: [], more: 0 };
   const all = clusters(items, CLUSTER_GAP, Infinity, Infinity);
   const mine = all.find((c) => c.ids.includes(hostId)) ?? enclosing(all, host);
   if (!mine) return { members: [], more: 0 };
   const byId = new Map(items.map((i) => [i.id, i]));
-  const others = mine.ids
+  const sorted = mine.ids
     .filter((id) => id !== hostId && !skip.has(id))
     .map((id) => byId.get(id)!)
     .sort((a, b) => distance(a, host) - distance(b, host) || a.x - b.x || a.y - b.y);
+  const allowed = new Set(keep(sorted.map((o) => o.id)));
+  const others = sorted.filter((o) => allowed.has(o.id));
   return { members: others.slice(0, limit).map((o) => ({ id: o.id, relation: relation(o, host) })), more: Math.max(0, others.length - limit) };
 }
 

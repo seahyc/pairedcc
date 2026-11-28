@@ -3,9 +3,10 @@ import { z } from "zod";
 import { answerInput, askStates, askStatusInput, asksInput, type AskState } from "./protocol";
 import { describeObject, revision, richTextPlain, shapeName } from "./operations";
 import { HUMAN, authorOf, resolveMark } from "./scratchbook";
-import { atomic, createCard, createComment, freeSpot } from "./agent-operations";
-import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, levelGaps, levelPadsOf, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
-import { cardLook, type CardTone } from "./card-shape";
+import { hasCommentRow } from "./feedback";
+import { atomic, createCard, createComment, freeSpot, othersOnPage } from "./agent-operations";
+import { ANSWER_CHROME, BESIDE_GAP, OPTION_GAP, answerLayout, answerTexts, levelGaps, levelPadsOf, readsAsAnswerTo, slideRight, optionRichText, pickAnswerSpot, capWords, isQuestion, describeImage, markOf, mergeHistory, type AskMark, type HistoryEntry } from "./ask-rules";
+import { cardLook, cardTextWidth, type CardTone } from "./card-shape";
 import { sourceAuthor, sourceOf, sourceText } from "./import-meta";
 import { isLeftOut, isPinned, keepForAgent, pinnedFor } from "./leave-out";
 import { followers } from "./follow";
@@ -205,7 +206,7 @@ const given = (editor: Editor, s: TLShape, max = 2000, keep: Keep = (x) => x): G
     text: clip(sourceText(s, textOf(s)) || textOf(s) || dataText(editor, s) || mediaText(editor, s, keep) || `(${shapeName(s)}, no text)`, max),
     ...(mark ? { mark } : {}),
     ...(s.meta.settled === true ? { settled: true as const } : {}),
-    ...(reviewDate(s.meta) ? { review: reviewDate(s.meta) } : {}),
+    ...(reviewDate(s.meta, authorOf(s)) ? { review: reviewDate(s.meta, authorOf(s)) } : {}),
   };
 };
 const said = (editor: Editor, s: TLShape, max: number, keep: Keep = (x) => x): HistoryEntry => {
@@ -328,10 +329,10 @@ function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep:
       const b = editor.getShapePageBounds(s);
       return b ? [{ id: s.id as string, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
     });
-  const found = clusterAround(placed, host.id, skip);
-  // A left-out member is withheld (and counted as such), like anything else around the ask.
-  const kept = new Set<string>(keep(found.members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? [])).map((s) => s.id));
-  const members = found.members.filter((m) => kept.has(m.id)).map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
+  // A left-out member is withheld (and counted as such), like anything else around the ask. It is
+  // dropped before the cap, so it neither takes a shareable member's slot nor counts as more.
+  const found = clusterAround(placed, host.id, skip, undefined, (ids) => keep(ids.flatMap((id) => editor.getShape(id as TLShapeId) ?? [])).map((s) => s.id));
+  const members = found.members.map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
   // The group's name, as the overview (O) shows it, from everything in it but the ask's own card
   // (an ask is never the name of what it asks about) and what the person left out.
   const whole = clusterAround(placed, host.id, new Set(), Infinity).members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? []);
@@ -383,9 +384,10 @@ export function describeAsk(editor: Editor, shape: TLShape) {
       ).slice(0, 12)
     : [];
   // Where things sit carries meaning: the group the card is in, said with relations. What the
-  // ask already gives (targets, and the frame's objects when the card is in a frame) is not repeated.
+  // ask already gives (targets, and the frame objects it sent when the card is in a frame) is not
+  // repeated. Only what was sent: a frame past its twelve-object cap still gives the rest as the group.
   const group = editor.getShapePageBounds(shape)
-    ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : []), ...frameObjects.map((s) => s.id)]), keep)
+    ? groupOf(editor, shape, new Set([...skip, ...frameObjects.map((s) => s.id)]), keep)
     : { members: [], more: 0, hasWords: false };
   // A card with no named group of its own around it still sits in its frame's: the one it is in, or
   // the one it was lifted out of so the frame would not cut it off (item 132). Named as O names a frame.
@@ -510,7 +512,18 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   const under = freeSpot(editor, layout.box, new Set([shape.id]), pageId);
   const besideBox = { ...layout.box, x: anchor.maxX + BESIDE_GAP, y: anchor.y };
   const beside = freeSpot(editor, besideBox, new Set([shape.id]), pageId);
-  const spot = pickAnswerSpot(under.y - layout.box.y, beside.y - besideBox.y) === "under" ? under : beside;
+  let spot = pickAnswerSpot(under.y - layout.box.y, beside.y - besideBox.y) === "under" ? under : beside;
+  // Both taken (questions written close under each other, their answers beside them): where the
+  // row slid to may sit just beside or under another question and read as its answer. Then it
+  // stays level with its own question instead, to the right of the rows in the way.
+  const questions = [...editor.getPageShapeIds(pageId)]
+    .flatMap((id) => editor.getShape(id) ?? [])
+    .filter((s) => s.id !== shape.id && askOf(s))
+    .flatMap((s) => editor.getShapePageBounds(s) ?? []);
+  if (questions.some((q) => readsAsAnswerTo(spot, q))) {
+    const level = slideRight(besideBox, othersOnPage(editor, new Set([shape.id]), pageId));
+    if (level && !questions.some((q) => readsAsAnswerTo(level, q))) spot = level;
+  }
   // On the open page, the answer is one step the person can undo, and tldraw puts it inside a
   // frame it lands in. On another page it is kept off the person's undo stack: undoing their own
   // work here must not silently remove an answer they cannot see (canvas_undo_run still can).
@@ -526,8 +539,18 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
   const ids = place(() => {
     // Rows stack under the measured height of the row above (a card sizes to its text when made).
     let rowY = spot.y, rowBottom = spot.y, row = 0;
+    let rowIds: string[] = [];
+    // Options on dimensions: a row's lines are levelled before the next row is placed (and before
+    // the room is checked), so rows stack and clear the board at their levelled heights (#174's
+    // review). The drawn cards are measured again once the answer is drawn (levelOptionLines).
+    const closeRow = () => {
+      if (input.dimensions && rowIds.length > 1) levelByEstimate(editor, rowIds);
+      rowBottom = Math.max(rowBottom, ...rowIds.map((id) => editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY));
+      rowIds = [];
+    };
     const made = texts.map((text, i) => {
       if (layout.cards[i].row !== row) {
+        closeRow();
         row = layout.cards[i].row;
         rowY = rowBottom + OPTION_GAP;
       }
@@ -546,9 +569,10 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
         const card = editor.getShape(id as TLShapeId)!;
         editor.updateShape({ id: card.id, type: card.type, props: { richText: optionRichText(text, input.dimensions) } } as never);
       }
-      rowBottom = Math.max(rowBottom, editor.getShapePageBounds(id as TLShapeId)?.maxY ?? rowY);
+      rowIds.push(id);
       return id;
     });
+    closeRow();
     // The room was checked with estimated heights; the cards now have their measured ones. If
     // they reach something, the whole answer moves: searched again from both of the first
     // placement's starting points (under the ask, beside it) with its measured size, each shift
@@ -577,16 +601,20 @@ export function answerAsk(editor: Editor, value: unknown, actor: string) {
     if (!input.question && shape.meta.status !== "resolved") resolveMark(editor, editor.getShape(shape.id)!, "resolved", actor);
     return made;
   });
-  return { ask: describeAsk(editor, editor.getShape(shape.id)!), answers: ids.map((id) => describeObject(editor, id, true)) };
+  const after = editor.getShape(shape.id)!;
+  // The ask's row in the feedback queue: closed by an answer, still open after a clarifying question;
+  // left out when the ask has no row (a starter card the person rewrote is still Paired's).
+  const queue = hasCommentRow(authorOf(after), after.meta) ? (after.meta.status === "resolved" ? "resolved" : "open") : undefined;
+  return { ask: describeAsk(editor, after), answers: ids.map((id) => describeObject(editor, id, true)), ...(queue ? { queue } : {}) };
 }
 
 /**
  * Options on dimensions, once drawn: space goes above a dimension line on the cards whose headline
  * (or value above it) took fewer lines, so each dimension sits level across the row and the eye can
- * run along a line. Measured on the drawn cards, since only the browser's own wrapping is exact; an
- * answer on a page that is not open is left as it is. The space is `meta.levelPads`, a derived
- * field like the card's height: the text is untouched, the answer's revision stays valid and its run
- * still undoes.
+ * run along a line. Measured on the drawn cards, since only the browser's own wrapping is exact; a
+ * row that is not drawn (out of view, or on a page that is not open) by the editor's text measure
+ * at the width the card's text really wraps at. The space is `meta.levelPads`, a derived field like
+ * the card's height: the text is untouched, the answer's revision stays valid and its run still undoes.
  */
 export async function levelOptionLines(editor: Editor, askId: string) {
   if (typeof document === "undefined") return;
@@ -594,7 +622,12 @@ export async function levelOptionLines(editor: Editor, askId: string) {
     const at = Math.max(...shapes.map((s) => Number(s.meta.answeredAt) || 0));
     return shapes.filter((s) => (Number(s.meta.answeredAt) || 0) === at);
   };
-  const cards = latest(editor.getCurrentPageShapes().filter((s) => s.meta.replyTo === askId && Array.isArray(s.meta.dimensions)));
+  // The answer goes to its ask's page, which need not be the open one (#69); nothing there is
+  // drawn, so that row is measured by estimate, as a row out of view is.
+  const ask = editor.getShape(askId as TLShapeId);
+  const pageId = (ask && editor.getAncestorPageId(ask)) ?? editor.getCurrentPageId();
+  const onPage = [...editor.getPageShapeIds(pageId)].map((id) => editor.getShape(id)).filter((s): s is TLShape => !!s);
+  const cards = latest(onPage.filter((s) => s.meta.replyTo === askId && Array.isArray(s.meta.dimensions)));
   if (cards.length < 2) return;
   // A hidden tab draws no frames; never hold the answer back waiting for one.
   const frame = () =>
@@ -632,6 +665,28 @@ export async function levelOptionLines(editor: Editor, askId: string) {
   }
 }
 
+/**
+ * Levels one row of option cards by the editor's text measure, synchronously: space above each
+ * dimension line, top down, on the cards whose line sits higher. Leaves the row as it is when a card
+ * has lost its dimension lines.
+ */
+function levelByEstimate(editor: Editor, ids: string[]) {
+  const first = editor.getShape(ids[0] as TLShapeId);
+  const dimensions = Array.isArray(first?.meta.dimensions) ? first.meta.dimensions.length : 0;
+  for (let k = 0; k < dimensions; k++) {
+    const found = ids.map((id) => estimateLine(editor, id as TLShapeId, k));
+    if (found.some((m) => !m)) return;
+    const rows = found as { s: TLShape; offset: number }[];
+    const gaps = levelGaps(rows.map((m) => m.offset), rows.map(() => 0));
+    rows.forEach(({ s }, i) => {
+      if (gaps[i] < 0.5) return;
+      const pads = Array.from({ length: dimensions }, (_, j) => levelPadsOf(s.meta)[j] ?? 0);
+      pads[k] += gaps[i];
+      editor.updateShape({ id: s.id, type: s.type, meta: { ...s.meta, levelPads: pads } } as never);
+    });
+  }
+}
+
 /** Where an option card's k-th dimension line starts below its top, by the editor's text measure. */
 function estimateLine(editor: Editor, id: TLShapeId, k: number) {
   const s = editor.getShape(id);
@@ -644,7 +699,7 @@ function estimateLine(editor: Editor, id: TLShapeId, k: number) {
   const html = renderHtmlFromRichTextForMeasurement(editor, { ...props.richText, content: paras.slice(0, at) } as TLRichText);
   const above = editor.textMeasure.measureHtml(html || "&nbsp;", {
     fontFamily: t.font, fontSize: t.size, lineHeight: t.lineHeight, fontStyle: t.style, fontWeight: t.weight,
-    maxWidth: Math.max(40, props.w - t.pad * 2 - 8), padding: "0px",
+    maxWidth: cardTextWidth(props.tone, s.meta.settled === true, props.w), padding: "0px",
   }).h;
   const pads = levelPadsOf(s.meta).slice(0, k + 1).reduce((a, b) => a + b, 0);
   return { s, offset: t.pad + above + pads };

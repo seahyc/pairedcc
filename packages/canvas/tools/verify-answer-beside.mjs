@@ -3,7 +3,10 @@
 // Starts its own dev server of this checkout with an empty board store. The person writes three
 // questions under one card and sends each (the asks stack under each other); an agent answers them out of
 // order with three options each. Every answer row must sit right next to its own ask, directly
-// under it or beside it, and no cards may overlap. A lone ask still gets its answer underneath.
+// under it or beside it, or, when both are taken by its neighbours' answers (questions written close
+// under each other), level with it further right (item 132); no row may read as another ask's
+// answer, no cards may overlap, and no ask's state line may run over a card. A lone ask still gets
+// its answer underneath.
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-answer-beside.mjs <screenshot dir>
 //
@@ -90,8 +93,12 @@ try {
   const nextTo = (row, a) => {
     const under = Math.abs(row.x - a.x) <= 4 && row.y >= a.b && row.y <= a.b + 90;
     const beside = row.x >= a.r && row.x <= a.r + 90 && Math.abs(row.y - a.y) <= 30;
-    return under ? 'under' : beside ? 'beside' : null;
+    // Item 132: under and beside both taken by its neighbours' answers, it stays level with its ask.
+    const level = row.x >= a.r && Math.abs(row.y - a.y) <= 30;
+    return under ? 'under' : beside ? 'beside' : level ? 'level, further right' : null;
   };
+  /** Just under or just beside an ask: where a row would be read as that ask's answer. */
+  const readsAsAnswer = (row, a) => (Math.abs(row.x - a.x) <= 4 && row.y >= a.b && row.y <= a.b + 90) || (row.x >= a.r && row.x <= a.r + 90 && Math.abs(row.y - a.y) <= 30);
   const overlaps = (cards) => cards.flatMap((a, i) => cards.slice(i + 1).filter((c) => a.x < c.r && c.x < a.r && a.y < c.b && c.y < a.b).map((c) => `${a.name} × ${c.name}`));
 
   // 1. Three asks about one card, answered out of order.
@@ -110,6 +117,23 @@ try {
   }
   const o1 = overlaps(l.all);
   check('no cards overlap', o1.length === 0, o1.join('; '));
+  const misread = asks.flatMap((g, i) => {
+    const row = l.all.filter((c) => c.replyTo === g.ask.id);
+    const first = row.reduce((m, c) => (c.x < m.x || (c.x === m.x && c.y < m.y) ? c : m), row[0]);
+    return asks.flatMap((h, j) => (j !== i && first && readsAsAnswer(first, l.all.find((c) => c.id === h.ask.id)) ? [`ask ${i + 1}'s answer reads as ask ${j + 1}'s`] : []));
+  });
+  check('no answer row reads as another ask\'s answer', misread.length === 0, misread.join('; '));
+  // Each state line (screen) against every card (screen): none runs over one.
+  const overState = await p.evaluate(() => {
+    const ed = window.__pairedEditor, hits = [];
+    const lines = [...document.querySelectorAll('.ask-status')].map((el) => el.getBoundingClientRect());
+    for (const s of ed.getCurrentPageShapes().filter((s) => s.type !== 'arrow' && s.type !== 'frame')) {
+      const b = ed.getShapePageBounds(s), a = ed.pageToScreen({ x: b.x, y: b.y }), z = ed.pageToScreen({ x: b.maxX, y: b.maxY });
+      for (const r of lines) if (r.left < z.x - 1 && r.right > a.x + 1 && r.top < z.y - 1 && r.bottom > a.y + 1) hits.push(s.meta.name ?? s.id);
+    }
+    return hits;
+  });
+  check('no state line runs over a card', overState.length === 0, overState.join('; '));
   await p.evaluate(() => { window.__pairedEditor.zoomToFit({ animation: { duration: 0 } }); });
   await p.waitForTimeout(400);
   await p.screenshot({ path: `${out}/1-three-asks.png` });
