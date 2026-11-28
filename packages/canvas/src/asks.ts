@@ -329,10 +329,10 @@ function groupOf(editor: Editor, host: TLShape, skip: ReadonlySet<string>, keep:
       const b = editor.getShapePageBounds(s);
       return b ? [{ id: s.id as string, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
     });
-  const found = clusterAround(placed, host.id, skip);
-  // A left-out member is withheld (and counted as such), like anything else around the ask.
-  const kept = new Set<string>(keep(found.members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? [])).map((s) => s.id));
-  const members = found.members.filter((m) => kept.has(m.id)).map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
+  // A left-out member is withheld (and counted as such), like anything else around the ask. It is
+  // dropped before the cap, so it neither takes a shareable member's slot nor counts as more.
+  const found = clusterAround(placed, host.id, skip, undefined, (ids) => keep(ids.flatMap((id) => editor.getShape(id as TLShapeId) ?? [])).map((s) => s.id));
+  const members = found.members.map((m) => ({ ...given(editor, editor.getShape(m.id as TLShapeId)!, 400, keep), relation: m.relation }));
   // The group's name, as the overview (O) shows it, from everything in it but the ask's own card
   // (an ask is never the name of what it asks about) and what the person left out.
   const whole = clusterAround(placed, host.id, new Set(), Infinity).members.flatMap((m) => editor.getShape(m.id as TLShapeId) ?? []);
@@ -381,9 +381,10 @@ export function describeAsk(editor: Editor, shape: TLShape) {
       ).slice(0, 12)
     : [];
   // Where things sit carries meaning: the group the card is in, said with relations. What the
-  // ask already gives (targets, and the frame's objects when the card is in a frame) is not repeated.
+  // ask already gives (targets, and the frame objects it sent when the card is in a frame) is not
+  // repeated. Only what was sent: a frame past its twelve-object cap still gives the rest as the group.
   const group = editor.getShapePageBounds(shape)
-    ? groupOf(editor, shape, new Set([...skip, ...(frame ? editor.getSortedChildIdsForParent(frame.id) : []), ...frameObjects.map((s) => s.id)]), keep)
+    ? groupOf(editor, shape, new Set([...skip, ...frameObjects.map((s) => s.id)]), keep)
     : { members: [], more: 0 };
   // A card with no named group of its own around it still sits in its frame's: the one it is in, or
   // the one it was lifted out of so the frame would not cut it off (item 132). Named as O names a frame.
