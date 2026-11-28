@@ -120,6 +120,7 @@ const CHECKS = [
   { name: 'overview-lifted', file: 'verify-overview-lifted.ts', args: (d) => [d] },
   { name: 'fold', file: 'verify-fold.mjs', args: (d) => [d] },
   { name: 'focus', file: 'verify-focus.mjs', args: (d) => [d] },
+  { name: 'thread-limit', file: 'verify-thread-limit.mjs', args: (d) => [d] },
 ].filter((c) => existsSync(join(dirname(fileURLToPath(import.meta.url)), c.file)));
 const SKIPPED = [
   { name: 'board-sync-server', reason: 'needs Postgres and Redis; run `pnpm --filter @pairedcc/canvas verify:sync-server`' },

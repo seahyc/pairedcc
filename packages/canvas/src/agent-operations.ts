@@ -1,5 +1,5 @@
 import { relationships, relationshipsOf, sourceOf, transformationOf, type ArrowEnd, type PrimitiveRecord } from "./primitives";
-import { foldedForAgent, foldedPick } from "./fold";
+import { foldedForAgent, foldedPick, foldedUndecided } from "./fold";
 import { reviewDate } from "./learning/recall";
 import { followPause, followers } from "./follow";
 import { prototypeRefusal } from "./prototype-flags";
@@ -578,6 +578,8 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         ...(s.meta.settled === true ? { settled: true } : {}),
         // A finished thread the person has out of view as one line: still theirs, still in context.
         ...(foldedForAgent(editor, s) ? { folded: true } : {}),
+        // Folded only to make room for four more recent unfinished threads: nothing was decided.
+        ...(foldedUndecided(editor, s) ? { undecided: true } : {}),
         ...(foldedPick(editor, s) ? { pick: foldedPick(editor, s) } : {}),
         ...(reviewDate(s.meta, authorOf(s)) ? { review: reviewDate(s.meta, authorOf(s)) } : {}),
         meta: s.meta,

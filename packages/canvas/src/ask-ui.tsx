@@ -11,7 +11,7 @@ import { toggleMark } from "./scratchbook";
 import { isLeftOut, isPinned, leftOutLabel, pinnedLabel, toggleLeftOut, togglePinned } from "./leave-out";
 import { toggleSettled } from "./settled";
 import { unclipFromFrame } from "./frame-edge";
-import { foldLine, isFoldedNow, threadFinished, toggleFold } from "./fold";
+import { foldLine, foldedUndecided, isFoldedNow, threadFinished, toggleFold } from "./fold";
 import { prototypeEnabled } from "./prototype-flags";
 import { TOUCH, keys } from "./keys";
 import { checkable, startCheck } from "./learning/check-ui";
@@ -99,7 +99,7 @@ export function AskLayer() {
         // A finished thread folded away is one line where its question was: nothing else is drawn.
         const finished = threadFinished(s.meta, answers.map((r) => r.meta));
         if (isFoldedNow(editor, s))
-          return [{ id: s.id, ask, tight: false, question: textOf(s), answers: 0, x: b.x, y: b.y, w: foldWidth(b, answers.flatMap((r) => editor.getShapePageBounds(r) ?? [])), given: "", outlines: [] as Outline[], group: undefined as Group | undefined, finished, fold: foldLine(textOf(s), answers.map((r) => ({ text: textOf(r), meta: r.meta }))) }];
+          return [{ id: s.id, ask, tight: false, question: textOf(s), answers: 0, x: b.x, y: b.y, w: foldWidth(b, answers.flatMap((r) => editor.getShapePageBounds(r) ?? [])), given: "", outlines: [] as Outline[], group: undefined as Group | undefined, finished, fold: foldLine(textOf(s), answers.map((r) => ({ text: textOf(r), meta: r.meta })), foldedUndecided(editor, s)) }];
         const focused = selected.has(s.id) || answers.some((r) => selected.has(r.id)) || ask.state === "working";
         const view = focused || anyLeftOut || anyPinned ? describeAsk(editor, s) : undefined;
         const pinnedIds = view?.pinned?.map((p) => p.id) ?? [];
@@ -173,8 +173,9 @@ export function AskLayer() {
             <button
               key={a.id}
               type="button"
-              className="fold-line"
+              className={`fold-line${a.fold.undecided ? " fold-line--undecided" : ""}`}
               data-fold-line={a.id}
+              data-fold-undecided={a.fold.undecided ? "" : undefined}
               aria-expanded={false}
               title="Unfold this thread"
               style={{ transform: `translate(${a.x}px, ${a.y}px)`, width: a.w }}
@@ -185,7 +186,7 @@ export function AskLayer() {
               }}
             >
               <span className="fold-q">{a.fold.question}</span>
-              <span className="fold-a">{a.fold.answer ? `✓ ${a.fold.answer}` : "✓ settled"}</span>
+              <span className="fold-a">{a.fold.undecided ? `· ${a.fold.undecided}` : a.fold.answer ? `✓ ${a.fold.answer}` : "✓ settled"}</span>
               {a.fold.more > 0 && <span className="fold-more" aria-label={`${a.fold.more} more folded`}>+{a.fold.more}</span>}
             </button>
           );
