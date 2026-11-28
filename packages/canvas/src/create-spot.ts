@@ -17,6 +17,16 @@ export const CREATE_GAP = 56;
 export const CREATE_AIR = 8;
 const STEP = 8, GRID = 24, FAR = 1200;
 
+/**
+ * Whether an existing object of type `type` is in the way of a new object of type `newType` placed
+ * without x/y. Arrows never are. Frames are only for a new frame, so it never covers another
+ * frame; anything else may still go over a frame (it is made on the page, above it).
+ */
+export function blocksCreate(type: string, newType: string) {
+  if (type === "arrow") return false;
+  return type !== "frame" || newType === "frame";
+}
+
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 const clear = (spot: Rect, others: Rect[]) => {
   const roomy = { x: spot.x - CREATE_AIR, y: spot.y - CREATE_AIR, w: spot.w + 2 * CREATE_AIR, h: spot.h + 2 * CREATE_AIR };
@@ -61,6 +71,27 @@ function middleOfView(size: Size, view: Rect, others: Rect[], all: Rect[]): Rect
       const d = Math.hypot(i, j);
       if (d >= bestD) continue;
       const spot = { ...centre, x: centre.x + i * GRID, y: centre.y + j * GRID };
+      if (clear(spot, others)) {
+        best = spot;
+        bestD = d;
+      }
+    }
+  if (best) return best;
+  // A gap narrower than the grid step: try spots against the view's edges and every edge of what
+  // is there (plus the air kept around it), and take the clear one in view nearest the middle.
+  const xs = [centre.x, view.x, view.x + view.w - size.w], ys = [centre.y, view.y, view.y + view.h - size.h];
+  for (const o of others) {
+    xs.push(o.x + o.w + CREATE_AIR, o.x - size.w - CREATE_AIR);
+    ys.push(o.y + o.h + CREATE_AIR, o.y - size.h - CREATE_AIR);
+  }
+  const fits = (v: number, start: number, length: number, room: number) => v >= start && v + length <= start + room;
+  const inX = xs.filter((x) => fits(x, view.x, size.w, view.w)), inY = ys.filter((y) => fits(y, view.y, size.h, view.h));
+  bestD = Infinity;
+  for (const x of inX)
+    for (const y of inY) {
+      const d = Math.hypot(x - centre.x, y - centre.y);
+      if (d >= bestD) continue;
+      const spot = { ...centre, x, y };
       if (clear(spot, others)) {
         best = spot;
         bestD = d;

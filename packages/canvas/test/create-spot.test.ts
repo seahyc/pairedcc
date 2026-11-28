@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createSpot, CREATE_GAP } from '../src/create-spot'
+import { createSpot, CREATE_GAP, blocksCreate } from '../src/create-spot'
 
 type Rect = { x: number; y: number; w: number; h: number }
 const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
@@ -65,5 +65,29 @@ describe('createSpot beside a selection with something level with its top', () =
     const blocked = { x: 0, y: 800, w: 600, h: 100 } // the window's controls under the selection
     const spot = createSpot({ w: 420, h: 59 }, { view, selection: sel }, [sel, other, blocked])
     expect(spot).toEqual({ x: 80 + 260 + CREATE_GAP, y: 596 + 120 - 59, w: 420, h: 59 })
+  })
+})
+
+describe('createSpot finds a clear gap narrower than its search step', () => {
+  it('uses the in-view gap between two full-width objects rather than going below the view', () => {
+    const small = { x: 0, y: 0, w: 1000, h: 800 }
+    const top = { x: 0, y: 0, w: 1000, h: 369 }
+    const bottom = { x: 0, y: 450, w: 1000, h: 350 }
+    const spot = createSpot({ w: 420, h: 59 }, { view: small }, [top, bottom])
+    expect(inside(spot, small)).toBe(true)
+    expect(spot.y).toBeGreaterThanOrEqual(377)
+    expect(spot.y).toBeLessThanOrEqual(383)
+    expect(hits(spot, top) || hits(spot, bottom)).toBe(false)
+  })
+})
+
+describe('what a new object placed without x/y keeps clear of', () => {
+  it('a new frame keeps clear of existing frames', () => {
+    expect(blocksCreate('frame', 'frame')).toBe(true)
+  })
+  it('other new objects may still sit over a frame; arrows never block', () => {
+    expect(blocksCreate('frame', 'card')).toBe(false)
+    expect(blocksCreate('arrow', 'frame')).toBe(false)
+    expect(blocksCreate('card', 'frame')).toBe(true)
   })
 })

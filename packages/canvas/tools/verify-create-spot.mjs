@@ -3,7 +3,7 @@
 //
 //   cd <a directory where playwright is installed> && node <repo>/packages/canvas/tools/verify-create-spot.mjs <screenshot dir>
 //
-// Needs the dev server on :5183 (`pnpm dev:canvas`) with an empty board store (PAIRED_BOARDS_DIR
+// Needs the dev server on :5183 (`pnpm dev:canvas`; another port through CANVAS_BASE) with an empty board store (PAIRED_BOARDS_DIR
 // set to a new folder).
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
@@ -11,7 +11,7 @@ const { chromium } = createRequire(`${process.cwd()}/`)('playwright');
 const out = process.argv[2];
 if (!out) throw new Error('Usage: node verify-create-spot.mjs <screenshot dir>');
 mkdirSync(out, { recursive: true });
-const BASE = 'http://localhost:5183';
+const BASE = process.env.CANVAS_BASE ?? 'http://localhost:5183';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 
@@ -106,6 +106,37 @@ const e = await command('create', { kind: 'note', text: 'Undo me' });
 await p.evaluate(() => { window.__pairedEditor.undo(); });
 const after = await p.evaluate((id) => ({ n: window.paired.read().objects.length, gone: !window.__pairedEditor.getShape(id) }), e.id);
 check('one undo removes a placed note', after.gone && after.n === before, JSON.stringify(after));
+
+// 7. An unlocked frame over the page origin, the view elsewhere: what is created without x/y is not
+// taken into that frame (it would be clipped by it wherever it is placed), for a card and a primitive.
+const originFrame = await p.evaluate(() => {
+  const id = window.paired.create({ kind: 'frame', name: 'Over the origin', x: -300, y: -300, width: 900, height: 900 });
+  const e = window.__pairedEditor;
+  e.selectNone();
+  e.setCamera({ x: -20000, y: -15000, z: 1 });
+  return id;
+});
+for (const input of [{ kind: 'note', text: 'Made far from the origin' }, { kind: 'rectangle', width: 200, height: 120, text: 'A box far from the origin' }]) {
+  const made = await command('create', input);
+  const st = await p.evaluate(({ id, frame }) => {
+    const e = window.__pairedEditor, s = e.getShape(id), v = e.getViewportPageBounds(), b = e.getShapePageBounds(id);
+    return { pageChild: s.parentId === e.getCurrentPageId(), inFrame: s.parentId === frame, masked: !!e.getShapeMask(id), inView: v.contains(b) };
+  }, { id: made.id, frame: originFrame });
+  check(`a ${input.kind} without x/y with a frame over the origin is a page child, visible in view`, st.pageChild && !st.masked && st.inView, JSON.stringify(st));
+}
+
+// 8. A new frame without x/y does not cover an existing, unselected frame in the middle of the view.
+const midFrame = await p.evaluate(() => {
+  const e = window.__pairedEditor;
+  e.setCamera({ x: -40000, y: -15000, z: 1 });
+  const v = e.getViewportPageBounds();
+  const id = window.paired.create({ kind: 'frame', name: 'Existing frame', x: v.x + v.w / 2 - 250, y: v.y + v.h / 2 - 150, width: 500, height: 300 });
+  e.selectNone();
+  return id;
+});
+const nf = await command('create', { kind: 'frame', name: 'New frame', width: 360, height: 200 });
+const [nfb, mfb] = [await bounds(nf.id), await bounds(midFrame)];
+check('a new frame without x/y does not cover an unselected existing frame, and is in view', !overlaps(nfb, mfb) && inside(nfb, await view()), `${JSON.stringify(nfb)} vs ${JSON.stringify(mfb)}`);
 
 await p.evaluate(() => { window.__pairedEditor.selectNone(); });
 await p.waitForTimeout(300);

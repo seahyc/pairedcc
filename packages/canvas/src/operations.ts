@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLShape, type TLShapeId } from "tldraw";
+import { createShapeId, toRichText, DefaultColorStyle, type Editor, type TLPageId, type TLShape, type TLShapeId } from "tldraw";
 import { clip } from "./text";
 
 const color = z.enum(DefaultColorStyle.values);
@@ -116,10 +116,15 @@ export function nameAfterText(oldName: unknown, oldText: string, newText: string
   return next || undefined;
 }
 
-export function createObject(editor: Editor, value: unknown) {
+/**
+ * Without `parentId`, tldraw puts the new object into whatever frame covers its x/y. Pass the page
+ * to keep it a page child: for a provisional spot that is moved once the object has its size.
+ */
+export function createObject(editor: Editor, value: unknown, parentId?: TLPageId) {
   const parsed = createInput.parse(value),
     input = { ...parsed, x: parsed.x ?? 0, y: parsed.y ?? 0 },
-    id = createShapeId();
+    id = createShapeId(),
+    parent = parentId ? { parentId } : {};
   editor.markHistoryStoppingPoint("create object");
   const meta = {
     name: input.name ?? (input.text.split("\n")[0] || input.kind),
@@ -132,6 +137,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "geo",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,
@@ -152,6 +158,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "text",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,
@@ -169,6 +176,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "note",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,
@@ -184,6 +192,7 @@ export function createObject(editor: Editor, value: unknown) {
         editor.createShape({
           id,
           type: "frame",
+          ...parent,
           x: input.x,
           y: input.y,
           meta,

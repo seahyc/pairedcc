@@ -42,7 +42,7 @@ import { matchesText, richTextSearch } from "./read-filter";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { rewriteRefusal } from "./authorship";
 import { notePlace, noteWidth } from "./note-place";
-import { createSpot } from "./create-spot";
+import { blocksCreate, createSpot } from "./create-spot";
 import { windowControls } from "./window-controls";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, levelOptionLines, listAsks, setAskStatus } from "./asks";
@@ -113,21 +113,28 @@ function placeCreated(editor: Editor, id: string, selection: ReturnType<typeof p
   const made = editor.getShapePageBounds(id as TLShapeId);
   if (!made) return;
   const v = editor.getViewportPageBounds();
-  const spot = createSpot({ w: made.w, h: made.h }, { view: { x: v.x, y: v.y, w: v.w, h: v.h }, selection }, [...othersOnPage(editor, new Set([id])), ...windowControls(editor)]);
   const shape = find(editor, id);
+  const others = [...editor.getPageShapeIds(editor.getCurrentPageId())]
+    .flatMap((other) => editor.getShape(other) ?? [])
+    .filter((s) => s.id !== id && blocksCreate(s.type, shape.type))
+    .flatMap((s) => editor.getShapePageBounds(s) ?? []);
+  const spot = createSpot({ w: made.w, h: made.h }, { view: { x: v.x, y: v.y, w: v.w, h: v.h }, selection }, [...others, ...windowControls(editor)]);
   editor.updateShape({ id: shape.id, type: shape.type, x: spot.x + (shape.x - made.x), y: spot.y + (shape.y - made.y) });
 }
 
-/** Agents' notes become cards; other primitives pass through unchanged. */
-function createFor(editor: Editor, value: unknown, actor: string) {
+/**
+ * Agents' notes become cards; other primitives pass through unchanged. With `pageId` the object
+ * is made straight on that page; without it, tldraw puts it in a frame that covers its x/y.
+ */
+function createFor(editor: Editor, value: unknown, actor: string, pageId?: TLPageId) {
   const kind = value && typeof value === "object" ? (value as { kind?: unknown }).kind : undefined;
   if (kind === "note" && actor !== HUMAN) {
     editor.markHistoryStoppingPoint("create card");
-    const id = createCard(editor, value, actor);
+    const id = createCard(editor, value, actor, {}, pageId);
     editor.select(id);
     return id;
   }
-  return createObject(editor, value);
+  return createObject(editor, value, pageId);
 }
 
 function placeCaption(editor: Editor, imageId: string) {
@@ -759,7 +766,11 @@ export async function executeCommand(
       const inputs = inputIds ? recordInputs(editor, inputIds) : undefined;
       const placing = unplaced(command.input);
       const selection = placing ? personSelection(editor) : undefined;
-      const id = createFor(editor, placing ? { ...(command.input as object), ...placing } : command.input, actor);
+      // A provisional spot at the origin must not take the new object into a frame that covers the
+      // origin: it would stay that frame's child, clipped by it, once moved into the person's view.
+      const id = placing
+        ? createFor(editor, { ...(command.input as object), ...placing }, actor, editor.getCurrentPageId())
+        : createFor(editor, command.input, actor);
       if (placing) placeCreated(editor, id, selection);
       const s = find(editor, id);
       editor.updateShape({
