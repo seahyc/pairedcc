@@ -42,6 +42,8 @@ import { matchesText, richTextSearch } from "./read-filter";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { rewriteRefusal } from "./authorship";
 import { notePlace, noteWidth } from "./note-place";
+import { createSpot } from "./create-spot";
+import { windowControls } from "./window-controls";
 import { agentStyle, collectMarks, collectFeedback, collectLooseNotes, authorOf, humanStyle, HUMAN, resolveMark } from "./scratchbook";
 import { answerAsk, levelOptionLines, listAsks, setAskStatus } from "./asks";
 import { feedbackCounts, feedbackMarkdown, filterFeedback } from "./feedback";
@@ -87,6 +89,33 @@ export function createCard(editor: Editor, value: unknown, author: string, meta:
     props: { w: input.width ?? (human ? HUMAN_CARD_W : agentWidths[tone as keyof typeof agentWidths]), richText: toRichText(input.text), tone },
   });
   return id;
+}
+
+/** `create` without x/y: a provisional spot, placed for real once the object has its size. */
+function unplaced(value: unknown) {
+  if (!value || typeof value !== "object") return undefined;
+  const { x, y } = value as { x?: unknown; y?: unknown };
+  if (x === undefined && y === undefined) return { x: 0, y: 0 };
+  if (x === undefined || y === undefined) throw new Error("Give both x and y, or neither to place it beside the person's selection or in the middle of their view");
+  return undefined;
+}
+
+/** The box around what the person has selected of their own, if anything. */
+function personSelection(editor: Editor) {
+  const boxes = editor.getSelectedShapes().filter((s) => authorOf(s) === HUMAN && s.type !== "arrow").flatMap((s) => editor.getShapePageBounds(s) ?? []);
+  if (!boxes.length) return undefined;
+  const x = Math.min(...boxes.map((b) => b.minX)), y = Math.min(...boxes.map((b) => b.minY));
+  return { x, y, w: Math.max(...boxes.map((b) => b.maxX)) - x, h: Math.max(...boxes.map((b) => b.maxY)) - y };
+}
+
+/** Beside the person's selection or in the middle of their view, clear of everything (create-spot.ts). */
+function placeCreated(editor: Editor, id: string, selection: ReturnType<typeof personSelection>) {
+  const made = editor.getShapePageBounds(id as TLShapeId);
+  if (!made) return;
+  const v = editor.getViewportPageBounds();
+  const spot = createSpot({ w: made.w, h: made.h }, { view: { x: v.x, y: v.y, w: v.w, h: v.h }, selection }, [...othersOnPage(editor, new Set([id])), ...windowControls(editor)]);
+  const shape = find(editor, id);
+  editor.updateShape({ id: shape.id, type: shape.type, x: spot.x + (shape.x - made.x), y: spot.y + (shape.y - made.y) });
 }
 
 /** Agents' notes become cards; other primitives pass through unchanged. */
@@ -728,7 +757,10 @@ export async function executeCommand(
     case "create": {
       const inputIds = z.object({ inputs: z.array(z.string().startsWith("shape:")).max(50).optional() }).parse(command.input ?? {}).inputs;
       const inputs = inputIds ? recordInputs(editor, inputIds) : undefined;
-      const id = createFor(editor, command.input, actor);
+      const placing = unplaced(command.input);
+      const selection = placing ? personSelection(editor) : undefined;
+      const id = createFor(editor, placing ? { ...(command.input as object), ...placing } : command.input, actor);
+      if (placing) placeCreated(editor, id, selection);
       const s = find(editor, id);
       editor.updateShape({
         id: s.id,

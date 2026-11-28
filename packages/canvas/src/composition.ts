@@ -8,7 +8,7 @@ export const sceneInput = z.object({
   nodes: z.array(z.object({
     key,
     parentKey: key.optional(),
-    shape: z.union([createInput, imageInput.extend({ kind: z.literal("image") })]),
+    shape: z.union([createInput.required({ x: true, y: true }), imageInput.extend({ kind: z.literal("image") })]),
   })).min(1).max(100),
   connections: z.array(z.object({
     fromKey: key,

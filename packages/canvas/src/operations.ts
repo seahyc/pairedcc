@@ -16,7 +16,8 @@ const styles = {
 export const createInput = z.object({
   ...styles,
   kind: z.enum(["rectangle", "ellipse", "text", "note", "frame"]),
-  ...point,
+  x: point.x.optional().describe("Left edge in canvas coordinates. Leave out x and y to place it beside the person's selection, or in the middle of their view, clear of everything."),
+  y: point.y.optional().describe("Top edge in canvas coordinates; give both x and y or neither."),
   width: z.number().min(1).max(20000).default(240),
   height: z.number().min(1).max(20000).default(160),
   text: z.string().max(50000).default(""),
@@ -116,7 +117,8 @@ export function nameAfterText(oldName: unknown, oldText: string, newText: string
 }
 
 export function createObject(editor: Editor, value: unknown) {
-  const input = createInput.parse(value),
+  const parsed = createInput.parse(value),
+    input = { ...parsed, x: parsed.x ?? 0, y: parsed.y ?? 0 },
     id = createShapeId();
   editor.markHistoryStoppingPoint("create object");
   const meta = {

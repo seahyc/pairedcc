@@ -116,9 +116,11 @@
                           ]
                         },
                         "x": {
+                          "description": "Left edge in canvas coordinates. Leave out x and y to place it beside the person's selection, or in the middle of their view, clear of everything.",
                           "type": "number"
                         },
                         "y": {
+                          "description": "Top edge in canvas coordinates; give both x and y or neither.",
                           "type": "number"
                         },
                         "width": {
@@ -561,7 +563,7 @@
     },
     {
       "name": "canvas_create",
-      "description": "Create a frame, rectangle, ellipse, text or note at canvas coordinates. Preserve alternatives instead of overwriting them. Notes take a style: note (default casual card), heading (large title, no card), quote (serif italic, for excerpts from a source; include the source) or code (monospace, for numbers, data and code).",
+      "description": "Create a frame, rectangle, ellipse, text or note at canvas coordinates, or leave out x and y to put it beside the person's selection (or in the middle of their view) clear of everything. Preserve alternatives instead of overwriting them. Notes take a style: note (default casual card), heading (large title, no card), quote (serif italic, for excerpts from a source; include the source) or code (monospace, for numbers, data and code).",
       "op": "create",
       "output": "json",
       "inputSchema": {
@@ -635,9 +637,11 @@
             ]
           },
           "x": {
+            "description": "Left edge in canvas coordinates. Leave out x and y to place it beside the person's selection, or in the middle of their view, clear of everything.",
             "type": "number"
           },
           "y": {
+            "description": "Top edge in canvas coordinates; give both x and y or neither.",
             "type": "number"
           },
           "width": {
@@ -702,9 +706,7 @@
           }
         },
         "required": [
-          "kind",
-          "x",
-          "y"
+          "kind"
         ]
       }
     },
