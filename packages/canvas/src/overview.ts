@@ -2,11 +2,12 @@ import { isLeftOut } from "./leave-out";
 import { foldedForAgent, foldedPick } from "./fold";
 import { reviewDate } from "./learning/recall";
 import { z } from "zod";
-import type { Editor, TLShape } from "tldraw";
+import type { Editor, TLShape, TLShapeId } from "tldraw";
 import { cardStyle, revision, richTextPlain, shapeName } from "./operations";
 import { chartLine } from "./data/agent";
 import { authorOf, collectMarks } from "./scratchbook";
 import { clusters } from "./clusters";
+import { coveredThoughts } from "./learning/check-ui";
 import { groupLabel, type OverviewItem } from "./board-overview";
 
 // Overview-then-detail: a compact, paginated listing of one level of the board, so an
@@ -32,10 +33,12 @@ export function snippet(shape: TLShape) {
  * words in reading order. One function for the person's overview and for agents.
  */
 export function groupName(editor: Editor, shapes: readonly TLShape[]) {
+  // A thought Check me is covering never names a group, as in O: the name would give it away.
+  const covered = new Set<string>(coveredThoughts(editor).map((c) => c.id));
   const items = shapes.flatMap((s): OverviewItem[] => {
     const b = editor.getShapePageBounds(s);
     if (!b) return [];
-    const text = "richText" in s.props ? richTextPlain(s.props.richText).trim() : "";
+    const text = "richText" in s.props && !covered.has(s.id) ? richTextPlain(s.props.richText).trim() : "";
     const base = { id: s.id, x: b.x, y: b.y, w: b.w, h: b.h, text, thought: Boolean(text), settled: false };
     if (s.type === "frame") return [{ ...base, text: "", thought: false, frame: String((s.props as { name?: unknown }).name ?? "") }];
     return [{ ...base, heading: s.type === "card" && (s.props as { tone?: unknown }).tone === "heading", ...(s.meta.ask ? { ask: true } : {}) }];
@@ -46,6 +49,43 @@ export function groupName(editor: Editor, shapes: readonly TLShape[]) {
   const loose = items.filter((i) => i.frame === undefined);
   const pileNamed = loose.some((i) => !i.ask && i.text.trim());
   return items.length ? groupLabel(pileNamed || loose.length === items.length ? loose : items) : undefined;
+}
+
+/**
+ * The groups the person's overview (O) draws at this level, as agents get them: piles the person
+ * made (edges within 60 px, chained) and, as a group of its own, a frame with any card lifted out
+ * of it (#155). A frame is never in one cluster with a loose pile beside it: O shows them as two
+ * boxes, so the agent's name and members match the person's map. Largest first.
+ */
+function levelGroups(editor: Editor, level: readonly TLShape[], byId: Map<string, TLShape>) {
+  const frameIds = new Set(level.filter((s) => s.type === "frame").map((s) => s.id as string));
+  // The frame at this level a card was lifted out of (meta.within may name a frame nested in it).
+  const ownFrame = (s: TLShape) => {
+    if (typeof s.meta.within !== "string") return undefined;
+    let id: string | undefined = s.meta.within;
+    for (let i = 0; id && i < 50; i++) {
+      if (frameIds.has(id)) return id;
+      id = editor.getShape(id as TLShapeId)?.parentId;
+    }
+    return undefined;
+  };
+  const box = (s: TLShape) => {
+    const b = s.type === "arrow" ? undefined : editor.getShapePageBounds(s);
+    return b ? [{ id: s.id as string, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
+  };
+  const loose = level.filter((s) => s.type !== "frame" && !ownFrame(s));
+  const piles = clusters(loose.flatMap(box)).map((c) => ({ ...c, label: groupName(editor, c.ids.flatMap((id) => byId.get(id) ?? [])) }));
+  const lifted = level.filter((s) => s.type !== "frame" && ownFrame(s));
+  const frames = [...frameIds].flatMap((frameId) => {
+    const members = [byId.get(frameId)!, ...lifted.filter((s) => ownFrame(s) === frameId)];
+    if (members.length < 2) return [];
+    const boxes = members.flatMap(box);
+    if (!boxes.length) return [];
+    const x = Math.min(...boxes.map((b) => b.x)), y = Math.min(...boxes.map((b) => b.y));
+    const w = Math.max(...boxes.map((b) => b.x + b.w)) - x, h = Math.max(...boxes.map((b) => b.y + b.h)) - y;
+    return [{ ids: members.slice(0, 50).map((m) => m.id as string), count: members.length, bounds: { x: round(x), y: round(y), w: round(w), h: round(h) }, label: groupName(editor, members.slice(0, 1)) }];
+  });
+  return [...piles, ...frames].sort((p, q) => q.count - p.count || p.bounds.x - q.bounds.x).slice(0, 50);
 }
 
 export function overview(editor: Editor, value: unknown = {}) {
@@ -100,13 +140,7 @@ export function overview(editor: Editor, value: unknown = {}) {
         ...(snippet(s) ? { text: snippet(s) } : {}),
       };
     }),
-    // Piles the person made at this level (edges within 60 px, chained), largest first.
-    clusters: clusters(
-      level.flatMap((s) => {
-        const b = s.type === "arrow" ? undefined : editor.getShapePageBounds(s);
-        return b ? [{ id: s.id, x: b.x, y: b.y, w: b.w, h: b.h }] : [];
-      }),
-    ).map((c) => ({ ...c, label: groupName(editor, c.ids.flatMap((id) => byId.get(id) ?? [])) })),
+    clusters: levelGroups(editor, level, byId),
     ...(next < level.length ? { nextCursor: String(next) } : {}),
   };
 }

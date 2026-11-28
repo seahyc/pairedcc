@@ -90,8 +90,14 @@ describe("a frame beside a loose pile", () => {
   it("names the cluster after the pile, as the overview names that pile, not after the frame", () => {
     const { clusters } = overview(ed2) as { clusters: { ids: string[]; label?: string }[] };
     const c = clusters.find((x) => x.ids.includes("shape:p1"))!;
-    expect(c.ids).toContain("shape:frame");
     expect(c.label).toBe("Pricing ideas");
+  });
+  // Item 142 (c), review of #169: O draws the frame and the pile as two boxes, so the cluster an
+  // agent is given holds the pile alone; the name then points at the same objects as the person's map.
+  it("keeps the frame out of the pile's cluster, as O does", () => {
+    const { clusters } = overview(ed2) as { clusters: { ids: string[]; label?: string }[] };
+    expect(clusters.find((x) => x.ids.includes("shape:p1"))!.ids).toEqual(["shape:p1", "shape:p2"]);
+    expect(clusters.some((x) => x.ids.includes("shape:frame"))).toBe(false);
   });
 });
 
