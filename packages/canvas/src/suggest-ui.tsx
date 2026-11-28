@@ -5,22 +5,13 @@ import { sendAsk } from "./ask-ui";
 import { selectedRecords } from "./import-board";
 import { HUMAN_CARD_W } from "./agent-operations";
 import { richTextPlain } from "./operations";
+import { textLines } from "./text-lines";
 import { SUGGEST_FONT, SUGGEST_LINE, SUGGEST_LINE_TOUCH, SUGGEST_PAUSE_MS, selectionKey, suggestScale, suggestSize, suggestSpot, suggestionsFor, type Rect, type Selected } from "./suggest";
 import { TOUCH } from "./keys";
 import { windowControls } from "./window-controls";
 
 const textOf = (s: TLShape) => ("richText" in s.props ? richTextPlain(s.props.richText).trim() : "");
 
-/** A card's text with its line breaks kept (paragraphs, list items, Shift+Enter), so a list reads as one. */
-export function textLines(node: unknown): string {
-  if (typeof node !== "object" || node === null) return "";
-  const { type, text, content } = node as { type?: string; text?: unknown; content?: unknown };
-  if (type === "hardBreak") return "\n";
-  if (typeof text === "string") return text;
-  if (!Array.isArray(content)) return "";
-  const inline = type === "paragraph" || type === "heading";
-  return content.map(textLines).join(inline ? "" : "\n");
-}
 /** Room for the card a suggestion becomes, so clicking one never lands it on something. */
 const CARD_ROOM = { w: HUMAN_CARD_W, h: 72 };
 /** How far a finger may move and still tap, in screen px. */

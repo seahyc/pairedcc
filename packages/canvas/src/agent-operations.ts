@@ -41,6 +41,7 @@ import { bendFor, chooseAnchors } from "./connector-follow";
 import { convergeInput, placeBeside, synthesisText } from "./converge/model";
 import { overview } from "./overview";
 import { matchesText, richTextSearch } from "./read-filter";
+import { textLines } from "./text-lines";
 import { createChart, createDataset, dataFields, recordInputs, setChartState, setDatasetCell, summaryProps } from "./data/agent";
 import { rewriteRefusal } from "./authorship";
 import { notePlace, noteWidth } from "./note-place";
@@ -572,7 +573,7 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
         props,
         ...dataFields(editor, s),
         text:
-          "richText" in s.props ? richTextSearch(s.props.richText) : undefined,
+          "richText" in s.props ? textLines(s.props.richText) : undefined,
         author: authorOf(s),
         ...(s.type === "card" ? { style: cardStyle((s.props as { tone?: unknown }).tone) } : {}),
         ...(s.meta.settled === true ? { settled: true } : {}),
@@ -593,11 +594,12 @@ export function readCanvas(editor: Editor, value: unknown = {}) {
       targetId: s.meta.targetId,
       status: s.meta.status,
       author: s.meta.author,
-      text: "richText" in s.props ? richTextSearch(s.props.richText) : "",
+      text: "richText" in s.props ? textLines(s.props.richText) : "",
     }));
   return {
     page: editor.getCurrentPage(),
-    pages: editor.getPages(),
+    // Each page's id and name, as canvas_overview lists them: what an agent needs to switch pages.
+    pages: editor.getPages().map((p) => ({ id: p.id, name: p.name })),
     selection: editor.getSelectedShapeIds(),
     objects,
     annotations,

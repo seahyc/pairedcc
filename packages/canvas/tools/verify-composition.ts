@@ -33,12 +33,13 @@ try {
   assert.equal(scene.objects.a.parentId, scene.objects.board.id);
   assert.equal(scene.objects.a.x, 30);
   assert.equal(scene.objects.a.props.dash, "dashed");
-  const copies = z.object({ objects: z.array(objectSchema) }).parse(await command("duplicate", {
+  // A change's result gives each object's words as plain `text` (item 140); canvas_get has the rich text.
+  const copies = z.object({ objects: z.array(objectSchema.extend({ text: z.string().optional() })) }).parse(await command("duplicate", {
     objects: [guard(scene.objects.board)], offsetX: 900, offsetY: 0,
   }));
   for (const object of copies.objects) cleanup.add(object.id);
   assert.ok(copies.objects.length >= 3);
-  assert.equal(copies.objects.filter(object => object.props.richText).length >= 2, true);
+  assert.equal(copies.objects.filter(object => object.text).length >= 2, true);
   const currentA = objectSchema.parse(await command("get", { id: scene.objects.a.id }));
   const currentB = objectSchema.parse(await command("get", { id: scene.objects.b.id }));
   await command("arrange", { objects: [guard(currentA), { id: currentB.id, expectedRevision: currentB.revision + 100 }], layout: "row", x: 6030, y: 6200 }, true);

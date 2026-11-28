@@ -33,6 +33,18 @@ try {
   const undone = await agent.call("canvas_undo_run", { runId: scene.runId });
   const after = await agent.call("canvas_read", {});
   check("the run still undoes as a whole", !after.objects.some((o: any) => o.text?.includes("Synthetic note")), { restored: undone.restored?.length, removedNow: undone.removedNow?.length });
+  // Item 140 (e), (i): what a change returns gives words as text, a card's style, and no rich text.
+  const sceneResult = JSON.stringify(await agent.call("canvas_scene", { name: "Two more", nodes: nodes.slice(0, 2).map((n) => ({ ...n, key: `m${n.key}`, shape: { ...n.shape, y: n.shape.y + 2000 } })) }));
+  check("a scene's result leaves rich text out", !sceneResult.includes("richText") && sceneResult.includes("pricing page"), { bytes: sceneResult.length });
+  const heading = await agent.call("canvas_create", { kind: "note", x: 0, y: 3000, text: "Onboarding", style: "heading" });
+  check("create says the card's style and its words as text", heading.style === "heading" && heading.text === "Onboarding" && !("richText" in (heading.props ?? {})), { style: heading.style, text: heading.text, props: Object.keys(heading.props ?? {}) });
+  const updated = await agent.call("canvas_update", { id: heading.id, expectedRevision: heading.revision, text: "Onboarding emails" });
+  check("update gives the new words as text, without rich text", updated.text === "Onboarding emails" && !("richText" in (updated.props ?? {})), { text: updated.text });
+  const code = await agent.call("canvas_create", { kind: "note", x: 600, y: 3000, text: "const a = 1\nconst b = 2\nreturn a + b", style: "code" });
+  const codeRead = (await agent.call("canvas_read", { ids: [code.id] })).objects[0];
+  check("a multi-line card's result keeps its lines, as read gives them", code.text === "const a = 1\nconst b = 2\nreturn a + b" && codeRead?.text === code.text, { result: code.text, read: codeRead?.text });
+  const reread = await agent.call("canvas_read", { ids: [heading.id] });
+  check("read lists each page by id and name only", reread.pages.every((p: any) => Object.keys(p).sort().join() === "id,name"), reread.pages[0]);
   console.log(`sizes: read ${readBytes} bytes for 40 notes; runs listing ${runsBytes} bytes`);
   await agent.close();
   await context.close();
