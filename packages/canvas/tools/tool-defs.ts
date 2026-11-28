@@ -131,7 +131,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_image",
     op: "image",
     description:
-      "Place an image or animated GIF as an editable canvas object. Supply base64 data URL, dimensions, optional original source URL and a short caption (shown under the image with ✦, e.g. 'B · Catch: the hand grabs the shot (rough)'). This tool does not generate images.",
+      "Place an image or animated GIF as an editable canvas object. Supply base64 data URL, width and height (its size on the board, not scaled for you: keep the aspect ratio and at most 600 on the longest side), optional original source URL and a short caption (shown under the image with ✦, e.g. 'B · Catch: the hand grabs the shot (rough)'). The result adds `captionId`, the caption card, which you move or remove separately. This tool does not generate images.",
     input: imageInput.shape,
     output: "json",
   },
@@ -146,7 +146,7 @@ export const toolDefs: ToolDef[] = [
     name: "canvas_annotate",
     op: "annotate",
     description:
-      "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar. Without x/y it goes under the object, or beside it when that space is taken, never covering anything, on a card as wide as the note needs.",
+      "Attach a note to a specific object with a connected arrow: your read-back, critique, questions or 'Done' report. It does not close the mark it answers: canvas_resolve that. Rendered as agent work (lavender, ✦) and attributed to you. Humans add pink handwritten feedback through the toolbar. Without x/y it goes under the object (side: beside puts it to the right instead), or the nearest clear spot when that is taken, never covering anything, on a card as wide as the note needs.",
     // Authorship is never the caller's to set: the canvas attributes the note to the agent.
     input: annotationInput.omit({ author: true }).shape,
     output: "json",

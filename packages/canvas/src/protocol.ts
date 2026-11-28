@@ -26,6 +26,7 @@ export const annotationInput = z.object({
   text: z.string().min(1).max(10000),
   x: z.number().finite().optional(),
   y: z.number().finite().optional(),
+  side: z.enum(["under", "beside"]).optional().describe("Without x/y: under the object (default) or beside it, to its right; either way the nearest clear spot, never covering anything."),
   author: z.string().max(100).default("Human"),
 });
 export const connectionInput = z.object({

@@ -63,3 +63,27 @@ describe("a note's width", () => {
     expect(noteWidth("Ok\nA much longer second line with more words in it")).toBeGreaterThan(noteWidth("Ok\nShort"));
   });
 });
+
+// Item 140 (a), tasks 06, 11 and 26: an agent that wants its note beside the card, not under it,
+// says so with side: "beside" instead of working out x/y itself.
+describe("a note asked to go beside its target", () => {
+  const target = { x: 100, y: 100, w: 240, h: 80 };
+  it("goes 60 px right of the target, level with its top, when that is free", () => {
+    expect(notePlace(target, { w: 300, h: 60 }, [], "beside")).toEqual({ x: 340 + NOTE_GAP, y: 100, w: 300, h: 60 });
+  });
+  it("slides further right past something in the way, rather than under", () => {
+    const other = { x: 380, y: 90, w: 200, h: 100 };
+    const spot = notePlace(target, { w: 300, h: 60 }, [other], "beside");
+    expect(hits(spot, other)).toBe(false);
+    expect(spot.x).toBeGreaterThanOrEqual(340);
+    expect(spot.y).toBeLessThan(180);
+  });
+  it("when the right side is crowded far out, takes the nearest clear side and never covers anything", () => {
+    const wall = Array.from({ length: 12 }, (_, i) => ({ x: 360 + i * 100, y: 0, w: 96, h: 400 }));
+    const spot = notePlace(target, { w: 300, h: 60 }, wall, "beside");
+    expect(wall.some((o) => hits(spot, o))).toBe(false)
+  });
+  it("leaves the default under", () => {
+    expect(notePlace(target, { w: 300, h: 60 }, [])).toEqual(notePlace(target, { w: 300, h: 60 }, [], "under"));
+  });
+});

@@ -410,7 +410,7 @@ export function annotateObject(editor: Editor, value: unknown) {
   const chosen = input.x !== undefined || input.y !== undefined;
   const width = noteWidth(input.text);
   const lines = Math.ceil(input.text.length / Math.max(16, Math.floor((width - 44) / 8.5))) + (input.text.match(/\n/g)?.length ?? 0);
-  const placed = chosen ? undefined : notePlace(bounds, { w: width, h: 28 + 22 * Math.max(1, lines) }, othersOnPage(editor, new Set([target.id])));
+  const placed = chosen ? undefined : notePlace(bounds, { w: width, h: 28 + 22 * Math.max(1, lines) }, othersOnPage(editor, new Set([target.id])), input.side);
   const x = input.x ?? placed?.x ?? bounds.x, y = input.y ?? placed?.y ?? bounds.maxY + 60;
   const meta = { name: input.author === HUMAN ? "Feedback" : "Agent note", role: "annotation", targetId: target.id, status: "open", author: input.author };
   editor.markHistoryStoppingPoint("add feedback");
@@ -421,7 +421,7 @@ export function annotateObject(editor: Editor, value: unknown) {
     // The height above was a guess; the card sizes to its text when made. Place again with its real size.
     const made = placed && editor.getShapePageBounds(id);
     if (made) {
-      const again = notePlace(bounds, { w: made.w, h: made.h }, othersOnPage(editor, new Set([target.id, id])));
+      const again = notePlace(bounds, { w: made.w, h: made.h }, othersOnPage(editor, new Set([target.id, id])), input.side);
       if (again.x !== made.x || again.y !== made.y) editor.updateShape({ id, type: "card", x: again.x, y: again.y });
     }
     connect(
