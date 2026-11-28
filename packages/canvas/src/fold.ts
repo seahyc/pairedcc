@@ -1,4 +1,4 @@
-import type { Editor, TLShape, TLShapeId } from "tldraw";
+import type { Editor, TLPageId, TLShape, TLShapeId } from "tldraw";
 import { learningVisibility } from "./learning/prompt-shape";
 import { richTextSearch } from "./read-filter";
 
@@ -46,13 +46,59 @@ export function primaryAnswer<T extends { meta: Meta }>(answers: readonly T[]) {
   return answer ? { answer, picked: answer.meta.mark === "picked", others: chosen.length - 1 } : undefined;
 }
 
-/** What the folded line says: the question, the answer the person picked (or that it is settled). */
-export function foldLine(question: string, answers: { text: string; meta: Meta }[]) {
+/**
+ * What the folded line says: the question, the answer the person picked (or that it is settled).
+ * A thread folded only to make room (`undecided`) says instead how many answers wait for a pick.
+ */
+export function foldLine(question: string, answers: { text: string; meta: Meta }[], undecided = false) {
+  const q = question.trim() || "(question)";
+  if (undecided) {
+    const n = answers.length;
+    return { question: q, answer: "", more: 0, undecided: n === 1 ? "1 answer, not picked yet" : `${n} options, none picked yet` };
+  }
   const primary = primaryAnswer(answers);
   const first = primary?.answer.text.trim();
   const answer = first ? `${first}${primary!.others > 0 ? ` (+${primary!.others})` : ""}` : "";
   const more = answers.length - (first ? 1 : 0);
-  return { question: question.trim() || "(question)", answer, more };
+  return { question: q, answer, more };
+}
+
+/**
+ * Item 144 (finding 1, working memory holds about four things): at most this many unfinished
+ * threads stay open on a page. An older thread that has answers but no pick folds to one line
+ * ("question · 3 options, none picked yet") until the person unfolds it.
+ */
+export const CROWD_LIMIT = 4;
+export type ThreadState = {
+  id: string;
+  askedAt: number;
+  /** The ask's state: waiting, working, answered or failed. */
+  state: string;
+  answers: number;
+  finished: boolean;
+  choice: FoldChoice | undefined;
+  /** The person is on it: something in it selected or being written. */
+  touched: boolean;
+};
+/**
+ * The threads on one page folded only because more recent unfinished threads are open. Newest
+ * asked first: a waiting, working or failed ask, and one the person unfolded, stay open and count
+ * among the four; an answered, undecided one folds once four are open. The thread the person is
+ * on stays open and counts too. That never folds another thread: everything older than a thread
+ * that was folded is folded already. So the board shows this rule's set less the thread the person
+ * is on, and an agent (which is told what is saved, not what is selected) is given the same set.
+ * Finished threads and ones the person folded are folded by their own rule and are not counted.
+ */
+export function crowdFolded(threads: readonly ThreadState[]): Set<string> {
+  const folded = new Set<string>();
+  let open = 0;
+  for (const t of [...threads].sort((a, b) => b.askedAt - a.askedAt || (a.id < b.id ? 1 : -1))) {
+    if (t.choice === "folded" || t.finished) continue;
+    const foldable = !t.touched && t.choice !== "open" && t.state === "answered" && t.answers > 0;
+    if (foldable && open >= CROWD_LIMIT) folded.add(t.id);
+    else open++;
+  }
+  return folded;
 }
 
 /** The value `meta.fold` should take when the person presses the fold line or Fold. */
@@ -103,10 +149,61 @@ export function threadAsk(editor: Editor, shape: TLShape): TLShape | undefined {
   return parent && isAsk(parent) ? parent : undefined;
 }
 
+/**
+ * The threads on a page folded only to make room (item 144), as saved with the board: what is
+ * selected does not enter into it. Indexed once per change of the page's shapes.
+ */
+const crowdIndex = new Map<string, { key: unknown; folded: Set<string> }>();
+function pageShapes(editor: Editor, pageId: string): readonly TLShape[] {
+  if (pageId === editor.getCurrentPageId()) return editor.getCurrentPageShapes();
+  return [...editor.getPageShapeIds(pageId as TLPageId)].flatMap((id) => editor.getShape(id) ?? []);
+}
+function crowdOnPage(editor: Editor, pageId: string) {
+  const current = pageId === editor.getCurrentPageId();
+  // Another page's shapes are not one cached list: the store's change clock says when anything changed.
+  const key = current ? editor.getCurrentPageShapes() : (editor as Partial<Editor>).store?.history.get();
+  const hit = crowdIndex.get(pageId);
+  if (key !== undefined && hit?.key === key) return hit.folded;
+  const threads = pageShapes(editor, pageId).flatMap((s): ThreadState[] => {
+    if (!isAsk(s)) return [];
+    const ask = s.meta.ask as { state?: unknown; askedAt?: unknown };
+    const answers = answersOf(editor, s).map((a) => a.meta);
+    return [{
+      id: s.id,
+      askedAt: typeof ask.askedAt === "number" ? ask.askedAt : 0,
+      state: typeof ask.state === "string" ? ask.state : "",
+      answers: answers.length,
+      finished: threadFinished(s.meta, answers),
+      choice: foldChoice(s.meta),
+      touched: false,
+    }];
+  });
+  const folded = crowdFolded(threads);
+  crowdIndex.set(pageId, { key, folded });
+  return folded;
+}
+/** Folded only because four more recent unfinished threads are open: the person has not decided it. */
+function crowded(editor: Editor, ask: TLShape) {
+  const pageId = editor.getAncestorPageId(ask);
+  return Boolean(pageId && crowdOnPage(editor, pageId).has(ask.id));
+}
+
 /** Is this ask's thread folded on the board right now? */
 export function isFoldedNow(editor: Editor, ask: TLShape) {
   const answers = answersOf(editor, ask);
-  return foldedShown(ask.meta, answers.map((a) => a.meta), touched(editor, ask, answers));
+  const on = touched(editor, ask, answers);
+  return foldedShown(ask.meta, answers.map((a) => a.meta), on) || (!on && crowded(editor, ask));
+}
+
+/**
+ * The thread an object is in is folded only to make room, not because it was decided: no answer
+ * picked or settled, and the person did not fold it. Agents are told so (`undecided: true`).
+ */
+export function foldedUndecided(editor: Editor, shape: TLShape) {
+  if (!shape.meta.ask && typeof shape.meta.replyTo !== "string") return false;
+  const ask = threadAsk(editor, shape);
+  if (!ask || foldedSaved(ask.meta, answersOf(editor, ask).map((a) => a.meta))) return false;
+  return crowded(editor, ask);
 }
 
 /** For <Tldraw getShapeVisibility>: an ask and its answers are out of view while folded. */
@@ -121,7 +218,7 @@ export function foldedForAgent(editor: Editor, shape: TLShape) {
   if (!shape.meta.ask && typeof shape.meta.replyTo !== "string") return false;
   const ask = threadAsk(editor, shape);
   if (!ask) return false;
-  return foldedSaved(ask.meta, answersOf(editor, ask).map((a) => a.meta));
+  return foldedSaved(ask.meta, answersOf(editor, ask).map((a) => a.meta)) || crowded(editor, ask);
 }
 
 /**

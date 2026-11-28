@@ -2316,6 +2316,16 @@ kbd {
   font-family: "Shantell Sans", Inter, sans-serif;
   font-weight: 400;
 }
+/* Item 144: folded only to make room; nothing picked yet. A dashed edge reads as still open. */
+.fold-line--undecided {
+  border-style: dashed;
+  background: #fffafc;
+}
+.fold-line--undecided .fold-a {
+  color: #7d7a8c;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13px;
+}
 .fold-more {
   flex: none;
   font-size: 12px;
