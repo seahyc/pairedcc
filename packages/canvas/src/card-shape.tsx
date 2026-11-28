@@ -56,6 +56,17 @@ const settledHuman = { ...cardType.human, font: print, size: 19, lineHeight: 1.4
 export function cardLook(tone: CardTone, settled: boolean) {
   return settled && tone === "human" ? settledHuman : cardType[tone];
 }
+/** Left plus right border of each card tone, as drawn by style.css (`.scrap--*`); none when unlisted. */
+const sideBorder: Partial<Record<CardTone, number>> = { agent: 3, code: 3, human: 5, quote: 4, source: 2 };
+/**
+ * The width a card's text wraps at when drawn: the card less its padding and side borders. The
+ * height estimate measures 8 px narrower on purpose (a card a line too tall is harmless); lining
+ * text up across cards needs where the lines really break.
+ */
+export function cardTextWidth(tone: CardTone, settled: boolean, w: number) {
+  const border = settled && tone === "human" ? 3 : sideBorder[tone] ?? 0;
+  return Math.max(40, w - cardLook(tone, settled).pad * 2 - border);
+}
 const lookOf = (shape: CardShape) => cardLook(shape.props.tone, shape.meta.settled === true);
 
 export class CardShapeUtil extends BaseBoxShapeUtil<CardShape> {
